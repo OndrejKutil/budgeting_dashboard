@@ -135,3 +135,97 @@ async def get_month_data(
             supabase_client.auth.sign_out()
         except:
             pass  # Ignore errors in cleanup
+
+
+@router.get("/{year}/{month}/summary")
+async def get_month_summary(
+    year: int,
+    month: str,
+    access_token: str = Depends(get_supabase_access_token),
+    refresh_token: str = Depends(get_supabase_refresh_token),
+    api_key: str = Depends(api_key_auth)
+):
+    """
+    Fetches summary data for a specific year and month.
+    """
+    # Initialize Supabase client
+    supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
+
+    try:
+        supabase_client.auth.set_session(access_token, refresh_token)
+        
+        # Convert month string to number and get date range
+        month_num = get_month_number(month)
+        start_date, end_date = get_month_date_range(year, month_num)
+        
+        # Query summary data within the date range
+        response = supabase_client.table("transactions").select("type, SUM(amount) as total_amount").gte("date", start_date).lt("date", end_date).group("type").execute()
+
+        return {
+            "data": response.data,
+            "count": len(response.data)
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching summary data: {e}")
+        logger.error(f"Access token (first 20 chars): {access_token[:20]}...")
+        logger.error(f"Error type: {type(e).__name__}")
+
+        
+        raise fastapi.HTTPException(
+            status_code=500, 
+            detail=f"Database query failed: {str(e)}"
+        )
+    
+    finally:
+        try:
+            supabase_client.auth.sign_out()
+        except:
+            pass
+
+
+@router.get("/{year}/{month}/categories_sum")
+async def get_month_categories_sum(
+    year: int,
+    month: str,
+    access_token: str = Depends(get_supabase_access_token),
+    refresh_token: str = Depends(get_supabase_refresh_token),
+    api_key: str = Depends(api_key_auth)
+):
+    """
+    Fetches sum of transactions by category for a specific year and month.
+    """
+    # Initialize Supabase client
+    supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
+
+    try:
+        supabase_client.auth.set_session(access_token, refresh_token)
+        
+        # Convert month string to number and get date range
+        month_num = get_month_number(month)
+        start_date, end_date = get_month_date_range(year, month_num)
+        
+        # Query sum by category within the date range
+        response = supabase_client.table("transactions").select("category, SUM(amount) as total_amount").gte("date", start_date).lt("date", end_date).group("category").execute()
+
+        return {
+            "data": response.data,
+            "count": len(response.data)
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching categories sum: {e}")
+        logger.error(f"Access token (first 20 chars): {access_token[:20]}...")
+        logger.error(f"Error type: {type(e).__name__}")
+
+        
+        raise fastapi.HTTPException(
+            status_code=500, 
+            detail=f"Database query failed: {str(e)}"
+        )
+    
+    finally:
+        try:
+            supabase_client.auth.sign_out()
+        except:
+            pass
