@@ -48,7 +48,7 @@ async def api_key_auth(api_key: str = Depends(api_key_header)) -> str:
         )
 
     return api_key
-    
+
 
 async def get_supabase_access_token(
     authorization: str = Depends(supabase_token_header)
@@ -71,7 +71,11 @@ async def get_supabase_access_token(
             detail="Invalid access token format. Use 'Bearer <token>'",
         )
     
-    token = authorization.split(" ")[1]
+    if access_token.startswith("Bearer "):
+        token = access_token.split(" ")[1]
+    else:
+        # Direct token without Bearer prefix
+        token = acess_token
     
     # Just check if token exists and has some content
     if not token or len(token.strip()) == 0:
