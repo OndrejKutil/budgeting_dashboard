@@ -1,9 +1,9 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 # auth dependencies
-from auth import api_key_auth, get_supabase_access_token, get_supabase_refresh_token
+from auth import api_key_auth, get_current_user
 
 # Load environment variables
 import os
@@ -15,7 +15,11 @@ import logging
 # supabase client
 from supabase import create_client, Client
 
+# other
+from datetime import date
+from typing import Optional
 
+!# Import COLUMNS Enum
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -35,26 +39,40 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# This router prefix is /all-data
+
 @router.get("/")
 async def get_all_data(
     api_key: str = Depends(api_key_auth), 
-    access_token: str = Depends(get_supabase_access_token), 
-    refresh_token: str = Depends(get_supabase_refresh_token)
+    user: Depends(get_current_user),
+    start_date: Optional[date] = Query(None, description="start")
+    end_date: Optional[date] = Query(None),
+    category: Optional[str] = Query(None),
+    account: Optional[str] = Query(None)
 ):
     """
     Endpoint to fetch all data from the database.
     Requires API key authentication and Supabase access token.
     """
-    
-    # Create a fresh client for this request (stateless approach)
-    user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-    
+
     try:
-        # Set session for this request only
-        user_supabase_client.auth.set_session(access_token, refresh_token)
+        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY, options={"headers": {"Authorization": f"Bearer {user["access_token"]}"}}
         
         # Fetch all data from the 'transactions' table using the user's session
-        response = user_supabase_client.table("transactions").select("*").execute()
+        query = user_supabase_client.table("transactions").select("*")
+        
+        if start_date:
+            query = query.gte(COLUMNS.DATE.value, start_date)
+        if end_date:
+            query = query.lte(COLUMNS.DATE.value, end_date)
+        if category:
+            query = query.eq(COLUMNS.CATEGORY.value, category)
+        if account:
+            query = query.eq(COLUMNS.ACCOUNT.value, account)
+            
+        query = query.order(COLUMNS.DATE.value, desc=False)
+        
+        response = query.execute()
         
         return {
             "data": response.data,
@@ -71,9 +89,3 @@ async def get_all_data(
             status_code=500, 
             detail=f"Database query failed: {str(e)}"
         )
-    
-    finally:
-        try:
-            user_supabase_client.auth.sign_out()
-        except:
-            pass  # Ignore errors in cleanup
