@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Depends, status
+from fastapi import HTTPException, Depends, status, Request
 from fastapi.security import APIKeyHeader
 
 import os
@@ -25,7 +25,7 @@ supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=
 
 
 # ================================================================================================
-#                                   Dependency Functions
+#                                   API key
 # ================================================================================================
 
 
@@ -49,6 +49,9 @@ async def api_key_auth(api_key: str = Depends(api_key_header)) -> str:
 
     return api_key
 
+# ================================================================================================
+#                                   SUPABASE keys
+# ================================================================================================
 
 async def get_supabase_access_token(
     authorization: str = Depends(supabase_token_header)
@@ -117,3 +120,24 @@ async def get_supabase_refresh_token(
         )
     
     return token
+    
+    
+def get_current_user(request: Request):
+    """Extract and decode JWT from Authorization header"""
+    auth = request.headers.get("Authorization")
+    
+    if auth.startswith("Bearer "):
+        token = auth.split(" ")[1]
+    else:
+        token = auth
+
+    try:
+        # Decode the JWT (optional: validate issuer, expiry, etc.)
+        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
+        return {
+            "user_id": payload["sub"],  # Supabase uses `sub` as the user ID
+            "email": payload.get("email"),
+            "access_token": token
+        }
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
