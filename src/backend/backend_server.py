@@ -118,14 +118,11 @@ async def refresh_access_token(
         if response.session:
             logger.info("Successfully refreshed user session")
             return {
-                "success": True,
                 "access_token": response.session.access_token,
                 "refresh_token": response.session.refresh_token,
                 "expires_at": response.session.expires_at,
-                "user": {
-                    "id": response.user.id,
-                    "email": response.user.email
-                }
+                "user_id": response.user.id,
+                "email": response.user.email
             }
         else:
             logger.warning("Failed to refresh session - no session returned")
