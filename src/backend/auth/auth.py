@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 
 import logging
 
+import jwt
+from jwt import PyJWTError
+
 # ================================================================================================
 #                                   Settings and Configuration
 # ================================================================================================
@@ -18,6 +21,7 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 PROJECT_URL = os.getenv("PROJECT_URL")
 ANON_KEY = os.getenv("ANON_KEY")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
 supabase_token_header = APIKeyHeader(name="X-Access-Token", auto_error=False)
@@ -25,7 +29,7 @@ supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=
 
 
 # ================================================================================================
-#                                   API key
+#                                       API key
 # ================================================================================================
 
 
@@ -54,31 +58,24 @@ async def api_key_auth(api_key: str = Depends(api_key_header)) -> str:
 # ================================================================================================
 
 async def get_supabase_access_token(
-    authorization: str = Depends(supabase_token_header)
+    access_token: str = Depends(supabase_token_header)
 ) -> str:
     """
     Dependency to check if Supabase access token is present in request headers.
     Just checks format, doesn't verify the token.
     Returns the token string if present and properly formatted.
     """
-    if not authorization:
+    if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Access token is missing",
-        )
-    
-    # Check Bearer format
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid access token format. Use 'Bearer <token>'",
         )
     
     if access_token.startswith("Bearer "):
         token = access_token.split(" ")[1]
     else:
         # Direct token without Bearer prefix
-        token = acess_token
+        token = access_token
     
     # Just check if token exists and has some content
     if not token or len(token.strip()) == 0:
@@ -121,6 +118,11 @@ async def get_supabase_refresh_token(
     
     return token
     
+
+# ================================================================================================
+#                                   JWT Authentication
+# ================================================================================================
+
     
 def get_current_user(request: Request):
     """Extract and decode JWT from Authorization header"""

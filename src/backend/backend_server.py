@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import fastapi
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from auth import api_key_auth, get_supabase_refresh_token, get_supabase_access_token
+from backend.auth.auth import api_key_auth, get_supabase_refresh_token
 
 # logging
 import logging
@@ -59,12 +59,9 @@ app.add_middleware(
 )
 
 # Include routers
-from routers import all_data_router, month, years
+from routers import all_data_router
 
-app.include_router(all_data_router.router, prefix="/all-data", tags=["Transactions"])
-app.include_router(month.router, prefix="/month", tags=["Months"])
-app.include_router(years.router, prefix="/years", tags=["Years"])
-
+app.include_router(all_data_router.router, prefix="/all", tags=["All transactions"])
 
 
 # ================================================================================================
@@ -87,15 +84,10 @@ async def health_check():
     """
     return {"status": "healthy"}
 
-@app.get("/verification_check")
-async def api_key_verification_check(
-    api_key: str = Depends(api_key_auth)
-):
-    """
-    Endpoint to verify API key.
-    Returns a success message if the API key is valid.
-    """
-    return {"message": "API key is valid!"}
+
+# ================================================================================================
+#                                       Token Refresh Endpoint
+# ================================================================================================
 
 
 @app.post("/refresh-token")
@@ -155,13 +147,19 @@ async def refresh_access_token(
             pass
 
 
+
+# ================================================================================================
+#                                       Run the Server
+# ================================================================================================
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "backend_server:app",  # Use import string instead of app object
+        "backend_server:app",
         host=BACKEND_HOST, 
         port=BACKEND_PORT,
         log_level="info",
-        access_log=False,  # Disable access logs to avoid clutter
-        reload=True  # Enable auto-reload for development
+        access_log=False,
+        reload=True 
     )
