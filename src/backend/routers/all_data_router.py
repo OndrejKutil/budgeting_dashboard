@@ -62,9 +62,9 @@ async def get_all_data(
         query = user_supabase_client.table("transactions").select("*")
         
         if start_date:
-            query = query.gte(COLUMNS.DATE.value, start_date)
+            query = query.gte(COLUMNS.DATE.value, start_date.isoformat())
         if end_date:
-            query = query.lte(COLUMNS.DATE.value, end_date)
+            query = query.lte(COLUMNS.DATE.value, end_date.isoformat())
         if category:
             query = query.eq(COLUMNS.CATEGORY.value, category)
         if account:
