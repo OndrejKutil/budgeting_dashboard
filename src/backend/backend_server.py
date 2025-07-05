@@ -10,13 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 # logging
 import logging
 
-# supabase client
-from supabase import create_client, Client
-
-# helper
-from schemas.endpoint_schemas import RefreshTokenResponse
-
-
 # ================================================================================================
 #                                   Settings and Configuration
 # ================================================================================================
@@ -25,23 +18,37 @@ from schemas.endpoint_schemas import RefreshTokenResponse
 # set up logging
 log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
 
-# Force configuration to override uvicorn's default logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file_path, mode='w'),  # 'w' mode overwrites existing file
-        logging.StreamHandler()  # Console output
-    ],
-    force=True  # This forces the configuration even if handlers already exist
-)
+# Configure logging with different levels for console and file
+# Remove any existing handlers
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# File handler - logs everything (DEBUG and above)
+file_handler = logging.FileHandler(log_file_path, mode='w')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+
+# Console handler - only warnings and above
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.WARNING)
+console_handler.setFormatter(formatter)
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)  # Set to lowest level to capture everything
+root_logger.addHandler(file_handler)
+root_logger.addHandler(console_handler)
+
 # Create logger for this module
 logger = logging.getLogger(__name__)
 logger.info("Starting backend server...")
 logger.info(f"Log file path: {log_file_path}")
 
 # Import auth functions after logging is configured
-from auth.auth import api_key_auth, get_supabase_refresh_token, admin_key_auth
+from auth.auth import api_key_auth, admin_key_auth
 
 # Load environment variables
 load_dotenv()
@@ -64,9 +71,13 @@ app.add_middleware(
 )
 
 # Include routers
-from routers import all_data_router
+from routers import transactions, token_refresh, categories, accounts
 
-app.include_router(all_data_router.router, prefix="/all", tags=["All transactions"])
+app.include_router(transactions.router, prefix="/all", tags=["Transactions"])
+app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh"])
+app.include_router(categories.router, prefix="/categories", tags=["Categories"])
+app.include_router(accounts.router, prefix="/accounts", tags=["Accounts"])
+
 
 
 # ================================================================================================
@@ -101,72 +112,17 @@ async def get_log(
     try:
         with open(log_file_path, 'r') as log_file:
             log_content = log_file.read()
+        logger.info("Log file accessed successfully")
         return {"logs": log_content}
     except Exception as e:
-        logger.error(f"Failed to read log file: {e}")
+        logger.info(f"Failed to read log file with detailed error: {str(e)}")
+        logger.info(f"Log file path attempted: {log_file_path}")
+        logger.error("Failed to read log file")
+        
         raise fastapi.HTTPException(
             status_code=500,
             detail="Failed to read log file."
         )
-
-
-# ================================================================================================
-#                                       Token Refresh Endpoint
-# ================================================================================================
-
-
-@app.post("/refresh", response_model=RefreshTokenResponse)
-async def refresh_access_token(
-    api_key: str = Depends(api_key_auth),
-    refresh_token: str = Depends(get_supabase_refresh_token)
-):
-    """
-    Endpoint to refresh the access token using refresh token.
-    Frontend should call this when access token expires.
-    """
-    
-    # Create a fresh client for token refresh
-    refresh_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-    
-    try:
-        # Use the refresh token to get new tokens
-        response = refresh_supabase_client.auth.refresh_session(refresh_token)
-        
-        if response:
-            logger.info("Successfully refreshed user session")
-            return {
-                "user": response.user,
-                "session": response.session
-            }
-        else:
-            logger.warning("Failed to refresh session - no session returned")
-            raise fastapi.HTTPException(
-                status_code=500,
-                detail="Failed to refresh session. Please log in again."
-            )
-    
-    except Exception as e:
-        logger.error(f"Token refresh failed: {e}")
-        
-        # Handle specific refresh errors
-        if "refresh_token_not_found" in str(e) or "Invalid refresh token" in str(e):
-            raise fastapi.HTTPException(
-                status_code=502,
-                detail="Invalid refresh token. Please log in again."
-            )
-        
-        raise fastapi.HTTPException(
-            status_code=500,
-            detail="Token refresh failed. Please try again."
-        )
-    
-    finally:
-        # Clean up the refresh client
-        try:
-            refresh_supabase_client.auth.sign_out()
-        except:
-            pass
-
 
 
 # ================================================================================================

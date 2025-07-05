@@ -49,13 +49,13 @@ async def api_key_auth(api_key: str = Depends(api_key_header)) -> str:
     """
     if not api_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_400_BAD_REQUEST, 
             detail="API key is missing",
         )
     
     if api_key != API_KEY:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
+            status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Invalid API key"
         )
 
@@ -123,12 +123,11 @@ async def get_current_user(
             options={"verify_aud": False}
         )
 
-        pprint.pprint(payload)
 
     except (PyJWTError, jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
         logger.error(f"JWT validation error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Invalid or expired token",
         )
 
@@ -154,13 +153,13 @@ async def admin_key_auth(admin_key: str = Depends(admin_key_header)) -> str:
     """
     if not admin_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Admin key is missing",
         )
     
     if admin_key != ADMIN_KEY:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
+            status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Invalid Admin key"
         )
 

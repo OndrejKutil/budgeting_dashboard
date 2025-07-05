@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date as Date, datetime
 from decimal import Decimal
+from enum import Enum
 
 
 # ================================================================================================
@@ -10,15 +11,16 @@ from decimal import Decimal
 
 class TransactionData(BaseModel):
     """Schema for individual transaction data"""
-    id: Optional[str] = Field(None, description="Transaction ID")
-    date: Date = Field(..., description="Transaction date")
+    id: str = Field(None, description="Transaction ID")
+    user_id: str = Field(None, description="User ID who owns this transaction")
+    account_id: str = Field(..., description="Account id associated with the transaction")
+    category_id: int = Field(..., description="Transaction category id")
     amount: Decimal = Field(..., description="Transaction amount")
-    category: str = Field(..., description="Transaction category")
-    account: str = Field(..., description="Account name")
-    description: Optional[str] = Field(None, description="Transaction description")
+    date: Date = Field(..., description="Transaction date")
+    notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Record update timestamp")
-    user_id: Optional[str] = Field(None, description="User ID who owns this transaction")
+    
     
     class Config:
         # Allow Decimal to be serialized as float in JSON
@@ -28,54 +30,85 @@ class TransactionData(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "id": "dqn46qd8f8q484q",
-                "date": "2025-01-15",
+                "id": "1",
+                "user_id": "user123",
+                "account_id": "acc456",
+                "category_id": 2,
                 "amount": 49.99,
-                "category": "Groceries",
-                "account": "Checking",
-                "description": "Weekly grocery shopping",
+                "date": "2025-01-15",
+                "notes": "Weekly grocery shopping",
                 "created_at": "2025-01-15T10:30:00Z",
-                "updated_at": "2025-01-15T10:30:00Z",
-                "user_id": "user123"
+                "updated_at": "2025-01-15T10:30:00Z"
             }
         }
 
+class CategoryType(str, Enum):
+    """Enum for category types"""
+    EXPENSE = "expense"
+    INCOME = "income"
+    TRANSFER = "transfer"
+    SAVING = "saving"
+    INVESTMENT = "investment"
+    EXCLUDE = "exclude"
+
+    def __str__(self):
+        return self.value
+    
+
+class CategoryData(BaseModel):
+    """Schema for individual category data"""
+    id: int = Field(..., description="Category ID")
+    name: str = Field(..., description="Category name")
+    type: CategoryType = Field(..., description="Category type (expense, income, etc.)")
+    is_active: Optional[bool] = Field(True, description="Indicates if the category is active")
+    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Record update timestamp")
+
+
+class AccountData(BaseModel):
+    """Schema for individual account data"""
+    id: str = Field(..., description="Account ID")
+    user_id: Optional[str] = Field(None, description="User ID who owns this account")
+    name: str = Field(..., description="Account name")
+    type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
+    starting_balance: Optional[Decimal] = Field(0.0, description="Initial balance of the account")
+    currency: Optional[str] = Field(..., description="Currency of the account")
+    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+
 
 # ================================================================================================
-#                                   Response Schemas
+#                                        Get Schemas
 # ================================================================================================
 
 class AllDataResponse(BaseModel):
-    """Response schema for GET /all/ endpoint"""
     data: List[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")
-    user_id: Optional[str] = Field(None, description="User ID of the requesting user")
     
     class Config:
         json_schema_extra = {
             "example": {
                 "data": [
                     {
-                        "id": 1,
-                        "date": "2025-01-15",
+                        "id": "1",
+                        "user_id": "user123",
+                        "account_id": "acc456",
+                        "category_id": 2,
                         "amount": 49.99,
-                        "category": "Groceries",
-                        "account": "Checking",
-                        "description": "Weekly grocery shopping",
+                        "date": "2025-01-15",
+                        "notes": "Weekly grocery shopping",
                         "created_at": "2025-01-15T10:30:00Z",
-                        "updated_at": "2025-01-15T10:30:00Z",
-                        "user_id": "user123"
+                        "updated_at": "2025-01-15T10:30:00Z"
                     },
                     {
-                        "id": 2,
+                        "id": "2",
+                        "user_id": "user123",
+                        "account_id": "acc789",
+                        "category_id": 3,
+                        "amount": 19.99,
                         "date": "2025-01-16",
-                        "amount": 25.00,
-                        "category": "Gas",
-                        "account": "Credit Card",
-                        "description": "Gas station fill-up",
-                        "created_at": "2025-01-16T08:15:00Z",
-                        "updated_at": "2025-01-16T08:15:00Z",
-                        "user_id": "user123"
+                        "notes": "Coffee with friends",
+                        "created_at": "2025-01-16T11:00:00Z",
+                        "updated_at": "2025-01-16T11:00:00Z"
                     }
                 ],
                 "count": 2,
@@ -87,6 +120,136 @@ class RefreshTokenResponse(BaseModel):
     """Response schema for token refresh endpoint"""
     user: Optional[dict] = Field(None, description="User information after refresh")
     session: Optional[dict] = Field(None, description="Session information after refresh")
+
+
+class CategoriesResponse(BaseModel):
+    data: List[CategoryData] = Field(..., description="List of category records")
+    count: int = Field(..., description="Total number of records returned")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": [
+                    {
+                        "id": "1",
+                        "user_id": "user123",
+                        "account_id": "acc456",
+                        "category_id": 2,
+                        "amount": 49.99,
+                        "date": "2025-01-15",
+                        "notes": "Weekly grocery shopping",
+                        "created_at": "2025-01-15T10:30:00Z",
+                        "updated_at": "2025-01-15T10:30:00Z"
+                    },
+                    {
+                        "id": "2",
+                        "user_id": "user123",
+                        "account_id": "acc789",
+                        "category_id": 3,
+                        "amount": 19.99,
+                        "date": "2025-01-16",
+                        "notes": "Coffee with friends",
+                        "created_at": "2025-01-16T11:00:00Z",
+                        "updated_at": "2025-01-16T11:00:00Z"
+                    }
+                ],
+                "count": 2,
+        }}
+
+
+class AccountsResponse(BaseModel):
+    """Response schema for accounts endpoint"""
+    data: List[AccountData] = Field(..., description="List of account records")
+    count: int = Field(..., description="Total number of records returned")
+
+    class Config:
+        json_encoders = {
+            Decimal: float
+        }
+        json_schema_extra = {
+            "example": {
+                "data": [
+                    {
+                        "id": "acc456",
+                        "user_id": "user123",
+                        "name": "Main Checking Account",
+                        "type": "checking",
+                        "starting_balance": 1000.00,
+                        "currency": "USD",
+                        "created_at": "2025-01-15T10:30:00Z"
+                    },
+                    {
+                        "id": "acc789",
+                        "user_id": "user123",
+                        "name": "Savings Account",
+                        "type": "savings",
+                        "starting_balance": 5000.00,
+                        "currency": "USD",
+                        "created_at": "2025-01-16T11:00:00Z"
+                    }
+                ],
+                "count": 2,
+            }
+        }
+
+# ================================================================================================
+#                                   Insert Schemas
+# ================================================================================================
+
+class TransactionRequest(BaseModel):
+    account_id: str = Field(..., description="Account ID associated with the transaction")
+    category_id: int = Field(..., description="Transaction category ID")
+    amount: Decimal = Field(..., description="Transaction amount")
+    date: Date = Field(..., description="Transaction date")
+    notes: Optional[str] = Field(None, description="Transaction description")
+    is_transfer: Optional[bool] = Field(False, description="Indicates if this is a transfer transaction")
+    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+
+    class Config:
+        # Allow Decimal to be serialized as float in JSON
+        json_encoders = {
+            Decimal: float
+        }
+        # Example for documentation
+        json_schema_extra = {
+            "example": {
+                "account_id": "acc456",
+                "category_id": 2,
+                "amount": 49.99,
+                "date": "2025-01-15",
+                "notes": "Weekly grocery shopping",
+                "is_transfer": False,
+                "created_at": "2025-01-15T10:30:00Z"
+            }
+        }
+
+
+class AccountRequest(BaseModel):
+    """Schema for creating a new account"""
+    name: str = Field(..., description="Name of the account")
+    type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
+    starting_balance: Optional[Decimal] = Field(0.0, description="Initial balance of the account")
+    currency: Optional[str] = Field(..., description="Currency of the account")
+    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+
+    class Config:
+        # Allow Decimal to be serialized as float in JSON
+        json_encoders = {
+            Decimal: float
+        }
+        # Example for documentation
+        json_schema_extra = {
+            "example": {
+                "name": "Main Checking Account",
+                "type": "checking",
+                "starting_balance": 1000.00,
+                "currency": "CZK",
+                "created_at": "2025-01-15T10:30:00Z"
+            }
+        }
+
+
+
 
 
 # ================================================================================================
