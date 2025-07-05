@@ -250,10 +250,69 @@ class AccountRequest(BaseModel):
 
 
 
+class SummaryData(BaseModel):
+    """Schema for financial summary data"""
+    total_income: float = Field(..., description="Total income amount")
+    total_expense: float = Field(..., description="Total expense amount")
+    total_saving: float = Field(..., description="Total saving amount")
+    total_investment: float = Field(..., description="Total investment amount")
+    profit: float = Field(..., description="Profit (income - expenses)")
+    net_cash_flow: float = Field(..., description="Net cash flow (income - expenses - savings - investments)")
+    by_category: dict = Field(..., description="Summary grouped by category name")
+    by_account: dict = Field(..., description="Summary grouped by account name")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_income": 5000.00,
+                "total_expense": 3500.00,
+                "total_saving": 1000.00,
+                "total_investment": 500.00,
+                "profit": 1500.00,
+                "net_cash_flow": 0.00,
+                "by_category": {
+                    "Salary": 5000.00,
+                    "Groceries": -800.00,
+                    "Utilities": -300.00
+                },
+                "by_account": {
+                    "Main Checking": 2500.00,
+                    "Savings Account": 1000.00
+                }
+            }
+        }
+
+
+class SummaryResponse(BaseModel):
+    """Response schema for summary endpoint"""
+    data: SummaryData = Field(..., description="Financial summary data")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": {
+                    "total_income": 5000.00,
+                    "total_expense": 3500.00,
+                    "total_saving": 1000.00,
+                    "total_investment": 500.00,
+                    "profit": 1500.00,
+                    "net_cash_flow": 0.00,
+                    "by_category": {
+                        "Salary": 5000.00,
+                        "Groceries": -800.00,
+                        "Utilities": -300.00
+                    },
+                    "by_account": {
+                        "Main Checking": 2500.00,
+                        "Savings Account": 1000.00
+                    }
+                }
+            }
+        }
 
 
 # ================================================================================================
 #                                   Error Schemas
 # ================================================================================================
 
-# TODO
+# TODO: Define error schemas for consistent error responses

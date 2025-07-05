@@ -1,0 +1,24 @@
+# FastAPI and server dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# CORS middleware (included with FastAPI)
+# fastapi already includes starlette which provides CORSMiddleware
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# JWT token handling
+PyJWT==2.8.0
+
+# Supabase client for database operations
+supabase==2.0.2
+
+# Data validation and serialization
+pydantic==2.5.0
+
+# HTTP client (dependency of supabase)
+httpx==0.25.2
+
+# Additional dependencies that might be needed
+python-multipart==0.0.6  # For form data handling

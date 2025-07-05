@@ -50,7 +50,9 @@ async def get_all_data(
     start_date: Optional[date] = Query(None, description="starting date for filtering transactions"),
     end_date: Optional[date] = Query(None, description="ending date for filtering transactions"),
     category_id: Optional[str] = Query(None, description="category for filtering transactions"),
-    account_id: Optional[str] = Query(None, description="account for filtering transactions")
+    account_id: Optional[str] = Query(None, description="account for filtering transactions"),
+    limit: Optional[int] = Query(100, ge=1, le=1000, description="number of items to return (max 1000)"),
+    offset: Optional[int] = Query(0, ge=0, description="number of items to skip")
 ) -> AllDataResponse:
 
     try:
@@ -72,6 +74,9 @@ async def get_all_data(
             
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
+        # Apply pagination
+        query = query.limit(limit).offset(offset)
+        
         response = query.execute()
         
         return {
@@ -81,7 +86,7 @@ async def get_all_data(
     
     except Exception as e:
         logger.info(f"Database query failed for get_all_data: {str(e)}")
-        logger.info(f"Query parameters - start_date: {start_date}, end_date: {end_date}, category_id: {category_id}, account_id: {account_id}")
+        logger.info(f"Query parameters - start_date: {start_date}, end_date: {end_date}, category_id: {category_id}, account_id: {account_id}, limit: {limit}, offset: {offset}")
         logger.error("Failed to fetch transactions from database")
         
         raise fastapi.HTTPException(
