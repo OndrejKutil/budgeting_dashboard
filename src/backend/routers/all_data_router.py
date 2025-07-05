@@ -17,7 +17,7 @@ from supabase import create_client, Client
 
 # helper
 from helper.columns import COLUMNS
-# TODO from backend.schemas.endpoint_schemas import 
+from schemas.endpoint_schemas import AllDataResponse 
 
 # other
 from datetime import date
@@ -29,8 +29,8 @@ from typing import Optional
 
 # Load environment variables
 load_dotenv()
-PROJECT_URL = os.getenv("PROJECT_URL")
-ANON_KEY = os.getenv("ANON_KEY")
+PROJECT_URL: str = os.getenv("PROJECT_URL")
+ANON_KEY: str = os.getenv("ANON_KEY")
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ router = APIRouter()
 
 #? This router prefix is /all
 
-@router.get("/")
+@router.get("/", response_model=AllDataResponse)
 async def get_all_data(
     api_key: str = Depends(api_key_auth), 
     user: dict[str, str] = Depends(get_current_user),
@@ -51,16 +51,11 @@ async def get_all_data(
     end_date: Optional[date] = Query(None, description="ending date for filtering transactions"),
     category: Optional[str] = Query(None, description="category for filtering transactions"),
     account: Optional[str] = Query(None, description="account for filtering transactions")
-) -> dict:
+) -> AllDataResponse:
 
     try:
-        # Create Supabase client with user's access token
-        user_supabase_client: Client = create_client(
-            PROJECT_URL, 
-            ANON_KEY
-        )
+        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
-        # Set the user's access token for authentication
         user_supabase_client.postgrest.auth(user["access_token"])
         
 

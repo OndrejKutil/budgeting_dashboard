@@ -24,16 +24,16 @@ logger.setLevel(logging.INFO)
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
-PROJECT_URL = os.getenv("PROJECT_URL")
-ANON_KEY = os.getenv("ANON_KEY")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-ADMIN_KEY = os.getenv("ADMIN_KEY")
+API_KEY: str = os.getenv("API_KEY")
+PROJECT_URL: str = os.getenv("PROJECT_URL")
+ANON_KEY: str = os.getenv("ANON_KEY")
+SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET")
+ADMIN_KEY: str = os.getenv("ADMIN_KEY")
 
-api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False)
-supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False)
-authorization_header = APIKeyHeader(name="Authorization", auto_error=False)
-admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="API Key")
+supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False, scheme_name="Refresh Token")
+authorization_header = APIKeyHeader(name="Authorization", auto_error=False, scheme_name="Bearer Token")
+admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False, scheme_name="Admin Key")
 
 
 # ================================================================================================

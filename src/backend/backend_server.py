@@ -13,6 +13,9 @@ import logging
 # supabase client
 from supabase import create_client, Client
 
+# helper
+from schemas.endpoint_schemas import RefreshTokenResponse
+
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -73,31 +76,24 @@ app.include_router(all_data_router.router, prefix="/all", tags=["All transaction
 
 @app.get("/")
 async def root():
-    """
-    Root endpoint to check if the server is running.
-    """
     return {"message": "Backend server is running!"}
 
 
 @app.get("/health")
 async def health_check():
-    """
-    Health check endpoint to verify server status.
-    """
     return {"status": "healthy"}
 
 
 @app.get("/version")
 async def get_version():
-    """
-    Endpoint to get the version of the backend server.
-    This can be used for debugging or monitoring purposes.
-    """
     return {"version": "1.0.0", "description": "Budgeting Dashboard Backend Server"}
 
 
 @app.get("/log")
-async def get_log():
+async def get_log(
+    api_key: str = Depends(api_key_auth),
+    admin_key: str = Depends(admin_key_auth)
+):
     """
     Endpoint to retrieve the backend server log file.
     This can be useful for debugging or monitoring server activity.
@@ -119,7 +115,7 @@ async def get_log():
 # ================================================================================================
 
 
-@app.post("/refresh-token")
+@app.post("/refresh", response_model=RefreshTokenResponse)
 async def refresh_access_token(
     api_key: str = Depends(api_key_auth),
     refresh_token: str = Depends(get_supabase_refresh_token)
@@ -136,30 +132,26 @@ async def refresh_access_token(
         # Use the refresh token to get new tokens
         response = refresh_supabase_client.auth.refresh_session(refresh_token)
         
-        if response.session:
+        if response:
             logger.info("Successfully refreshed user session")
             return {
-                "access_token": response.session.access_token,
-                "refresh_token": response.session.refresh_token,
-                "expires_at": response.session.expires_at,
-                "user_id": response.user.id,
-                "email": response.user.email
+                "user": response.user,
+                "session": response.session
             }
         else:
             logger.warning("Failed to refresh session - no session returned")
             raise fastapi.HTTPException(
-                status_code=401,
+                status_code=500,
                 detail="Failed to refresh session. Please log in again."
             )
     
     except Exception as e:
         logger.error(f"Token refresh failed: {e}")
-        logger.error(f"Refresh token (first 20 chars): {refresh_token[:20]}...")
         
         # Handle specific refresh errors
         if "refresh_token_not_found" in str(e) or "Invalid refresh token" in str(e):
             raise fastapi.HTTPException(
-                status_code=401,
+                status_code=502,
                 detail="Invalid refresh token. Please log in again."
             )
         
