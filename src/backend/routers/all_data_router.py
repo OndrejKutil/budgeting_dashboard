@@ -3,7 +3,7 @@ import fastapi
 from fastapi import APIRouter, Depends, Query
 
 # auth dependencies
-from backend.auth.auth import api_key_auth, get_current_user
+from auth.auth import api_key_auth, get_current_user, get_supabase_refresh_token
 
 # Load environment variables
 import os
@@ -15,11 +15,13 @@ import logging
 # supabase client
 from supabase import create_client, Client
 
+# helper
+from helper.columns import COLUMNS
+# TODO from backend.schemas.endpoint_schemas import 
+
 # other
 from datetime import date
 from typing import Optional
-
-from backend.helper.columns import COLUMNS
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -44,21 +46,24 @@ router = APIRouter()
 @router.get("/")
 async def get_all_data(
     api_key: str = Depends(api_key_auth), 
-    user = Depends(get_current_user),
-    start_date: Optional[date] = Query(None, description="start"),
-    end_date: Optional[date] = Query(None),
-    category: Optional[str] = Query(None),
-    account: Optional[str] = Query(None)
-):
-    """
-    Endpoint to fetch all data from the database.
-    Requires API key authentication and Supabase access token.
-    """
+    user: dict[str, str] = Depends(get_current_user),
+    start_date: Optional[date] = Query(None, description="starting date for filtering transactions"),
+    end_date: Optional[date] = Query(None, description="ending date for filtering transactions"),
+    category: Optional[str] = Query(None, description="category for filtering transactions"),
+    account: Optional[str] = Query(None, description="account for filtering transactions")
+) -> dict:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY, options={"headers": {"Authorization": f"Bearer {user["access_token"]}"}})
+        # Create Supabase client with user's access token
+        user_supabase_client: Client = create_client(
+            PROJECT_URL, 
+            ANON_KEY
+        )
         
-        # Fetch all data from the 'transactions' table using the user's session
+        # Set the user's access token for authentication
+        user_supabase_client.postgrest.auth(user["access_token"])
+        
+
         query = user_supabase_client.table("transactions").select("*")
         
         if start_date:
@@ -80,10 +85,8 @@ async def get_all_data(
         }
     
     except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        logger.error(f"Access token (first 20 chars): {user["access_token"][:20]}...")
-        logger.error(f"Error type: {type(e).__name__}")
-
+        logger.critical(f"Error type: {type(e).__name__}")
+        logger.critical(f"Error fetching data: {e}")
         
         raise fastapi.HTTPException(
             status_code=500, 

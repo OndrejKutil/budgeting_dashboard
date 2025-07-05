@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import fastapi
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from backend.auth.auth import api_key_auth, get_supabase_refresh_token
 
 # logging
 import logging
@@ -21,22 +20,25 @@ from supabase import create_client, Client
 
 
 # set up logging
-# Ensure log directory exists and create/overwrite log file
-log_file_path = 'src/backend/backend.log'
-os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
 
+# Force configuration to override uvicorn's default logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file_path, mode='w'),  # 'w' mode overwrites existing file
-        # Removed StreamHandler() to prevent console output
-    ]
+        logging.StreamHandler()  # Console output
+    ],
+    force=True  # This forces the configuration even if handlers already exist
 )
 # Create logger for this module
 logger = logging.getLogger(__name__)
 logger.info("Starting backend server...")
+logger.info(f"Log file path: {log_file_path}")
 
+# Import auth functions after logging is configured
+from auth.auth import api_key_auth, get_supabase_refresh_token, admin_key_auth
 
 # Load environment variables
 load_dotenv()
@@ -83,6 +85,33 @@ async def health_check():
     Health check endpoint to verify server status.
     """
     return {"status": "healthy"}
+
+
+@app.get("/version")
+async def get_version():
+    """
+    Endpoint to get the version of the backend server.
+    This can be used for debugging or monitoring purposes.
+    """
+    return {"version": "1.0.0", "description": "Budgeting Dashboard Backend Server"}
+
+
+@app.get("/log")
+async def get_log():
+    """
+    Endpoint to retrieve the backend server log file.
+    This can be useful for debugging or monitoring server activity.
+    """
+    try:
+        with open(log_file_path, 'r') as log_file:
+            log_content = log_file.read()
+        return {"logs": log_content}
+    except Exception as e:
+        logger.error(f"Failed to read log file: {e}")
+        raise fastapi.HTTPException(
+            status_code=500,
+            detail="Failed to read log file."
+        )
 
 
 # ================================================================================================
@@ -159,7 +188,5 @@ if __name__ == "__main__":
         "backend_server:app",
         host=BACKEND_HOST, 
         port=BACKEND_PORT,
-        log_level="info",
-        access_log=False,
-        reload=True 
+        log_config=None
     )
