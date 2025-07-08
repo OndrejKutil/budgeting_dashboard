@@ -30,13 +30,13 @@ class TransactionData(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "id": "1",
-                "user_id": "user123",
-                "account_id": "acc456",
-                "category_id": 2,
-                "amount": 49.99,
+                "id": "",
+                "user_id": "",
+                "account_id": "",
+                "category_id": 1,
+                "amount": 100.00,
                 "date": "2025-01-15",
-                "notes": "Weekly grocery shopping",
+                "notes": "",
                 "created_at": "2025-01-15T10:30:00Z",
                 "updated_at": "2025-01-15T10:30:00Z"
             }
@@ -213,11 +213,11 @@ class TransactionRequest(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "account_id": "acc456",
+                "account_id": "",
                 "category_id": 2,
                 "amount": 49.99,
                 "date": "2025-01-15",
-                "notes": "Weekly grocery shopping",
+                "notes": "",
                 "is_transfer": False,
                 "created_at": "2025-01-15T10:30:00Z"
             }
@@ -240,10 +240,10 @@ class AccountRequest(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "name": "Main Checking Account",
-                "type": "checking",
+                "name": "",
+                "type": "",
                 "starting_balance": 1000.00,
-                "currency": "CZK",
+                "currency": "",
                 "created_at": "2025-01-15T10:30:00Z"
             }
         }
