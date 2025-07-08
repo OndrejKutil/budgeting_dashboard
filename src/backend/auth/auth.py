@@ -123,12 +123,21 @@ async def get_current_user(
             options={"verify_aud": False}
         )
 
-
-    except (PyJWTError, jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-        logger.error(f"JWT validation error: {e}")
+    except jwt.ExpiredSignatureError as e:
+        logger.error(f"JWT token expired")
+        logger.info(f"Error details: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid or expired token",
+            status_code=498,  # Custom status code for token expired
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer", "X-Token-Status": "expired"}
+        )
+    except (PyJWTError, jwt.InvalidTokenError) as e:
+        logger.error(f"JWT validation error")
+        logger.info(f"Error details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"}
         )
 
     try:        
@@ -137,8 +146,12 @@ async def get_current_user(
             "email": payload.get("email"),
             "access_token": access_token
         }
-    except PyJWTError:
+    except Exception as e:
+        logger.error(f"Error decoding JWT payload")
+        logger.info(f"Error details: {e}\n Payload: {pprint.pformat(payload)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error decoding supabase JWT payload")
+
+
     
 
 # ================================================================================================
