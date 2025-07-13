@@ -1,0 +1,47 @@
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+API_KEY = os.getenv('BACKEND_API_KEY')
+BACKEND_HOST = os.getenv('BACKEND_HOST')
+BACKEND_PORT = os.getenv('BACKEND_PORT')
+
+def login_request(email: str, password: str) -> dict:
+
+    if not email or not password:
+        raise ValueError("Email and password must be provided")
+    
+    url = f"http://{BACKEND_HOST}:{BACKEND_PORT}/login/login"
+    headers = {
+        "X-API-KEY": API_KEY,
+        "X-Login": f"{email}&&&{password}"
+    }
+    try:
+        response = requests.post(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json().get("data")
+
+            
+            returns = {
+                "email": email,
+                "access_token": data.get("session").get("access_token"),
+                "refresh_token": data.get("session").get("refresh_token"),
+                "user": data.get("user"),
+                "session": data.get("session"),
+            }
+
+            return returns
+        
+        else:
+            return {
+                "error": f"Login failed with status code {response.status_code}",
+                "message": response.text
+            }
+        
+    except Exception as e:
+        raise ConnectionError(f"Failed to connect to the backend: {str(e)}")
+
+
+

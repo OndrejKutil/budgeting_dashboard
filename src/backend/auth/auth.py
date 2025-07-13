@@ -34,6 +34,7 @@ api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="A
 supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False, scheme_name="Refresh Token")
 authorization_header = APIKeyHeader(name="Authorization", auto_error=False, scheme_name="Bearer Token")
 admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False, scheme_name="Admin Key")
+login_header = APIKeyHeader(name="X-Login", auto_error=False, scheme_name="Login Key")
 
 
 # ================================================================================================
@@ -177,3 +178,33 @@ async def admin_key_auth(admin_key: str = Depends(admin_key_header)) -> str:
         )
 
     return admin_key
+
+
+# ================================================================================================
+#                                   Login Key Authentication
+# ================================================================================================
+
+async def login_key_auth(login_key: str = Depends(login_header)) -> str:
+    """
+    Dependency to check for Login key in request headers.
+    Raises HTTPException if Login key is missing or invalid.
+    Returns the validated Login key.
+    """
+    if not login_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Login key is missing",
+        )
+    
+    email, password = login_key.split("&&&")
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Invalid Login key format. Expected 'email:password'."
+        )
+    
+    return {
+        "email": email,
+        "password": password
+    }

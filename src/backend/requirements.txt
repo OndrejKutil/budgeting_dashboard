@@ -12,13 +12,13 @@ python-dotenv==1.0.0
 PyJWT==2.8.0
 
 # Supabase client for database operations
-supabase==2.0.2
+supabase==1.0.4
 
 # Data validation and serialization
-pydantic==2.5.0
+pydantic>=2.0.0
 
 # HTTP client (dependency of supabase)
-httpx==0.25.2
+httpx>=0.24.0
 
 # Additional dependencies that might be needed
 python-multipart==0.0.6  # For form data handling
