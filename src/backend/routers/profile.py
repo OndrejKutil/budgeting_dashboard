@@ -69,7 +69,6 @@ async def get_my_profile(
             "id": user_data.id,
             "aud": user_data.aud,
             "role": user_data.role,
-            "is_anonymous": user_data.is_anonymous,
             
             # Email information
             "email": user_data.email,

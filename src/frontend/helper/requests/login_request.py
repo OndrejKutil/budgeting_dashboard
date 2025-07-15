@@ -6,13 +6,18 @@ load_dotenv()
 API_KEY = os.getenv('BACKEND_API_KEY')
 BACKEND_HOST = os.getenv('BACKEND_HOST')
 BACKEND_PORT = os.getenv('BACKEND_PORT')
+BACKEND_URL = os.getenv('BACKEND_URL')
 
 def login_request(email: str, password: str) -> dict:
 
     if not email or not password:
         raise ValueError("Email and password must be provided")
     
-    url = f"http://{BACKEND_HOST}:{BACKEND_PORT}/login/login"
+    if not BACKEND_URL:
+        url = f"http://{BACKEND_HOST}:{BACKEND_PORT}/login/login"
+    else:
+        url = f"{BACKEND_URL}/login/login"
+
     headers = {
         "X-API-KEY": API_KEY,
         "X-Login": f"{email}&&&{password}"

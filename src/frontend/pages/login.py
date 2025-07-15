@@ -4,9 +4,10 @@
 # Login page component with authentication form
 
 import dash
-from dash import html, dcc, Input, Output, callback
+from dash import html, dcc, Input, Output, callback, State
 import dash_bootstrap_components as dbc
-from helper.login_request import login_request
+from helper.requests.login_request import login_request
+import json
 
 def create_login_layout():
     """Create the login page layout"""
@@ -22,6 +23,15 @@ def create_login_layout():
                     
                     dbc.CardBody([
                         html.H4("Welcome Back!", className="text-center mb-4", style={'color': '#34495e'}),
+                        
+                        # Error Alert (initially hidden)
+                        dbc.Alert(
+                            id="login-error-alert",
+                            is_open=False,
+                            dismissable=True,  # Allow user to close manually
+                            color="danger",
+                            style={'margin-bottom': '20px'}
+                        ),
                         
                         # Login Form
                         dbc.Form([
@@ -117,21 +127,60 @@ def create_login_layout():
 # =============================================================================
 
 @callback(
-    Output('auth-store', 'data'),
+    [Output('auth-store', 'data'),
+     Output('token-store', 'data'),
+     Output('login-error-alert', 'children'),
+     Output('login-error-alert', 'is_open')],
     Input('login-button', 'n_clicks'),
-    [dash.dependencies.State('email-input', 'value'),
-     dash.dependencies.State('password-input', 'value'),
-     dash.dependencies.State('auth-store', 'data')],
+    [State('email-input', 'value'),
+     State('password-input', 'value'),
+     State('auth-store', 'data'),
+     State('token-store', 'data')],
     prevent_initial_call=True
 )
-def handle_login(n_clicks, email, password, current_auth_data):
+def handle_login(n_clicks, email, password, current_auth_data, current_token_data):
     """Handle login button click and store credentials"""
-    if n_clicks and email and password:
-
-        data = login_request(email, password)
-        data['logged'] = True
-
-        return data
     
+    if n_clicks and email and password:
+        try:
+            data = login_request(email, password)
+            
+            if data.get('error'):
+                # Handle login error - show alert to user, DON'T update auth-store
+                error_message = f"{json.loads(data.get('message')).get('detail')}"
+                return dash.no_update, dash.no_update, error_message, True  # Don't update stores!
+
+            auth = {'logged': True}
+            token = {
+                'access_token': data['access_token'],
+                'refresh_token': data['refresh_token'],
+                'email': email,
+                'user': data['user'],
+                'session': data['session']
+            }
+            
+            return auth, token, "", False
+            
+        except Exception as e:
+            error_message = f"Connection error: {str(e)}"
+            return dash.no_update, dash.no_update, error_message, True  # Don't update stores!
+
+    if n_clicks and (not email or not password):
+        # Show error if button clicked but fields are empty
+        error_message = "Please enter both email and password"
+        return dash.no_update, dash.no_update, error_message, True  # Don't update stores!
+
     # Return current data if no valid login attempt
-    return current_auth_data
+    return dash.no_update, dash.no_update, "", False  # Don't update stores if no action
+
+
+# Additional callback to hide alert when user starts typing
+@callback(
+    Output('login-error-alert', 'is_open', allow_duplicate=True),
+    [Input('email-input', 'value'),
+     Input('password-input', 'value')],
+    prevent_initial_call=True
+)
+def hide_alert_on_input(email, password):
+    """Hide error alert when user starts typing"""
+    return False
