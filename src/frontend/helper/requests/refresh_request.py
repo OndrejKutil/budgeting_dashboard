@@ -8,13 +8,9 @@ import os
 
 load_dotenv()
 
-BACKEND_HOST = os.getenv("BACKEND_HOST")
-BACKEND_PORT = os.getenv("BACKEND_PORT")
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
 BACKEND_URL = os.getenv("BACKEND_URL")
 
-if not BACKEND_URL:
-    BACKEND_URL = f"http://{BACKEND_HOST}:{BACKEND_PORT}"
 
 # =================================================
 # Helper functions

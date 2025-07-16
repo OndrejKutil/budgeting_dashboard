@@ -259,7 +259,6 @@ class SummaryData(BaseModel):
     profit: float = Field(..., description="Profit (income - expenses)")
     net_cash_flow: float = Field(..., description="Net cash flow (income - expenses - savings - investments)")
     by_category: dict = Field(..., description="Summary grouped by category name")
-    by_account: dict = Field(..., description="Summary grouped by account name")
 
     class Config:
         json_schema_extra = {
@@ -274,10 +273,6 @@ class SummaryData(BaseModel):
                     "Salary": 5000.00,
                     "Groceries": -800.00,
                     "Utilities": -300.00
-                },
-                "by_account": {
-                    "Main Checking": 2500.00,
-                    "Savings Account": 1000.00
                 }
             }
         }

@@ -135,6 +135,7 @@ async def get_log(
 
 if __name__ == "__main__":
     import uvicorn
+    print(f"Backend server running at http://{BACKEND_HOST}:{BACKEND_PORT}")
     uvicorn.run(
         "backend_server:app",
         host=BACKEND_HOST, 

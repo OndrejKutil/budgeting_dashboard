@@ -8,8 +8,6 @@ import requests
 
 load_dotenv()
 
-BACKEND_HOST = os.getenv("BACKEND_HOST")
-BACKEND_PORT = os.getenv("BACKEND_PORT")
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
 BACKEND_URL = os.getenv("BACKEND_URL")
 
@@ -19,10 +17,8 @@ BACKEND_URL = os.getenv("BACKEND_URL")
 
 def request_profile_data(access_token: str) -> dict:
 
-    if not BACKEND_URL:
-        url = f"http://{BACKEND_HOST}:{BACKEND_PORT}/profile/me"
-    else:
-        url = f"{BACKEND_URL}/profile/me"
+
+    url = f"{BACKEND_URL}/profile/me"
 
     headers = {
         "X-API-KEY": BACKEND_API_KEY,

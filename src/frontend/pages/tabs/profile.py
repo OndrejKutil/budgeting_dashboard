@@ -2,6 +2,7 @@ from dash import html, dcc, Input, State, Output, callback
 import dash_bootstrap_components as dbc
 from utils.theme import COLORS, CARD_STYLE
 from datetime import datetime
+from helper.requests.profile_request import request_profile_data
 
 
 def create_profile_tab():
@@ -179,26 +180,30 @@ def create_profile_tab():
      Output("profile-updated", "children"),
      Output("profile-signin", "children"),
      Output("profile-email-confirmed", "children")],
-    [Input('dashboard-tabs', 'value'),
-     Input('profile-store', 'data')]  # Now using profile-store instead of token-store
+    [Input('dashboard-tabs', 'value')],
+    [State('token-store', 'data')]
 )
-def update_profile_content(current_tab, profile_data):
-    
-    print(f"Profile tab callback - Tab: {current_tab}, Profile data: {profile_data}")
-    
+def update_profile_content(current_tab, token_store):
+
     # Only update if profile tab is currently selected
     if current_tab != 'profile':
         return (["Loading..."] * 11)  # Return loading for all fields
-    
-    if not profile_data or not profile_data.get('data'):
-        # If no profile data in store, show placeholders
-        print("No profile data in store")
-        return (["Loading..."] * 11)
+
+    if not token_store or not token_store.get('access_token'):
+        # If no token available, show no data message
+        return (["No data"] * 11)
 
     try:
-        # Profile data is already loaded from the store
-        data = profile_data['data']
+        # Fetch profile data using the token
+        print("Fetching profile data...")
+        response = request_profile_data(token_store['access_token'])
+        print(f"Profile data: {response}")
         
+        if not response or 'data' not in response:
+            raise ValueError("Invalid profile data format")
+            
+        data = response['data']
+
         # Helper function to format dates
         def format_date(date_str):
             if not date_str:
@@ -237,6 +242,6 @@ def update_profile_content(current_tab, profile_data):
         )
         
     except Exception as e:
-        print(f"Error displaying profile data: {e}")
+        print(f"Error fetching profile data: {e}")
         error_msg = f"Error: {str(e)}"
         return ([error_msg] * 11)

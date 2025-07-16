@@ -61,11 +61,7 @@ async def get_financial_summary(
         user_supabase_client.postgrest.auth(user["access_token"])
         
         # Query transactions with category and account joins
-        query = user_supabase_client.table("transactions").select("""
-            *,
-            categories(id, name, type),
-            accounts(id, name)
-        """)
+        query = user_supabase_client.table("transactions").select("*, categories(*)")
         
         # Apply date filters if provided
         if start_date:
@@ -87,17 +83,14 @@ async def get_financial_summary(
         
         # Initialize grouping dictionaries
         by_category = defaultdict(float)
-        by_account = defaultdict(float)
         
         # Process each transaction
         for transaction in transactions:
             amount = float(transaction.get("amount", 0))
             category = transaction.get("categories", {})
-            account = transaction.get("accounts", {})
             
             category_type = category.get("type", "").lower() if category else ""
             category_name = category.get("name", "Unknown Category") if category else "Unknown Category"
-            account_name = account.get("name", "Unknown Account") if account else "Unknown Account"
             
             # Sum by category type (expenses, savings, and investments are negative)
             if category_type == "income":
@@ -111,9 +104,6 @@ async def get_financial_summary(
             
             # Group by category name
             by_category[category_name] += amount
-            
-            # Group by account name
-            by_account[account_name] += amount
         
         # Calculate profit and net cash flow
         # Convert total_expense to positive for display (abs of negative sum)
@@ -137,7 +127,6 @@ async def get_financial_summary(
         
         # Round grouped values
         by_category = {k: round(v, 2) for k, v in by_category.items()}
-        by_account = {k: round(v, 2) for k, v in by_account.items()}
         
         summary_data = {
             "total_income": total_income,
@@ -147,7 +136,6 @@ async def get_financial_summary(
             "profit": profit,
             "net_cash_flow": net_cash_flow,
             "by_category": dict(by_category),
-            "by_account": dict(by_account)
         }
         
         return {"data": summary_data}

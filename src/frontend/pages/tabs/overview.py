@@ -1,5 +1,7 @@
-from dash import html
+from dash import html, Input, Output, State, callback, dash_table
+import dash_bootstrap_components as dbc
 from utils.theme import COLORS, CARD_STYLE
+from helper.requests.overview_request import get_overview
 
 def create_overview_tab():
     """Create the overview tab content"""
@@ -12,9 +14,218 @@ def create_overview_tab():
         'minHeight': '400px'
     }
     
-    return html.Div([
-        html.H1("Dashboard Overview", style={
-            'color': COLORS['text_primary'],
-        }),
-        # Add your overview content here
-    ], style=content_card_style)
+    return html.Div(
+        id='overview-tab-content',
+        style=content_card_style,
+        children=[
+            html.H2("Financial Overview", style={
+                'color': COLORS['text_primary'],
+                'marginBottom': '20px'
+            }),
+            
+            # Key Metrics Cards Row
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Total Income", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-income", children="Loading...", style={'color': '#28a745', 'margin': '0'})
+                        ])
+                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #28a745'})
+                ], width=3),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Total Expenses", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-expenses", children="Loading...", style={'color': '#dc3545', 'margin': '0'})
+                        ])
+                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #dc3545'})
+                ], width=3),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Total Savings", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-savings", children="Loading...", style={'color': '#17a2b8', 'margin': '0'})
+                        ])
+                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #17a2b8'})
+                ], width=3),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Total Investments", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-investments", children="Loading...", style={'color': '#6f42c1', 'margin': '0'})
+                        ])
+                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6f42c1'})
+                ], width=3),
+            ], className="mb-4"),
+            
+            # Secondary Metrics Cards Row
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Profit/Loss", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-profit", children="Loading...", style={'margin': '0'})
+                        ])
+                    ], id="profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'})
+                ], width=6),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Cash Flow", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H3(id="overview-cashflow", children="Loading...", style={'margin': '0'})
+                        ])
+                    ], id="cashflow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'})
+                ], width=6),
+            ], className="mb-4"),
+            
+            # Category Breakdown Table
+            dbc.Card([
+                dbc.CardHeader([
+                    html.H4("Category Breakdown", className="mb-0", style={'color': COLORS['text_primary']})
+                ]),
+                dbc.CardBody([
+                    html.Div(id="overview-category-table", children="Loading...")
+                ])
+            ], style={'backgroundColor': COLORS['background_secondary']})
+        ]
+    )
+
+
+@callback(
+    [Output('overview-income', 'children'),
+     Output('overview-expenses', 'children'),
+     Output('overview-savings', 'children'),
+     Output('overview-investments', 'children'),
+     Output('overview-profit', 'children'),
+     Output('overview-profit', 'style'),
+     Output('profit-card', 'style'),
+     Output('overview-cashflow', 'children'),
+     Output('overview-cashflow', 'style'),
+     Output('cashflow-card', 'style'),
+     Output('overview-category-table', 'children')],
+    [Input('dashboard-tabs', 'value')],
+    [State('token-store', 'data')]
+)
+def update_overview_content(current_tab, token_store):
+    # Only update if overview tab is currently selected
+    if current_tab != 'overview':
+        return (
+            "Loading...", "Loading...", "Loading...", "Loading...", "Loading...", {'margin': '0'}, 
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'},
+            "Loading...", {'margin': '0'},
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'},
+            "Loading..."
+        )
+    
+    if not token_store or not token_store.get('access_token'):
+        return (
+            "No data", "No data", "No data", "No data", "No data", {'margin': '0'}, 
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'},
+            "No data", {'margin': '0'},
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #6c757d'},
+            "No data available"
+        )
+    
+    try:
+        data = get_overview(token_store['access_token'])
+        
+        if not data or 'data' not in data:
+            raise ValueError("Invalid data format")
+            
+        overview_data = data['data']
+        
+        # Format currency values
+        def format_currency(value):
+            if value is None:
+                return "$0.00"
+            return f"${value:,.2f}"
+        
+        # Get values with defaults
+        income = overview_data.get('total_income', 0)
+        expenses = overview_data.get('total_expense', 0)
+        profit = overview_data.get('profit', 0)
+        cashflow = overview_data.get('net_cash_flow', 0)
+        savings = overview_data.get('total_saving', 0)
+        investments = overview_data.get('total_investment', 0)
+        by_category = overview_data.get('by_category', {})
+        
+        # Style for profit/loss
+        profit_color = '#28a745' if profit >= 0 else '#dc3545'
+        profit_border_color = '#28a745' if profit >= 0 else '#dc3545'
+        profit_style = {'color': profit_color, 'margin': '0'}
+        profit_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {profit_border_color}'}
+        
+        # Style for cash flow
+        cashflow_color = '#28a745' if cashflow >= 0 else '#dc3545'
+        cashflow_border_color = '#28a745' if cashflow >= 0 else '#dc3545'
+        cashflow_style = {'color': cashflow_color, 'margin': '0'}
+        cashflow_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {cashflow_border_color}'}
+        
+        # Create category breakdown table
+        if by_category:
+            category_data = []
+            for category, amount in by_category.items():
+                category_data.append({
+                    'Category': category,
+                    'Amount': format_currency(amount),
+                    'Type': 'Income' if amount > 0 else 'Expense'
+                })
+            
+            category_table = dash_table.DataTable(
+                data=category_data,
+                columns=[
+                    {'name': 'Category', 'id': 'Category'},
+                    {'name': 'Amount', 'id': 'Amount'},
+                    {'name': 'Type', 'id': 'Type'}
+                ],
+                style_cell={
+                    'textAlign': 'left',
+                    'backgroundColor': COLORS['background_secondary'],
+                    'color': COLORS['text_primary'],
+                    'border': f'1px solid {COLORS["text_secondary"]}',
+                    'padding': '10px'
+                },
+                style_header={
+                    'backgroundColor': COLORS['text_secondary'],
+                    'color': COLORS['background_primary'],
+                    'fontWeight': 'bold'
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': 'Amount', 'filter_query': '{Type} = Income'},
+                        'color': '#28a745'
+                    },
+                    {
+                        'if': {'column_id': 'Amount', 'filter_query': '{Type} = Expense'},
+                        'color': '#dc3545'
+                    }
+                ]
+            )
+        else:
+            category_table = html.P("No category data available", style={'color': COLORS['text_secondary']})
+        
+        return (
+            format_currency(income),      # income
+            format_currency(expenses),    # expenses
+            format_currency(savings),     # savings
+            format_currency(investments), # investments
+            format_currency(profit),      # profit
+            profit_style,                 # profit style
+            profit_card_style,           # profit card style
+            format_currency(cashflow),    # cashflow
+            cashflow_style,              # cashflow style
+            cashflow_card_style,         # cashflow card style
+            category_table               # category table
+        )
+        
+    except Exception as e:
+        print(f"Error fetching overview data: {e}")
+        error_msg = f"Error: {str(e)}"
+        return (
+            error_msg, error_msg, error_msg, error_msg, error_msg, {'margin': '0'}, 
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #dc3545'},
+            error_msg, {'margin': '0'},
+            {'backgroundColor': COLORS['background_secondary'], 'border': '1px solid #dc3545'},
+            error_msg
+        )

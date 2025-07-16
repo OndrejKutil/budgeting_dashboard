@@ -20,12 +20,8 @@ FRONTEND_HOST = os.getenv("FRONTEND_HOST")
 FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE")
 BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_HOST = os.getenv("BACKEND_HOST")
-BACKEND_PORT = os.getenv("BACKEND_PORT")
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
 
-if BACKEND_URL is None:
-    BACKEND_URL = f"http://{BACKEND_HOST}:{BACKEND_PORT}"
 
 # =============================================================================
 # APP INITIALIZATION
@@ -69,9 +65,13 @@ if DEVELOPMENT_MODE == 'True':
         }
     ),
     
-    # Store profile data (preloaded after login)
     dcc.Store(
         id='profile-store',
+        data={}
+    ),
+
+    dcc.Store(
+        id='overview-store',
         data={}
     ),
 
@@ -111,6 +111,11 @@ else:
         # Store profile data (preloaded after login)
         dcc.Store(
             id='profile-store',
+            data={}
+        ),
+
+        dcc.Store(
+            id='overview-store',
             data={}
         ),
 

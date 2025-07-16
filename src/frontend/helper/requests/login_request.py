@@ -13,10 +13,7 @@ def login_request(email: str, password: str) -> dict:
     if not email or not password:
         raise ValueError("Email and password must be provided")
     
-    if not BACKEND_URL:
-        url = f"http://{BACKEND_HOST}:{BACKEND_PORT}/login/login"
-    else:
-        url = f"{BACKEND_URL}/login/login"
+    url = f"{BACKEND_URL}/login/login"
 
     headers = {
         "X-API-KEY": API_KEY,
