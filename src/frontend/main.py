@@ -5,8 +5,10 @@ from utils.theme import APP_STYLE
 from pages.login import create_login_layout
 from pages.dashboard import create_dashboard_layout
 from helper.auth_helpers import is_user_authenticated
+from helper.requests.refresh_request import refresh_token
 from dotenv import load_dotenv
 import os
+import requests
 
 # =============================================================================
 # Basic Configuration
@@ -17,6 +19,13 @@ load_dotenv()
 FRONTEND_HOST = os.getenv("FRONTEND_HOST")
 FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE")
+BACKEND_URL = os.getenv("BACKEND_URL")
+BACKEND_HOST = os.getenv("BACKEND_HOST")
+BACKEND_PORT = os.getenv("BACKEND_PORT")
+BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
+
+if BACKEND_URL is None:
+    BACKEND_URL = f"http://{BACKEND_HOST}:{BACKEND_PORT}"
 
 # =============================================================================
 # APP INITIALIZATION
@@ -38,6 +47,7 @@ app.title = "Budget Dashboard"
 
 if DEVELOPMENT_MODE == 'True':
     ACCESS_TOKEN = os.getenv("DEBUG_ACCESS_TOKEN")
+    REFRESH_TOKEN = os.getenv("DEBUG_REFRESH_TOKEN")
 
     app.layout = html.Div([
     
@@ -52,11 +62,17 @@ if DEVELOPMENT_MODE == 'True':
         id='token-store',
         data={
             'access_token': ACCESS_TOKEN,
-            'refresh_token': '',
+            'refresh_token': REFRESH_TOKEN,
             'email': 'user@example.com',
             'user': None,
             'session': None
         }
+    ),
+    
+    # Store profile data (preloaded after login)
+    dcc.Store(
+        id='profile-store',
+        data={}
     ),
 
     dcc.Interval(
@@ -90,6 +106,12 @@ else:
                 'user': None,
                 'session': None
             }
+        ),
+        
+        # Store profile data (preloaded after login)
+        dcc.Store(
+            id='profile-store',
+            data={}
         ),
 
         # Token refresh interval - checks every 45 minutes (disabled in production until logged in)
@@ -186,14 +208,14 @@ def refresh_token_periodically(n_intervals, token_data):
     if not token_data or not token_data.get('refresh_token'):
         return dash.no_update
     
-    # Check if token is close to expiring (implement your token expiry logic here)
     # For now, just refresh every time the interval triggers
     try:
-        # Here you would call your backend to refresh the token
-        # response = requests.post('your-backend/refresh', json={'refresh_token': auth_data['refresh_token']})
-        # new_token = response.json()['access_token']
-        
-        # For now, just return the same data (placeholder)
+        data = refresh_token(token_data['refresh_token'])
+        token_data['access_token'] = data.get('access_token', token_data['access_token'])
+        token_data['refresh_token'] = data.get('refresh_token', token_data['refresh_token'])
+        token_data['user'] = data.get('user', token_data['user'])
+        token_data['session'] = data.get('session', token_data['session'])
+
         return token_data
 
     except Exception as e:

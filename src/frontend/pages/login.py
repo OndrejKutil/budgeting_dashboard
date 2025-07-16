@@ -7,6 +7,7 @@ import dash
 from dash import html, dcc, Input, Output, callback, State
 import dash_bootstrap_components as dbc
 from helper.requests.login_request import login_request
+from helper.requests.profile_request import request_profile_data
 import json
 
 def create_login_layout():
@@ -184,3 +185,26 @@ def handle_login(n_clicks, email, password, current_auth_data, current_token_dat
 def hide_alert_on_input(email, password):
     """Hide error alert when user starts typing"""
     return False
+
+
+# Callback to preload profile data after successful login
+@callback(
+    Output('profile-store', 'data'),
+    Input('auth-store', 'data'),
+    State('token-store', 'data'),
+    prevent_initial_call=True
+)
+def preload_profile_data(auth_data, token_data):
+    """Preload profile data immediately after successful login"""
+    
+    if auth_data and auth_data.get('logged') and token_data and token_data.get('access_token'):
+        try:
+            # Get profile data from API
+            profile_data = request_profile_data(token_data['access_token'])
+            if profile_data and not profile_data.get('error'):
+                return profile_data
+        except Exception as e:
+            print(f"Error preloading profile data: {e}")
+    
+    # Return empty data if login failed or no token
+    return {}
