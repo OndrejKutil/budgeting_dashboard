@@ -4,12 +4,12 @@ from utils.theme import COLORS, CARD_STYLE
 def create_transactions_tab():
     """Create the transactions tab content"""
     
-    content_card_style = {
-        **CARD_STYLE,
-        'backgroundColor': COLORS['background_secondary'],
+    content_style = {
+        'backgroundColor': COLORS['background_primary'],
+        'padding': '24px',
         'margin': '0',
-        'borderRadius': '8px',
-        'minHeight': '400px'
+        'minHeight': '100%',
+        'width': '100%'
     }
     
     return html.Div([
@@ -17,4 +17,4 @@ def create_transactions_tab():
             'color': COLORS['text_primary'],
         }),
         # Add your transactions content here
-    ], style=content_card_style)
+    ], style=content_style)

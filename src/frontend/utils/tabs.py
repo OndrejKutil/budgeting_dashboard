@@ -1,3 +1,7 @@
+# ==========================================================================
+# Enum for tab names used in the budgeting dashboard application.
+# ==========================================================================
+
 from enum import Enum
 
 class Tab(Enum):

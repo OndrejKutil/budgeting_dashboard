@@ -26,6 +26,13 @@ COLORS = {
     'accent_danger': '#ed4245',           # Error red
     'accent_warning': '#faa61a',          # Warning orange
     
+    # Financial card colors
+    'income_color': '#28a745',            # Green for income/positive values
+    'expense_color': '#dc3545',           # Red for expenses/negative values
+    'savings_color': '#17a2b8',           # Teal for savings
+    'investment_color': '#6f42c1',        # Purple for investments
+    'neutral_color': '#6c757d',           # Gray for neutral/default values
+    
     # Input and interactive elements
     'input_background': '#40444b',        # Input field background
     'input_border': '#72767d',            # Input border
@@ -159,4 +166,57 @@ SUCCESS_STYLE = {
     'textAlign': 'center',
     'marginTop': '12px',
     'fontSize': '14px',
+}
+
+# =============================================================================
+# NAVIGATION BAR STYLES
+# =============================================================================
+
+NAVIGATION_BAR_STYLE = {
+    'backgroundColor': COLORS['background_secondary'],
+    'padding': '0',
+    'margin': '0',
+    'width': '100%'
+}
+
+NAV_LIST_STYLE = {
+    'display': 'flex',
+    'listStyle': 'none',
+    'margin': '0',
+    'padding': '0 24px',
+    'alignItems': 'center',
+    'height': '60px'
+}
+
+NAV_BUTTON_STYLE = {
+    'backgroundColor': 'transparent',
+    'border': 'none',
+    'color': COLORS['text_secondary'],
+    'padding': '12px 20px',
+    'margin': '0 4px',
+    'borderRadius': '6px',
+    'fontSize': '16px',
+    'fontWeight': '500',
+    'cursor': 'pointer',
+    'fontFamily': 'inherit',
+    'outline': 'none'
+}
+
+NAV_BUTTON_ACTIVE_STYLE = {
+    **NAV_BUTTON_STYLE,
+    'color': COLORS['text_primary']
+}
+
+LOGOUT_BUTTON_STYLE = {
+    'backgroundColor': 'transparent',
+    'border': 'none',
+    'color': COLORS['accent_danger'],
+    'padding': '12px 20px',
+    'margin': '0 4px',
+    'borderRadius': '6px',
+    'fontSize': '16px',
+    'fontWeight': '500',
+    'cursor': 'pointer',
+    'fontFamily': 'inherit',
+    'outline': 'none'
 }

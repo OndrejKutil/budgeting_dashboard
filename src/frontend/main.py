@@ -41,6 +41,9 @@ app.title = "Budget Dashboard"
 # MAIN APP LAYOUT
 # =============================================================================
 
+
+# If in development mode, use debug tokens for testing
+# This is useful for local development without needing to log in every time
 if DEVELOPMENT_MODE == 'True':
     ACCESS_TOKEN = os.getenv("DEBUG_ACCESS_TOKEN")
     REFRESH_TOKEN = os.getenv("DEBUG_REFRESH_TOKEN")
@@ -50,10 +53,11 @@ if DEVELOPMENT_MODE == 'True':
     # Store authentication data
     dcc.Store(
         id='auth-store',
-        data={
-            'logged': True
-        }
+        data={'logged': True},
+        storage_type='session'
     ),
+
+    # Store authentication tokens and user data
     dcc.Store(
         id='token-store',
         data={
@@ -62,19 +66,32 @@ if DEVELOPMENT_MODE == 'True':
             'email': 'user@example.com',
             'user': None,
             'session': None
-        }
+        },
+        storage_type='session'
     ),
     
+    # Store profile data (preloaded after login)
     dcc.Store(
         id='profile-store',
-        data={}
+        data={},
+        storage_type='session'
     ),
 
+    # Store overview data (preloaded after login)
     dcc.Store(
         id='overview-store',
-        data={}
+        data={},
+        storage_type='session'
     ),
 
+    # Store for navigation state
+    dcc.Store(
+        id='navigation-store',
+        data={'active_tab': 'overview'},
+        storage_type='session'
+    ),
+
+    # Token refresh interval - checks every 45 minutes
     dcc.Interval(
         id='token-refresh-interval',
         interval=45*60*1000,  # 45 minutes in milliseconds
@@ -88,15 +105,17 @@ if DEVELOPMENT_MODE == 'True':
     ], style=APP_STYLE)
     
 else:
+    # Production mode layout
     app.layout = html.Div([
         
         # Store authentication data
         dcc.Store(
             id='auth-store',
-            data={
-                'logged': False
-            }
+            data={'logged': False},
+            storage_type='session'
         ),
+
+        # Store authentication tokens and user data
         dcc.Store(
             id='token-store',
             data={
@@ -105,26 +124,38 @@ else:
                 'email': '',
                 'user': None,
                 'session': None
-            }
+            },
+            storage_type='session'
         ),
         
         # Store profile data (preloaded after login)
         dcc.Store(
             id='profile-store',
-            data={}
+            data={},
+            storage_type='session'
         ),
 
+        # Store overview data (preloaded after login)
         dcc.Store(
             id='overview-store',
-            data={}
+            data={},
+            storage_type='session'
         ),
 
-        # Token refresh interval - checks every 45 minutes (disabled in production until logged in)
+        # Store for navigation state
+        dcc.Store(
+            id='navigation-store',
+            data={'active_tab': 'overview'},
+            storage_type='session'
+        ),
+
+        # Token refresh interval - checks every 45 minutes 
+        # (disabled in production until logged in)
         dcc.Interval(
             id='token-refresh-interval',
             interval=45*60*1000,  # 45 minutes in milliseconds
             n_intervals=0,
-            disabled=True  # Disabled until user logs in
+            disabled=True
         ),
         
         # Main content area
@@ -202,6 +233,7 @@ def handle_logout(n_clicks):
 # =============================================================================
 
 @app.callback(
+    Output('auth-store', 'data', allow_duplicate=True),
     Output('token-store', 'data', allow_duplicate=True),
     Input('token-refresh-interval', 'n_intervals'),
     prevent_initial_call=True
@@ -213,9 +245,11 @@ def refresh_token_periodically(n_intervals, token_data):
     if not token_data or not token_data.get('refresh_token'):
         return dash.no_update
     
-    # For now, just refresh every time the interval triggers
+    # Attempt to refresh the token
     try:
         data = refresh_token(token_data['refresh_token'])
+
+        # Update token data with new values
         token_data['access_token'] = data.get('access_token', token_data['access_token'])
         token_data['refresh_token'] = data.get('refresh_token', token_data['refresh_token'])
         token_data['user'] = data.get('user', token_data['user'])
@@ -232,15 +266,16 @@ def refresh_token_periodically(n_intervals, token_data):
             'refresh_token': '',
             'user': None,
             'session': None
-        }
+        }, {'logged': False}
 
 
 # =============================================================================
 # RUN THE APPLICATION
 # =============================================================================
 
+# Import navigation callback after app is created
+# This ensures the app is fully initialized before importing components that depend on it
+from pages.dashboard import *
+
 if __name__ == "__main__":
-    # Run the app in debug mode for development
-    print(f"Running app on http://{FRONTEND_HOST}:{FRONTEND_PORT}")
-    print(f"Development mode: {DEVELOPMENT_MODE}")
     app.run(debug=DEVELOPMENT_MODE, host=FRONTEND_HOST, port=FRONTEND_PORT)

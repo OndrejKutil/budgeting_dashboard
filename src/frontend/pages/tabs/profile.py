@@ -8,12 +8,12 @@ from helper.requests.profile_request import request_profile_data
 def create_profile_tab():
     """Create the profile tab content"""
     
-    content_card_style = {
-        **CARD_STYLE,
-        'backgroundColor': COLORS['background_secondary'],
+    content_style = {
+        'backgroundColor': COLORS['background_primary'],
+        'padding': '24px',
         'margin': '0',
-        'borderRadius': '8px',
-        'minHeight': '400px'
+        'minHeight': '100%',
+        'width': '100%'
     }
     
     return html.Div([
@@ -22,12 +22,7 @@ def create_profile_tab():
                 'color': COLORS['text_primary'],
                 'margin': '0',
                 'flex': '1'
-            }),
-            html.Button(
-                "Logout", 
-                id="logout-button", 
-                className="btn btn-danger"
-            )
+            })
         ], style={
             'display': 'flex',
             'justifyContent': 'space-between',
@@ -163,7 +158,7 @@ def create_profile_tab():
                 ])
             ], style={'backgroundColor': COLORS['background_secondary']})
         ])
-    ], style=content_card_style)
+    ], style=content_style)
 
 
 
@@ -180,12 +175,13 @@ def create_profile_tab():
      Output("profile-updated", "children"),
      Output("profile-signin", "children"),
      Output("profile-email-confirmed", "children")],
-    [Input('dashboard-tabs', 'value')],
+    [Input('navigation-store', 'data')],
     [State('token-store', 'data')]
 )
-def update_profile_content(current_tab, token_store):
+def update_profile_content(nav_data, token_store):
 
     # Only update if profile tab is currently selected
+    current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'profile':
         return (["Loading..."] * 11)  # Return loading for all fields
 
@@ -194,10 +190,7 @@ def update_profile_content(current_tab, token_store):
         return (["No data"] * 11)
 
     try:
-        # Fetch profile data using the token
-        print("Fetching profile data...")
         response = request_profile_data(token_store['access_token'])
-        print(f"Profile data: {response}")
         
         if not response or 'data' not in response:
             raise ValueError("Invalid profile data format")

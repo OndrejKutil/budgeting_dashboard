@@ -4,14 +4,14 @@
 # Login page component with authentication form
 
 import dash
-from dash import html, dcc, Input, Output, callback, State
+from dash import html, Input, Output, callback, State
 import dash_bootstrap_components as dbc
 from helper.requests.login_request import login_request
 from helper.requests.profile_request import request_profile_data
 import json
 
 def create_login_layout():
-    """Create the login page layout"""
+    """Main static layout for the login page"""
     
     return dbc.Container([
         dbc.Row([

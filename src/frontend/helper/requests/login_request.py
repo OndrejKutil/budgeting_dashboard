@@ -43,6 +43,7 @@ def login_request(email: str, password: str) -> dict:
             }
         
     except Exception as e:
+        print(f"Error during login request: {e}")
         raise ConnectionError(f"Failed to connect to the backend: {str(e)}")
 
 

@@ -25,14 +25,15 @@ def request_profile_data(access_token: str) -> dict:
         'Authorization': f"Bearer {access_token}"
     }
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
 
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Failed to fetch profile data: {response.status_code} - {response.text}")
-    
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to fetch profile data: {response.status_code} - {response.text}")
 
-
-    
+    except Exception as e:
+        print(f"Error fetching profile data: {e}")
+        raise Exception(f"Error fetching profile data: {str(e)}")
 
