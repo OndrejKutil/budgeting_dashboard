@@ -3,8 +3,8 @@
 # =============================================================================
 # Main dashboard page that displays user information
 
-from dash import html, dcc, Input, Output, callback, ALL, State, callback_context
-from utils.theme import COLORS, NAV_BUTTON_STYLE, NAV_BUTTON_ACTIVE_STYLE, LOGOUT_BUTTON_STYLE
+from dash import html, Input, Output, callback, ALL, State, callback_context
+from utils.theme import COLORS, NAV_BUTTON_STYLE, NAV_BUTTON_ACTIVE_STYLE
 from utils.tabs import Tab
 from components.navigation import create_navigation_bar, create_logout_button
 from pages.tabs.overview import create_overview_tab
@@ -12,6 +12,7 @@ from pages.tabs.monthly_view import create_monthly_view_tab
 from pages.tabs.yearly_view import create_yearly_view_tab
 from pages.tabs.transactions import create_transactions_tab
 from pages.tabs.profile import create_profile_tab
+import json
 
 def create_dashboard_layout():
     """Create the main dashboard layout with navigation bar interface"""
@@ -77,7 +78,7 @@ def update_navigation_content(n_clicks_list, nav_data_input, nav_data_state):
     # Check if a navigation button was clicked
     if 'nav-button' in trigger_id:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        button_index = eval(button_id)['index']  # Extract the tab index
+        button_index = json.loads(button_id)['index']  # Extract the tab index
         
         # Update navigation state
         new_nav_data = {'active_tab': button_index}

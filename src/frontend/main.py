@@ -2,13 +2,12 @@ import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
 from utils.theme import APP_STYLE
-from pages.login import create_login_layout
+from pages.login_page import create_login_layout
 from pages.dashboard import create_dashboard_layout
 from helper.auth_helpers import is_user_authenticated
 from helper.requests.refresh_request import refresh_token
 from dotenv import load_dotenv
 import os
-import requests
 
 # =============================================================================
 # Basic Configuration
