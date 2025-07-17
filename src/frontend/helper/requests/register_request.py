@@ -25,32 +25,20 @@ def register_user(email: str, password: str, full_name: str = None) -> Dict[str,
     
     try:
         # Prepare registration data
-        registration_data = {
-            "email": email,
-            "password": password
-        }
-        
-        if full_name:
-            registration_data["full_name"] = full_name
-        
-        # Set up headers
         headers = {
-            "Content-Type": "application/json"
+            "X-Login": f"{email}&&&{password}&&&{full_name or 'None'}",
         }
+        
         
         if BACKEND_API_KEY:
             headers["X-API-Key"] = BACKEND_API_KEY
         
         registration_url = f"{BACKEND_URL}/auth/register"
-        # TODO: ==============================================
-        # TODO: Replace with your actual registration endpoint
-        # TODO: ==============================================
         
         # Make the registration request
         response = requests.post(
             registration_url,
             headers=headers,
-            json=registration_data,
             timeout=10  # 10 second timeout
         )
         

@@ -73,9 +73,19 @@ async def register(
     try:
         supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
 
+        if register.get("full_name") == "None":
+            full_name = None
+        else:
+            full_name = register.get("full_name")
+
         response = supabase_client.auth.sign_up(
-            {"email": register["email"],
-            "password": register["password"]}
+            {"email": register.get("email"),
+            "password": register.get("password"),
+            "options": {
+                "data": {
+                    "full_name": full_name
+                }
+            }}
         )
 
         return {

@@ -12,12 +12,12 @@ def login_request(email: str, password: str) -> dict:
 
     if not email or not password:
         raise ValueError("Email and password must be provided")
-    
-    url = f"{BACKEND_URL}/login/login"
+
+    url = f"{BACKEND_URL}/auth/login"
 
     headers = {
         "X-API-KEY": API_KEY,
-        "X-Login": f"{email}&&&{password}"
+        "X-Login": f"{email}&&&{password}&&&None",
     }
     try:
         response = requests.post(url, headers=headers)

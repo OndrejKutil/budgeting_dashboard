@@ -79,7 +79,7 @@ app.include_router(categories.router, prefix="/categories", tags=["Categories"])
 app.include_router(accounts.router, prefix="/accounts", tags=["Accounts"])
 app.include_router(profile.router, prefix="/profile", tags=["Profile"])
 app.include_router(summary.router, prefix="/summary", tags=["Summary"])
-app.include_router(login.router, prefix="/login", tags=["Login"])
+app.include_router(login.router, prefix="/auth", tags=["Authentication"])
 
 
 

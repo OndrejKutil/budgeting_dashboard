@@ -195,16 +195,17 @@ async def login_key_auth(login_key: str = Depends(login_header)) -> str:
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Login key is missing",
         )
-    
-    email, password = login_key.split("&&&")
+
+    email, password, full_name = login_key.split("&&&")
 
     if not email or not password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Invalid Login key format. Expected 'email:password'."
+            detail="Invalid Login key format. Expected 'email&&&password&&&full_name'."
         )
     
     return {
         "email": email,
-        "password": password
+        "password": password,
+        "full_name": full_name if full_name else None
     }
