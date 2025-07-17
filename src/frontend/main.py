@@ -29,8 +29,7 @@ BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
 # Initialize the Dash app with Bootstrap theme
 app = dash.Dash(
     __name__, 
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True
+    external_stylesheets=[dbc.themes.BOOTSTRAP]
 )
 
 
@@ -53,7 +52,7 @@ if DEVELOPMENT_MODE == 'True':
     dcc.Store(
         id='auth-store',
         data={'logged': True},
-        storage_type='session'
+        storage_type='local'
     ),
 
     # Store authentication tokens and user data
@@ -66,28 +65,28 @@ if DEVELOPMENT_MODE == 'True':
             'user': None,
             'session': None
         },
-        storage_type='session'
+        storage_type='local'
     ),
     
     # Store profile data (preloaded after login)
     dcc.Store(
         id='profile-store',
         data={},
-        storage_type='session'
+        storage_type='local'
     ),
 
     # Store overview data (preloaded after login)
     dcc.Store(
         id='overview-store',
         data={},
-        storage_type='session'
+        storage_type='local'
     ),
 
     # Store for navigation state
     dcc.Store(
         id='navigation-store',
         data={'active_tab': 'overview'},
-        storage_type='session'
+        storage_type='local'
     ),
 
     # Token refresh interval - checks every 45 minutes
@@ -111,7 +110,7 @@ else:
         dcc.Store(
             id='auth-store',
             data={'logged': False},
-            storage_type='session'
+            storage_type='local'
         ),
 
         # Store authentication tokens and user data
@@ -124,28 +123,28 @@ else:
                 'user': None,
                 'session': None
             },
-            storage_type='session'
+            storage_type='local'
         ),
         
         # Store profile data (preloaded after login)
         dcc.Store(
             id='profile-store',
             data={},
-            storage_type='session'
+            storage_type='local'
         ),
 
         # Store overview data (preloaded after login)
         dcc.Store(
             id='overview-store',
             data={},
-            storage_type='session'
+            storage_type='local'
         ),
 
         # Store for navigation state
         dcc.Store(
             id='navigation-store',
             data={'active_tab': 'overview'},
-            storage_type='session'
+            storage_type='local'
         ),
 
         # Token refresh interval - checks every 45 minutes 
@@ -235,6 +234,7 @@ def handle_logout(n_clicks):
     Output('auth-store', 'data', allow_duplicate=True),
     Output('token-store', 'data', allow_duplicate=True),
     Input('token-refresh-interval', 'n_intervals'),
+    State('token-store', 'data'),
     prevent_initial_call=True
 )
 def refresh_token_periodically(n_intervals, token_data):
@@ -254,27 +254,24 @@ def refresh_token_periodically(n_intervals, token_data):
         token_data['user'] = data.get('user', token_data['user'])
         token_data['session'] = data.get('session', token_data['session'])
 
-        return token_data
+        # Return auth data (unchanged) and updated token data
+        return dash.no_update, token_data
 
     except Exception as e:
         # If refresh fails, log out the user
         print(f"Token refresh failed: {e}")
-        return {
+        return {'logged': False}, {
             'email': '',
             'access_token': '',
             'refresh_token': '',
             'user': None,
             'session': None
-        }, {'logged': False}
+        }
 
 
 # =============================================================================
 # RUN THE APPLICATION
 # =============================================================================
-
-# Import navigation callback after app is created
-# This ensures the app is fully initialized before importing components that depend on it
-from pages.dashboard import *
 
 if __name__ == "__main__":
     app.run(debug=DEVELOPMENT_MODE, host=FRONTEND_HOST, port=FRONTEND_PORT)
