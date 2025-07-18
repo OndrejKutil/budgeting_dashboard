@@ -2,6 +2,9 @@ from dash import html, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
 from utils.theme import COLORS, CARD_STYLE
 from helper.requests.overview_request import get_overview
+from utils.currency import CURRENCY_SYMBOLS
+
+
 
 def create_overview_tab():
     """Create the overview tab content"""
@@ -105,9 +108,10 @@ def create_overview_tab():
      Output('cashflow-card', 'style'),
      Output('overview-category-table', 'children')],
     [Input('navigation-store', 'data')],
-    [State('token-store', 'data')]
+    [State('token-store', 'data'), 
+     State('user-settings-store', 'data')]
 )
-def update_overview_content(nav_data, token_store):
+def update_overview_content(nav_data, token_store, user_settings):
     # Only update if overview tab is currently selected
     current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'overview':
@@ -128,19 +132,21 @@ def update_overview_content(nav_data, token_store):
             "No data available"
         )
     
+    # Get selected currency and symbol
+    currency = (user_settings or {}).get('currency', 'CZK')
+    symbol = CURRENCY_SYMBOLS.get(currency, currency)
+
     try:
         data = get_overview(token_store['access_token'])
-        
         if not data or 'data' not in data:
             raise ValueError("Invalid data format")
-            
         overview_data = data['data']
         
         # Format currency values
         def format_currency(value):
             if value is None:
-                return "$0.00"
-            return f"${value:,.2f}"
+                return f"{symbol} 0.00"
+            return f"{symbol} {value:,.2f}"
         
         # Get values with defaults
         income = overview_data.get('total_income', 0)

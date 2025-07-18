@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 from utils.theme import APP_STYLE
 from pages.login_page import create_login_layout
 from pages.dashboard import create_dashboard_layout
-from helper.auth_helpers import is_user_authenticated
+from helper.auth.auth_helpers import is_user_authenticated
 from helper.requests.refresh_request import refresh_token
 from dotenv import load_dotenv
 import os
@@ -31,7 +31,6 @@ app = dash.Dash(
     __name__, 
     external_stylesheets=[dbc.themes.BOOTSTRAP]
 )
-
 
 app.title = "Budget Dashboard"
 
@@ -86,6 +85,13 @@ if DEVELOPMENT_MODE == 'True':
     dcc.Store(
         id='navigation-store',
         data={'active_tab': 'overview'},
+        storage_type='local'
+    ),
+
+    # Store for user settings
+    dcc.Store(
+        id='user-settings-store',
+        data={},
         storage_type='local'
     ),
 
@@ -144,6 +150,13 @@ else:
         dcc.Store(
             id='navigation-store',
             data={'active_tab': 'overview'},
+            storage_type='local'
+        ),
+
+        # Store for user settings
+        dcc.Store(
+            id='user-settings-store',
+            data={},
             storage_type='local'
         ),
 
@@ -223,7 +236,6 @@ def handle_logout(n_clicks):
     
     
     return dash.no_update
-
 
 
 # =============================================================================

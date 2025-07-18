@@ -3,7 +3,7 @@ import dash
 from utils.theme import COLORS, CARD_STYLE, INPUT_STYLE, BUTTON_PRIMARY_STYLE, HEADING_STYLE, SUBHEADING_STYLE, APP_STYLE
 import dash_bootstrap_components as dbc
 
-from helper.validation import validate_registration_form
+from helper.auth.validation import validate_registration_form
 from helper.requests.register_request import register_user
 
 

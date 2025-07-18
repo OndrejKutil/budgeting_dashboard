@@ -3,6 +3,7 @@ import dash_bootstrap_components as dbc
 from utils.theme import COLORS, CARD_STYLE
 from datetime import datetime
 from helper.requests.profile_request import request_profile_data
+from utils.currency import CURRENCY_OPTIONS
 
 
 def create_profile_tab():
@@ -54,12 +55,25 @@ def create_profile_tab():
                             html.P(id="profile-phone", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                         dbc.Col([
-                            # Empty column for layout balance
-                        ], width=6),
+                            html.Strong("Currency:", style={'color': COLORS['text_primary']}),
+                            dcc.Dropdown(
+                                id="profile-currency",
+                                options=[
+                                    {"label": html.Span(label), "value": value}
+                                    for label, value in CURRENCY_OPTIONS
+                                ],
+                                value="CZK",
+                                clearable=False,
+                                style={
+                                    'width': '220px',
+                                    "paddingLeft": '10px',
+                                },
+                                className="profile-currency-dropdown"
+                            )
+                        ], width=3, style={'display': 'flex', 'alignItems': 'center'}),
                     ])
                 ])
             ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
-            
             # Account Status Card
             dbc.Card([
                 dbc.CardHeader([
@@ -238,3 +252,17 @@ def update_profile_content(nav_data, token_store):
         print(f"Error fetching profile data: {e}")
         error_msg = f"Error: {str(e)}"
         return ([error_msg] * 11)
+
+# Callback to update user settings store with selected currency
+@callback(
+    Output('user-settings-store', 'data'),
+    Input('profile-currency', 'value'),
+    State('user-settings-store', 'data'),
+    prevent_initial_call=True
+)
+def update_user_settings_currency(selected_currency, current_settings):
+    """Update the user settings store with the selected currency from the profile tab."""
+    if not current_settings:
+        current_settings = {}
+    current_settings['currency'] = selected_currency
+    return current_settings
