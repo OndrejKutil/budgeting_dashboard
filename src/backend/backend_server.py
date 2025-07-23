@@ -1,6 +1,5 @@
 # general
 import os
-from dotenv import load_dotenv
 
 # fastapi
 import fastapi
@@ -9,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # logging
 import logging
+
+# import env configuration
+import backend.helper.environment as env
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -50,13 +52,11 @@ logger.info(f"Log file path: {log_file_path}")
 # Import auth functions after logging is configured
 from auth.auth import api_key_auth, admin_key_auth
 
-# Load environment variables
-load_dotenv()
-PROJECT_URL = os.getenv("PROJECT_URL")
-ANON_KEY = os.getenv("ANON_KEY")
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
-BACKEND_HOST = os.getenv("BACKEND_HOST")
-BACKEND_PORT = int(os.getenv("BACKEND_PORT"))
+BACKEND_HOST: str = env.BACKEND_HOST
+BACKEND_PORT: int = int(env.BACKEND_PORT)
 
 # Initialize FastAPI app
 app = FastAPI()

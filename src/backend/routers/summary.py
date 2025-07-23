@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 from auth.auth import api_key_auth, get_current_user
 
 # Load environment variables
-import os
-from dotenv import load_dotenv
+import backend.helper.environment as env
 
 # logging
 import logging
@@ -16,7 +15,7 @@ import logging
 from supabase import create_client, Client
 
 # helper
-from helper.columns import TRANSACTIONS_COLUMNS, CATEGORIES_COLUMNS, ACCOUNTS_COLUMNS
+from helper.columns import TRANSACTIONS_COLUMNS
 from schemas.endpoint_schemas import SummaryResponse
 
 # other
@@ -29,9 +28,8 @@ from collections import defaultdict
 # ================================================================================================
 
 # Load environment variables
-load_dotenv()
-PROJECT_URL: str = os.getenv("PROJECT_URL")
-ANON_KEY: str = os.getenv("ANON_KEY")
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

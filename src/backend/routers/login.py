@@ -1,13 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 # auth dependencies
-from auth.auth import api_key_auth, get_current_user, login_key_auth
+from auth.auth import api_key_auth, login_key_auth
 
 # Load environment variables
-import os
-from dotenv import load_dotenv
+import backend.helper.environment as env
 
 # logging
 import logging
@@ -15,17 +14,14 @@ import logging
 # supabase client
 from supabase import create_client, Client
 
-# other
-from typing import Optional
-
 # ================================================================================================
 #                                   Settings and Configuration
 # ================================================================================================
 
 # Load environment variables
-load_dotenv()
-PROJECT_URL: str = os.getenv("PROJECT_URL")
-ANON_KEY: str = os.getenv("ANON_KEY")
+
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

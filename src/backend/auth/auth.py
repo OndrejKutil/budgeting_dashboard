@@ -11,6 +11,8 @@ from jwt import PyJWTError
 
 import pprint
 
+import backend.helper.environment as env
+
 # ================================================================================================
 #                                   Settings and Configuration
 # ================================================================================================
@@ -22,13 +24,13 @@ logger = logging.getLogger(__name__)
 # This will be configured by backend_server.py
 logger.setLevel(logging.INFO)
 
-# Load environment variables
-load_dotenv()
-API_KEY: str = os.getenv("API_KEY")
-PROJECT_URL: str = os.getenv("PROJECT_URL")
-ANON_KEY: str = os.getenv("ANON_KEY")
-SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET")
-ADMIN_KEY: str = os.getenv("ADMIN_KEY")
+
+
+API_KEY: str = env.API_KEY
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
+SUPABASE_JWT_SECRET: str = env.SUPABASE_JWT_SECRET
+ADMIN_KEY: str = env.ADMIN_KEY
 
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="API Key")
 supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False, scheme_name="Refresh Token")

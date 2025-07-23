@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends, status
 from auth.auth import api_key_auth, get_supabase_refresh_token
 
 # Load environment variables
-import os
-from dotenv import load_dotenv
+import backend.helper.environment as env
 
 # logging
 import logging
@@ -24,9 +23,9 @@ from schemas.endpoint_schemas import RefreshTokenResponse
 # ================================================================================================
 
 # Load environment variables
-load_dotenv()
-PROJECT_URL: str = os.getenv("PROJECT_URL")
-ANON_KEY: str = os.getenv("ANON_KEY")
+
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
