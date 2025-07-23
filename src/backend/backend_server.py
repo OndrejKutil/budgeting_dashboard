@@ -40,7 +40,7 @@ console_handler.setFormatter(formatter)
 
 # Configure root logger
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)  # Set to lowest level to capture everything
+root_logger.setLevel(logging.INFO)
 root_logger.addHandler(file_handler)
 root_logger.addHandler(console_handler)
 
@@ -58,16 +58,18 @@ ANON_KEY: str = env.ANON_KEY
 BACKEND_HOST: str = env.BACKEND_HOST
 BACKEND_PORT: int = int(env.BACKEND_PORT)
 
+FRONTEND_URL: str = env.FRONTEND_URL
+
 # Initialize FastAPI app
 app = FastAPI()
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=["X-API-KEY", "X-Admin-Key", "Authorization", "X-Login", "X-Refresh-Token"],
 )
 
 # Include routers
