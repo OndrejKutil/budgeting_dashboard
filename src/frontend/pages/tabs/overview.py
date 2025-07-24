@@ -230,9 +230,9 @@ def update_overview_content(nav_data, token_store, user_settings):
         print(f"Error fetching overview data: {e}")
         error_msg = f"Error: {str(e)}"
         return (
-            error_msg, error_msg, error_msg, error_msg, error_msg, {'margin': '0'}, 
+            "--- Error ---", "--- Error ---", "--- Error ---", "--- Error ---", "--- Error ---", {'margin': '0'},
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_danger']}"},
-            error_msg, {'margin': '0'},
+            "--- Error ---", {'margin': '0'},
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_danger']}"},
-            error_msg
+            "--- Error ---"
         )

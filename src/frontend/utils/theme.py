@@ -9,39 +9,39 @@
 # =============================================================================
 
 COLORS = {
-    # Primary background colors (Discord-like dark theme)
-    'background_primary': '#36393f',      # Main background (Discord dark)
-    'background_secondary': '#2f3136',    # Secondary background (Discord darker)
-    'background_tertiary': '#292b2f',     # Tertiary background (Discord darkest)
-    
+    # Primary background colors (Light theme)
+    'background_primary': '#f4f6fa',      # Main background (light gray)
+    'background_secondary': '#ffffff',    # Secondary background (white)
+    'background_tertiary': '#e9ecef',     # Tertiary background (lighter gray)
+
     # Text colors
-    'text_primary': '#ffffff',            # Primary text (Discord white)
-    'text_secondary': '#b9bbbe',          # Secondary text (Discord gray)
-    'text_muted': '#72767d',              # Muted text (Discord light gray)
-    
+    'text_primary': '#23272f',            # Primary text (dark gray)
+    'text_secondary': '#495057',          # Secondary text (medium gray)
+    'text_muted': '#adb5bd',              # Muted text (light gray)
+
     # Accent colors
-    'accent_primary': '#5865f2',          # Discord blurple
-    'accent_secondary': '#4752c4',        # Darker blurple for hover
-    'accent_success': '#3ba55c',          # Success green
-    'accent_danger': '#ed4245',           # Error red
-    'accent_warning': '#faa61a',          # Warning orange
-    
+    'accent_primary': '#1976d2',          # Blue (primary accent)
+    'accent_secondary': '#1565c0',        # Darker blue for hover
+    'accent_success': '#388e3c',          # Success green
+    'accent_danger': '#d32f2f',           # Error red
+    'accent_warning': '#ffa000',          # Warning orange
+
     # Financial card colors
-    'income_color': '#28a745',            # Green for income/positive values
-    'expense_color': '#dc3545',           # Red for expenses/negative values
-    'savings_color': '#17a2b8',           # Teal for savings
-    'investment_color': '#6f42c1',        # Purple for investments
-    'neutral_color': '#6c757d',           # Gray for neutral/default values
-    
+    'income_color': '#43a047',            # Green for income/positive values
+    'expense_color': '#e53935',           # Red for expenses/negative values
+    'savings_color': '#00bcd4',           # Teal for savings
+    'investment_color': '#8e24aa',        # Purple for investments
+    'neutral_color': '#bdbdbd',           # Gray for neutral/default values
+
     # Input and interactive elements
-    'input_background': '#40444b',        # Input field background
-    'input_border': '#72767d',            # Input border
-    'input_border_focus': '#5865f2',      # Input border when focused
-    
+    'input_background': '#ffffff',        # Input field background
+    'input_border': '#ced4da',            # Input border
+    'input_border_focus': '#1976d2',      # Input border when focused
+
     # Card and container elements
-    'card_background': '#2f3136',         # Card background
-    'card_border': '#42464d',             # Card border
-    'card_shadow': 'rgba(0, 0, 0, 0.3)',  # Card shadow
+    'card_background': '#ffffff',         # Card background
+    'card_border': '#e0e0e0',             # Card border
+    'card_shadow': 'rgba(60, 60, 60, 0.08)',  # Card shadow
 }
 
 # =============================================================================
@@ -52,7 +52,7 @@ COLORS = {
 CARD_STYLE = {
     'backgroundColor': COLORS['card_background'],
     'border': f"1px solid {COLORS['card_border']}",
-    'borderRadius': '8px',
+    'borderRadius': '10px',
     'padding': '24px',
     'boxShadow': f"0 2px 10px {COLORS['card_shadow']}",
     'margin': '16px',
@@ -62,12 +62,13 @@ CARD_STYLE = {
 INPUT_STYLE = {
     'backgroundColor': COLORS['input_background'],
     'border': f"1px solid {COLORS['input_border']}",
-    'borderRadius': '4px',
+    'borderRadius': '6px',
     'color': COLORS['text_primary'],
     'padding': '12px',
     'fontSize': '16px',
     'width': '100%',
     'marginBottom': '12px',
+    'boxSizing': 'border-box',
 }
 
 # Primary button styling
@@ -75,7 +76,7 @@ BUTTON_PRIMARY_STYLE = {
     'backgroundColor': COLORS['accent_primary'],
     'color': 'white',
     'border': 'none',
-    'borderRadius': '4px',
+    'borderRadius': '6px',
     'padding': '12px 24px',
     'fontSize': '16px',
     'fontWeight': 'bold',
@@ -83,6 +84,7 @@ BUTTON_PRIMARY_STYLE = {
     'width': '100%',
     'marginTop': '8px',
     'transition': 'background-color 0.2s ease',
+    'boxShadow': '0 1px 4px rgba(25, 118, 210, 0.08)',
 }
 
 # Secondary button styling
@@ -90,7 +92,7 @@ BUTTON_SECONDARY_STYLE = {
     'backgroundColor': 'transparent',
     'color': COLORS['accent_primary'],
     'border': f"1px solid {COLORS['accent_primary']}",
-    'borderRadius': '4px',
+    'borderRadius': '6px',
     'padding': '12px 24px',
     'fontSize': '16px',
     'fontWeight': 'bold',
@@ -98,6 +100,7 @@ BUTTON_SECONDARY_STYLE = {
     'width': '100%',
     'marginTop': '8px',
     'transition': 'all 0.2s ease',
+    'boxShadow': '0 1px 4px rgba(25, 118, 210, 0.04)',
 }
 
 # =============================================================================
@@ -204,7 +207,7 @@ NAV_BUTTON_STYLE = {
 
 NAV_BUTTON_ACTIVE_STYLE = {
     **NAV_BUTTON_STYLE,
-    'color': COLORS['text_primary']
+    'color': COLORS['accent_primary']
 }
 
 LOGOUT_BUTTON_STYLE = {

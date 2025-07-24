@@ -250,8 +250,7 @@ def update_profile_content(nav_data, token_store):
         
     except Exception as e:
         print(f"Error fetching profile data: {e}")
-        error_msg = f"Error: {str(e)}"
-        return ([error_msg] * 11)
+        return (["--- Error ---"] * 11)
 
 # Callback to update user settings store with selected currency
 @callback(
