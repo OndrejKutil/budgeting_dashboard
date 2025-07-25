@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 # import env configuration
-import backend.helper.environment as env
+import helper.environment as env
 
 # ================================================================================================
 #                                   Settings and Configuration

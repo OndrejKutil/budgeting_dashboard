@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, status
 from auth.auth import api_key_auth, login_key_auth
 
 # Load environment variables
-import backend.helper.environment as env
+import helper.environment as env
 
 # logging
 import logging
