@@ -11,7 +11,7 @@ from jwt import PyJWTError
 
 import pprint
 
-import backend.helper.environment as env
+import helper.environment as env
 
 # ================================================================================================
 #                                   Settings and Configuration
