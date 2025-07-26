@@ -209,17 +209,3 @@ NAV_BUTTON_ACTIVE_STYLE = {
     **NAV_BUTTON_STYLE,
     'color': COLORS['accent_primary']
 }
-
-LOGOUT_BUTTON_STYLE = {
-    'backgroundColor': 'transparent',
-    'border': 'none',
-    'color': COLORS['accent_danger'],
-    'padding': '12px 20px',
-    'margin': '0 4px',
-    'borderRadius': '6px',
-    'fontSize': '16px',
-    'fontWeight': '500',
-    'cursor': 'pointer',
-    'fontFamily': 'inherit',
-    'outline': 'none'
-}

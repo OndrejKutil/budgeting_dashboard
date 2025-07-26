@@ -13,6 +13,13 @@ from pages.tabs.yearly_view import create_yearly_view_tab
 from pages.tabs.transactions import create_transactions_tab
 from pages.tabs.profile import create_profile_tab
 import json
+import dash
+from components.add_transaction_modal import create_add_transaction_modal
+from helper.requests.transactions_request import (
+    get_accounts,
+    get_categories,
+    create_transaction,
+)
 
 def create_dashboard_layout():
     """Create the main dashboard layout with navigation bar interface"""
@@ -40,6 +47,9 @@ def create_dashboard_layout():
             'height': '60px'
         }),
         
+        # Modal for adding transactions
+        create_add_transaction_modal(),
+
         # Content area
         html.Div(
             id="nav-content",
@@ -128,3 +138,62 @@ def get_tab_content(selected_tab):
         
     # Default fallback
     return html.Div("Select a tab to view content")
+
+
+
+@callback(
+    Output("add-transaction-modal", "is_open"),
+    Output("transaction-account-dropdown", "options"),
+    Output("transaction-category-dropdown", "options"),
+    Input("open-add-transaction-button", "n_clicks"),
+    Input("close-add-transaction-modal", "n_clicks"),
+    State("add-transaction-modal", "is_open"),
+    State("token-store", "data"),
+    prevent_initial_call=True,
+)
+def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
+    ctx = callback_context
+    if ctx.triggered_id == "open-add-transaction-button" and token_data:
+        accounts = get_accounts(token_data.get("access_token", ""))
+        categories = get_categories(token_data.get("access_token", ""))
+        acc_options = [
+            {"label": a.get("name"), "value": a.get("id")}
+            for a in accounts.get("data", [])
+        ]
+        cat_options = [
+            {"label": c.get("name"), "value": c.get("id")}
+            for c in categories.get("data", [])
+        ]
+        return True, acc_options, cat_options
+
+    if ctx.triggered_id == "close-add-transaction-modal":
+        return False, dash.no_update, dash.no_update
+
+    return is_open, dash.no_update, dash.no_update
+
+
+@callback(
+    Output("add-transaction-modal", "is_open", allow_duplicate=True),
+    Input("submit-transaction-button", "n_clicks"),
+    State("transaction-account-dropdown", "value"),
+    State("transaction-category-dropdown", "value"),
+    State("transaction-amount-input", "value"),
+    State("transaction-date-input", "date"),
+    State("transaction-notes-input", "value"),
+    State("transaction-transfer-checkbox", "value"),
+    State("token-store", "data"),
+    prevent_initial_call=True,
+)
+def submit_transaction(_, account_id, category_id, amount, date, notes, is_transfer, token_data):
+    if not token_data:
+        return "Not authenticated", True, dash.no_update
+
+    payload = {
+        "account_id": account_id,
+        "category_id": category_id,
+        "amount": amount,
+        "date": date,
+        "notes": notes,
+        "is_transfer": bool(is_transfer),
+    }
+    result = create_transaction(token_data.get("access_token", ""), payload)

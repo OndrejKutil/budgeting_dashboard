@@ -9,8 +9,6 @@ from utils.theme import (
     NAVIGATION_BAR_STYLE, 
     NAV_LIST_STYLE, 
     NAV_BUTTON_STYLE,
-    NAV_BUTTON_ACTIVE_STYLE,
-    LOGOUT_BUTTON_STYLE
 )
 
 def create_navigation_bar(active_tab='overview'):
@@ -30,6 +28,16 @@ def create_navigation_bar(active_tab='overview'):
                 )
             ], style={'margin': '0'})
         )
+
+    nav_items.append(
+        html.Li([
+            html.Button(
+                "Add Transaction",
+                id="open-add-transaction-button",
+                className='nav-button'
+            )
+        ], style={'margin': '0'})
+    )
     
     return html.Nav([
         html.Ul(nav_items, style=NAV_LIST_STYLE, id='nav-list')
@@ -42,7 +50,6 @@ def create_logout_button():
         html.Button(
             "Logout",
             id="logout-button",
-            style=LOGOUT_BUTTON_STYLE,
             className='logout-button'
         )
     ], style={

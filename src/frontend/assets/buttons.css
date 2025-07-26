@@ -1,0 +1,39 @@
+.logout-button {
+    background-color: #d32f2f; /* accent_danger */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 20px;
+    margin: 0 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+    box-shadow: 0 1px 4px rgba(211, 47, 47, 0.08);
+    transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+    background-color: #b71c1c; /* darker red for hover */
+}
+
+.nav-button {
+    background-color: #1976d2; /* accent_primary */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 20px;
+    margin: 0 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+    box-shadow: 0 1px 4px rgba(25, 118, 210, 0.08);
+    transition: background-color 0.2s ease;
+}
+
+.nav-button:hover {
+    background-color: #1565c0; /* accent_secondary */
+}
