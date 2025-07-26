@@ -1,7 +1,7 @@
 import dash
 from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
-from utils.theme import APP_STYLE
+
 from pages.login_page import create_login_layout
 from pages.dashboard import create_dashboard_layout
 from helper.auth.auth_helpers import is_user_authenticated
@@ -104,8 +104,8 @@ if DEVELOPMENT_MODE == 'True':
     
     # Main content area
     html.Div(id='main-content')
-    
-    ], style=APP_STYLE)
+
+    ], className='app-container')
     
 else:
     # Production mode layout
@@ -170,8 +170,8 @@ else:
         
         # Main content area
         html.Div(id='main-content')
-        
-    ], style=APP_STYLE)
+
+    ], className='app-container')
 
 # =============================================================================
 # MAIN ROUTING CALLBACK

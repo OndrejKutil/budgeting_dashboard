@@ -1,5 +1,4 @@
 from dash import html, Input, Output, callback, State
-from utils.theme import COLORS, CARD_STYLE, INPUT_STYLE, BUTTON_PRIMARY_STYLE, HEADING_STYLE, SUBHEADING_STYLE, APP_STYLE
 import dash_bootstrap_components as dbc
 import dash
 import json
@@ -21,15 +20,8 @@ def create_login_tab_layout():
                     html.Div([
                         # Header
                         html.Div([
-                            html.H3("Budget Dashboard", style={
-                                **HEADING_STYLE,
-                                'marginBottom': '8px',
-                                'fontSize': '32px'
-                            }),
-                            html.P("Welcome Back!", style={
-                                **SUBHEADING_STYLE,
-                                'marginBottom': '32px'
-                            })
+                            html.H3("Budget Dashboard", className="heading heading-large"),
+                            html.P("Welcome Back!", className="subheading subheading-large")
                         ]),
                         
                         # Error Alert (initially hidden)
@@ -38,72 +30,47 @@ def create_login_tab_layout():
                             is_open=False,
                             dismissable=True,
                             color="danger",
-                            style={
-                                'marginBottom': '20px',
-                                'backgroundColor': COLORS['accent_danger'],
-                                'border': 'none',
-                                'color': 'white'
-                            }
+                            className="error-alert"
                         ),
                         
                         # Login Form
                         html.Div([
                             # Email Input
                             html.Div([
-                                html.Label("Email Address", 
-                                    htmlFor="email-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Email Address",
+                                    htmlFor="email-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="email-input",
                                     type="email",
                                     placeholder="Enter your email",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '16px'
-                                    }
+                                    className="form-input mb-16"
                                 ),
                             ]),
                             
                             # Password Input
                             html.Div([
-                                html.Label("Password", 
-                                    htmlFor="password-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Password",
+                                    htmlFor="password-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="password-input",
                                     type="password",
                                     placeholder="Enter your password",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '8px'
-                                    }
+                                    className="form-input mb-8"
                                 ),
                                 # Forgot Password Link
                                 html.Div([
-                                    html.Button("Forgot your password?", 
+                                    html.Button(
+                                        "Forgot your password?",
                                         id="forgot-password-link",
-                                        style={
-                                            'color': COLORS['accent_primary'],
-                                            'textDecoration': 'none',
-                                            'fontSize': '14px',
-                                            'cursor': 'pointer',
-                                            'background': 'none',
-                                            'border': 'none'
-                                        }
+                                        className="link-button"
                                     )
-                                ], style={'textAlign': 'right', 'marginBottom': '24px'})
+                                ], className="forgot-link-container")
                             ]),
                             
                             # Login Button
@@ -112,45 +79,28 @@ def create_login_tab_layout():
                                     "Sign In",
                                     id="login-button",
                                     type="button",
-                                    style={
-                                        **BUTTON_PRIMARY_STYLE,
-                                        'marginBottom': '20px'
-                                    }
+                                    className="btn-primary mb-20"
                                 ),
                             ]),
                             
                             # Sign up Link
                             html.Div([
-                                html.Span("Don't have an account? ", 
-                                    style={
-                                        'color': COLORS['text_secondary'],
-                                        'fontSize': '14px'
-                                    }
+                                html.Span(
+                                    "Don't have an account? ",
+                                    className="subheading"
                                 ),
-                                html.Button("Sign up",  
+                                html.Button(
+                                    "Sign up",
                                     id="signup-link",
-                                    style={
-                                        'color': COLORS['accent_primary'],
-                                        'textDecoration': 'none',
-                                        'fontWeight': 'bold',
-                                        'fontSize': '14px',
-                                        'cursor': 'pointer',
-                                        'background': 'none',
-                                        'border': 'none'
-                                    }
+                                    className="link-button"
                                 )
-                            ], style={'textAlign': 'center'})
+                            ], className="text-center")
                         ])
-                    ], style={
-                        **CARD_STYLE,
-                        'width': '400px',
-                        'maxWidth': '90vw',
-                        'margin': '0 auto'
-                    })
+                    ], className="card login-card")
                 ], width=12)
-            ], justify="center", style={'minHeight': '100vh', 'display': 'flex', 'alignItems': 'center'})
-        ], fluid=True, style={'padding': '20px'})
-    ], style=APP_STYLE)
+            ], justify="center", className="centered-row")
+        ], fluid=True, className="padded-container")
+    ], className="app-container")
 
 
 # =============================================================================
