@@ -55,9 +55,6 @@ from auth.auth import api_key_auth, admin_key_auth
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
 
-BACKEND_HOST: str = env.BACKEND_HOST
-BACKEND_PORT: int = int(env.BACKEND_PORT)
-
 FRONTEND_URL: str = env.FRONTEND_URL
 
 # Initialize FastAPI app
