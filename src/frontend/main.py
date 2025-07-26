@@ -99,7 +99,7 @@ if DEVELOPMENT_MODE == 'True':
         id='token-refresh-interval',
         interval=45*60*1000,  # 45 minutes in milliseconds
         n_intervals=0,
-        disabled=False
+        disabled=True
     ),
     
     # Main content area
@@ -165,7 +165,7 @@ else:
             id='token-refresh-interval',
             interval=45*60*1000,  # 45 minutes in milliseconds
             n_intervals=0,
-            disabled=True
+            disabled=False
         ),
         
         # Main content area

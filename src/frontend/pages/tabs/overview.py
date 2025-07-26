@@ -1,6 +1,6 @@
-from dash import html, Input, Output, State, callback, dash_table
+from dash import html, Input, Output, State, callback, dash_table, dcc
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, CARD_STYLE
+from utils.theme import COLORS, LOADING_STYLE
 from helper.requests.overview_request import get_overview
 from utils.currency import CURRENCY_SYMBOLS
 
@@ -17,7 +17,7 @@ def create_overview_tab():
         'width': '100%'
     }
     
-    return html.Div(
+    content = html.Div(
         id='overview-tab-content',
         style=content_style,
         children=[
@@ -32,7 +32,9 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Total Income", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-income", children="Loading...", style={'color': COLORS['income_color'], 'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-income", children='', style={'color': COLORS['income_color'], 'margin': '0'})
+                            , style={**LOADING_STYLE, 'marginTop': '-1.5rem'})
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['income_color']}"})
                 ], width=3),
@@ -40,7 +42,9 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Total Expenses", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-expenses", children="Loading...", style={'color': COLORS['expense_color'], 'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-expenses", children='', style={'color': COLORS['expense_color'], 'margin': '0'})
+                            , style={**LOADING_STYLE, 'marginTop': '-1.5rem'})
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['expense_color']}"})
                 ], width=3),
@@ -48,7 +52,9 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Total Savings", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-savings", children="Loading...", style={'color': COLORS['savings_color'], 'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-savings", children='', style={'color': COLORS['savings_color'], 'margin': '0'})
+                            , style={**LOADING_STYLE, 'marginTop': '-1.5rem'})
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['savings_color']}"})
                 ], width=3),
@@ -56,7 +62,9 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Total Investments", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-investments", children="Loading...", style={'color': COLORS['investment_color'], 'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-investments", children='', style={'color': COLORS['investment_color'], 'margin': '0'})
+                            , style={**LOADING_STYLE, 'marginTop': '-1.5rem'})
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['investment_color']}"})
                 ], width=3),
@@ -68,7 +76,10 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Profit/Loss", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-profit", children="Loading...", style={'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-profit", children='', style={'margin': '0'}),
+                                style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
+                            )
                         ])
                     ], id="profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
                 ], width=6),
@@ -76,7 +87,10 @@ def create_overview_tab():
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Cash Flow", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            html.H3(id="overview-cashflow", children="Loading...", style={'margin': '0'})
+                            dcc.Loading(
+                                html.H3(id="overview-cashflow", children='', style={'margin': '0'}),
+                                style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
+                            )
                         ])
                     ], id="cashflow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
                 ], width=6),
@@ -88,11 +102,13 @@ def create_overview_tab():
                     html.H4("Category Breakdown", className="mb-0", style={'color': COLORS['text_primary']})
                 ]),
                 dbc.CardBody([
-                    html.Div(id="overview-category-table", children="Loading...")
+                    html.Div(id="overview-category-table", children='')
                 ])
             ], style={'backgroundColor': COLORS['background_secondary']})
         ]
     )
+
+    return content
 
 
 @callback(
@@ -116,11 +132,11 @@ def update_overview_content(nav_data, token_store, user_settings):
     current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'overview':
         return (
-            "Loading...", "Loading...", "Loading...", "Loading...", "Loading...", {'margin': '0'}, 
+            '', '', '', '', '', {'margin': '0'}, 
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            "Loading...", {'margin': '0'},
+            '', {'margin': '0'},
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            "Loading..."
+            ''
         )
     
     if not token_store or not token_store.get('access_token'):
@@ -230,9 +246,9 @@ def update_overview_content(nav_data, token_store, user_settings):
         print(f"Error fetching overview data: {e}")
         error_msg = f"Error: {str(e)}"
         return (
-            "--- Error ---", "--- Error ---", "--- Error ---", "--- Error ---", "--- Error ---", {'margin': '0'},
+            "Error", "Error", "Error", "Error", "Error", {'margin': '0'},
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_danger']}"},
-            "--- Error ---", {'margin': '0'},
+            "Error", {'margin': '0'},
             {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_danger']}"},
-            "--- Error ---"
+            "Error"
         )

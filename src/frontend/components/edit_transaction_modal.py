@@ -7,7 +7,7 @@ from utils.theme import COLORS, INPUT_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECOND
 def create_edit_transaction_modal():
     """Modal dialog for editing or deleting a transaction."""
     today = datetime.date.today()
-    return dbc.Modal(
+    modal = dbc.Modal(
         [
             dcc.Store(id="edit-transaction-id"),
             dbc.ModalHeader(dbc.ModalTitle("Edit Transaction")),
@@ -44,4 +44,15 @@ def create_edit_transaction_modal():
         is_open=False,
         backdrop=True,
         size="lg",
+    )
+
+    return dcc.Loading(
+        modal,
+        type="default",
+        style={
+            'width': '100%',
+            'marginTop': '30rem',
+            'position': 'fixed',
+            'zIndex': 2000  # Ensure it's above modal backdrop
+        }
     )

@@ -1,6 +1,6 @@
 from dash import html, dcc, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, INPUT_STYLE
+from utils.theme import COLORS, LOADING_STYLE
 from helper.requests.transactions_request import (
     get_transactions,
     update_transaction as request_update_transaction,
@@ -12,7 +12,7 @@ from helper.requests.categories_request import get_categories
 import dash
 
 
-LIMIT = 100
+LIMIT = 50
 
 def _attach_names(items: list[dict], access_token: str) -> list[dict]:
     """Replace account_id and category_id in items with their names."""
@@ -65,7 +65,8 @@ def create_transactions_tab():
                 dbc.Col(dbc.Button('Next', id='transactions-next-btn', color='secondary'), width='auto'),
                 dbc.Col(html.Div(id='transactions-page-info', style={'alignSelf': 'center', 'marginLeft': '10px'}), width='auto')
             ], className='mb-3'),
-            dash_table.DataTable(
+            dcc.Loading(
+                dash_table.DataTable(
                 id='transactions-table',
                 data=[],
                 columns=[
@@ -91,7 +92,7 @@ def create_transactions_tab():
                     'fontWeight': 'bold'
                 },
                 page_action='none'
-            ),
+            ), style=LOADING_STYLE),
             create_edit_transaction_modal()
         ]
     )

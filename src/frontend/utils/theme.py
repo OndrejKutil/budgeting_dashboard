@@ -209,3 +209,10 @@ NAV_BUTTON_ACTIVE_STYLE = {
     **NAV_BUTTON_STYLE,
     'color': COLORS['accent_primary']
 }
+
+LOADING_STYLE = {
+    'width': '100%',
+    'marginTop': '45rem',
+    'position': 'fixed',
+    'zIndex': 2000
+}

@@ -15,12 +15,12 @@ from pages.tabs.profile import create_profile_tab
 import json
 import dash
 from components.add_transaction_modal import create_add_transaction_modal
-import datetime
 from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
     create_transaction,
 )
+import datetime
 
 def create_dashboard_layout():
     """Create the main dashboard layout with navigation bar interface"""

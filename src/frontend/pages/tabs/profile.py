@@ -1,6 +1,6 @@
 from dash import html, dcc, Input, State, Output, callback
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, CARD_STYLE
+from utils.theme import COLORS, CARD_STYLE, LOADING_STYLE
 from datetime import datetime
 from helper.requests.profile_request import request_profile_data
 from utils.currency import CURRENCY_OPTIONS
@@ -16,8 +16,8 @@ def create_profile_tab():
         'minHeight': '100%',
         'width': '100%'
     }
-    
-    return html.Div([
+
+    content = html.Div([
         html.Div([
             html.H1("Profile Settings", style={
                 'color': COLORS['text_primary'],
@@ -38,21 +38,22 @@ def create_profile_tab():
                 dbc.CardHeader([
                     html.H4("Basic Information", className="mb-0", style={'color': COLORS['text_primary']})
                 ]),
+                dcc.Loading(
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col([
                             html.Strong("Email:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-email", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-email", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                         dbc.Col([
                             html.Strong("Role:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-role", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-role", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                     ]),
                     dbc.Row([
                         dbc.Col([
                             html.Strong("Phone:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-phone", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-phone", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                         dbc.Col([
                             html.Strong("Currency:", style={'color': COLORS['text_primary']}),
@@ -72,25 +73,26 @@ def create_profile_tab():
                             )
                         ], width=3, style={'display': 'flex', 'alignItems': 'center'}),
                     ])
-                ])
+                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
             ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
             # Account Status Card
             dbc.Card([
                 dbc.CardHeader([
                     html.H4("Account Status", className="mb-0", style={'color': COLORS['text_primary']})
                 ]),
+                dcc.Loading(
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col([
                             html.Strong("Email Verified:", style={'color': COLORS['text_primary']}),
                             html.P(id="profile-email-verified", children=[
-                                dbc.Badge("Loading...", color="secondary", className="ms-2")
+                                dbc.Badge('', color="secondary", className="ms-2")
                             ], className="mb-2")
                         ], width=6),
                         dbc.Col([
                             html.Strong("Phone Verified:", style={'color': COLORS['text_primary']}),
                             html.P(id="profile-phone-verified", children=[
-                                dbc.Badge("Loading...", color="secondary", className="ms-2")
+                                dbc.Badge('', color="secondary", className="ms-2")
                             ], className="mb-2")
                         ], width=6),
                     ]),
@@ -98,15 +100,15 @@ def create_profile_tab():
                         dbc.Col([
                             html.Strong("Anonymous User:", style={'color': COLORS['text_primary']}),
                             html.P(id="profile-anonymous", children=[
-                                dbc.Badge("Loading...", color="secondary", className="ms-2")
+                                dbc.Badge('', color="secondary", className="ms-2")
                             ], className="mb-2")
                         ], width=6),
                         dbc.Col([
                             html.Strong("Provider:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-provider", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-provider", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                     ])
-                ])
+                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
             ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
             
             # Account Timeline Card
@@ -114,28 +116,29 @@ def create_profile_tab():
                 dbc.CardHeader([
                     html.H4("Account Timeline", className="mb-0", style={'color': COLORS['text_primary']})
                 ]),
+                dcc.Loading(
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col([
                             html.Strong("Account Created:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-created", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-created", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                         dbc.Col([
                             html.Strong("Last Updated:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-updated", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-updated", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                     ]),
                     dbc.Row([
                         dbc.Col([
                             html.Strong("Last Sign In:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-signin", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-signin", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                         dbc.Col([
                             html.Strong("Email Confirmed:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-email-confirmed", children="Loading...", className="mb-2", style={'color': COLORS['text_secondary']})
+                            html.P(id="profile-email-confirmed", children='', className="mb-2", style={'color': COLORS['text_secondary']})
                         ], width=6),
                     ])
-                ])
+                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
             ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
             
             # Account Actions Card
@@ -174,6 +177,7 @@ def create_profile_tab():
         ])
     ], style=content_style)
 
+    return content
 
 
 # Callbacks for profile tab interactions
@@ -197,7 +201,7 @@ def update_profile_content(nav_data, token_store):
     # Only update if profile tab is currently selected
     current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'profile':
-        return (["Loading..."] * 11)  # Return loading for all fields
+        return ([''] * 11)  # Return loading for all fields
 
     if not token_store or not token_store.get('access_token'):
         # If no token available, show no data message

@@ -7,7 +7,7 @@ from utils.theme import COLORS, INPUT_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECOND
 def create_add_transaction_modal():
     """Modal dialog with form for adding a transaction."""
     today = datetime.date.today()
-    return dbc.Modal(
+    modal = dbc.Modal(
         [
             dbc.ModalHeader(dbc.ModalTitle("Add Transaction")),
             dbc.ModalBody([
@@ -42,4 +42,15 @@ def create_add_transaction_modal():
         is_open=False,
         backdrop=True,
         size="lg"
+    )
+
+    return dcc.Loading(
+        modal,
+        type="default",
+        style={
+            'width': '100%',
+            'marginTop': '65rem',
+            'position': 'fixed',
+            'zIndex': 2000  # Ensure it's above modal backdrop
+        }
     )
