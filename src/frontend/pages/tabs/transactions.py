@@ -2,10 +2,42 @@ from dash import html, dcc, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
 from utils.theme import COLORS, INPUT_STYLE
 from helper.requests.transactions_request import get_transactions
+from helper.requests.accounts_request import get_accounts
+from helper.requests.categories_request import get_categories
 import dash
 
 
 LIMIT = 100
+
+def _attach_names(items: list[dict], access_token: str) -> list[dict]:
+    """Replace account_id and category_id in items with their names."""
+    try:
+        accounts_resp = get_accounts(access_token)
+        account_map = {
+            acc.get("id"): acc.get("name", acc.get("id"))
+            for acc in accounts_resp.get("data", [])
+        }
+    except Exception:
+        account_map = {}
+
+    try:
+        categories_resp = get_categories(access_token)
+        category_map = {
+            cat.get("id"): cat.get("name", cat.get("id"))
+            for cat in categories_resp.get("data", [])
+        }
+    except Exception:
+        category_map = {}
+
+    for item in items:
+        aid = item.get("account_id")
+        cid = item.get("category_id")
+        if aid in account_map:
+            item["account_id"] = account_map[aid]
+        if cid in category_map:
+            item["category_id"] = category_map[cid]
+
+    return items
 
 def create_transactions_tab():
     """Create the transactions tab content"""
@@ -24,22 +56,18 @@ def create_transactions_tab():
         children=[
             html.H2('Transactions', style={'color': COLORS['text_primary'], 'marginBottom': '20px'}),
             dcc.Store(id='transactions-offset-store', data={'offset': 0}),
-            dcc.Store(id='selected-transaction-store'),
             dbc.Row([
-                dbc.Col(dbc.Input(id='transaction-id-input', placeholder='Transaction ID', type='text', style=INPUT_STYLE), width=3),
-                dbc.Col(dbc.Button('View Transaction', id='view-transaction-btn', color='primary'), width='auto'),
                 dbc.Col(dbc.Button('Previous', id='transactions-prev-btn', color='secondary', className='me-2'), width='auto'),
                 dbc.Col(dbc.Button('Next', id='transactions-next-btn', color='secondary'), width='auto'),
                 dbc.Col(html.Div(id='transactions-page-info', style={'alignSelf': 'center', 'marginLeft': '10px'}), width='auto')
             ], className='mb-3'),
-            dbc.Alert(id='transaction-update-alert', is_open=False, color='success', className='mb-3'),
             dash_table.DataTable(
                 id='transactions-table',
                 data=[],
                 columns=[
                     {'name': 'id', 'id': 'id'},
-                    {'name': 'account_id', 'id': 'account_id'},
-                    {'name': 'category_id', 'id': 'category_id'},
+                    {'name': 'account', 'id': 'account_id'},
+                    {'name': 'category', 'id': 'category_id'},
                     {'name': 'amount', 'id': 'amount'},
                     {'name': 'date', 'id': 'date'},
                     {'name': 'notes', 'id': 'notes'},
@@ -58,14 +86,6 @@ def create_transactions_tab():
                     'fontWeight': 'bold'
                 },
                 page_action='none'
-            ),
-            html.Div(
-                id='update-section',
-                style={'display': 'none', 'marginTop': '20px'},
-                children=[
-                    dbc.Input(id='update-notes-input', placeholder='Notes', style=INPUT_STYLE),
-                    dbc.Button('Update Transaction', id='update-transaction-btn', color='success', className='mt-2')
-                ]
             )
         ]
     )
@@ -97,60 +117,27 @@ def next_page(n_clicks, data):
     return {'offset': offset}
 
 
-@callback(
-    Output('selected-transaction-store', 'data'),
-    Input('view-transaction-btn', 'n_clicks'),
-    State('transaction-id-input', 'value'),
-    State('token-store', 'data'),
-    prevent_initial_call=True
-)
-def load_transaction(n_clicks, transaction_id, token_store):
-    if n_clicks and transaction_id and token_store and token_store.get('access_token'):
-        try:
-            data = get_transactions(token_store['access_token'], transaction_id=str(transaction_id))
-            tx = data.get('data')
-            if tx:
-                return tx[0]
-        except Exception:
-            pass
-    return None
 
 
 @callback(
     [Output('transactions-table', 'data'),
-     Output('transactions-page-info', 'children'),
-     Output('update-section', 'style')],
+     Output('transactions-page-info', 'children')],
     [Input('navigation-store', 'data'),
-     Input('transactions-offset-store', 'data'),
-     Input('selected-transaction-store', 'data')],
+     Input('transactions-offset-store', 'data')],
     State('token-store', 'data')
 )
-def update_transactions(nav_data, offset_data, selected_tx, token_store):
+def update_transactions(nav_data, offset_data, token_store):
     if nav_data.get('active_tab') != 'transactions':
-        return [], '', {'display': 'none'}
+        return [], ''
     if not token_store or not token_store.get('access_token'):
-        return [], '', {'display': 'none'}
-
-    if selected_tx:
-        return [selected_tx], 'Viewing selected transaction', {'display': 'block'}
+        return [], ''
 
     offset = (offset_data or {}).get('offset', 0)
     try:
         data = get_transactions(token_store['access_token'], offset=offset, limit=LIMIT)
         items = data.get('data', [])
+        items = _attach_names(items, token_store['access_token'])
         info = f"Showing {offset + 1}-{offset + len(items)}"
-        return items, info, {'display': 'none'}
+        return items, info
     except Exception:
-        return [], 'Failed to load transactions', {'display': 'none'}
-
-
-@callback(
-    [Output('transaction-update-alert', 'children'),
-     Output('transaction-update-alert', 'is_open')],
-    Input('update-transaction-btn', 'n_clicks'),
-    prevent_initial_call=True
-)
-def update_transaction(n_clicks):
-    if n_clicks:
-        return 'Transaction updated successfully', True
-    return dash.no_update, False
+        return [], 'Failed to load transactions'
