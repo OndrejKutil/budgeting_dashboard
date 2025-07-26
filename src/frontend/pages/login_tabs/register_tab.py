@@ -1,6 +1,6 @@
 from dash import html, Input, Output, callback, State
 import dash
-from utils.theme import COLORS, CARD_STYLE, INPUT_STYLE, BUTTON_PRIMARY_STYLE, HEADING_STYLE, SUBHEADING_STYLE, APP_STYLE
+
 import dash_bootstrap_components as dbc
 
 from helper.auth.validation import validate_registration_form
@@ -24,15 +24,8 @@ def create_register_tab_layout():
                     html.Div([
                         # Header
                         html.Div([
-                            html.H3("Budget Dashboard", style={
-                                **HEADING_STYLE,
-                                'marginBottom': '8px',
-                                'fontSize': '32px'
-                            }),
-                            html.P("Create Your Account", style={
-                                **SUBHEADING_STYLE,
-                                'marginBottom': '32px'
-                            })
+                            html.H3("Budget Dashboard", className="heading heading-large"),
+                            html.P("Create Your Account", className="subheading subheading-large")
                         ]),
                         
                         # Error Alert (initially hidden)
@@ -41,12 +34,7 @@ def create_register_tab_layout():
                             is_open=False,
                             dismissable=True,
                             color="danger",
-                            style={
-                                'marginBottom': '20px',
-                                'backgroundColor': COLORS['accent_danger'],
-                                'border': 'none',
-                                'color': 'white'
-                            }
+                            className="error-alert"
                         ),
                         
                         # Success Alert (initially hidden)
@@ -55,205 +43,124 @@ def create_register_tab_layout():
                             is_open=False,
                             dismissable=True,
                             color="success",
-                            style={
-                                'marginBottom': '20px',
-                                'backgroundColor': COLORS['accent_primary'],
-                                'border': 'none',
-                                'color': 'white'
-                            }
+                            className="success-alert"
                         ),
                         
                         # Registration Form
                         html.Div([
                             # Email Input
                             html.Div([
-                                html.Label("Email Address", 
-                                    htmlFor="register-email-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Email Address",
+                                    htmlFor="register-email-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="register-email-input",
                                     type="email",
                                     placeholder="Enter your email",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '4px'
-                                    }
+                                    className="form-input mb-4"
                                 ),
                                 # Email validation message
                                 html.Div(
                                     id="email-validation-message",
-                                    style={
-                                        'color': COLORS['accent_danger'],
-                                        'fontSize': '12px',
-                                        'marginBottom': '16px',
-                                        'minHeight': '16px'
-                                    }
+                                    className="validation-message"
                                 ),
                             ]),
                             
                             # Full Name Input (Optional)
                             html.Div([
-                                html.Label("Full Name (Optional)", 
-                                    htmlFor="register-fullname-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Full Name (Optional)",
+                                    htmlFor="register-fullname-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="register-fullname-input",
                                     type="text",
                                     placeholder="Enter your full name",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '4px'
-                                    }
+                                    className="form-input mb-4"
                                 ),
                                 # Full name validation message
                                 html.Div(
                                     id="fullname-validation-message",
-                                    style={
-                                        'color': COLORS['accent_danger'],
-                                        'fontSize': '12px',
-                                        'marginBottom': '16px',
-                                        'minHeight': '16px'
-                                    }
+                                    className="validation-message"
                                 ),
                             ]),
                             
                             # Password Input
                             html.Div([
-                                html.Label("Password", 
-                                    htmlFor="register-password-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Password",
+                                    htmlFor="register-password-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="register-password-input",
                                     type="password",
                                     placeholder="Enter your password",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '4px'
-                                    }
+                                    className="form-input mb-4"
                                 ),
                                 # Password validation message
                                 html.Div(
                                     id="password-validation-message",
-                                    style={
-                                        'color': COLORS['accent_danger'],
-                                        'fontSize': '12px',
-                                        'marginBottom': '16px',
-                                        'minHeight': '16px'
-                                    }
+                                    className="validation-message"
                                 ),
                             ]),
                             
                             # Confirm Password Input
                             html.Div([
-                                html.Label("Confirm Password", 
-                                    htmlFor="register-confirm-password-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Confirm Password",
+                                    htmlFor="register-confirm-password-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="register-confirm-password-input",
                                     type="password",
                                     placeholder="Confirm your password",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '4px'
-                                    }
+                                    className="form-input mb-4"
                                 ),
                                 # Confirm password validation message
                                 html.Div(
                                     id="confirm-password-validation-message",
-                                    style={
-                                        'color': COLORS['accent_danger'],
-                                        'fontSize': '12px',
-                                        'marginBottom': '24px',
-                                        'minHeight': '16px'
-                                    }
+                                    className="validation-message mb-24"
                                 ),
                             ]),
                             
                             # Password Requirements Info
                             html.Div([
-                                html.P("Password Requirements:", style={
-                                    'color': COLORS['text_secondary'],
-                                    'fontSize': '12px',
-                                    'marginBottom': '4px',
-                                    'fontWeight': 'bold'
-                                }),
+                                html.P("Password Requirements:"),
                                 html.Ul([
-                                    html.Li("At least 8 characters", style={'fontSize': '11px', 'color': COLORS['text_secondary']}),
-                                    html.Li("At least 1 uppercase letter", style={'fontSize': '11px', 'color': COLORS['text_secondary']}),
-                                    html.Li("At least 1 lowercase letter", style={'fontSize': '11px', 'color': COLORS['text_secondary']}),
-                                    html.Li("At least 1 number", style={'fontSize': '11px', 'color': COLORS['text_secondary']})
-                                ], style={'paddingLeft': '20px', 'margin': '0'})
-                            ], style={'marginBottom': '24px'}),
+                                    html.Li("At least 8 characters"),
+                                    html.Li("At least 1 uppercase letter"),
+                                    html.Li("At least 1 lowercase letter"),
+                                    html.Li("At least 1 number")
+                                ])
+                            ], className="password-info"),
                             
                             # Terms and Privacy Policy Checkbox
                             html.Div([
                                 dbc.Checkbox(
                                     id="terms-checkbox",
                                     value=False,
-                                    style={'marginRight': '8px'}
+                                    className="mr-8"
                                 ),
                                 html.Span([
                                     "I agree to the ",
                                     html.Button(
                                         "Terms of Service",
                                         id="terms-of-service-link",
-                                        style={
-                                            'color': COLORS['accent_primary'],
-                                            'textDecoration': 'underline',
-                                            'fontSize': '14px',
-                                            'cursor': 'pointer',
-                                            'background': 'none',
-                                            'border': 'none',
-                                            'padding': '0'
-                                        }
+                                        className="link-button",
                                     ),
                                     " and ",
                                     html.Button(
                                         "Privacy Policy",
                                         id="privacy-policy-link",
-                                        style={
-                                            'color': COLORS['accent_primary'],
-                                            'textDecoration': 'underline',
-                                            'fontSize': '14px',
-                                            'cursor': 'pointer',
-                                            'background': 'none',
-                                            'border': 'none',
-                                            'padding': '0'
-                                        }
+                                        className="link-button",
                                     )
-                                ], style={
-                                    'color': COLORS['text_primary'],
-                                    'fontSize': '14px'
-                                })
-                            ], style={
-                                'display': 'flex',
-                                'alignItems': 'center',
-                                'marginBottom': '20px'
-                            }),
+                                ], className="subheading")
+                            ], className="terms-container"),
                             
                             # Register Button
                             html.Div([
@@ -261,45 +168,28 @@ def create_register_tab_layout():
                                     "Create Account",
                                     id="register-button",
                                     type="button",
-                                    style={
-                                        **BUTTON_PRIMARY_STYLE,
-                                        'marginBottom': '20px'
-                                    }
+                                    className="btn-primary mb-20"
                                 ),
                             ]),
                             
                             # Back to Login Link
                             html.Div([
-                                html.Span("Already have an account? ", 
-                                    style={
-                                        'color': COLORS['text_secondary'],
-                                        'fontSize': '14px'
-                                    }
+                                html.Span(
+                                    "Already have an account? ",
+                                    className="subheading"
                                 ),
-                                html.Button("Sign in",  
+                                html.Button(
+                                    "Sign in",
                                     id="back-to-login-link",
-                                    style={
-                                        'color': COLORS['accent_primary'],
-                                        'textDecoration': 'none',
-                                        'fontWeight': 'bold',
-                                        'fontSize': '14px',
-                                        'cursor': 'pointer',
-                                        'background': 'none',
-                                        'border': 'none'
-                                    }
+                                    className="link-button"
                                 )
-                            ], style={'textAlign': 'center'})
+                            ], className="text-center")
                         ])
-                    ], style={
-                        **CARD_STYLE,
-                        'width': '450px',
-                        'maxWidth': '90vw',
-                        'margin': '0 auto'
-                    })
+                    ], className="card register-card")
                 ], width=12)
-            ], justify="center", style={'minHeight': '100vh', 'display': 'flex', 'alignItems': 'center'})
-        ], fluid=True, style={'padding': '20px'})
-    ], style=APP_STYLE)
+            ], justify="center", className="centered-row")
+        ], fluid=True, className="padded-container")
+    ], className="app-container")
 
 
 # =============================================================================

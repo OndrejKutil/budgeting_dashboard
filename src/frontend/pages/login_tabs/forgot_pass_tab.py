@@ -1,5 +1,5 @@
 from dash import html, Input, Output, callback, State
-from utils.theme import COLORS, CARD_STYLE, INPUT_STYLE, BUTTON_PRIMARY_STYLE, HEADING_STYLE, SUBHEADING_STYLE, APP_STYLE
+
 import dash_bootstrap_components as dbc
 
 # =============================================================================
@@ -17,15 +17,8 @@ def create_forgot_password_tab_layout():
                     html.Div([
                         # Header
                         html.Div([
-                            html.H3("Reset Password", style={
-                                **HEADING_STYLE,
-                                'marginBottom': '8px',
-                                'fontSize': '32px'
-                            }),
-                            html.P("Enter your email address and we'll send you a link to reset your password.", style={
-                                **SUBHEADING_STYLE,
-                                'marginBottom': '32px'
-                            })
+                            html.H3("Reset Password", className="heading heading-large"),
+                            html.P("Enter your email address and we'll send you a link to reset your password.", className="subheading subheading-large")
                         ]),
                         
                         # Success/Error Alert (initially hidden)
@@ -34,35 +27,23 @@ def create_forgot_password_tab_layout():
                             is_open=False,
                             dismissable=True,
                             color="info",
-                            style={
-                                'marginBottom': '20px',
-                                'backgroundColor': COLORS['accent_primary'],
-                                'border': 'none',
-                                'color': 'white'
-                            }
+                            className="success-alert"
                         ),
                         
                         # Forgot Password Form
                         html.Div([
                             # Email Input
                             html.Div([
-                                html.Label("Email Address", 
-                                    htmlFor="forgot-password-email-input", 
-                                    style={
-                                        'color': COLORS['text_primary'],
-                                        'fontWeight': 'bold',
-                                        'marginBottom': '8px',
-                                        'display': 'block'
-                                    }
+                                html.Label(
+                                    "Email Address",
+                                    htmlFor="forgot-password-email-input",
+                                    className="form-label"
                                 ),
                                 dbc.Input(
                                     id="forgot-password-email-input",
                                     type="email",
                                     placeholder="Enter your email address",
-                                    style={
-                                        **INPUT_STYLE,
-                                        'marginBottom': '24px'
-                                    }
+                                    className="form-input mb-24"
                                 ),
                             ]),
                             
@@ -72,49 +53,29 @@ def create_forgot_password_tab_layout():
                                     "Send Reset Link",
                                     id="reset-password-button",
                                     type="button",
-                                    style={
-                                        **BUTTON_PRIMARY_STYLE,
-                                        'marginBottom': '20px'
-                                    }
+                                    className="btn-primary mb-20"
                                 ),
                             ]),
                             
                             # TODO: Future implementation placeholder
                             html.Div([
-                            ], style={'display': 'none'}),
+                            ], className="hidden"),
                             
                             # Back to Login Link
                             html.Div([
-                                html.Span("Remember your password? ", 
-                                    style={
-                                        'color': COLORS['text_secondary'],
-                                        'fontSize': '14px'
-                                    }
-                                ),
-                                html.Button("Back to Login",  
+                                html.Span("Remember your password? ", className="subheading"),
+                                html.Button(
+                                    "Back to Login",
                                     id="back-to-login-link",
-                                    style={
-                                        'color': COLORS['accent_primary'],
-                                        'textDecoration': 'none',
-                                        'fontWeight': 'bold',
-                                        'fontSize': '14px',
-                                        'cursor': 'pointer',
-                                        'background': 'none',
-                                        'border': 'none'
-                                    }
+                                    className="link-button"
                                 )
-                            ], style={'textAlign': 'center'})
+                            ], className="text-center")
                         ])
-                    ], style={
-                        **CARD_STYLE,
-                        'width': '400px',
-                        'maxWidth': '90vw',
-                        'margin': '0 auto'
-                    })
+                    ], className="card forgot-card")
                 ], width=12)
-            ], justify="center", style={'minHeight': '100vh', 'display': 'flex', 'alignItems': 'center'})
-        ], fluid=True, style={'padding': '20px'})
-    ], style=APP_STYLE)
+            ], justify="center", className="centered-row")
+        ], fluid=True, className="padded-container")
+    ], className="app-container")
 
 
 # =============================================================================

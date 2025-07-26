@@ -1,0 +1,10 @@
+.login-card {
+    width: 400px;
+    max-width: 90vw;
+    margin: 0 auto;
+}
+
+.forgot-link-container {
+    text-align: right;
+    margin-bottom: 24px;
+}
