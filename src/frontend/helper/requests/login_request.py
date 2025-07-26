@@ -1,12 +1,8 @@
 import requests
-import os
-from dotenv import load_dotenv
+import helper.environment as env
 
-load_dotenv()
-API_KEY = os.getenv('BACKEND_API_KEY')
-BACKEND_HOST = os.getenv('BACKEND_HOST')
-BACKEND_PORT = os.getenv('BACKEND_PORT')
-BACKEND_URL = os.getenv('BACKEND_URL')
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 def login_request(email: str, password: str) -> dict:
 
@@ -16,7 +12,7 @@ def login_request(email: str, password: str) -> dict:
     url = f"{BACKEND_URL}/auth/login"
 
     headers = {
-        "X-API-KEY": API_KEY,
+        "X-API-KEY": BACKEND_API_KEY,
         "X-Login": f"{email}&&&{password}&&&None",
     }
     try:

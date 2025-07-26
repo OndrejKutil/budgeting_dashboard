@@ -1,13 +1,10 @@
 import requests
 import json
 from typing import Dict, Any
-import os
-from dotenv import load_dotenv
+import helper.environment as env
 
-load_dotenv()
-
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 
 def register_user(email: str, password: str, full_name: str = None) -> Dict[str, Any]:

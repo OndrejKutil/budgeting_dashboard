@@ -1,11 +1,8 @@
-import os
 import requests
-from dotenv import load_dotenv
+import helper.environment as env
 
-load_dotenv()
-
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 
 def get_accounts(access_token: str, account_id: str | None = None) -> dict:

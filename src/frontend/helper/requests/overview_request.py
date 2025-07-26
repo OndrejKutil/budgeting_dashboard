@@ -1,14 +1,9 @@
 import requests
-from dotenv import load_dotenv
-import os
 import datetime
+import helper.environment as env
 
-load_dotenv()
-
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
-if not BACKEND_URL:
-    raise ValueError("BACKEND_URL environment variable is not set.")
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 def get_overview(access_token: str) -> dict:
     """Fetch overview data from the backend."""

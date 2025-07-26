@@ -6,6 +6,7 @@ from pages.login_page import create_login_layout
 from pages.dashboard import create_dashboard_layout
 from helper.auth.auth_helpers import is_user_authenticated
 from helper.requests.refresh_request import refresh_token
+import helper.environment as env
 from dotenv import load_dotenv
 import os
 
@@ -13,14 +14,11 @@ import os
 # Basic Configuration
 # =============================================================================
 
-load_dotenv()
-
-FRONTEND_HOST = os.getenv("FRONTEND_HOST")
-FRONTEND_PORT = os.getenv("FRONTEND_PORT")
-DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE")
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
-
+FRONTEND_HOST: str = env.FRONTEND_HOST
+FRONTEND_PORT: int = env.FRONTEND_PORT
+DEVELOPMENT_MODE: bool = env.DEVELOPMENT_MODE
+BACKEND_URL: str = env.BACKEND_URL
+BACKEND_API_KEY: str = env.BACKEND_API_KEY
 
 # =============================================================================
 # APP INITIALIZATION
@@ -42,6 +40,7 @@ app.title = "Budget Dashboard"
 # If in development mode, use debug tokens for testing
 # This is useful for local development without needing to log in every time
 if DEVELOPMENT_MODE == 'True':
+    load_dotenv()
     ACCESS_TOKEN = os.getenv("DEBUG_ACCESS_TOKEN")
     REFRESH_TOKEN = os.getenv("DEBUG_REFRESH_TOKEN")
 

@@ -1,11 +1,8 @@
-from dotenv import load_dotenv
-import os
 import datetime
+import helper.environment as env
 
-load_dotenv()
-
-BACKEND_URL = os.getenv("BACKEND_URL")
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 
 def get_yearly_summary(access_token: str, year: int | None = None) -> dict:

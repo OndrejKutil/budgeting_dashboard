@@ -1,15 +1,13 @@
 import requests
-from dotenv import load_dotenv
-import os
 
 # =================================================
 # Load environment variables
 # =================================================
 
-load_dotenv()
+import helper.environment as env
 
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
-BACKEND_URL = os.getenv("BACKEND_URL")
+BACKEND_URL = env.BACKEND_URL
+BACKEND_API_KEY = env.BACKEND_API_KEY
 
 
 # =================================================
