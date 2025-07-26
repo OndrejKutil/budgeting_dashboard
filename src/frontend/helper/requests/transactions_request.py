@@ -84,3 +84,38 @@ def create_transaction(access_token: str, payload: dict) -> dict:
         "success": True,
         "message": "Transaction added",
     }
+
+
+def update_transaction(access_token: str, transaction_id: str, payload: dict) -> dict:
+    """Update an existing transaction via PUT request."""
+
+    url = f"{BACKEND_URL}/transactions/{transaction_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "X-API-KEY": BACKEND_API_KEY,
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.put(url, headers=headers, json=payload)
+        response.raise_for_status()
+    except Exception as e:
+        return {"success": False, "message": f"Error updating transaction: {e}"}
+
+    return {"success": True, "message": "Transaction updated"}
+
+
+def delete_transaction(access_token: str, transaction_id: str) -> dict:
+    """Delete a transaction via DELETE request."""
+
+    url = f"{BACKEND_URL}/transactions/{transaction_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "X-API-KEY": BACKEND_API_KEY,
+    }
+    try:
+        response = requests.delete(url, headers=headers)
+        response.raise_for_status()
+    except Exception as e:
+        return {"success": False, "message": f"Error deleting transaction: {e}"}
+
+    return {"success": True, "message": "Transaction deleted"}

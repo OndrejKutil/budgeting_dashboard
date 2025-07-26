@@ -15,6 +15,7 @@ from pages.tabs.profile import create_profile_tab
 import json
 import dash
 from components.add_transaction_modal import create_add_transaction_modal
+import datetime
 from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
@@ -195,5 +196,6 @@ def submit_transaction(_, account_id, category_id, amount, date, notes, is_trans
         "date": date,
         "notes": notes,
         "is_transfer": bool(is_transfer),
+        "created_at": datetime.datetime.now().isoformat()
     }
     result = create_transaction(token_data.get("access_token", ""), payload)
