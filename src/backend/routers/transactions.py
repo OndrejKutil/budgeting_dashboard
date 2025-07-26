@@ -50,6 +50,7 @@ async def get_all_data(
     end_date: Optional[date] = Query(None, description="ending date for filtering transactions"),
     category_id: Optional[str] = Query(None, description="category for filtering transactions"),
     account_id: Optional[str] = Query(None, description="account for filtering transactions"),
+    transaction_id: Optional[str] = Query(None, description="transaction ID for filtering transactions"),
     limit: Optional[int] = Query(100, ge=1, le=1000, description="number of items to return (max 1000)"),
     offset: Optional[int] = Query(0, ge=0, description="number of items to skip")
 ) -> AllDataResponse:
@@ -70,11 +71,13 @@ async def get_all_data(
             query = query.eq(TRANSACTIONS_COLUMNS.CATEGORY_ID.value, category_id)
         if account_id:
             query = query.eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
+        if transaction_id:
+            query = query.eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id)
             
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         # Apply pagination
-        query = query.limit(limit).offset(offset)
+        query = query.range(offset, offset + limit)
         
         response = query.execute()
         
@@ -93,40 +96,6 @@ async def get_all_data(
             detail="Database query failed"
         )
 
-
-@router.get("/{transaction_id}", response_model=AllDataResponse)
-async def get_transaction_by_id(
-    transaction_id: str,
-    api_key: str = Depends(api_key_auth),
-    user: dict[str, str] = Depends(get_current_user)
-) -> AllDataResponse:
-    """
-    Fetch a specific transaction by its ID.
-    """
-    try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
-        
-        response = user_supabase_client.table("transactions").select("*").eq("id", transaction_id).execute()
-        
-        if not response.data:
-            raise fastapi.HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
-        
-        return {
-            "data": response.data,
-            "count": len(response.data)
-        }
-    
-    except Exception as e:
-        logger.info(f"Transaction fetch by ID failed for transaction_id: {transaction_id}")
-        logger.info(f"Full error details: {str(e)}")
-        logger.error(f"Failed to fetch transaction {transaction_id}")
-        
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Failed to fetch transaction"
-        )
     
 
 @router.post("/")

@@ -128,19 +128,3 @@ async def get_log(
             status_code=500,
             detail="Failed to read log file."
         )
-
-
-# ================================================================================================
-#                                       Run the Server
-# ================================================================================================
-
-
-if __name__ == "__main__":
-    import uvicorn
-    print(f"Backend server running at http://{BACKEND_HOST}:{BACKEND_PORT}")
-    uvicorn.run(
-        "backend_server:app",
-        host=BACKEND_HOST, 
-        port=BACKEND_PORT,
-        log_config=None
-    )
