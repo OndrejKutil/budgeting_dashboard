@@ -70,14 +70,15 @@ def create_transactions_tab():
                 id='transactions-table',
                 data=[],
                 columns=[
+                    {'name': 'date', 'id': 'date'},
                     {'name': 'id', 'id': 'id'},
                     {'name': 'account', 'id': 'account_name'},
-                    {'name': 'category', 'id': 'category_name'},
                     {'name': 'amount', 'id': 'amount'},
-                    {'name': 'date', 'id': 'date'},
+                    {'name': 'category', 'id': 'category_name'},
                     {'name': 'notes', 'id': 'notes'},
                     {'name': 'is_transfer', 'id': 'is_transfer'}
                 ],
+                hidden_columns=['id', 'is_transfer'],
                 row_selectable='single',
                 style_cell={
                     'textAlign': 'left',
@@ -91,6 +92,16 @@ def create_transactions_tab():
                     'color': COLORS['background_primary'],
                     'fontWeight': 'bold'
                 },
+                style_data_conditional=[
+                    {
+                        'if': {'column_id': 'amount', 'filter_query': '{amount} < 0'},
+                        'color': COLORS['expense_color'],
+                    },
+                    {
+                        'if': {'column_id': 'amount', 'filter_query': '{amount} >= 0'},
+                        'color': COLORS['income_color'],
+                    },
+                ],
                 page_action='none'
             ), style=LOADING_STYLE),
             create_edit_transaction_modal()

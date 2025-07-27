@@ -19,10 +19,6 @@ def create_add_account_modal():
                     dbc.Input(id="account-type-input", type="text", placeholder="Account type", className="form-input mb-10"),
                 ]),
                 html.Div([
-                    html.Label("Starting Balance", htmlFor="account-balance-input", className="text-primary"),
-                    dbc.Input(id="account-balance-input", type="number", placeholder="0", className="form-input mb-10"),
-                ]),
-                html.Div([
                     html.Label("Currency", htmlFor="account-currency-input", className="text-primary"),
                     dbc.Input(id="account-currency-input", type="text", placeholder="Currency", className="form-input mb-10"),
                 ]),

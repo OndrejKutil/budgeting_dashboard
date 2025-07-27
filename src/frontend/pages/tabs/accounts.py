@@ -42,10 +42,10 @@ def create_accounts_tab():
                     {'name': 'id', 'id': 'id'},
                     {'name': 'name', 'id': 'name'},
                     {'name': 'type', 'id': 'type'},
-                    {'name': 'starting_balance', 'id': 'starting_balance'},
                     {'name': 'currency', 'id': 'currency'},
                     {'name': 'created_at', 'id': 'created_at'}
                 ],
+                hidden_columns=['id'],
                 row_selectable='single',
                 style_cell={
                     'textAlign': 'left',
@@ -123,7 +123,6 @@ def update_accounts(nav_data, offset_data, _refresh, token_store):
         Output('edit-account-id', 'data'),
         Output('edit-account-name-input', 'value'),
         Output('edit-account-type-input', 'value'),
-        Output('edit-account-balance-input', 'value'),
         Output('edit-account-currency-input', 'value'),
     ],
     Input('accounts-table', 'selected_rows'),
@@ -132,7 +131,7 @@ def update_accounts(nav_data, offset_data, _refresh, token_store):
 )
 def open_edit_account_modal(selected_rows, table_data):
     if not selected_rows:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     row = table_data[selected_rows[0]]
 
@@ -141,7 +140,6 @@ def open_edit_account_modal(selected_rows, table_data):
         row.get('id'),
         row.get('name'),
         row.get('type'),
-        row.get('starting_balance'),
         row.get('currency'),
     )
 
@@ -154,19 +152,17 @@ def open_edit_account_modal(selected_rows, table_data):
     State('edit-account-name-input', 'value'),
     State('edit-account-type-input', 'value'),
     State('edit-account-balance-input', 'value'),
-    State('edit-account-currency-input', 'value'),
     State('token-store', 'data'),
     State('accounts-refresh-store', 'data'),
     prevent_initial_call=True,
 )
-def update_account_cb(_, acc_id, name, acc_type, starting_balance, currency, token_data, refresh):
+def update_account_cb(_, acc_id, name, acc_type, currency, token_data, refresh):
     if not _ or not token_data or not acc_id:
         return dash.no_update, dash.no_update
 
     payload = {
         'name': name,
         'type': acc_type,
-        'starting_balance': starting_balance,
         'currency': currency,
     }
     request_update_account(token_data['access_token'], acc_id, payload)

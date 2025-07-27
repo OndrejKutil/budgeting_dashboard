@@ -174,7 +174,7 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
         return True, acc_options, cat_options
 
     if ctx.triggered_id == "close-add-transaction-modal":
-        return False
+        return False, dash.no_update, dash.no_update
 
 
     return is_open, dash.no_update, dash.no_update

@@ -20,10 +20,6 @@ def create_edit_account_modal():
                     dbc.Input(id="edit-account-type-input", type="text", placeholder="Account type", className="form-input mb-10"),
                 ]),
                 html.Div([
-                    html.Label("Starting Balance", htmlFor="edit-account-balance-input", className="text-primary"),
-                    dbc.Input(id="edit-account-balance-input", type="number", placeholder="0", className="form-input mb-10"),
-                ]),
-                html.Div([
                     html.Label("Currency", htmlFor="edit-account-currency-input", className="text-primary"),
                     dbc.Input(id="edit-account-currency-input", type="text", placeholder="Currency", className="form-input mb-10"),
                 ]),

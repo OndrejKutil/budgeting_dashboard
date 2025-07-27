@@ -71,7 +71,6 @@ class AccountData(BaseModel):
     user_id: Optional[str] = Field(None, description="User ID who owns this account")
     name: str = Field(..., description="Account name")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
-    starting_balance: Optional[Decimal] = Field(0.0, description="Initial balance of the account")
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
@@ -174,7 +173,6 @@ class AccountsResponse(BaseModel):
                         "user_id": "user123",
                         "name": "Main Checking Account",
                         "type": "checking",
-                        "starting_balance": 1000.00,
                         "currency": "USD",
                         "created_at": "2025-01-15T10:30:00Z"
                     },
@@ -183,7 +181,6 @@ class AccountsResponse(BaseModel):
                         "user_id": "user123",
                         "name": "Savings Account",
                         "type": "savings",
-                        "starting_balance": 5000.00,
                         "currency": "USD",
                         "created_at": "2025-01-16T11:00:00Z"
                     }
@@ -228,7 +225,6 @@ class AccountRequest(BaseModel):
     """Schema for creating a new account"""
     name: str = Field(..., description="Name of the account")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
-    starting_balance: Optional[Decimal] = Field(0.0, description="Initial balance of the account")
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
@@ -242,7 +238,6 @@ class AccountRequest(BaseModel):
             "example": {
                 "name": "",
                 "type": "",
-                "starting_balance": 1000.00,
                 "currency": "",
                 "created_at": "2025-01-15T10:30:00Z"
             }
