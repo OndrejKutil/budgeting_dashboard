@@ -36,6 +36,16 @@ def create_navigation_bar(active_tab='overview'):
         ], className=None)
     )
 
+    nav_items.append(
+        html.Li([
+            html.Button(
+                "Add Account",
+                id="open-add-account-button",
+                className='nav-button add-transaction-button mr-20'
+            )
+        ], className=None)
+    )
+
     # Add logout button as last item
     nav_items.append(
         html.Li([

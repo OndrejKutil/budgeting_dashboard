@@ -11,15 +11,18 @@ from pages.tabs.overview import create_overview_tab
 from pages.tabs.monthly_view import create_monthly_view_tab
 from pages.tabs.yearly_view import create_yearly_view_tab
 from pages.tabs.transactions import create_transactions_tab
+from pages.tabs.accounts import create_accounts_tab
 from pages.tabs.profile import create_profile_tab
 import json
 import dash
 from components.add_transaction_modal import create_add_transaction_modal
+from components.add_account_modal import create_add_account_modal
 from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
     create_transaction,
 )
+from helper.requests.accounts_request import create_account
 import datetime
 
 def create_dashboard_layout():
@@ -49,6 +52,7 @@ def create_dashboard_layout():
         
         # Modal for adding transactions
         create_add_transaction_modal(),
+        create_add_account_modal(),
 
         # Content area
         html.Div(
@@ -129,7 +133,10 @@ def get_tab_content(selected_tab):
 
     elif selected_tab == Tab.YEARLY_VIEW.name.lower():
         return create_yearly_view_tab()
-    
+
+    elif selected_tab == Tab.ACCOUNTS.name.lower():
+        return create_accounts_tab()
+
     elif selected_tab == Tab.TRANSACTIONS.name.lower():
         return create_transactions_tab()
     
@@ -167,7 +174,8 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
         return True, acc_options, cat_options
 
     if ctx.triggered_id == "close-add-transaction-modal":
-        return False, dash.no_update, dash.no_update
+        return False
+
 
     return is_open, dash.no_update, dash.no_update
 
@@ -195,6 +203,49 @@ def submit_transaction(_, account_id, category_id, amount, date, notes, is_trans
         "date": date,
         "notes": notes,
         "is_transfer": bool(is_transfer),
-        "created_at": datetime.datetime.now().isoformat()
+        "created_at": datetime.datetime.now().isoformat(),
     }
-    result = create_transaction(token_data.get("access_token", ""), payload)
+    create_transaction(token_data.get("access_token", ""), payload)
+    return False
+
+
+@callback(
+    Output("add-account-modal", "is_open"),
+    Input("open-add-account-button", "n_clicks"),
+    Input("close-add-account-modal", "n_clicks"),
+    State("add-account-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_add_account_modal(open_click, close_click, is_open):
+    ctx = callback_context
+    if ctx.triggered_id == "open-add-account-button":
+        return True
+    if ctx.triggered_id == "close-add-account-modal":
+        return False
+    return is_open
+
+
+@callback(
+    Output("add-account-modal", "is_open", allow_duplicate=True),
+    Input("submit-account-button", "n_clicks"),
+    State("account-name-input", "value"),
+    State("account-type-input", "value"),
+    State("account-balance-input", "value"),
+    State("account-currency-input", "value"),
+    State("token-store", "data"),
+    prevent_initial_call=True,
+)
+def submit_account(_, name, acc_type, starting_balance, currency, token_data):
+    if not token_data:
+        return dash.no_update
+
+    payload = {
+        "name": name,
+        "type": acc_type,
+        "starting_balance": starting_balance,
+        "currency": currency,
+        "created_at": datetime.datetime.now().isoformat(),
+    }
+    create_account(token_data.get("access_token", ""), payload)
+    return False
+
