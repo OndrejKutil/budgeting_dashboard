@@ -26,7 +26,7 @@ def create_login_layout():
         ),
 
         # Main container for the content
-        html.Div(id='login-page-content')
+        html.Div(id='login-page-content', className='login-page-content')
 
     ])
 

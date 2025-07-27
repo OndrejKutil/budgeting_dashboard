@@ -12,10 +12,17 @@
     --accent-warning: #ffa000;
     --input-background: #ffffff;
     --input-border: #ced4da;
+    --transparent-hover: rgba(25, 118, 210, 0.1);
     --input-border-focus: #1976d2;
     --card-background: #ffffff;
     --card-border: #e0e0e0;
     --card-shadow: rgba(60, 60, 60, 0.08);
+    /* Financial card colors */
+    --income-color: #43a047;
+    --expense-color: #e53935;
+    --savings-color: #00bcd4;
+    --investment-color: #8e24aa;
+    --neutral-color: #bdbdbd;
 }
 
 .app-container {
@@ -23,6 +30,24 @@
     min-height: 100vh;
     font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: var(--text-primary);
+}
+.text-primary {
+    color: var(--text-primary) !important;
+}
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+
+
+.login-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .card {
@@ -42,7 +67,6 @@
     padding: 12px;
     font-size: 16px;
     width: 100%;
-    margin-bottom: 12px;
     box-sizing: border-box;
 }
 
@@ -58,74 +82,6 @@
     display: block;
 }
 
-.btn-primary {
-    background-color: var(--accent-primary);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 8px;
-    transition: background-color 0.2s ease;
-    box-shadow: 0 1px 4px rgba(25, 118, 210, 0.08);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-secondary);
-}
-
-.heading {
-    color: var(--text-primary);
-    text-align: center;
-    margin-bottom: 24px;
-    font-size: 28px;
-    font-weight: bold;
-}
-.heading-large {
-    font-size: 32px;
-    margin-bottom: 8px;
-}
-
-.subheading {
-    color: var(--text-secondary);
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 16px;
-}
-.subheading-large {
-    margin-bottom: 32px;
-}
-
-.link-button {
-    color: var(--accent-primary);
-    text-decoration: none;
-    font-size: 14px;
-    cursor: pointer;
-    background: none;
-    border: none;
-}
-
-.link-button:hover {
-    text-decoration: underline;
-}
-
-.text-primary { color: var(--text-primary); }
-.text-secondary { color: var(--text-secondary); }
-.text-italic { font-style: italic; }
-.font-bold { font-weight: bold; }
-.fs-14 { font-size: 14px; }
-.fs-18 { font-size: 18px; }
-
-.validation-message {
-    color: var(--accent-danger);
-    font-size: 12px;
-    margin-bottom: 16px;
-    min-height: 16px;
-}
-
 .error-alert {
     margin-bottom: 20px;
     background-color: var(--accent-danger);
@@ -139,10 +95,30 @@
     color: white;
 }
 
+
+/* Financial value colors */
+.income-color { color: var(--income-color); }
+.expense-color { color: var(--expense-color); }
+.savings-color { color: var(--savings-color); }
+.investment-color { color: var(--investment-color); }
+.neutral-color { color: var(--neutral-color); }
+
+
+.loading {
+    width: 100%;
+    margin-top: 45rem;
+    position: fixed;
+    z-index: 2000;
+}
+
 .centered-row {
     min-height: 100vh;
     display: flex;
     align-items: center;
+}
+
+.date-label {
+    padding-right: 10px;
 }
 
 .text-center {
@@ -153,13 +129,15 @@
     padding: 20px;
 }
 
-.mb-8 { margin-bottom: 8px; }
-.mb-4 { margin-bottom: 4px; }
-.mb-16 { margin-bottom: 16px; }
-.mb-20 { margin-bottom: 20px; }
-.mb-24 { margin-bottom: 24px; }
-.mb-32 { margin-bottom: 32px; }
-.mr-8 { margin-right: 8px; }
+.mb-8 { margin-bottom: 8px !important; }
+.mb-4 { margin-bottom: 4px !important; }
+.mb-10 { margin-bottom: 10px !important; }
+.mb-16 { margin-bottom: 16px !important; }
+.mb-20 { margin-bottom: 20px !important; }
+.mb-24 { margin-bottom: 24px !important; }
+.mb-32 { margin-bottom: 32px !important; }
+.mr-8 { margin-right: 8px !important; }
+.mr-20 { margin-right: 20px !important; }
 
 .content-box {
     max-height: 400px;
@@ -170,45 +148,9 @@
     margin-bottom: 24px;
 }
 
-/* Logout and navigation buttons from existing CSS */
-.logout-button {
-    background-color: var(--accent-danger);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 12px 20px;
-    margin: 0 4px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    outline: none;
-    box-shadow: 0 1px 4px rgba(211, 47, 47, 0.08);
-    transition: background-color 0.2s ease;
-}
-.logout-button:hover {
-    background-color: #b71c1c;
-}
-
-.nav-button {
-    background-color: var(--accent-primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 12px 20px;
-    margin: 0 4px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    outline: none;
-    box-shadow: 0 1px 4px rgba(25, 118, 210, 0.08);
-    transition: background-color 0.2s ease;
-}
-.nav-button:hover {
-    background-color: var(--accent-secondary);
-}
-
 .hidden {
     display: none;
 }
+
+.width-120 { width: 120px !important; }
+.width-250 { width: 250px !important; }

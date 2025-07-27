@@ -1,0 +1,64 @@
+/* Navigation bar styles */
+.navigation-bar {
+    background-color: var(--background-secondary);
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+.nav-list {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0 24px;
+    align-items: center;
+    height: 60px;
+}
+
+.nav-spacer {
+    flex: 1 1 auto;
+}
+
+.nav-button {
+    background-color: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    padding: 12px 20px !important;
+    margin: 0 4px !important;
+    border-radius: 6px !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    outline: none !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.nav-button.active {
+    color: var(--accent-primary);
+}
+
+.nav-button:hover {
+    background-color: var(--transparent-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+.add-transaction-button {
+    background-color: var(--accent-primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    outline: none !important;
+    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.add-transaction-button:hover {
+    background-color: var(--accent-secondary) !important;
+    color: white !important;
+}
+

@@ -26,8 +26,8 @@ BACKEND_API_KEY: str = env.BACKEND_API_KEY
 
 # Initialize the Dash app with Bootstrap theme
 app = dash.Dash(
-    __name__, 
-    external_stylesheets=[dbc.themes.BOOTSTRAP]
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
 
 app.title = "Budget Dashboard"

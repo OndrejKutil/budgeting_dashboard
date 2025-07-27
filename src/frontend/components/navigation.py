@@ -5,11 +5,6 @@
 
 from dash import html, dcc
 from utils.tabs import Tab
-from utils.theme import (
-    NAVIGATION_BAR_STYLE, 
-    NAV_LIST_STYLE, 
-    NAV_BUTTON_STYLE,
-)
 
 def create_navigation_bar(active_tab='overview'):
     """Create a modern navigation bar with clickable navigation items"""
@@ -17,43 +12,41 @@ def create_navigation_bar(active_tab='overview'):
     nav_items = []
     for tab in Tab:
         tab_id = tab.name.lower()
-        
+        is_active = (tab_id == active_tab)
         nav_items.append(
             html.Li([
                 html.Button(
                     tab.value,
                     id={'type': 'nav-button', 'index': tab_id},
-                    style=NAV_BUTTON_STYLE,
-                    className='nav-button'
+                    className=f"nav-button{' active' if is_active else ''}"
                 )
-            ], style={'margin': '0'})
+            ], className=None)
         )
+
+    # Add spacer to push right-side items to the right
+    nav_items.append(html.Li([], className='nav-spacer'))
 
     nav_items.append(
         html.Li([
             html.Button(
                 "Add Transaction",
                 id="open-add-transaction-button",
-                className='nav-button'
+                className='nav-button add-transaction-button mr-20'
             )
-        ], style={'margin': '0'})
+        ], className=None)
     )
-    
+
+    # Add logout button as last item
+    nav_items.append(
+        html.Li([
+            html.Button(
+                "Logout",
+                id="logout-button",
+                className='btn-danger'
+            )
+        ], className=None)
+    )
+
     return html.Nav([
-        html.Ul(nav_items, style=NAV_LIST_STYLE, id='nav-list')
-    ], style=NAVIGATION_BAR_STYLE)
-
-
-def create_logout_button():
-    """Create logout button for the navigation bar"""
-    return html.Div([
-        html.Button(
-            "Logout",
-            id="logout-button",
-            className='logout-button'
-        )
-    ], style={
-        'marginLeft': 'auto',
-        'display': 'flex',
-        'alignItems': 'center'
-    })
+        html.Ul(nav_items, className='nav-list', id='nav-list')
+    ], className='navigation-bar')

@@ -79,7 +79,7 @@ def create_login_tab_layout():
                                     "Sign In",
                                     id="login-button",
                                     type="button",
-                                    className="btn-primary mb-20"
+                                    className="btn-primary mb-20 login-button",
                                 ),
                             ]),
                             

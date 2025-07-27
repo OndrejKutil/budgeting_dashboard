@@ -168,7 +168,7 @@ def create_register_tab_layout():
                                     "Create Account",
                                     id="register-button",
                                     type="button",
-                                    className="btn-primary mb-20"
+                                    className="btn-primary mb-20 login-button"
                                 ),
                             ]),
                             

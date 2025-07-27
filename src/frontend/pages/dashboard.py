@@ -6,7 +6,7 @@
 from dash import html, Input, Output, callback, ALL, State, callback_context
 from utils.theme import COLORS, NAV_BUTTON_STYLE, NAV_BUTTON_ACTIVE_STYLE
 from utils.tabs import Tab
-from components.navigation import create_navigation_bar, create_logout_button
+from components.navigation import create_navigation_bar
 from pages.tabs.overview import create_overview_tab
 from pages.tabs.monthly_view import create_monthly_view_tab
 from pages.tabs.yearly_view import create_yearly_view_tab
@@ -36,10 +36,9 @@ def create_dashboard_layout():
     }
     
     return html.Div([
-        # Navigation bar with logout button
+        # Navigation bar
         html.Div([
-            create_navigation_bar(),
-            create_logout_button()
+            create_navigation_bar()
         ], style={
             'display': 'flex',
             'alignItems': 'center',

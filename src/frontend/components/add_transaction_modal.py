@@ -12,30 +12,30 @@ def create_add_transaction_modal():
             dbc.ModalHeader(dbc.ModalTitle("Add Transaction")),
             dbc.ModalBody([
                 html.Div([
-                    html.Label("Account", htmlFor="transaction-account-dropdown", style={'color': COLORS['text_primary']}),
-                    dcc.Dropdown(id="transaction-account-dropdown", options=[], placeholder="Select account", style={'marginBottom': '10px'})
+                    html.Label("Account", htmlFor="transaction-account-dropdown", className="text-primary"),
+                    dcc.Dropdown(id="transaction-account-dropdown", options=[], placeholder="Select account", className="mb-10")
                 ]),
                 html.Div([
-                    html.Label("Category", htmlFor="transaction-category-dropdown", style={'color': COLORS['text_primary']}),
-                    dcc.Dropdown(id="transaction-category-dropdown", options=[], placeholder="Select category", style={'marginBottom': '10px'})
+                    html.Label("Category", htmlFor="transaction-category-dropdown", className="text-primary"),
+                    dcc.Dropdown(id="transaction-category-dropdown", options=[], placeholder="Select category", className="mb-10")
                 ]),
                 html.Div([
-                    html.Label("Amount", htmlFor="transaction-amount-input", style={'color': COLORS['text_primary']}),
-                    dbc.Input(id="transaction-amount-input", type="number", placeholder="Amount", style={**INPUT_STYLE, 'marginBottom': '10px'})
+                    html.Label("Amount", htmlFor="transaction-amount-input", className="text-primary"),
+                    dbc.Input(id="transaction-amount-input", type="number", placeholder="Amount", className="form-input mb-10")
                 ]),
                 html.Div([
-                    html.Label("Date", htmlFor="transaction-date-input", style={'color': COLORS['text_primary']}),
-                    dcc.DatePickerSingle(id="transaction-date-input", date=today, style={'marginBottom': '10px'})
+                    html.Label("Date", htmlFor="transaction-date-input", className="text-primary date-label"),
+                    dcc.DatePickerSingle(id="transaction-date-input", date=today, className="mb-10")
                 ]),
                 html.Div([
-                    html.Label("Notes", htmlFor="transaction-notes-input", style={'color': COLORS['text_primary']}),
-                    dbc.Input(id="transaction-notes-input", type="text", placeholder="Optional notes", style={**INPUT_STYLE, 'marginBottom': '10px'})
+                    html.Label("Notes", htmlFor="transaction-notes-input", className="text-primary"),
+                    dbc.Input(id="transaction-notes-input", type="text", placeholder="Optional notes", className="form-input mb-10")
                 ]),
-                dbc.Checkbox(id="transaction-transfer-checkbox", value=False, label="Transfer", style={'marginBottom': '10px'}),
+                dbc.Checkbox(id="transaction-transfer-checkbox", value=False, label="Transfer", className="mb-10"),
             ]),
             dbc.ModalFooter([
-                dbc.Button("Add", id="submit-transaction-button", n_clicks=0, style={**BUTTON_PRIMARY_STYLE, 'width': 'auto'}),
-                dbc.Button("Close", id="close-add-transaction-modal", n_clicks=0, style={**BUTTON_SECONDARY_STYLE, 'width': 'auto'})
+                dbc.Button("Add", id="submit-transaction-button", n_clicks=0, className="btn-primary width-120"),
+                dbc.Button("Close", id="close-add-transaction-modal", n_clicks=0, className="btn-secondary width-120")
             ])
         ],
         id="add-transaction-modal",

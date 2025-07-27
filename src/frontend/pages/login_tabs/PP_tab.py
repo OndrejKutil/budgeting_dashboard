@@ -33,54 +33,53 @@ def create_privacy_policy_tab_layout():
                             html.P([
                                 "This budget dashboard is a personal learning project developed by Ondřej Kutil. ",
                                 "It is intended for educational use only and is not a commercial or production-grade application."
-                            ], className="text-primary fs-14 mb-20"),
+                            ], className="text-secondary fs-14 mb-20"),
                             
                             # Section 1: Data Collection
                             html.H4("1. Data Collection", className="text-primary fs-18 font-bold mb-12"),
                             html.P([
                                 "1.1. The application may process financial inputs such as transaction amounts, ",
                                 "categories, and notes as entered by the user."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "1.2. No personal identifiers (such as name, email, or account credentials) are ",
                                 "required or collected unless explicitly added by the user."
-                            ], className="text-primary fs-14 mb-20"),
+                            ], className="text-secondary fs-14 mb-20"),
                             
                             # Section 2: Data Storage and Security
                             html.H4("2. Data Storage and Security", className="text-primary fs-18 font-bold mb-12"),
                             html.P([
                                 "2.1. Data is stored in environments such as Supabase."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "2.2. This project does not include advanced security features such as encryption, ",
                                 "access controls, or production-level authentication."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "2.3. Users are responsible for the security and privacy of their own data."
-                            ], className="text-primary fs-14 mb-20"),
+                            ], className="text-secondary fs-14 mb-20"),
                             
                             # Section 3: Data Sharing
                             html.H4("3. Data Sharing", className="text-primary fs-18 font-bold mb-12"),
                             html.P([
                                 "3.1. No data is shared with third parties."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "3.2. All processing occurs locally or within services explicitly set up by the user."
-                            ], className="text-primary fs-14 mb-20"),
+                            ], className="text-secondary fs-14 mb-20"),
                             
                             # Section 4: Disclaimer
                             html.H4("4. Disclaimer", className="text-primary fs-18 font-bold mb-12"),
                             html.P([
                                 "4.1. This project is provided as-is, without warranties of any kind."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "4.2. As this is a personal educational tool, bugs or unintended behavior may occur."
-                            ], className="text-primary fs-14 mb-8"),
+                            ], className="text-secondary fs-14 mb-8"),
                             html.P([
                                 "4.3. Use at your own risk."
-                            ], className="text-primary fs-14 mb-24")
+                            ], className="text-secondary fs-14 mb-24")
                         ], className="content-box"),
-                        
                         # Back to Register Link
                         html.Div([
                             html.Button(
