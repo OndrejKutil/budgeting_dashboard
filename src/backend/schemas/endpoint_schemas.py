@@ -55,14 +55,25 @@ class CategoryType(str, Enum):
         return self.value
     
 
+class SpendingType(str, Enum):
+    """Enum for spending types"""
+    CORE = "core"
+    FUN = "fun"
+    FUTURE = "future"
+    INCOME = "income"
+
+    def __str__(self):
+        return self.value
+
+
 class CategoryData(BaseModel):
     """Schema for individual category data"""
     id: int = Field(..., description="Category ID")
     name: str = Field(..., description="Category name")
     type: CategoryType = Field(..., description="Category type (expense, income, etc.)")
     is_active: Optional[bool] = Field(True, description="Indicates if the category is active")
+    spending_type: Optional[SpendingType] = Field(None, description="Type of spending associated with the category")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Record update timestamp")
 
 
 class AccountData(BaseModel):
@@ -131,22 +142,14 @@ class CategoriesResponse(BaseModel):
                 "data": [
                     {
                         "id": "1",
-                        "user_id": "user123",
-                        "account_id": "acc456",
-                        "category_id": 2,
-                        "amount": 49.99,
-                        "date": "2025-01-15",
-                        "notes": "Weekly grocery shopping",
+                        "name": "Groceries",
+                        "type": CategoryType.EXPENSE,
+                        "spending_type": SpendingType.CORE,
+                        "is_active": True,
                         "created_at": "2025-01-15T10:30:00Z",
-                        "updated_at": "2025-01-15T10:30:00Z"
                     },
                     {
                         "id": "2",
-                        "user_id": "user123",
-                        "account_id": "acc789",
-                        "category_id": 3,
-                        "amount": 19.99,
-                        "date": "2025-01-16",
                         "notes": "Coffee with friends",
                         "created_at": "2025-01-16T11:00:00Z",
                         "updated_at": "2025-01-16T11:00:00Z"
