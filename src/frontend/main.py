@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 from pages.login_page import create_login_layout
 from pages.dashboard import create_dashboard_layout
 from helper.auth.auth_helpers import is_user_authenticated
-from helper.requests.refresh_request import refresh_token
+from helper.requests.refresh_request import refresh_token as refresh_access_token
 import helper.environment as env
 from dotenv import load_dotenv
 import os
@@ -163,7 +163,7 @@ else:
         # (disabled in production until logged in)
         dcc.Interval(
             id='token-refresh-interval',
-            interval=45*60*1000,  # 45 minutes in milliseconds
+            interval=40*60*1000,  # 40 minutes in milliseconds
             n_intervals=0,
             disabled=False
         ),
@@ -189,22 +189,6 @@ def display_page(auth_data):
     else:
         # User is not authenticated, show login page
         return create_login_layout()
-
-# =============================================================================
-# ENABLE INTERVAL CALLBACK
-# =============================================================================
-
-@app.callback(
-    Output('token-refresh-interval', 'disabled'),
-    Input('auth-store', 'data'),
-    prevent_initial_call=True
-)
-def toggle_token_refresh_interval(auth_data):
-    """Enable/disable token refresh interval based on login status"""
-    if auth_data and auth_data.get('logged'):
-        return False  # Enable interval when logged in
-    else:
-        return True   # Disable interval when logged out
 
 # =============================================================================
 # LOGOUT CALLBACK
@@ -233,8 +217,8 @@ def handle_logout(n_clicks):
 
         return auth_data, token_data
     
-    
-    return dash.no_update
+
+    return dash.no_update, dash.no_update
 
 
 # =============================================================================
@@ -253,11 +237,11 @@ def refresh_token_periodically(n_intervals, token_data):
     
     # Only refresh if user is logged in and has a refresh token
     if not token_data or not token_data.get('refresh_token'):
-        return dash.no_update
+        return dash.no_update, dash.no_update
     
     # Attempt to refresh the token
     try:
-        data = refresh_token(token_data['refresh_token'])
+        data = refresh_access_token(token_data['refresh_token'])
 
         # Update token data with new values
         token_data['access_token'] = data.get('access_token', token_data['access_token'])

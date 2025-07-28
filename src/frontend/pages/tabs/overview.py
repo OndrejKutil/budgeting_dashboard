@@ -81,7 +81,7 @@ def create_overview_tab():
                                 style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
                             )
                         ])
-                    ], id="profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
+                    ], id="profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
                 ], width=6),
                 dbc.Col([
                     dbc.Card([
@@ -92,7 +92,7 @@ def create_overview_tab():
                                 style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
                             )
                         ])
-                    ], id="cashflow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
+                    ], id="cashflow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
                 ], width=6),
             ], className="mb-4"),
             
@@ -117,11 +117,7 @@ def create_overview_tab():
      Output('overview-savings', 'children'),
      Output('overview-investments', 'children'),
      Output('overview-profit', 'children'),
-     Output('overview-profit', 'style'),
-     Output('profit-card', 'style'),
      Output('overview-cashflow', 'children'),
-     Output('overview-cashflow', 'style'),
-     Output('cashflow-card', 'style'),
      Output('overview-category-table', 'children')],
     [Input('navigation-store', 'data')],
     [State('token-store', 'data'), 
@@ -132,20 +128,12 @@ def update_overview_content(nav_data, token_store, user_settings):
     current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'overview':
         return (
-            '', '', '', '', '', {'margin': '0'}, 
-            {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            '', {'margin': '0'},
-            {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            ''
+            '', '', '', '', '', '', ''
         )
     
     if not token_store or not token_store.get('access_token'):
         return (
-            "No data", "No data", "No data", "No data", "No data", {'margin': '0'}, 
-            {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            "No data", {'margin': '0'},
-            {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"},
-            "No data available"
+            "No data", "No data", "No data", "No data", "No data", "No data", "No data available"
         )
     
     # Get selected currency and symbol
@@ -172,18 +160,6 @@ def update_overview_content(nav_data, token_store, user_settings):
         savings = overview_data.get('total_saving', 0)
         investments = overview_data.get('total_investment', 0)
         by_category = overview_data.get('by_category', {})
-        
-        # Style for profit/loss
-        profit_color = COLORS['income_color'] if profit >= 0 else COLORS['expense_color']
-        profit_border_color = COLORS['income_color'] if profit >= 0 else COLORS['expense_color']
-        profit_style = {'color': profit_color, 'margin': '0'}
-        profit_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {profit_border_color}'}
-        
-        # Style for cash flow
-        cashflow_color = COLORS['income_color'] if cashflow >= 0 else COLORS['expense_color']
-        cashflow_border_color = COLORS['income_color'] if cashflow >= 0 else COLORS['expense_color']
-        cashflow_style = {'color': cashflow_color, 'margin': '0'}
-        cashflow_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {cashflow_border_color}'}
         
         # Create category breakdown table
         if by_category:
@@ -233,12 +209,8 @@ def update_overview_content(nav_data, token_store, user_settings):
             format_currency(expenses),    # expenses
             format_currency(savings),     # savings
             format_currency(investments), # investments
-            format_currency(profit),      # profit
-            profit_style,                 # profit style
-            profit_card_style,           # profit card style
-            format_currency(cashflow),    # cashflow
-            cashflow_style,              # cashflow style
-            cashflow_card_style,         # cashflow card style
+            format_currency(profit),      # profit        # profit card style
+            format_currency(cashflow),    # cashflow        # cashflow card style
             category_table               # category table
         )
         

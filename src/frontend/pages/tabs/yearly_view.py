@@ -1,9 +1,7 @@
 from dash import html, dcc, Input, Output, State, callback
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-from utils.theme import COLORS
+from utils.theme import COLORS, LOADING_STYLE
 from helper.requests.yearly_analytics_request import get_yearly_analytics, get_emergency_fund_analysis
 from utils.currency import CURRENCY_SYMBOLS
 import datetime
@@ -23,7 +21,7 @@ def create_yearly_view_tab():
     current_year = datetime.datetime.now().year
     year_options = [{"label": str(year), "value": year} for year in range(current_year - 5, current_year + 2)]
 
-    return html.Div(
+    content = html.Div(
         id='yearly-view-tab-content',
         style=content_style,
         children=[
@@ -61,7 +59,8 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Total Income", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-total-income", children='', style={'color': COLORS['income_color'], 'margin': '0'})
+                                html.H3(id="yearly-total-income", children='', style={'color': COLORS['income_color'], 'margin': '0'}),
+                                style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['income_color']}"})
@@ -71,7 +70,8 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Total Expenses", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-total-expenses", children='', style={'color': COLORS['expense_color'], 'margin': '0'})
+                                html.H3(id="yearly-total-expenses", children='', style={'color': COLORS['expense_color'], 'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['expense_color']}"})
@@ -81,7 +81,8 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Total Savings", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-total-savings", children='', style={'color': COLORS['savings_color'], 'margin': '0'})
+                                html.H3(id="yearly-total-savings", children='', style={'color': COLORS['savings_color'], 'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['savings_color']}"})
@@ -91,7 +92,8 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Total Investments", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-total-investments", children='', style={'color': COLORS['investment_color'], 'margin': '0'})
+                                html.H3(id="yearly-total-investments", children='', style={'color': COLORS['investment_color'], 'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['investment_color']}"})
@@ -105,17 +107,30 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Profit/Loss", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-profit", children='', style={'margin': '0'})
+                                html.H3(id="yearly-profit", children='', style={'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
-                    ], id="yearly-profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
+                    ], id="yearly-profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
+                ], width=3),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.H4("Net Cash Flow", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            dcc.Loading(
+                                html.H3(id="yearly-net-flow", children='', style={'margin': '0'}),
+                                style=LOADING_STYLE
+                            )
+                        ])
+                    ], id="yearly-net-flow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
                             html.H4("Savings Rate", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-savings-rate", children='', style={'color': COLORS['savings_color'], 'margin': '0'})
+                                html.H3(id="yearly-savings-rate", children='', style={'color': COLORS['savings_color'], 'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['savings_color']}"})
@@ -125,20 +140,11 @@ def create_yearly_view_tab():
                         dbc.CardBody([
                             html.H4("Investment Rate", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
                             dcc.Loading(
-                                html.H3(id="yearly-investment-rate", children='', style={'color': COLORS['investment_color'], 'margin': '0'})
+                                html.H3(id="yearly-investment-rate", children='', style={'color': COLORS['investment_color'], 'margin': '0'}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['investment_color']}"})
-                ], width=3),
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody([
-                            html.H4("Net Cash Flow", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
-                            dcc.Loading(
-                                html.H3(id="yearly-net-flow", children='', style={'margin': '0'})
-                            )
-                        ])
-                    ], id="yearly-net-flow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"})
                 ], width=3),
             ], className="mb-4"),
             
@@ -151,7 +157,8 @@ def create_yearly_view_tab():
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
-                                dcc.Graph(id='yearly-income-expense-chart', config={'displayModeBar': False})
+                                dcc.Graph(id='yearly-income-expense-chart', config={'displayModeBar': False}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary']})
@@ -163,7 +170,8 @@ def create_yearly_view_tab():
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
-                                dcc.Graph(id='yearly-expense-breakdown-chart', config={'displayModeBar': False})
+                                dcc.Graph(id='yearly-expense-breakdown-chart', config={'displayModeBar': False}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary']})
@@ -179,7 +187,8 @@ def create_yearly_view_tab():
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
-                                dcc.Graph(id='yearly-savings-investment-chart', config={'displayModeBar': False})
+                                dcc.Graph(id='yearly-savings-investment-chart', config={'displayModeBar': False}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary']})
@@ -187,11 +196,12 @@ def create_yearly_view_tab():
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
-                            html.H4("Monthly Net Cash Flow", className="mb-0", style={'color': COLORS['text_primary']})
+                            html.H4("Monthly Saving & Investing ratios", className="mb-0", style={'color': COLORS['text_primary']})
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
-                                dcc.Graph(id='yearly-net-flow-chart', config={'displayModeBar': False})
+                                dcc.Graph(id='yearly-saving-investing-ratios-chart', config={'displayModeBar': False}),
+                                style=LOADING_STYLE
                             )
                         ])
                     ], style={'backgroundColor': COLORS['background_secondary']})
@@ -217,21 +227,17 @@ def create_yearly_view_tab():
                         ]),
                         dbc.Row([
                             dbc.Col([
-                                html.H5("Recommendation", style={'color': COLORS['text_primary']}),
-                                html.Div(id="emergency-fund-recommendation")
-                            ], width=12)
-                        ]),
-                        dbc.Row([
-                            dbc.Col([
                                 html.H5("Core Expenses Breakdown", style={'color': COLORS['text_primary'], 'marginTop': '20px'}),
                                 html.Div(id="core-expenses-breakdown")
                             ], width=12)
                         ])
-                    ])
+                    ], style=LOADING_STYLE)
                 ])
             ], style={'backgroundColor': COLORS['background_secondary']})
         ]
     )
+
+    return content
 
 
 @callback(
@@ -265,22 +271,19 @@ def fetch_yearly_data(selected_year, nav_data, token_store):
      Output('yearly-total-savings', 'children'),
      Output('yearly-total-investments', 'children'),
      Output('yearly-profit', 'children'),
-     Output('yearly-profit', 'style'),
-     Output('yearly-profit-card', 'style'),
      Output('yearly-savings-rate', 'children'),
      Output('yearly-investment-rate', 'children'),
-     Output('yearly-net-flow', 'children'),
-     Output('yearly-net-flow', 'style'),
-     Output('yearly-net-flow-card', 'style')],
+     Output('yearly-net-flow', 'children')],
     Input('yearly-analytics-store', 'data'),
     State('user-settings-store', 'data')
 )
 def update_yearly_metrics(analytics_data, user_settings):
     """Update yearly metrics cards"""
     if not analytics_data or 'data' not in analytics_data:
-        empty_style = {'margin': '0'}
-        empty_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['neutral_color']}"}
-        return ('', '', '', '', '', empty_style, empty_card_style, '', '', '', empty_style, empty_card_style)
+        # Always return a string or placeholder, never no_update or None
+        return (
+            "No data", "No data", "No data", "No data", "No data", "No data", "No data", "No data"
+        )
     
     # Get currency symbol
     currency = (user_settings or {}).get('currency', 'CZK')
@@ -300,35 +303,19 @@ def update_yearly_metrics(analytics_data, user_settings):
     savings = data.get('total_saving', 0)
     investments = data.get('total_investment', 0)
     profit = data.get('profit', 0)
+    net_flow = data.get('net_cash_flow', 0)
     savings_rate = data.get('savings_rate', 0)
     investment_rate = data.get('investment_rate', 0)
-    net_flow = data.get('net_cash_flow', 0)
-    
-    # Style for profit/loss
-    profit_color = COLORS['income_color'] if profit >= 0 else COLORS['expense_color']
-    profit_border_color = COLORS['income_color'] if profit >= 0 else COLORS['expense_color']
-    profit_style = {'color': profit_color, 'margin': '0'}
-    profit_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {profit_border_color}'}
-    
-    # Style for net cash flow
-    net_flow_color = COLORS['income_color'] if net_flow >= 0 else COLORS['expense_color']
-    net_flow_border_color = COLORS['income_color'] if net_flow >= 0 else COLORS['expense_color']
-    net_flow_style = {'color': net_flow_color, 'margin': '0'}
-    net_flow_card_style = {'backgroundColor': COLORS['background_secondary'], 'border': f'1px solid {net_flow_border_color}'}
-    
+
     return (
         fmt(income),
         fmt(expenses),
         fmt(savings),
         fmt(investments),
         fmt(profit),
-        profit_style,
-        profit_card_style,
         fmt_percent(savings_rate),
         fmt_percent(investment_rate),
-        fmt(net_flow),
-        net_flow_style,
-        net_flow_card_style
+        fmt(net_flow)
     )
 
 
@@ -370,16 +357,18 @@ def update_expense_breakdown_chart(analytics_data):
     """Update core vs fun expenses chart"""
     if not analytics_data or 'data' not in analytics_data:
         return go.Figure()
-    
+
     data = analytics_data['data']
     months = data.get('months', [])
     core_expenses = data.get('monthly_core_expense', [])
     fun_expenses = data.get('monthly_fun_expense', [])
-    
+    future_expenses = data.get('monthly_future_expense', [])
+
     fig = go.Figure()
     fig.add_trace(go.Bar(x=months, y=core_expenses, name='Core Expenses', marker_color=COLORS['expense_color']))
     fig.add_trace(go.Bar(x=months, y=fun_expenses, name='Fun Expenses', marker_color=COLORS['accent_warning']))
-    
+    fig.add_trace(go.Bar(x=months, y=future_expenses, name='Future Expenses', marker_color=COLORS['accent_success']))
+
     fig.update_layout(
         barmode='stack',
         plot_bgcolor=COLORS['background_secondary'],
@@ -423,42 +412,40 @@ def update_savings_investment_chart(analytics_data):
 
 
 @callback(
-    Output('yearly-net-flow-chart', 'figure'),
+    Output('yearly-saving-investing-ratios-chart', 'figure'),
     Input('yearly-analytics-store', 'data')
 )
-def update_net_flow_chart(analytics_data):
-    """Update monthly net cash flow chart"""
+def update_savings_investment_ratios_chart(analytics_data):
+    """Update monthly savings and investments ratios chart"""
     if not analytics_data or 'data' not in analytics_data:
         return go.Figure()
-    
+
     data = analytics_data['data']
     months = data.get('months', [])
-    net_flow = data.get('monthly_net_flow', [])
-    
-    # Color bars based on positive/negative values
-    colors = [COLORS['income_color'] if val >= 0 else COLORS['expense_color'] for val in net_flow]
-    
+    savings_rate = data.get('monthly_savings_rate', [])
+    investment_rate = data.get('monthly_investment_rate', [])
+
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=months, y=net_flow, name='Net Cash Flow', marker_color=colors))
-    
-    # Add zero line
-    fig.add_hline(y=0, line_dash="dash", line_color=COLORS['text_secondary'])
-    
+    fig.add_trace(go.Scatter(x=months, y=savings_rate, mode='lines', name='Savings Rate', line=dict(color=COLORS['savings_color'], width=2)))
+    fig.add_trace(go.Scatter(x=months, y=investment_rate, mode='lines', name='Investment Rate', line=dict(color=COLORS['investment_color'], width=2)))
+
+    fig.add_trace(go.Scatter(x=months, y=[20] * len(months), mode='lines', name='Target Savings Rate (20%)', line=dict(color=COLORS['text_secondary'], width=2, dash='dot')))
+    fig.add_trace(go.Scatter(x=months, y=[10] * len(months), mode='lines', name='Target Investment Rate (10%)', line=dict(color=COLORS['text_secondary'], width=2, dash='dot')))
+
     fig.update_layout(
         plot_bgcolor=COLORS['background_secondary'],
         paper_bgcolor=COLORS['background_secondary'],
         font={'color': COLORS['text_primary']},
-        showlegend=False,
+        legend=dict(font=dict(color=COLORS['text_primary'])),
         margin=dict(l=40, r=40, t=40, b=40)
     )
-    
+
     return fig
 
 
 @callback(
     [Output('emergency-fund-3-month', 'children'),
      Output('emergency-fund-6-month', 'children'),
-     Output('emergency-fund-recommendation', 'children'),
      Output('core-expenses-breakdown', 'children')],
     Input('emergency-fund-store', 'data'),
     State('user-settings-store', 'data')
@@ -466,7 +453,12 @@ def update_net_flow_chart(analytics_data):
 def update_emergency_fund_analysis(emergency_data, user_settings):
     """Update emergency fund analysis section"""
     if not emergency_data or 'data' not in emergency_data:
-        return '', '', '', ''
+        # Always return a string or placeholder, never no_update or None
+        return (
+            html.P("No data", style={'color': COLORS['text_secondary']}),
+            html.P("No data", style={'color': COLORS['text_secondary']}),
+            html.P("No data", style={'color': COLORS['text_secondary']})
+        )
     
     # Get currency symbol
     currency = (user_settings or {}).get('currency', 'CZK')
@@ -479,51 +471,17 @@ def update_emergency_fund_analysis(emergency_data, user_settings):
     
     # 3-month fund analysis
     three_month_target = data.get('three_month_fund_target', 0)
-    three_month_coverage = data.get('three_month_coverage_percent', 0)
-    current_savings = data.get('current_savings', 0)
     
     three_month_content = html.Div([
         html.P(f"Target: {fmt(three_month_target)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
-        html.P(f"Current: {fmt(current_savings)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
-        dbc.Progress(
-            value=min(three_month_coverage, 100),
-            color="success" if three_month_coverage >= 100 else "warning" if three_month_coverage >= 50 else "danger",
-            style={'height': '20px', 'margin': '10px 0'}
-        ),
-        html.P(f"Coverage: {three_month_coverage:.1f}%", style={'color': COLORS['text_secondary'], 'margin': '5px 0'})
-    ])
+        ])
     
     # 6-month fund analysis
     six_month_target = data.get('six_month_fund_target', 0)
-    six_month_coverage = data.get('six_month_coverage_percent', 0)
     
     six_month_content = html.Div([
         html.P(f"Target: {fmt(six_month_target)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
-        html.P(f"Current: {fmt(current_savings)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
-        dbc.Progress(
-            value=min(six_month_coverage, 100),
-            color="success" if six_month_coverage >= 100 else "warning" if six_month_coverage >= 50 else "danger",
-            style={'height': '20px', 'margin': '10px 0'}
-        ),
-        html.P(f"Coverage: {six_month_coverage:.1f}%", style={'color': COLORS['text_secondary'], 'margin': '5px 0'})
     ])
-    
-    # Recommendation
-    recommendation = data.get('recommendation', '')
-    priority = data.get('priority', 'medium')
-    
-    priority_colors = {
-        'low': COLORS['accent_success'],
-        'medium': COLORS['accent_warning'],
-        'high': COLORS['expense_color'],
-        'critical': COLORS['accent_danger']
-    }
-    
-    recommendation_content = dbc.Alert(
-        recommendation,
-        color="success" if priority == 'low' else "warning" if priority == 'medium' else "danger",
-        style={'margin': '10px 0'}
-    )
     
     # Core expenses breakdown
     core_categories = data.get('core_category_breakdown', {})
@@ -549,4 +507,4 @@ def update_emergency_fund_analysis(emergency_data, user_settings):
     else:
         breakdown_content = html.P("No core expense data available", style={'color': COLORS['text_secondary']})
     
-    return three_month_content, six_month_content, recommendation_content, breakdown_content
+    return three_month_content, six_month_content, breakdown_content
