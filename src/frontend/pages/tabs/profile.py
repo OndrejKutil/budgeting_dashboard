@@ -1,6 +1,5 @@
 from dash import html, dcc, Input, State, Output, callback
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, CARD_STYLE, LOADING_STYLE
 from datetime import datetime
 from helper.requests.profile_request import request_profile_data
 from utils.currency import CURRENCY_OPTIONS
@@ -9,142 +8,131 @@ from utils.currency import CURRENCY_OPTIONS
 def create_profile_tab():
     """Create the profile tab content"""
     
-    content_style = {
-        'backgroundColor': COLORS['background_primary'],
-        'padding': '24px',
-        'margin': '0',
-        'minHeight': '100%',
-        'width': '100%'
-    }
-
     content = html.Div([
         html.Div([
-            html.H1("Profile Settings", style={
-                'color': COLORS['text_primary'],
-                'margin': '0',
-                'flex': '1'
-            })
-        ], style={
-            'display': 'flex',
-            'justifyContent': 'space-between',
-            'alignItems': 'center',
-            'marginBottom': '20px'
-        }),
+            html.H1("Profile Settings", className="tab-heading no-margin flex-1")
+        ], className="flex-between"),
         
         # Profile content with placeholder structure
         html.Div([
             # Basic Information Card
             dbc.Card([
-                dbc.CardHeader([
-                    html.H4("Basic Information", className="mb-0", style={'color': COLORS['text_primary']})
-                ]),
+                dbc.CardHeader(
+                    html.H4("Basic Information", className="mb-0 text-primary")
+                ),
                 dcc.Loading(
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Email:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-email", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Role:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-role", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Email:", className='text-primary'),
+                                html.P(id="profile-email", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Role:", className='text-primary'),
+                                html.P(id="profile-role", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                        ]),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Phone:", className='text-primary'),
+                                html.P(id="profile-phone", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Currency:", className='text-primary'),
+                                dcc.Dropdown(
+                                    id="profile-currency",
+                                    options=[
+                                        {"label": html.Span(label), "value": value}
+                                        for label, value in CURRENCY_OPTIONS
+                                    ],
+                                    value="CZK",
+                                    clearable=False,
+                                    style={
+                                        'width': '220px',
+                                        "paddingLeft": '10px',
+                                    },
+                                    className="profile-currency-dropdown"
+                                )
+                            ], width=3, className='flex-center'),
+                        ])
                     ]),
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Phone:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-phone", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Currency:", style={'color': COLORS['text_primary']}),
-                            dcc.Dropdown(
-                                id="profile-currency",
-                                options=[
-                                    {"label": html.Span(label), "value": value}
-                                    for label, value in CURRENCY_OPTIONS
-                                ],
-                                value="CZK",
-                                clearable=False,
-                                style={
-                                    'width': '220px',
-                                    "paddingLeft": '10px',
-                                },
-                                className="profile-currency-dropdown"
-                            )
-                        ], width=3, style={'display': 'flex', 'alignItems': 'center'}),
-                    ])
-                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
-            ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
+                    className="loading loading-zero"
+                )
+            ], className="card mb-3"),
             # Account Status Card
             dbc.Card([
                 dbc.CardHeader([
-                    html.H4("Account Status", className="mb-0", style={'color': COLORS['text_primary']})
+                    html.H4("Account Status", className="mb-0 text-primary")
                 ]),
                 dcc.Loading(
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Email Verified:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-email-verified", children=[
-                                dbc.Badge('', color="secondary", className="ms-2")
-                            ], className="mb-2")
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Phone Verified:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-phone-verified", children=[
-                                dbc.Badge('', color="secondary", className="ms-2")
-                            ], className="mb-2")
-                        ], width=6),
-                    ]),
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Anonymous User:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-anonymous", children=[
-                                dbc.Badge('', color="secondary", className="ms-2")
-                            ], className="mb-2")
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Provider:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-provider", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                    ])
-                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
-            ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Email Verified:", className='text-primary'),
+                                html.P(id="profile-email-verified", children=[
+                                    dbc.Badge('', color="secondary", className="ms-2")
+                                ], className="mb-2")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Phone Verified:", className='text-primary'),
+                                html.P(id="profile-phone-verified", children=[
+                                    dbc.Badge('', color="secondary", className="ms-2")
+                                ], className="mb-2")
+                            ], width=6),
+                        ]),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Anonymous User:", className='text-primary'),
+                                html.P(id="profile-anonymous", children=[
+                                    dbc.Badge('', color="secondary", className="ms-2")
+                                ], className="mb-2")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Provider:", className='text-primary'),
+                                html.P(id="profile-provider", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                        ])
+                    ],
+                ), className="loading loading-zero"
+                )
+            ], className="card mb-3"),
             
             # Account Timeline Card
             dbc.Card([
                 dbc.CardHeader([
-                    html.H4("Account Timeline", className="mb-0", style={'color': COLORS['text_primary']})
+                    html.H4("Account Timeline", className="mb-0 text-primary")
                 ]),
                 dcc.Loading(
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Account Created:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-created", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Last Updated:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-updated", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                    ]),
-                    dbc.Row([
-                        dbc.Col([
-                            html.Strong("Last Sign In:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-signin", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                        dbc.Col([
-                            html.Strong("Email Confirmed:", style={'color': COLORS['text_primary']}),
-                            html.P(id="profile-email-confirmed", children='', className="mb-2", style={'color': COLORS['text_secondary']})
-                        ], width=6),
-                    ])
-                ]), style={**LOADING_STYLE, 'marginTop': '0rem'})
-            ], className="mb-3", style={'backgroundColor': COLORS['background_secondary']}),
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Account Created:", className='text-primary'),
+                                html.P(id="profile-created", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Last Updated:", className='text-primary'),
+                                html.P(id="profile-updated", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                        ]),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Strong("Last Sign In:", className='text-primary'),
+                                html.P(id="profile-signin", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                            dbc.Col([
+                                html.Strong("Email Confirmed:", className='text-primary'),
+                                html.P(id="profile-email-confirmed", children='', className="mb-2 text-secondary")
+                            ], width=6),
+                        ])
+                    ],
+                ), className="loading loading-zero"
+                )
+            ], className="card mb-3"),
             
             # Account Actions Card
             dbc.Card([
                 dbc.CardHeader([
-                    html.H4("Account Actions", className="mb-0", style={'color': COLORS['text_primary']})
+                    html.H4("Account Actions", className="mb-0 text-primary")
                 ]),
                 dbc.CardBody([
                     dbc.Row([
@@ -173,9 +161,9 @@ def create_profile_tab():
                         ])
                     ])
                 ])
-            ], style={'backgroundColor': COLORS['background_secondary']})
+            ], className='card')
         ])
-    ], style=content_style)
+    ], className='tab-content')
 
     return content
 

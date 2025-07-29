@@ -14,25 +14,17 @@ LIMIT = 50
 def create_accounts_tab():
     """Create the accounts tab content"""
 
-    content_style = {
-        'backgroundColor': COLORS['background_primary'],
-        'padding': '24px',
-        'margin': '0',
-        'minHeight': '100%',
-        'width': '100%'
-    }
-
     return html.Div(
         id='accounts-tab-content',
-        style=content_style,
+        className='tab-content',
         children=[
-            html.H2('Accounts', style={'color': COLORS['text_primary'], 'marginBottom': '20px'}),
+            html.H2('Accounts', className='tab-heading'),
             dcc.Store(id='accounts-offset-store', data={'offset': 0}),
             dcc.Store(id='accounts-refresh-store', data={'refresh': 0}),
             dbc.Row([
                 dbc.Col(dbc.Button('Previous', id='accounts-prev-btn', color='secondary', className='me-2'), width='auto'),
                 dbc.Col(dbc.Button('Next', id='accounts-next-btn', color='secondary'), width='auto'),
-                dbc.Col(html.Div(id='accounts-page-info', style={'alignSelf': 'center', 'marginLeft': '10px'}), width='auto')
+                dbc.Col(html.Div(id='accounts-page-info', className='page-info'), width='auto')
             ], className='mb-3'),
             dcc.Loading(
                 dash_table.DataTable(

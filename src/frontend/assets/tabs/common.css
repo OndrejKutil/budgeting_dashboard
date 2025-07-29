@@ -1,0 +1,36 @@
+.tab-content {
+    background-color: var(--background-primary);
+    padding: 24px;
+    margin: 0;
+    min-height: 100%;
+    width: 100%;
+}
+
+.tab-heading {
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}
+
+.card-title-sm {
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.page-info {
+    align-self: center;
+    margin-left: 10px;
+}
+
+.no-margin { margin: 0 !important; }
+
+.border-income { border: 1px solid var(--income-color) !important; }
+.border-expense { border: 1px solid var(--expense-color) !important; }
+.border-savings { border: 1px solid var(--savings-color) !important; }
+.border-investment { border: 1px solid var(--investment-color) !important; }
+.border-accent { border: 1px solid var(--accent-primary) !important; }
+.loading-offset { margin-top: -1.5rem !important; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.flex-1 { flex: 1; }
+.loading-zero { margin-top: 0 !important; }
+.flex-center { display: flex; align-items: center; }
+.mt-20 { margin-top: 20px !important; }

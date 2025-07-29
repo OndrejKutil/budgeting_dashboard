@@ -1,7 +1,7 @@
 from dash import html, dcc, Input, Output, State, callback
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-from utils.theme import COLORS, LOADING_STYLE
+from utils.theme import COLORS
 from helper.requests.yearly_analytics_request import get_yearly_analytics, get_emergency_fund_analysis
 from utils.currency import CURRENCY_SYMBOLS
 import datetime
@@ -10,29 +10,21 @@ import datetime
 def create_yearly_view_tab():
     """Create the yearly view tab content with comprehensive analytics"""
 
-    content_style = {
-        'backgroundColor': COLORS['background_primary'],
-        'padding': '24px',
-        'margin': '0',
-        'minHeight': '100%',
-        'width': '100%'
-    }
-
     current_year = datetime.datetime.now().year
     year_options = [{"label": str(year), "value": year} for year in range(current_year - 5, current_year + 2)]
 
     content = html.Div(
         id='yearly-view-tab-content',
-        style=content_style,
+        className='tab-content',
         children=[
             # Header with year selector
             html.Div([
                 html.H2(
                     "Yearly Financial Analytics",
-                    style={'color': COLORS['text_primary'], 'margin': '0', 'flex': '1'}
+                    className='tab-heading no-margin flex-1'
                 ),
                 html.Div([
-                    html.Label("Select Year:", style={'color': COLORS['text_primary'], 'marginRight': '10px'}),
+                    html.Label("Select Year:", className='text-primary', style={'marginRight': '10px'}),
                     dcc.Dropdown(
                         id='yearly-year-selector',
                         options=year_options,
@@ -40,13 +32,8 @@ def create_yearly_view_tab():
                         clearable=False,
                         style={'width': '120px', 'display': 'inline-block'}
                     )
-                ], style={'display': 'flex', 'alignItems': 'center'})
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'alignItems': 'center',
-                'marginBottom': '24px'
-            }),
+                ], className='flex-center')
+            ], className='flex-between mb-24'),
             
             # Store for yearly data
             dcc.Store(id='yearly-analytics-store'),
@@ -57,46 +44,46 @@ def create_yearly_view_tab():
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Income", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Total Income", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-total-income", children='', style={'color': COLORS['income_color'], 'margin': '0'}),
-                                style={**LOADING_STYLE, 'marginTop': '-1.5rem'}
+                                html.H3(id="yearly-total-income", children='', className="income-color no-margin"),
+                                className="loading loading-offset"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['income_color']}"})
+                    ], className='card border-income')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Expenses", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Total Expenses", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-total-expenses", children='', style={'color': COLORS['expense_color'], 'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-total-expenses", children='', className="expense-color no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['expense_color']}"})
+                    ], className='card border-expense')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Savings", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Total Savings", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-total-savings", children='', style={'color': COLORS['savings_color'], 'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-total-savings", children='', className="savings-color no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['savings_color']}"})
+                    ], className='card border-savings')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Investments", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Total Investments", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-total-investments", children='', style={'color': COLORS['investment_color'], 'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-total-investments", children='', className="investment-color no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['investment_color']}"})
+                    ], className='card border-investment')
                 ], width=3),
             ], className="mb-4"),
             
@@ -105,46 +92,46 @@ def create_yearly_view_tab():
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Profit/Loss", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Profit/Loss", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-profit", children='', style={'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-profit", children='', className="no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], id="yearly-profit-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
+                    ], id="yearly-profit-card", className='card border-accent')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Net Cash Flow", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Net Cash Flow", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-net-flow", children='', style={'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-net-flow", children='', className="no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], id="yearly-net-flow-card", style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['accent_primary']}"})
+                    ], id="yearly-net-flow-card", className='card border-accent')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Savings Rate", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Savings Rate", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-savings-rate", children='', style={'color': COLORS['savings_color'], 'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-savings-rate", children='', className="savings-color no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['savings_color']}"})
+                    ], className='card border-savings')
                 ], width=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Investment Rate", className="card-title", style={'color': COLORS['text_primary'], 'fontSize': '16px'}),
+                            html.H4("Investment Rate", className="card-title card-title-sm"),
                             dcc.Loading(
-                                html.H3(id="yearly-investment-rate", children='', style={'color': COLORS['investment_color'], 'margin': '0'}),
-                                style=LOADING_STYLE
+                                html.H3(id="yearly-investment-rate", children='', className="investment-color no-margin"),
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary'], 'border': f"1px solid {COLORS['investment_color']}"})
+                    ], className='card border-investment')
                 ], width=3),
             ], className="mb-4"),
             
@@ -153,28 +140,28 @@ def create_yearly_view_tab():
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
-                            html.H4("Monthly Income vs Expenses", className="mb-0", style={'color': COLORS['text_primary']})
+                            html.H4("Monthly Income vs Expenses", className="mb-0 text-primary")
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
                                 dcc.Graph(id='yearly-income-expense-chart', config={'displayModeBar': False}),
-                                style=LOADING_STYLE
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary']})
+                    ], className='card')
                 ], width=6),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
-                            html.H4("Core vs Fun Expenses", className="mb-0", style={'color': COLORS['text_primary']})
+                            html.H4("Core vs Fun Expenses", className="mb-0 text-primary")
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
                                 dcc.Graph(id='yearly-expense-breakdown-chart', config={'displayModeBar': False}),
-                                style=LOADING_STYLE
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary']})
+                    ], className='card')
                 ], width=6),
             ], className="mb-4"),
             
@@ -183,57 +170,57 @@ def create_yearly_view_tab():
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
-                            html.H4("Monthly Savings & Investments", className="mb-0", style={'color': COLORS['text_primary']})
+                            html.H4("Monthly Savings & Investments", className="mb-0 text-primary")
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
                                 dcc.Graph(id='yearly-savings-investment-chart', config={'displayModeBar': False}),
-                                style=LOADING_STYLE
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary']})
+                    ], className='card')
                 ], width=6),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardHeader([
-                            html.H4("Monthly Saving & Investing ratios", className="mb-0", style={'color': COLORS['text_primary']})
+                            html.H4("Monthly Saving & Investing ratios", className="mb-0 text-primary")
                         ]),
                         dbc.CardBody([
                             dcc.Loading(
                                 dcc.Graph(id='yearly-saving-investing-ratios-chart', config={'displayModeBar': False}),
-                                style=LOADING_STYLE
+                                className="loading"
                             )
                         ])
-                    ], style={'backgroundColor': COLORS['background_secondary']})
+                    ], className='card')
                 ], width=6),
             ], className="mb-4"),
             
             # Emergency Fund Analysis
             dbc.Card([
                 dbc.CardHeader([
-                    html.H4("Emergency Fund Analysis", className="mb-0", style={'color': COLORS['text_primary']})
+                    html.H4("Emergency Fund Analysis", className="mb-0 text-primary")
                 ]),
                 dbc.CardBody([
                     dcc.Loading([
                         dbc.Row([
                             dbc.Col([
-                                html.H5("3-Month Emergency Fund", style={'color': COLORS['text_primary']}),
-                                html.Div(id="emergency-fund-3-month", style={'marginBottom': '20px'})
+                                html.H5("3-Month Emergency Fund", className='text-primary'),
+                                html.Div(id="emergency-fund-3-month", className='mb-20')
                             ], width=6),
                             dbc.Col([
-                                html.H5("6-Month Emergency Fund", style={'color': COLORS['text_primary']}),
-                                html.Div(id="emergency-fund-6-month", style={'marginBottom': '20px'})
+                                html.H5("6-Month Emergency Fund", className='text-primary'),
+                                html.Div(id="emergency-fund-6-month", className='mb-20')
                             ], width=6),
                         ]),
                         dbc.Row([
                             dbc.Col([
-                                html.H5("Core Expenses Breakdown", style={'color': COLORS['text_primary'], 'marginTop': '20px'}),
+                                html.H5("Core Expenses Breakdown", className='text-primary mt-20'),
                                 html.Div(id="core-expenses-breakdown")
                             ], width=12)
                         ])
-                    ], style=LOADING_STYLE)
+                    ], className="loading")
                 ])
-            ], style={'backgroundColor': COLORS['background_secondary']})
+            ], className='card')
         ]
     )
 
@@ -455,9 +442,9 @@ def update_emergency_fund_analysis(emergency_data, user_settings):
     if not emergency_data or 'data' not in emergency_data:
         # Always return a string or placeholder, never no_update or None
         return (
-            html.P("No data", style={'color': COLORS['text_secondary']}),
-            html.P("No data", style={'color': COLORS['text_secondary']}),
-            html.P("No data", style={'color': COLORS['text_secondary']})
+            html.P("No data", className='text-secondary'),
+            html.P("No data", className='text-secondary'),
+            html.P("No data", className='text-secondary')
         )
     
     # Get currency symbol
@@ -473,14 +460,14 @@ def update_emergency_fund_analysis(emergency_data, user_settings):
     three_month_target = data.get('three_month_fund_target', 0)
     
     three_month_content = html.Div([
-        html.P(f"Target: {fmt(three_month_target)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
+        html.P(f"Target: {fmt(three_month_target)}", className='text-primary', style={'margin': '5px 0'}),
         ])
     
     # 6-month fund analysis
     six_month_target = data.get('six_month_fund_target', 0)
     
     six_month_content = html.Div([
-        html.P(f"Target: {fmt(six_month_target)}", style={'color': COLORS['text_primary'], 'margin': '5px 0'}),
+        html.P(f"Target: {fmt(six_month_target)}", className='text-primary', style={'margin': '5px 0'}),
     ])
     
     # Core expenses breakdown
@@ -493,18 +480,18 @@ def update_emergency_fund_analysis(emergency_data, user_settings):
             percentage = (amount / (avg_monthly * 12) * 100) if avg_monthly > 0 else 0
             breakdown_items.append(
                 html.Div([
-                    html.Span(category, style={'color': COLORS['text_primary']}),
-                    html.Span(f"{fmt(amount)} ({percentage:.1f}%)", 
-                             style={'color': COLORS['text_secondary'], 'float': 'right'})
+                    html.Span(category, className='text-primary'),
+                    html.Span(f"{fmt(amount)} ({percentage:.1f}%)",
+                             className='text-secondary', style={'float': 'right'})
                 ], style={'margin': '5px 0', 'padding': '5px', 'backgroundColor': COLORS['background_tertiary'], 'borderRadius': '4px'})
             )
         
         breakdown_content = html.Div([
-            html.P(f"Average Monthly Core Expenses: {fmt(avg_monthly)}", 
-                  style={'color': COLORS['text_primary'], 'fontWeight': 'bold', 'marginBottom': '15px'}),
+            html.P(f"Average Monthly Core Expenses: {fmt(avg_monthly)}",
+                  className='text-primary', style={'fontWeight': 'bold', 'marginBottom': '15px'}),
             html.Div(breakdown_items)
         ])
     else:
-        breakdown_content = html.P("No core expense data available", style={'color': COLORS['text_secondary']})
+        breakdown_content = html.P("No core expense data available", className='text-secondary')
     
     return three_month_content, six_month_content, breakdown_content
