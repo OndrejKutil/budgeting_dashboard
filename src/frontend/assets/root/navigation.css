@@ -1,9 +1,12 @@
 /* Navigation bar styles */
 .navigation-bar {
     background-color: var(--background-secondary);
-    padding: 0;
+    padding: 0 24px;
     margin: 0;
     width: 100%;
+    display: flex;
+    align-items: center;
+    height: 60px;
 }
 .nav-list {
     display: flex;

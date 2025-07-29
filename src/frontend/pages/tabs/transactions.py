@@ -1,6 +1,6 @@
 from dash import html, dcc, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, LOADING_STYLE
+
 from helper.requests.transactions_request import (
     get_transactions,
     update_transaction as request_update_transaction,
@@ -45,25 +45,17 @@ def _attach_names(items: list[dict], access_token: str) -> list[dict]:
 def create_transactions_tab():
     """Create the transactions tab content"""
 
-    content_style = {
-        'backgroundColor': COLORS['background_primary'],
-        'padding': '24px',
-        'margin': '0',
-        'minHeight': '100%',
-        'width': '100%'
-    }
-
     return html.Div(
         id='transactions-tab-content',
-        style=content_style,
+        className='tab-content',
         children=[
-            html.H2('Transactions', style={'color': COLORS['text_primary'], 'marginBottom': '20px'}),
+            html.H2('Transactions', className='text-primary mb-20'),
             dcc.Store(id='transactions-offset-store', data={'offset': 0}),
             dcc.Store(id='transactions-refresh-store', data={'refresh': 0}),
             dbc.Row([
                 dbc.Col(dbc.Button('Previous', id='transactions-prev-btn', color='secondary', className='me-2'), width='auto'),
                 dbc.Col(dbc.Button('Next', id='transactions-next-btn', color='secondary'), width='auto'),
-                dbc.Col(html.Div(id='transactions-page-info', style={'alignSelf': 'center', 'marginLeft': '10px'}), width='auto')
+                dbc.Col(html.Div(id='transactions-page-info', className='align-self-center ml-10'), width='auto')
             ], className='mb-3'),
             dcc.Loading(
                 dash_table.DataTable(
@@ -82,28 +74,28 @@ def create_transactions_tab():
                 row_selectable='single',
                 style_cell={
                     'textAlign': 'left',
-                    'backgroundColor': COLORS['background_secondary'],
-                    'color': COLORS['text_primary'],
-                    'border': f'1px solid {COLORS["text_secondary"]}',
+                    'backgroundColor': 'var(--background-secondary)',
+                    'color': 'var(--text-primary)',
+                    'border': '1px solid var(--text-secondary)',
                     'padding': '8px'
                 },
                 style_header={
-                    'backgroundColor': COLORS['text_secondary'],
-                    'color': COLORS['background_primary'],
+                    'backgroundColor': 'var(--text-secondary)',
+                    'color': 'var(--background-primary)',
                     'fontWeight': 'bold'
                 },
                 style_data_conditional=[
                     {
                         'if': {'column_id': 'amount', 'filter_query': '{amount} < 0'},
-                        'color': COLORS['expense_color'],
+                        'color': 'var(--expense-color)',
                     },
                     {
                         'if': {'column_id': 'amount', 'filter_query': '{amount} >= 0'},
-                        'color': COLORS['income_color'],
+                        'color': 'var(--income-color)',
                     },
                 ],
                 page_action='none'
-            ), style=LOADING_STYLE),
+            ), className='loading'),
             create_edit_transaction_modal()
         ]
     )

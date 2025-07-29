@@ -1,7 +1,6 @@
 import datetime
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, INPUT_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE
 
 
 def create_edit_transaction_modal():
@@ -14,11 +13,11 @@ def create_edit_transaction_modal():
             dbc.ModalBody([
                 html.Div([
                     html.Label("Account", htmlFor="edit-transaction-account-dropdown", className="text-primary"),
-                    dcc.Dropdown(id="edit-transaction-account-dropdown", options=[], placeholder="Select account", style={'marginBottom': '10px'})
+                    dcc.Dropdown(id="edit-transaction-account-dropdown", options=[], placeholder="Select account", className="mb-10")
                 ]),
                 html.Div([
                     html.Label("Category", htmlFor="edit-transaction-category-dropdown", className="text-primary"),
-                    dcc.Dropdown(id="edit-transaction-category-dropdown", options=[], placeholder="Select category", style={'marginBottom': '10px'})
+                    dcc.Dropdown(id="edit-transaction-category-dropdown", options=[], placeholder="Select category", className="mb-10")
                 ]),
                 html.Div([
                     html.Label("Amount", htmlFor="edit-transaction-amount-input", className="text-primary"),
@@ -49,10 +48,5 @@ def create_edit_transaction_modal():
     return dcc.Loading(
         modal,
         type="default",
-        style={
-            'width': '100%',
-            'marginTop': '30rem',
-            'position': 'fixed',
-            'zIndex': 2000  # Ensure it's above modal backdrop
-        }
+        className="loading loading-modal"
     )

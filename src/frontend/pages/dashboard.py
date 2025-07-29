@@ -4,7 +4,7 @@
 # Main dashboard page that displays user information
 
 from dash import html, Input, Output, callback, ALL, State, callback_context
-from utils.theme import COLORS, NAV_BUTTON_STYLE, NAV_BUTTON_ACTIVE_STYLE
+
 from utils.tabs import Tab
 from components.navigation import create_navigation_bar
 from pages.tabs.overview import create_overview_tab
@@ -29,26 +29,11 @@ def create_dashboard_layout():
     """Create the main dashboard layout with navigation bar interface"""
     
     # Content container style - full width and height, no borders
-    content_container_style = {
-        'backgroundColor': COLORS['background_primary'],
-        'minHeight': 'calc(100vh - 60px)',  # Full height minus navbar
-        'padding': '0',
-        'margin': '0',
-        'width': '100%',
-        'boxSizing': 'border-box'
-    }
+
     
     return html.Div([
         # Navigation bar
-        html.Div([
-            create_navigation_bar()
-        ], style={
-            'display': 'flex',
-            'alignItems': 'center',
-            'backgroundColor': COLORS['background_secondary'],
-            'padding': '0 24px',
-            'height': '60px'
-        }),
+        create_navigation_bar(),
         
         # Modal for adding transactions
         create_add_transaction_modal(),
@@ -57,17 +42,10 @@ def create_dashboard_layout():
         # Content area
         html.Div(
             id="nav-content",
-            style=content_container_style
+            className='dashboard-content'
         )
         
-    ], style={
-        'backgroundColor': COLORS['background_primary'],
-        'minHeight': '100vh',
-        'fontFamily': 'Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif',
-        'color': COLORS['text_primary'],
-        'width': '100%',
-        'overflowX': 'hidden'
-    })
+    ], className='app-container')
 
 
 @callback(
@@ -104,22 +82,23 @@ def update_navigation_content(n_clicks_list, nav_data_input, nav_data_state):
 
 
 @callback(
-    Output({'type': 'nav-button', 'index': ALL}, 'style'),
+    Output({'type': 'nav-button', 'index': ALL}, 'className'),
     Input('navigation-store', 'data')
 )
 def update_navigation_button_styles(nav_data):
-    """Update navigation button styles based on active tab"""
+    """Update navigation button classes based on active tab"""
     active_tab = nav_data.get('active_tab', 'overview')
-    
-    styles = []
+
+    classes = []
     for tab in Tab:
         tab_id = tab.name.lower()
+        base = 'nav-button'
         if tab_id == active_tab:
-            styles.append(NAV_BUTTON_ACTIVE_STYLE)
+            classes.append(f"{base} active")
         else:
-            styles.append(NAV_BUTTON_STYLE)
-    
-    return styles
+            classes.append(base)
+
+    return classes
 
 
 def get_tab_content(selected_tab):

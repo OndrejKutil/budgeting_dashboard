@@ -1,7 +1,6 @@
 import datetime
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from utils.theme import COLORS, INPUT_STYLE, BUTTON_PRIMARY_STYLE, BUTTON_SECONDARY_STYLE
 
 
 def create_add_transaction_modal():
@@ -47,10 +46,5 @@ def create_add_transaction_modal():
     return dcc.Loading(
         modal,
         type="default",
-        style={
-            'width': '100%',
-            'marginTop': '65rem',
-            'position': 'fixed',
-            'zIndex': 2000  # Ensure it's above modal backdrop
-        }
+        className="loading loading-modal-large"
     )
