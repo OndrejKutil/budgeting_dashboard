@@ -3,7 +3,7 @@
 # =============================================================================
 # Modern navigation bar component for dashboard navigation with mobile support
 
-from dash import html, dcc
+from dash import html, dcc, Input, Output, State, callback, callback_context
 from utils.tabs import Tab
 
 def create_navigation_bar(active_tab='overview'):
@@ -73,6 +73,9 @@ def create_navigation_bar(active_tab='overview'):
     ])
 
     return html.Div([
+        # Store for mobile menu state
+        dcc.Store(id='mobile-menu-store', data={'open': False}),
+        
         # Desktop navigation
         html.Nav([
             html.Ul(nav_items, className='nav-list', id='nav-list')
@@ -95,3 +98,57 @@ def create_navigation_bar(active_tab='overview'):
             id='mobile-nav-menu'
         )
     ])
+
+# =============================================================================
+# MOBILE NAVIGATION CALLBACKS
+# =============================================================================
+
+@callback(
+    [Output('mobile-menu-store', 'data'),
+     Output('hamburger-menu', 'className'),
+     Output('mobile-nav-menu', 'className'),
+     Output('mobile-nav-overlay', 'className')],
+    [Input('hamburger-menu', 'n_clicks'),
+     Input('mobile-nav-overlay', 'n_clicks'),
+     Input({'type': 'mobile-nav-button', 'index': 'overview'}, 'n_clicks'),
+     Input({'type': 'mobile-nav-button', 'index': 'transactions'}, 'n_clicks'),
+     Input({'type': 'mobile-nav-button', 'index': 'accounts'}, 'n_clicks'),
+     Input({'type': 'mobile-nav-button', 'index': 'yearly_view'}, 'n_clicks'),
+     Input({'type': 'mobile-nav-button', 'index': 'profile'}, 'n_clicks'),
+     Input('mobile-add-transaction-button', 'n_clicks'),
+     Input('mobile-logout-button', 'n_clicks')],
+    [State('mobile-menu-store', 'data')],
+    prevent_initial_call=True
+)
+def toggle_mobile_menu(hamburger_clicks, overlay_clicks, overview_clicks, transactions_clicks, 
+                      accounts_clicks, yearly_clicks, profile_clicks, add_trans_clicks, 
+                      logout_clicks, current_state):
+    """Toggle mobile navigation menu open/closed"""
+    
+    if not current_state:
+        current_state = {'open': False}
+    
+    ctx = callback_context
+    if not ctx.triggered:
+        return current_state, 'hamburger-menu', 'mobile-nav-menu', 'mobile-nav-overlay'
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    # If hamburger or overlay clicked, toggle menu
+    if trigger_id in ['hamburger-menu', 'mobile-nav-overlay']:
+        new_state = {'open': not current_state['open']}
+    else:
+        # If any navigation button clicked, close menu
+        new_state = {'open': False}
+    
+    # Set CSS classes based on menu state
+    if new_state['open']:
+        hamburger_class = 'hamburger-menu active'
+        menu_class = 'mobile-nav-menu active'
+        overlay_class = 'mobile-nav-overlay active'
+    else:
+        hamburger_class = 'hamburger-menu'
+        menu_class = 'mobile-nav-menu'
+        overlay_class = 'mobile-nav-overlay'
+    
+    return new_state, hamburger_class, menu_class, overlay_class

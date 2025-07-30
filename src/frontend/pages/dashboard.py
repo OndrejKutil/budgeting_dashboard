@@ -46,11 +46,12 @@ def create_dashboard_layout():
     Output('nav-content', 'children'),
     Output('navigation-store', 'data'),
     Input({'type': 'nav-button', 'index': ALL}, 'n_clicks'),
+    Input({'type': 'mobile-nav-button', 'index': ALL}, 'n_clicks'),
     Input('navigation-store', 'data'),
     State('navigation-store', 'data'),
     prevent_initial_call=False
 )
-def update_navigation_content(n_clicks_list, nav_data_input, nav_data_state):
+def update_navigation_content(n_clicks_list, mobile_n_clicks_list, nav_data_input, nav_data_state):
     """Update the content and navigation state based on clicked navigation button"""
     
     # Find which button was clicked
@@ -61,8 +62,8 @@ def update_navigation_content(n_clicks_list, nav_data_input, nav_data_state):
     
     trigger_id = ctx.triggered[0]['prop_id']
     
-    # Check if a navigation button was clicked
-    if 'nav-button' in trigger_id:
+    # Check if a navigation button (desktop or mobile) was clicked
+    if 'nav-button' in trigger_id or 'mobile-nav-button' in trigger_id:
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
         button_index = json.loads(button_id)['index']  # Extract the tab index
         
@@ -106,14 +107,15 @@ def get_tab_content(selected_tab):
     Output("transaction-account-dropdown", "options"),
     Output("transaction-category-dropdown", "options"),
     Input("open-add-transaction-button", "n_clicks"),
+    Input("mobile-add-transaction-button", "n_clicks"),
     Input("close-add-transaction-modal", "n_clicks"),
     State("add-transaction-modal", "is_open"),
     State("token-store", "data"),
     prevent_initial_call=True,
 )
-def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
+def toggle_add_transaction_modal(open_click, mobile_open_click, close_click, is_open, token_data):
     ctx = callback_context
-    if ctx.triggered_id == "open-add-transaction-button" and token_data:
+    if (ctx.triggered_id == "open-add-transaction-button" or ctx.triggered_id == "mobile-add-transaction-button") and token_data:
         accounts = get_accounts(token_data.get("access_token", ""))
         categories = get_categories(token_data.get("access_token", ""))
         acc_options = [

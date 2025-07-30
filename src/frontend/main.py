@@ -115,11 +115,12 @@ def display_page(auth_data):
     Output('auth-store', 'data', allow_duplicate=True),
     Output('token-store', 'data', allow_duplicate=True),
     Input('logout-button', 'n_clicks'),
+    Input('mobile-logout-button', 'n_clicks'),
     prevent_initial_call=True
 )
-def handle_logout(n_clicks):
+def handle_logout(n_clicks, mobile_n_clicks):
     """Handle logout button click"""
-    if n_clicks:
+    if n_clicks or mobile_n_clicks:
         # Reset auth store to logged out state
         auth_data = {
             'logged': False

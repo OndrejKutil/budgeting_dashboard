@@ -76,13 +76,17 @@
     width: 100%;
     background-color: var(--background-secondary);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-100%);
-    transition: transform 0.3s ease;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
     z-index: 1000;
     padding: 20px 0;
 }
 
 .mobile-nav-menu.active {
+    visibility: visible;
+    opacity: 1;
     transform: translateY(0);
 }
 
@@ -175,10 +179,15 @@
     .navigation-bar {
         padding: 0 16px;
         justify-content: space-between;
+        position: relative;
     }
     
     .hamburger-menu {
         display: block;
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
     }
     
     .nav-list {

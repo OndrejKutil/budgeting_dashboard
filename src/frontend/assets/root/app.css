@@ -28,6 +28,18 @@
     --card-gradient: linear-gradient(145deg, #ffffff 0%, #f8f9fc 100%);
 }
 
+/* Global reset and base styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
 .app-container {
     background-color: var(--background-primary);
     min-height: 100vh;
@@ -277,6 +289,19 @@ h2 {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
 /* Mobile-first responsive design */
 @media (max-width: 1200px) {
     .tab-content {
@@ -357,6 +382,19 @@ h2 {
         min-height: calc(100vh - 60px);
         padding-top: 16px;
     }
+    
+    /* Better touch targets */
+    button, .btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Improved spacing for mobile */
+    .flex-between {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -381,6 +419,11 @@ h2 {
         padding: 12px 20px;
         font-size: 13px;
     }
+    
+    /* Ultra-small screens */
+    .login-page-content {
+        padding: 12px;
+    }
 }
 
 /* High-resolution displays */
@@ -391,6 +434,23 @@ h2 {
     
     .form-input:focus {
         box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.08);
+    }
+}
+
+/* Dark mode support (for future implementation) */
+@media (prefers-color-scheme: dark) {
+    /* Dark mode styles can be added here in the future */
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
 
