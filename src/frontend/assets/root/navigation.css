@@ -15,18 +15,11 @@
     padding: 0 24px;
     align-items: center;
     height: 60px;
+    width: 100%;
 }
 
-.nav-spacer {
-    flex-grow: 1 !important;
-    flex-shrink: 1 !important;
-    flex-basis: 0 !important;
-    min-width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    background: none !important;
+.ml-auto {
+    margin-left: auto !important;
 }
 
 .nav-button {
@@ -68,8 +61,27 @@
     transition: background-color 0.2s ease !important;
 }
 
+.add-account-button {
+    background-color: var(--accent-primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    outline: none !important;
+    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
+    transition: background-color 0.2s ease !important;
+}
+
 .add-transaction-button:hover {
     background-color: var(--accent-secondary) !important;
     color: white !important;
 }
 
+.add-account-button:hover {
+    background-color: var(--accent-secondary) !important;
+    color: white !important;
+}

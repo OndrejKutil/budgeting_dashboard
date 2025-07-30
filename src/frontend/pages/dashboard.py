@@ -15,14 +15,12 @@ from pages.tabs.accounts import create_accounts_tab
 from pages.tabs.profile import create_profile_tab
 import json
 import dash
-from components.add_transaction_modal import create_add_transaction_modal
-from components.add_account_modal import create_add_account_modal
 from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
     create_transaction,
 )
-from helper.requests.accounts_request import create_account
+
 import datetime
 
 def create_dashboard_layout():
@@ -34,10 +32,6 @@ def create_dashboard_layout():
     return html.Div([
         # Navigation bar
         create_navigation_bar(),
-        
-        # Modal for adding transactions
-        create_add_transaction_modal(),
-        create_add_account_modal(),
 
         # Content area
         html.Div(
@@ -79,26 +73,6 @@ def update_navigation_content(n_clicks_list, nav_data_input, nav_data_state):
     # Otherwise, just update content based on current navigation state
     active_tab = nav_data_input.get('active_tab', 'overview') if nav_data_input else 'overview'
     return get_tab_content(active_tab), nav_data_input or {'active_tab': 'overview'}
-
-
-@callback(
-    Output({'type': 'nav-button', 'index': ALL}, 'className'),
-    Input('navigation-store', 'data')
-)
-def update_navigation_button_styles(nav_data):
-    """Update navigation button classes based on active tab"""
-    active_tab = nav_data.get('active_tab', 'overview')
-
-    classes = []
-    for tab in Tab:
-        tab_id = tab.name.lower()
-        base = 'nav-button'
-        if tab_id == active_tab:
-            classes.append(f"{base} active")
-        else:
-            classes.append(base)
-
-    return classes
 
 
 def get_tab_content(selected_tab):
@@ -186,45 +160,3 @@ def submit_transaction(_, account_id, category_id, amount, date, notes, is_trans
     }
     create_transaction(token_data.get("access_token", ""), payload)
     return False
-
-
-@callback(
-    Output("add-account-modal", "is_open"),
-    Input("open-add-account-button", "n_clicks"),
-    Input("close-add-account-modal", "n_clicks"),
-    State("add-account-modal", "is_open"),
-    prevent_initial_call=True,
-)
-def toggle_add_account_modal(open_click, close_click, is_open):
-    ctx = callback_context
-    if ctx.triggered_id == "open-add-account-button":
-        return True
-    if ctx.triggered_id == "close-add-account-modal":
-        return False
-    return is_open
-
-
-@callback(
-    Output("add-account-modal", "is_open", allow_duplicate=True),
-    Input("submit-account-button", "n_clicks"),
-    State("account-name-input", "value"),
-    State("account-type-input", "value"),
-    State("account-balance-input", "value"),
-    State("account-currency-input", "value"),
-    State("token-store", "data"),
-    prevent_initial_call=True,
-)
-def submit_account(_, name, acc_type, starting_balance, currency, token_data):
-    if not token_data:
-        return dash.no_update
-
-    payload = {
-        "name": name,
-        "type": acc_type,
-        "starting_balance": starting_balance,
-        "currency": currency,
-        "created_at": datetime.datetime.now().isoformat(),
-    }
-    create_account(token_data.get("access_token", ""), payload)
-    return False
-

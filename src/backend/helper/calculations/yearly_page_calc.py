@@ -219,8 +219,6 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         response = query.execute()
         transactions = response.data
 
-        logger.info(f'Fetched {len(transactions)} transactions for emergency fund analysis for year: {year}')
-
     except Exception as e:
         logger.error(f'Database query failed for get_emergency_fund_analysis: {str(e)}')
         logger.info(f'Query parameters - year: {year}')
@@ -266,8 +264,6 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
     three_month_fund = round(three_month_fund, 2)
     six_month_fund = round(six_month_fund, 2)
     total_core_expenses = round(total_core_expenses, 2)
-
-    logger.info(f'Average monthly core expenses: {average_monthly_core}, Total core expenses: {total_core_expenses}, 3-month fund target: {three_month_fund}, 6-month fund target: {six_month_fund}')
     
     # Round category breakdown
     core_category_breakdown = {k: round(v, 2) for k, v in core_category_breakdown.items()}

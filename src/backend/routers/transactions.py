@@ -74,7 +74,8 @@ async def get_all_data(
         if transaction_id:
             query = query.eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id)
             
-        query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
+        # Reverse the order: most recent transactions first
+        query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=True)
         
         # Apply pagination
         query = query.range(offset, offset + limit)

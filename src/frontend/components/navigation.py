@@ -23,9 +23,6 @@ def create_navigation_bar(active_tab='overview'):
             ], className=None)
         )
 
-    # Add spacer to push right-side items to the right
-    nav_items.append(html.Li([], className='nav-spacer'))
-
     nav_items.append(
         html.Li([
             html.Button(
@@ -33,17 +30,7 @@ def create_navigation_bar(active_tab='overview'):
                 id="open-add-transaction-button",
                 className='nav-button add-transaction-button mr-20'
             )
-        ], className=None)
-    )
-
-    nav_items.append(
-        html.Li([
-            html.Button(
-                "Add Account",
-                id="open-add-account-button",
-                className='nav-button add-transaction-button mr-20'
-            )
-        ], className=None)
+        ], className='ml-auto')
     )
 
     # Add logout button as last item

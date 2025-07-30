@@ -1,12 +1,16 @@
-from dash import html, dcc, Input, Output, State, callback, dash_table
+from dash import html, dcc, Input, Output, State, callback, dash_table, callback_context
 import dash_bootstrap_components as dbc
 from helper.requests.accounts_request import (
     get_accounts,
     update_account as request_update_account,
     delete_account as request_delete_account,
 )
+from helper.requests.accounts_request import create_account
+from components.add_transaction_modal import create_add_transaction_modal
+from components.add_account_modal import create_add_account_modal
 from components.edit_account_modal import create_edit_account_modal
 import dash
+import datetime
 
 LIMIT = 50
 
@@ -17,13 +21,30 @@ def create_accounts_tab():
         id='accounts-tab-content',
         className='tab-content',
         children=[
-            html.H2('Accounts', className='text-primary mb-20'),
+            # Modals
+            create_add_transaction_modal(),
+            create_add_account_modal(),
+            create_edit_account_modal(),
+            
+            # Header section with title and actions
+            html.Div([
+                html.H2('Accounts', className='text-primary'),
+                html.Button(
+                    "Add Account",
+                    id="open-add-account-button",
+                    className='add-account-button'
+                )
+            ], className='page-header mb-20'),
+            
+            # Data stores
             dcc.Store(id='accounts-offset-store', data={'offset': 0}),
             dcc.Store(id='accounts-refresh-store', data={'refresh': 0}),
+            
+            # Pagination controls
             dbc.Row([
                 dbc.Col(dbc.Button('Previous', id='accounts-prev-btn', color='secondary', className='me-2'), width='auto'),
                 dbc.Col(dbc.Button('Next', id='accounts-next-btn', color='secondary'), width='auto'),
-                dbc.Col(html.Div(id='accounts-page-info', className='align-self-center ml-10'), width='auto')
+                dbc.Col(html.Div(id='accounts-page-info', className='align-self-center ml-10 mt-2'), width='auto'),
             ], className='mb-3'),
             dcc.Loading(
                 dash_table.DataTable(
@@ -38,6 +59,7 @@ def create_accounts_tab():
                 ],
                 hidden_columns=['id'],
                 row_selectable='single',
+                sort_action='native',
                 style_cell={
                     'textAlign': 'left',
                     'backgroundColor': 'var(--background-secondary)',
@@ -52,7 +74,6 @@ def create_accounts_tab():
                 },
                 page_action='none'
             ), className='loading'),
-            create_edit_account_modal(),
         ]
     )
 
@@ -189,3 +210,41 @@ def close_edit_account_modal(n_clicks, is_open):
     if n_clicks:
         return False
     return is_open
+
+@callback(
+    Output("add-account-modal", "is_open"),
+    Input("open-add-account-button", "n_clicks"),
+    Input("close-add-account-modal", "n_clicks"),
+    State("add-account-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_add_account_modal(open_click, close_click, is_open):
+    ctx = callback_context
+    if ctx.triggered_id == "open-add-account-button":
+        return True
+    if ctx.triggered_id == "close-add-account-modal":
+        return False
+    return is_open
+
+
+@callback(
+    Output("add-account-modal", "is_open", allow_duplicate=True),
+    Input("submit-account-button", "n_clicks"),
+    State("account-name-input", "value"),
+    State("account-type-input", "value"),
+    State("account-currency-input", "value"),
+    State("token-store", "data"),
+    prevent_initial_call=True,
+)
+def submit_account(_, name, acc_type, currency, token_data):
+    if not token_data:
+        return dash.no_update
+
+    payload = {
+        "name": name,
+        "type": acc_type,
+        "currency": currency,
+        "created_at": datetime.datetime.now().isoformat(),
+    }
+    create_account(token_data.get("access_token", ""), payload)
+    return False
