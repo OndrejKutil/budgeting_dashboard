@@ -7,7 +7,10 @@
     display: flex;
     align-items: center;
     height: 60px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
 }
+
 .nav-list {
     display: flex;
     list-style: none;
@@ -16,6 +19,81 @@
     align-items: center;
     height: 60px;
     width: 100%;
+}
+
+/* Hamburger menu button (hidden on desktop) */
+.hamburger-menu {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 1001;
+}
+
+.hamburger-menu span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: var(--text-primary);
+    margin: 5px 0;
+    transition: 0.3s;
+    transform-origin: center;
+}
+
+.hamburger-menu.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-menu.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+/* Mobile navigation overlay */
+.mobile-nav-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.mobile-nav-overlay.active {
+    display: block;
+}
+
+.mobile-nav-menu {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background-color: var(--background-secondary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    padding: 20px 0;
+}
+
+.mobile-nav-menu.active {
+    transform: translateY(0);
+}
+
+.mobile-nav-menu .nav-button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 16px 24px !important;
+    margin: 4px 0 !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid var(--background-tertiary);
 }
 
 .ml-auto {
@@ -34,54 +112,93 @@
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    transition: background-color 0.2s ease !important;
+    transition: all 0.2s ease !important;
 }
 
 .nav-button.active {
     color: var(--accent-primary);
+    background-color: var(--transparent-hover) !important;
 }
 
 .nav-button:hover {
     background-color: var(--transparent-hover) !important;
     color: var(--text-primary) !important;
+    transform: translateY(-1px);
 }
 
 .add-transaction-button {
     background-color: var(--accent-primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     padding: 12px 24px !important;
     font-size: 16px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
-    transition: background-color 0.2s ease !important;
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+    transition: all 0.2s ease !important;
 }
 
 .add-account-button {
     background-color: var(--accent-primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     padding: 12px 24px !important;
     font-size: 16px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
-    transition: background-color 0.2s ease !important;
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+    transition: all 0.2s ease !important;
 }
 
 .add-transaction-button:hover {
     background-color: var(--accent-secondary) !important;
     color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4) !important;
 }
 
 .add-account-button:hover {
     background-color: var(--accent-secondary) !important;
     color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4) !important;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .navigation-bar {
+        padding: 0 16px;
+        justify-content: space-between;
+    }
+    
+    .hamburger-menu {
+        display: block;
+    }
+    
+    .nav-list {
+        display: none;
+    }
+    
+    .mobile-nav-menu .add-transaction-button,
+    .mobile-nav-menu .add-account-button {
+        margin: 16px 24px !important;
+        width: calc(100% - 48px) !important;
+        text-align: center !important;
+    }
+    
+    .mobile-nav-menu .nav-button:last-child {
+        border-bottom: none;
+        background-color: var(--accent-danger) !important;
+        color: white !important;
+        margin: 16px 24px !important;
+        width: calc(100% - 48px) !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+    }
 }

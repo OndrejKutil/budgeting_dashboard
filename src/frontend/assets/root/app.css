@@ -23,14 +23,19 @@
     --savings-color: #00bcd4;
     --investment-color: #8e24aa;
     --neutral-color: #bdbdbd;
+    /* Gradient backgrounds */
+    --login-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-gradient: linear-gradient(145deg, #ffffff 0%, #f8f9fc 100%);
 }
 
 .app-container {
     background-color: var(--background-primary);
     min-height: 100vh;
-    font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: var(--text-primary);
+    line-height: 1.6;
 }
+
 .text-primary {
     color: var(--text-primary) !important;
 }
@@ -41,45 +46,87 @@
     color: var(--text-muted) !important;
 }
 
-
-
+/* Login page styling with gradient background */
 .login-page-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 100vh;
+    background: var(--login-gradient);
+    padding: 20px;
+    position: relative;
 }
 
+.login-page-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    pointer-events: none;
+}
+
+/* Enhanced card styling */
 .card {
-    background-color: var(--card-background);
+    background: var(--card-gradient);
     border: 1px solid var(--card-border);
-    border-radius: 10px;
+    border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 2px 10px var(--card-shadow);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     margin: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 16px 16px 0 0;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Form styling improvements */
 .form-input {
     background-color: var(--input-background);
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
+    border: 2px solid var(--input-border);
+    border-radius: 12px;
     color: var(--text-primary);
-    padding: 12px;
+    padding: 16px;
     font-size: 16px;
     width: 100%;
     box-sizing: border-box;
+    transition: all 0.3s ease;
+    font-family: inherit;
 }
 
 .form-input:focus {
     border-color: var(--input-border-focus);
     outline: none;
+    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1);
+    transform: translateY(-2px);
 }
 
 .form-label {
     color: var(--text-primary);
-    font-weight: bold;
+    font-weight: 600;
     margin-bottom: 8px;
     display: block;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .error-alert {
@@ -87,22 +134,27 @@
     background-color: var(--accent-danger);
     border: none;
     color: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
 }
+
 .success-alert {
     margin-bottom: 20px;
     background-color: var(--accent-primary);
     border: none;
     color: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 
-
 /* Financial value colors */
-.income-color { color: var(--income-color); }
-.expense-color { color: var(--expense-color); }
-.savings-color { color: var(--savings-color); }
-.investment-color { color: var(--investment-color); }
-.neutral-color { color: var(--neutral-color); }
-
+.income-color { color: var(--income-color); font-weight: 600; }
+.expense-color { color: var(--expense-color); font-weight: 600; }
+.savings-color { color: var(--savings-color); font-weight: 600; }
+.investment-color { color: var(--investment-color); font-weight: 600; }
+.neutral-color { color: var(--neutral-color); font-weight: 600; }
 
 .loading {
     width: 100%;
@@ -119,6 +171,7 @@
 
 .date-label {
     padding-right: 10px;
+    font-weight: 500;
 }
 
 .text-center {
@@ -129,6 +182,7 @@
     padding: 20px;
 }
 
+/* Spacing utilities */
 .mb-8 { margin-bottom: 8px !important; }
 .mb-4 { margin-bottom: 4px !important; }
 .mb-10 { margin-bottom: 10px !important; }
@@ -143,9 +197,11 @@
     max-height: 400px;
     overflow-y: auto;
     padding: 16px;
-    background-color: var(--background-secondary);
-    border-radius: 8px;
+    background: var(--card-gradient);
+    border-radius: 12px;
     margin-bottom: 24px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .hidden {
@@ -153,7 +209,9 @@
 }
 
 .width-120 { width: 120px !important; }
-.width-250 { width: 250px !important; }.tab-content {
+.width-250 { width: 250px !important; }
+
+.tab-content {
     background-color: var(--background-primary);
     padding: 24px;
     margin: 0;
@@ -161,11 +219,11 @@
     width: 100%;
 }
 
-.border-income { border: 1px solid var(--income-color) !important; }
-.border-expense { border: 1px solid var(--expense-color) !important; }
-.border-savings { border: 1px solid var(--savings-color) !important; }
-.border-investment { border: 1px solid var(--investment-color) !important; }
-.border-primary { border: 1px solid var(--accent-primary) !important; }
+.border-income { border: 2px solid var(--income-color) !important; }
+.border-expense { border: 2px solid var(--expense-color) !important; }
+.border-savings { border: 2px solid var(--savings-color) !important; }
+.border-investment { border: 2px solid var(--investment-color) !important; }
+.border-primary { border: 2px solid var(--accent-primary) !important; }
 
 .loading-negative { margin-top: -1.5rem !important; }
 .loading-none { margin-top: 0 !important; }
@@ -175,6 +233,7 @@
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .align-center { display: flex; align-items: center; }
 .ml-10 { margin-left: 10px !important; }
+
 .dashboard-content {
     background-color: var(--background-primary);
     min-height: calc(100vh - 60px);
@@ -182,5 +241,156 @@
     margin: 0;
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Enhanced heading styles */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 16px;
+}
+
+h2 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Button enhancements */
+.btn, button {
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 14px;
+}
+
+.btn:hover, button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 1200px) {
+    .tab-content {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 992px) {
+    .tab-content {
+        padding: 16px;
+    }
+    
+    .card {
+        margin: 12px 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-container {
+        font-size: 14px;
+    }
+    
+    .login-page-content {
+        padding: 16px;
+    }
+    
+    .tab-content {
+        padding: 12px;
+    }
+    
+    .card {
+        margin: 8px 0;
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .form-input {
+        padding: 14px;
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    
+    .padded-container {
+        padding: 12px;
+    }
+    
+    .content-box {
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    /* Stack cards vertically on mobile */
+    .row {
+        margin: 0 !important;
+    }
+    
+    .col, .col-3, .col-4, .col-6, .col-8, .col-12,
+    [class*="col-"] {
+        padding: 0 !important;
+        margin-bottom: 16px !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ensure cards take full width on mobile */
+    .card {
+        width: 100% !important;
+        margin: 8px 0 !important;
+    }
+    
+    /* Mobile-specific dashboard layout */
+    .dashboard-content {
+        min-height: calc(100vh - 60px);
+        padding-top: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card {
+        padding: 16px;
+        margin: 6px 0;
+    }
+    
+    .tab-content {
+        padding: 8px;
+    }
+    
+    h2 {
+        font-size: 1.25rem;
+    }
+    
+    .form-input {
+        padding: 12px;
+    }
+    
+    .btn, button {
+        padding: 12px 20px;
+        font-size: 13px;
+    }
+}
+
+/* High-resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .card {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+    
+    .form-input:focus {
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.08);
+    }
 }
 
