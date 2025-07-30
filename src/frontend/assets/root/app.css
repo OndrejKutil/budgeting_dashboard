@@ -107,7 +107,7 @@
 .loading {
     width: 100%;
     margin-top: 45rem;
-    position: fixed;
+    position: relative;
     z-index: 2000;
 }
 

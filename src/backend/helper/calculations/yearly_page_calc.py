@@ -67,6 +67,9 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
     # Category breakdowns
     by_category = defaultdict(float)
     core_categories = defaultdict(float)
+    # NEW: Separate income and expense category breakdowns
+    income_by_category = defaultdict(float)
+    expense_by_category = defaultdict(float)
 
     # Process each transaction
     for transaction in transactions:
@@ -84,9 +87,14 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         if category_type == 'income':
             monthly_data[month_name]['income'] += amount
             total_income += amount
+            # NEW: Add to income breakdown
+            income_by_category[category_name] += amount
+            
         elif category_type == 'expense':
             monthly_data[month_name]['expense'] += abs(amount)  # Store as positive for display
             total_expense += abs(amount)
+            # NEW: Add to expense breakdown (as positive values)
+            expense_by_category[category_name] += abs(amount)
             
             # Check if it's a core expense
             if spending_type == 'Core':
@@ -154,6 +162,9 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
     # Round category values
     by_category = {k: round(v, 2) for k, v in by_category.items()}
     core_categories = {k: round(v, 2) for k, v in core_categories.items()}
+    # NEW: Round the new breakdown values
+    income_by_category = {k: round(v, 2) for k, v in income_by_category.items()}
+    expense_by_category = {k: round(v, 2) for k, v in expense_by_category.items()}
 
 
     analytics_data = {
@@ -180,7 +191,9 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         'monthly_savings_rate': monthly_savings_rate,
         'monthly_investment_rate': monthly_investment_rate,
         'by_category': dict(by_category),
-        'core_categories': dict(core_categories)
+        'core_categories': dict(core_categories),
+        'income_by_category': dict(income_by_category),
+        'expense_by_category': dict(expense_by_category)
     }
 
     return analytics_data
@@ -206,6 +219,8 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         response = query.execute()
         transactions = response.data
 
+        logger.info(f'Fetched {len(transactions)} transactions for emergency fund analysis for year: {year}')
+
     except Exception as e:
         logger.error(f'Database query failed for get_emergency_fund_analysis: {str(e)}')
         logger.info(f'Query parameters - year: {year}')
@@ -217,8 +232,8 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
     core_category_breakdown = defaultdict(float)
     
     for transaction in transactions:
-        amount = float(transaction.get('amount', 0))
-        transaction_date = datetime.fromisoformat(transaction.get('date', '')).date()
+        amount = float(transaction.get(TRANSACTIONS_COLUMNS.AMOUNT.value, 0))
+        transaction_date = datetime.fromisoformat(transaction.get(TRANSACTIONS_COLUMNS.DATE.value, '')).date()
         month_key = f'{transaction_date.year}-{transaction_date.month:02d}'
         
         category = transaction.get('categories', {})
@@ -227,7 +242,7 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         category_name = category.get('name', 'Unknown Category') if category else 'Unknown Category'
         
         # Only consider core expenses
-        if category_type == 'expense' and spending_type == 'core':
+        if category_type == 'expense' and spending_type == 'Core':
             monthly_core_expenses[month_key] += abs(amount)
             core_category_breakdown[category_name] += abs(amount)
     
@@ -251,6 +266,8 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
     three_month_fund = round(three_month_fund, 2)
     six_month_fund = round(six_month_fund, 2)
     total_core_expenses = round(total_core_expenses, 2)
+
+    logger.info(f'Average monthly core expenses: {average_monthly_core}, Total core expenses: {total_core_expenses}, 3-month fund target: {three_month_fund}, 6-month fund target: {six_month_fund}')
     
     # Round category breakdown
     core_category_breakdown = {k: round(v, 2) for k, v in core_category_breakdown.items()}

@@ -18,7 +18,15 @@
 }
 
 .nav-spacer {
-    flex: 1 1 auto;
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    flex-basis: 0 !important;
+    min-width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: none !important;
 }
 
 .nav-button {

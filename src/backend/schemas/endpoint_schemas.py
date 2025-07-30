@@ -57,10 +57,10 @@ class CategoryType(str, Enum):
 
 class SpendingType(str, Enum):
     """Enum for spending types"""
-    CORE = "core"
-    FUN = "fun"
-    FUTURE = "future"
-    INCOME = "income"
+    CORE = "Core"
+    FUN = "Fun"
+    FUTURE = "Future"
+    INCOME = "Income"
 
     def __str__(self):
         return self.value

@@ -53,7 +53,7 @@ def create_forgot_password_tab_layout():
                                     "Send Reset Link",
                                     id="reset-password-button",
                                     type="button",
-                                    className="btn-primary mb-20"
+                                    className="btn-primary mb-20 login-button"
                                 ),
                             ]),
                             

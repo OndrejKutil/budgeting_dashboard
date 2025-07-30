@@ -7,8 +7,6 @@ from pages.dashboard import create_dashboard_layout
 from helper.auth.auth_helpers import is_user_authenticated
 from helper.requests.refresh_request import refresh_token as refresh_access_token
 import helper.environment as env
-from dotenv import load_dotenv
-import os
 
 # =============================================================================
 # Basic Configuration
@@ -36,30 +34,21 @@ app.title = "Budget Dashboard"
 # MAIN APP LAYOUT
 # =============================================================================
 
-
-# If in development mode, use debug tokens for testing
-# This is useful for local development without needing to log in every time
-if DEVELOPMENT_MODE == 'True':
-    load_dotenv()
-    ACCESS_TOKEN = os.getenv("DEBUG_ACCESS_TOKEN")
-    REFRESH_TOKEN = os.getenv("DEBUG_REFRESH_TOKEN")
-
-    app.layout = html.Div([
+app.layout = html.Div([
     
     # Store authentication data
     dcc.Store(
         id='auth-store',
-        data={'logged': True},
+        data={'logged': False},
         storage_type='local'
     ),
-
     # Store authentication tokens and user data
     dcc.Store(
         id='token-store',
         data={
-            'access_token': ACCESS_TOKEN,
-            'refresh_token': REFRESH_TOKEN,
-            'email': 'user@example.com',
+            'access_token': '',
+            'refresh_token': '',
+            'email': '',
             'user': None,
             'session': None
         },
@@ -72,106 +61,34 @@ if DEVELOPMENT_MODE == 'True':
         data={},
         storage_type='local'
     ),
-
     # Store overview data (preloaded after login)
     dcc.Store(
         id='overview-store',
         data={},
         storage_type='local'
     ),
-
     # Store for navigation state
     dcc.Store(
         id='navigation-store',
         data={'active_tab': 'overview'},
         storage_type='local'
     ),
-
     # Store for user settings
     dcc.Store(
         id='user-settings-store',
         data={},
         storage_type='local'
     ),
-
-    # Token refresh interval - checks every 45 minutes
+    # Token refresh interval - checks every 45 minutes 
+    # (disabled in production until logged in)
     dcc.Interval(
         id='token-refresh-interval',
-        interval=45*60*1000,  # 45 minutes in milliseconds
-        n_intervals=0,
-        disabled=True
+        interval=30*60*1000,  # 30 minutes in milliseconds
     ),
     
     # Main content area
     html.Div(id='main-content')
-
-    ], className='app-container')
-    
-else:
-    # Production mode layout
-    app.layout = html.Div([
-        
-        # Store authentication data
-        dcc.Store(
-            id='auth-store',
-            data={'logged': False},
-            storage_type='local'
-        ),
-
-        # Store authentication tokens and user data
-        dcc.Store(
-            id='token-store',
-            data={
-                'access_token': '',
-                'refresh_token': '',
-                'email': '',
-                'user': None,
-                'session': None
-            },
-            storage_type='local'
-        ),
-        
-        # Store profile data (preloaded after login)
-        dcc.Store(
-            id='profile-store',
-            data={},
-            storage_type='local'
-        ),
-
-        # Store overview data (preloaded after login)
-        dcc.Store(
-            id='overview-store',
-            data={},
-            storage_type='local'
-        ),
-
-        # Store for navigation state
-        dcc.Store(
-            id='navigation-store',
-            data={'active_tab': 'overview'},
-            storage_type='local'
-        ),
-
-        # Store for user settings
-        dcc.Store(
-            id='user-settings-store',
-            data={},
-            storage_type='local'
-        ),
-
-        # Token refresh interval - checks every 45 minutes 
-        # (disabled in production until logged in)
-        dcc.Interval(
-            id='token-refresh-interval',
-            interval=40*60*1000,  # 40 minutes in milliseconds
-            n_intervals=0,
-            disabled=False
-        ),
-        
-        # Main content area
-        html.Div(id='main-content')
-
-    ], className='app-container')
+], className='app-container')
 
 # =============================================================================
 # MAIN ROUTING CALLBACK
