@@ -89,7 +89,7 @@ def create_terms_of_service_tab_layout():
                 ], width=12)
             ], justify="center", className="centered-row")
         ], fluid=True, className="padded-container")
-    ], className="app-container")
+    ])
 
 
 # =============================================================================

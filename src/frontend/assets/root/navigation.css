@@ -1,13 +1,28 @@
 /* Navigation bar styles */
 .navigation-bar {
-    background-color: var(--background-secondary);
+    background-color: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
     padding: 0 24px;
     margin: 0;
     width: 100%;
     display: flex;
     align-items: center;
     height: 60px;
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
+
+/* Prevent navigation bar from changing on hover */
+.navigation-bar:hover {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+.nav-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .nav-list {
     display: flex;
     list-style: none;
@@ -28,60 +43,66 @@
     color: var(--text-secondary) !important;
     padding: 12px 20px !important;
     margin: 0 4px !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     font-size: 16px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    transition: background-color 0.2s ease !important;
+    transition: all 0.2s ease !important;
 }
 
 .nav-button.active {
-    color: var(--accent-primary);
+    color: var(--accent-primary) !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
 }
 
 .nav-button:hover {
     background-color: var(--transparent-hover) !important;
     color: var(--text-primary) !important;
+    transform: translateY(-1px) !important;
 }
 
 .add-transaction-button {
     background-color: var(--accent-primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     padding: 12px 24px !important;
     font-size: 16px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
-    transition: background-color 0.2s ease !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15) !important;
+    transition: all 0.2s ease !important;
 }
 
 .add-account-button {
     background-color: var(--accent-primary) !important;
     color: white !important;
     border: none !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     padding: 12px 24px !important;
     font-size: 16px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     font-family: inherit !important;
     outline: none !important;
-    box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08) !important;
-    transition: background-color 0.2s ease !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15) !important;
+    transition: all 0.2s ease !important;
 }
 
 .add-transaction-button:hover {
     background-color: var(--accent-secondary) !important;
     color: white !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25) !important;
 }
 
 .add-account-button:hover {
     background-color: var(--accent-secondary) !important;
     color: white !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25) !important;
 }

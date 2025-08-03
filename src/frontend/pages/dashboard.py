@@ -3,7 +3,7 @@
 # =============================================================================
 # Main dashboard page that displays user information
 
-from dash import html, Input, Output, callback, ALL, State, callback_context
+from dash import html, Input, Output, callback, ALL, State, callback_context, clientside_callback, ClientsideFunction
 
 from utils.tabs import Tab
 from components.navigation import create_navigation_bar
@@ -43,7 +43,7 @@ def create_dashboard_layout():
         # Global modals (available on all tabs)
         create_add_transaction_modal()
         
-    ], className='app-container')
+    ])
 
 
 @callback(

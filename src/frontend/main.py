@@ -26,9 +26,11 @@ BACKEND_API_KEY: str = env.BACKEND_API_KEY
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
+    title='Budget Dashboard',
+    assets_folder='assets',
+    pages_folder='pages',
+    update_title=None
 )
-
-app.title = "Budget Dashboard"
 
 # =============================================================================
 # MAIN APP LAYOUT

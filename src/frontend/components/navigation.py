@@ -7,7 +7,6 @@ from dash import html, dcc
 from utils.tabs import Tab
 
 def create_navigation_bar(active_tab='overview'):
-    """Create a modern navigation bar with clickable navigation items"""
     
     nav_items = []
     for tab in Tab:

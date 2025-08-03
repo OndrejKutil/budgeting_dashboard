@@ -1,36 +1,78 @@
 :root {
-    --background-primary: #f4f6fa;
+    --background-primary: #f8fafc;
     --background-secondary: #ffffff;
-    --background-tertiary: #e9ecef;
-    --text-primary: #23272f;
-    --text-secondary: #495057;
-    --text-muted: #adb5bd;
-    --accent-primary: #1976d2;
-    --accent-secondary: #1565c0;
-    --accent-success: #388e3c;
-    --accent-danger: #d32f2f;
-    --accent-warning: #ffa000;
+    --background-tertiary: #f1f5f9;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --accent-primary: #3b82f6;
+    --accent-secondary: #2563eb;
+    --accent-success: #10b981;
+    --accent-danger: #ef4444;
+    --accent-warning: #f59e0b;
     --input-background: #ffffff;
-    --input-border: #ced4da;
-    --transparent-hover: rgba(25, 118, 210, 0.1);
-    --input-border-focus: #1976d2;
+    --input-border: #e2e8f0;
+    --transparent-hover: rgba(59, 130, 246, 0.1);
+    --input-border-focus: #3b82f6;
     --card-background: #ffffff;
-    --card-border: #e0e0e0;
-    --card-shadow: rgba(60, 60, 60, 0.08);
+    --card-border: #e2e8f0;
+    --card-shadow: rgba(0, 0, 0, 0.1);
+    --card-shadow-hover: rgba(0, 0, 0, 0.15);
     /* Financial card colors */
-    --income-color: #43a047;
-    --expense-color: #e53935;
-    --savings-color: #00bcd4;
-    --investment-color: #8e24aa;
-    --neutral-color: #bdbdbd;
+    --income-color: #10b981;
+    --expense-color: #ef4444;
+    --savings-color: #06b6d4;
+    --investment-color: #8b5cf6;
+    --neutral-color: #9ca3af;
+    
+    /* Gradient definitions */
+    --gradient-login: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+    --gradient-dashboard: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+    --gradient-card-hover: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    --gradient-accent-subtle: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
 }
 
 .app-container {
-    background-color: var(--background-primary);
+    background: var(--background-primary);
     min-height: 100vh;
-    font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-primary);
+    line-height: 1.6;
 }
+
+/* Prevent unwanted hover effects on container elements */
+.app-container:hover,
+.login-page-content:hover,
+.dashboard-content:hover {
+    background: inherit !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.login-page-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-login);
+    min-height: 100vh;
+}
+
+/* Ensure login gradient stays consistent regardless of focus or hover */
+.login-page-content:hover,
+.login-page-content:focus,
+.login-page-content:focus-within {
+    background: var(--gradient-login) !important;
+}
+
+/* Disable card hover effects on login page to prevent flickering */
+.login-page-content .card:hover,
+.login-card:hover {
+    background: var(--card-background) !important;
+    transform: none !important;
+    box-shadow: 0 4px 16px var(--card-shadow) !important;
+}
+
 .text-primary {
     color: var(--text-primary) !important;
 }
@@ -41,38 +83,38 @@
     color: var(--text-muted) !important;
 }
 
-
-
-.login-page-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
 .card {
     background-color: var(--card-background);
     border: 1px solid var(--card-border);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 24px;
-    box-shadow: 0 2px 10px var(--card-shadow);
+    box-shadow: 0 4px 16px var(--card-shadow);
     margin: 16px;
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    background: var(--gradient-card-hover);
+    box-shadow: 0 8px 24px var(--card-shadow-hover);
+    transform: translateY(-2px);
 }
 
 .form-input {
     background-color: var(--input-background);
     border: 1px solid var(--input-border);
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--text-primary);
-    padding: 12px;
+    padding: 12px 16px;
     font-size: 16px;
     width: 100%;
     box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-input:focus {
     border-color: var(--input-border-focus);
     outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-label {
@@ -152,35 +194,57 @@
     display: none;
 }
 
-.width-120 { width: 120px !important; }
-.width-250 { width: 250px !important; }.tab-content {
-    background-color: var(--background-primary);
+.tab-content {
+    background: transparent;
     padding: 24px;
     margin: 0;
     min-height: 100%;
     width: 100%;
 }
 
-.border-income { border: 1px solid var(--income-color) !important; }
-.border-expense { border: 1px solid var(--expense-color) !important; }
-.border-savings { border: 1px solid var(--savings-color) !important; }
-.border-investment { border: 1px solid var(--investment-color) !important; }
-.border-primary { border: 1px solid var(--accent-primary) !important; }
-
-.loading-negative { margin-top: -1.5rem !important; }
-.loading-none { margin-top: 0 !important; }
-.loading-modal { margin-top: 30rem !important; }
-.loading-modal-large { margin-top: 65rem !important; }
-
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.align-center { display: flex; align-items: center; }
-.ml-10 { margin-left: 10px !important; }
-.dashboard-content {
-    background-color: var(--background-primary);
-    min-height: calc(100vh - 60px);
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    box-sizing: border-box;
+/* Prevent tab content from changing on hover */
+.tab-content:hover {
+    background: transparent !important;
 }
 
+/* Modern card styles with left border accents */
+.border-income { 
+    border: 1px solid var(--card-border) !important; 
+    border-left: 4px solid var(--income-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+.border-expense { 
+    border: 1px solid var(--card-border) !important; 
+    border-left: 4px solid var(--expense-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+.border-savings { 
+    border: 1px solid var(--card-border) !important; 
+    border-left: 4px solid var(--savings-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+.border-investment { 
+    border: 1px solid var(--card-border) !important; 
+    border-left: 4px solid var(--investment-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+.border-primary { 
+    border: 1px solid var(--card-border) !important; 
+    border-left: 4px solid var(--accent-primary) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Card hover effects */
+.border-income:hover, 
+.border-expense:hover, 
+.border-savings:hover, 
+.border-investment:hover, 
+.border-primary:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px) !important;
+}
