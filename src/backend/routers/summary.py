@@ -72,7 +72,7 @@ async def get_financial_summary(
         
         response = query.execute()
         transactions = response.data
-        
+
         # Initialize summary totals
         total_income = 0.0
         total_expense = 0.0
@@ -108,9 +108,9 @@ async def get_financial_summary(
         total_expense_positive = abs(total_expense)
         total_saving_positive = abs(total_saving)
         total_investment_positive = abs(total_investment)
-        
-        # Profit = income + expenses (since expenses are negative, we add them directly)
-        profit = total_income + total_expense
+
+        # Profit = income + expenses + investments (since expenses are negative, we add them directly)
+        profit = total_income + total_expense + total_investment
         
         # Net cash flow = income + expenses + savings + investments (all negatives are added)
         net_cash_flow = total_income + total_expense + total_saving + total_investment

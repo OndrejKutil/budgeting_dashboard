@@ -20,6 +20,7 @@ from helper.requests.transactions_request import (
     get_categories,
     create_transaction,
 )
+from components.add_transaction_modal import create_add_transaction_modal
 
 import datetime
 
@@ -37,7 +38,10 @@ def create_dashboard_layout():
         html.Div(
             id="nav-content",
             className='dashboard-content'
-        )
+        ),
+        
+        # Global modals (available on all tabs)
+        create_add_transaction_modal()
         
     ], className='app-container')
 

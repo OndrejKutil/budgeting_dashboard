@@ -6,7 +6,6 @@ from helper.requests.accounts_request import (
     delete_account as request_delete_account,
 )
 from helper.requests.accounts_request import create_account
-from components.add_transaction_modal import create_add_transaction_modal
 from components.add_account_modal import create_add_account_modal
 from components.edit_account_modal import create_edit_account_modal
 import dash
@@ -22,7 +21,6 @@ def create_accounts_tab():
         className='tab-content',
         children=[
             # Modals
-            create_add_transaction_modal(),
             create_add_account_modal(),
             create_edit_account_modal(),
             

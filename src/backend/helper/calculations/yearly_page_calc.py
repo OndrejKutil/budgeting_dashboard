@@ -128,7 +128,7 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
 
 
     # Calculate derived metrics
-    profit = total_income - total_expense
+    profit = total_income - total_expense - total_investment
     net_cash_flow = total_income - total_expense - total_saving - total_investment
     savings_rate = (total_saving / total_income * 100) if total_income > 0 else 0
     investment_rate = (total_investment / total_income * 100) if total_income > 0 else 0
