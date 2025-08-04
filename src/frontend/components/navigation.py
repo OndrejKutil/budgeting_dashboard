@@ -6,18 +6,17 @@
 from dash import html, dcc
 from utils.tabs import Tab
 
-def create_navigation_bar(active_tab='overview'):
+def create_navigation_bar():
     
     nav_items = []
     for tab in Tab:
         tab_id = tab.name.lower()
-        is_active = (tab_id == active_tab)
         nav_items.append(
             html.Li([
                 html.Button(
                     tab.value,
                     id={'type': 'nav-button', 'index': tab_id},
-                    className=f"nav-button{' active' if is_active else ''}"
+                    className="nav-button"
                 )
             ], className=None)
         )

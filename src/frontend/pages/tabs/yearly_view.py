@@ -26,13 +26,13 @@ def create_yearly_view_tab():
                     style={'margin': '0', 'flex': '1'}
                 ),
                 html.Div([
-                    html.Label("Select Year:", className='text-primary', style={'marginRight': '10px'}),
+                    html.Label("Select Year:", className='text-primary year-selector-label'),
                     dcc.Dropdown(
                         id='yearly-year-selector',
                         options=year_options,
                         value=current_year,
                         clearable=False,
-                        style={'width': '120px', 'display': 'inline-block'}
+                        className='year-selector-dropdown'
                     )
                 ], className='align-center')
             ], className='flex-between mb-24'),
