@@ -57,7 +57,10 @@ Write-Host "Starting budgeting dashboard application..." -ForegroundColor Cyan
 # Function to start backend server
 function Start-Backend {
     Write-Host "Starting backend server..." -ForegroundColor Green
-    $process = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'src\backend'; uvicorn backend_server:app" -WindowStyle Normal -PassThru
+    $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+    $backendLogFile = "backend_$timestamp.log"
+    Write-Host "Backend output will be logged to: $backendLogFile" -ForegroundColor Cyan
+    $process = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'src\backend'; uvicorn backend_server:app 2>&1 | Tee-Object -FilePath '../../scripts/$backendLogFile'" -WindowStyle Hidden -PassThru
     $global:childProcesses += $process
     return $process
 }
@@ -65,7 +68,10 @@ function Start-Backend {
 # Function to start frontend server
 function Start-Frontend {
     Write-Host "Starting frontend server..." -ForegroundColor Green
-    $process = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'src\frontend'; python main.py" -WindowStyle Normal -PassThru
+    $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+    $frontendLogFile = "frontend_$timestamp.log"
+    Write-Host "Frontend output will be logged to: $frontendLogFile" -ForegroundColor Cyan
+    $process = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'src\frontend'; python main.py 2>&1 | Tee-Object -FilePath '../../scripts/$frontendLogFile'" -WindowStyle Hidden -PassThru
     $global:childProcesses += $process
     return $process
 }
@@ -78,6 +84,8 @@ try {
     
     Write-Host ""
     Write-Host "Both services started successfully!" -ForegroundColor Green
+    Write-Host "Backend and frontend are running in the background with hidden windows." -ForegroundColor Cyan
+    Write-Host "Output logs are being saved to timestamped files in the scripts directory." -ForegroundColor Cyan
     Write-Host "Press Ctrl+C to stop both services." -ForegroundColor Yellow
     Write-Host ""
     
