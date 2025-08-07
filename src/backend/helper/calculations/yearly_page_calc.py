@@ -6,6 +6,7 @@ from helper.columns import TRANSACTIONS_COLUMNS
 from helper.environment import PROJECT_URL, ANON_KEY
 from supabase import create_client, Client
 import logging
+import pandas as pd
 
 
 # Create logger for this module
@@ -41,6 +42,26 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
+    # Convert transactions to DataFrame for efficient aggregation
+    if not transactions:
+        # Handle empty transactions case
+        df = pd.DataFrame()
+    else:
+        # Flatten the nested structure
+        flattened_transactions = []
+        for transaction in transactions:
+            category = transaction.get('categories', {})
+            flattened_transaction = {
+                'amount': float(transaction.get('amount', 0)),
+                'date': transaction.get('date', ''),
+                'category_type': category.get('type', '') if category else '',
+                'category_name': category.get('name', 'Unknown Category') if category else 'Unknown Category',
+                'spending_type': category.get('spending_type', '') if category else ''
+            }
+            flattened_transactions.append(flattened_transaction)
+        
+        df = pd.DataFrame(flattened_transactions)
+    
     # Initialize monthly data structure
     monthly_data = {}
     for month in range(1, 13):
@@ -55,76 +76,83 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
             'future_expense': 0.0
         }
     
-    # Initialize totals and category breakdowns
-    total_income = 0.0
-    total_expense = 0.0
-    total_saving = 0.0
-    total_investment = 0.0
-    total_core_expense = 0.0
-    total_fun_expense = 0.0
-    total_future_expense = 0.0
-    
-    # Category breakdowns
-    by_category = defaultdict(float)
-    core_categories = defaultdict(float)
-    # NEW: Separate income and expense category breakdowns
-    income_by_category = defaultdict(float)
-    expense_by_category = defaultdict(float)
-
-    # Process each transaction
-    for transaction in transactions:
-
-        amount = float(transaction.get('amount', 0))
-        transaction_date = datetime.fromisoformat(transaction.get('date', '')).date()
-        month_name = calendar.month_abbr[transaction_date.month]
+    if not df.empty:
+        # Add month column for grouping
+        df['date_parsed'] = pd.to_datetime(df['date']).dt.date
+        df['month_name'] = df['date_parsed'].apply(lambda x: calendar.month_abbr[x.month])
         
-        category = transaction.get('categories', {})
-        category_type = category.get('type', '') if category else ''
-        category_name = category.get('name', 'Unknown Category') if category else 'Unknown Category'
-        spending_type = category.get('spending_type', '') if category else ''
+        # Create absolute amount column for expenses/savings/investments
+        df['abs_amount'] = df['amount'].abs()
         
-        # Update monthly data and totals based on category type
-        if category_type == 'income':
-            monthly_data[month_name]['income'] += amount
-            total_income += amount
-            # NEW: Add to income breakdown
-            income_by_category[category_name] += amount
+        # Group by month and category type for monthly aggregations
+        monthly_groups = df.groupby(['month_name', 'category_type'])['amount'].sum().reset_index()
+        monthly_groups_abs = df.groupby(['month_name', 'category_type'])['abs_amount'].sum().reset_index()
+        
+        # Fill monthly data for income (use original amount)
+        income_monthly = monthly_groups[monthly_groups['category_type'] == 'income']
+        for _, row in income_monthly.iterrows():
+            monthly_data[row['month_name']]['income'] = row['amount']
+        
+        # Fill monthly data for expenses (use absolute amount)
+        expense_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'expense']
+        for _, row in expense_monthly.iterrows():
+            monthly_data[row['month_name']]['expense'] = row['abs_amount']
+        
+        # Fill monthly data for saving and investment (use absolute amount)
+        saving_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'saving']
+        for _, row in saving_monthly.iterrows():
+            monthly_data[row['month_name']]['saving'] = row['abs_amount']
+        
+        investment_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'investment']
+        for _, row in investment_monthly.iterrows():
+            monthly_data[row['month_name']]['investment'] = row['abs_amount']
+        
+        # Handle core and fun expenses
+        expense_df = df[df['category_type'] == 'expense']
+        if not expense_df.empty:
+            core_expense_monthly = expense_df[expense_df['spending_type'] == 'Core'].groupby('month_name')['abs_amount'].sum()
+            for month, amount in core_expense_monthly.items():
+                monthly_data[month]['core_expense'] = amount
             
-        elif category_type == 'expense':
-            monthly_data[month_name]['expense'] += abs(amount)  # Store as positive for display
-            total_expense += abs(amount)
-            # NEW: Add to expense breakdown (as positive values)
-            expense_by_category[category_name] += abs(amount)
-            
-            # Check if it's a core expense
-            if spending_type == 'Core':
-                monthly_data[month_name]['core_expense'] += abs(amount)
-                total_core_expense += abs(amount)
-                core_categories[category_name] += abs(amount)
-            elif spending_type == 'Fun':
-                monthly_data[month_name]['fun_expense'] += abs(amount)
-                total_fun_expense += abs(amount)
-                
-                
-        elif category_type == 'saving':
-            monthly_data[month_name]['saving'] += abs(amount)
-            total_saving += abs(amount)
-
-            if spending_type == 'Future':
-                monthly_data[month_name]['future_expense'] += abs(amount)
-                total_future_expense += abs(amount)
-
-        elif category_type == 'investment':
-            monthly_data[month_name]['investment'] += abs(amount)
-            total_investment += abs(amount)
-
-            if spending_type == 'Future':
-                monthly_data[month_name]['future_expense'] += abs(amount)
-                total_future_expense += abs(amount)
-
+            fun_expense_monthly = expense_df[expense_df['spending_type'] == 'Fun'].groupby('month_name')['abs_amount'].sum()
+            for month, amount in fun_expense_monthly.items():
+                monthly_data[month]['fun_expense'] = amount
         
-        # Group by category name (keep original sign for category breakdown)
-        by_category[category_name] += amount
+        # Handle future expenses (from saving and investment with Future spending_type)
+        future_df = df[(df['category_type'].isin(['saving', 'investment'])) & (df['spending_type'] == 'Future')]
+        if not future_df.empty:
+            future_expense_monthly = future_df.groupby('month_name')['abs_amount'].sum()
+            for month, amount in future_expense_monthly.items():
+                monthly_data[month]['future_expense'] = amount
+        
+        # Calculate totals using pandas aggregation
+        total_income = df[df['category_type'] == 'income']['amount'].sum()
+        total_expense = df[df['category_type'] == 'expense']['abs_amount'].sum()
+        total_saving = df[df['category_type'] == 'saving']['abs_amount'].sum()
+        total_investment = df[df['category_type'] == 'investment']['abs_amount'].sum()
+        total_core_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]['abs_amount'].sum()
+        total_fun_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')]['abs_amount'].sum()
+        total_future_expense = df[(df['category_type'].isin(['saving', 'investment'])) & (df['spending_type'] == 'Future')]['abs_amount'].sum()
+        
+        # Category breakdowns using pandas
+        by_category = df.groupby('category_name')['amount'].sum().to_dict()
+        core_categories = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')].groupby('category_name')['abs_amount'].sum().to_dict()
+        income_by_category = df[df['category_type'] == 'income'].groupby('category_name')['amount'].sum().to_dict()
+        expense_by_category = df[df['category_type'] == 'expense'].groupby('category_name')['abs_amount'].sum().to_dict()
+        
+    else:
+        # Handle empty DataFrame case
+        total_income = 0.0
+        total_expense = 0.0
+        total_saving = 0.0
+        total_investment = 0.0
+        total_core_expense = 0.0
+        total_fun_expense = 0.0
+        total_future_expense = 0.0
+        by_category = {}
+        core_categories = {}
+        income_by_category = {}
+        expense_by_category = {}
 
 
     # Calculate derived metrics
@@ -225,24 +253,48 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
     
 
-    # Calculate monthly core expenses
-    monthly_core_expenses = defaultdict(float)
-    core_category_breakdown = defaultdict(float)
+    # Convert transactions to DataFrame for efficient aggregation
+    if not transactions:
+        df = pd.DataFrame()
+    else:
+        # Flatten the nested structure
+        flattened_transactions = []
+        for transaction in transactions:
+            category = transaction.get('categories', {})
+            transaction_date = datetime.fromisoformat(transaction.get(TRANSACTIONS_COLUMNS.DATE.value, '')).date()
+            flattened_transaction = {
+                'amount': float(transaction.get(TRANSACTIONS_COLUMNS.AMOUNT.value, 0)),
+                'date': transaction_date,
+                'month_key': f'{transaction_date.year}-{transaction_date.month:02d}',
+                'category_type': category.get('type', '') if category else '',
+                'category_name': category.get('name', 'Unknown Category') if category else 'Unknown Category',
+                'spending_type': category.get('spending_type', '') if category else ''
+            }
+            flattened_transactions.append(flattened_transaction)
+        
+        df = pd.DataFrame(flattened_transactions)
     
-    for transaction in transactions:
-        amount = float(transaction.get(TRANSACTIONS_COLUMNS.AMOUNT.value, 0))
-        transaction_date = datetime.fromisoformat(transaction.get(TRANSACTIONS_COLUMNS.DATE.value, '')).date()
-        month_key = f'{transaction_date.year}-{transaction_date.month:02d}'
+    # Calculate monthly core expenses using pandas
+    if not df.empty:
+        # Filter for core expenses only
+        core_expenses_df = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]
         
-        category = transaction.get('categories', {})
-        category_type = category.get('type', '') if category else ''
-        spending_type = category.get('spending_type', '') if category else ''
-        category_name = category.get('name', 'Unknown Category') if category else 'Unknown Category'
-        
-        # Only consider core expenses
-        if category_type == 'expense' and spending_type == 'Core':
-            monthly_core_expenses[month_key] += abs(amount)
-            core_category_breakdown[category_name] += abs(amount)
+        if not core_expenses_df.empty:
+            # Calculate absolute amounts
+            core_expenses_df = core_expenses_df.copy()
+            core_expenses_df['abs_amount'] = core_expenses_df['amount'].abs()
+            
+            # Group by month
+            monthly_core_expenses = core_expenses_df.groupby('month_key')['abs_amount'].sum().to_dict()
+            
+            # Group by category
+            core_category_breakdown = core_expenses_df.groupby('category_name')['abs_amount'].sum().to_dict()
+        else:
+            monthly_core_expenses = {}
+            core_category_breakdown = {}
+    else:
+        monthly_core_expenses = {}
+        core_category_breakdown = {}
     
     # Calculate average monthly core expenses
     if monthly_core_expenses:
@@ -274,7 +326,7 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         'total_core_expenses': total_core_expenses,
         'three_month_fund_target': three_month_fund,
         'six_month_fund_target': six_month_fund,
-        'core_category_breakdown': dict(core_category_breakdown),
+        'core_category_breakdown': core_category_breakdown,
         'months_analyzed': len(monthly_core_expenses)
     }
     
