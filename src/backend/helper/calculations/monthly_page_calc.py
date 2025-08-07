@@ -113,17 +113,13 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
             for _, row in daily_spending.iterrows()
         ]
         
-        # Category breakdown - use absolute amounts for expenses/savings/investments, original for income
+        # Category breakdown - exclude income, use absolute amounts for expenses/savings/investments
         category_breakdown = []
-        for category_type in ['income', 'expense', 'saving', 'investment']:
+        for category_type in ['expense', 'saving', 'investment']:
             category_data = df[df['category_type'] == category_type]
             if not category_data.empty:
-                if category_type == 'income':
-                    # Income: use original amount (positive)
-                    category_totals = category_data.groupby('category_name')['amount'].sum()
-                else:
-                    # Expenses, savings, investments: use absolute amounts
-                    category_totals = category_data.groupby('category_name')['abs_amount'].sum()
+                # Expenses, savings, investments: use absolute amounts
+                category_totals = category_data.groupby('category_name')['abs_amount'].sum()
                 
                 for category_name, total in category_totals.items():
                     category_breakdown.append({

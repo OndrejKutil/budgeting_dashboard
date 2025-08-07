@@ -7,6 +7,8 @@ $PROJECT_PATH = Get-Location
 # Go to project root (two levels up)
 Set-Location $PROJECT_PATH
 
+Set-Location ..
+
 # Activate virtual environment if it exists
 $venvActivate = ".venv\Scripts\Activate.ps1"
 if (Test-Path $venvActivate) {

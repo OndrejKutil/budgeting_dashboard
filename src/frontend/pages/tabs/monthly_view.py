@@ -239,17 +239,17 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
         # Format currency values
         currency_symbol = CURRENCY_SYMBOLS.get((user_settings or {}).get('currency', 'USD'), '$')
         
-        income_text = f"{currency_symbol}{data.get('income', 0):,.2f}"
-        expenses_text = f"{currency_symbol}{data.get('expenses', 0):,.2f}"
-        savings_text = f"{currency_symbol}{data.get('savings', 0):,.2f}"
-        investments_text = f"{currency_symbol}{data.get('investments', 0):,.2f}"
+        income_text = f"{currency_symbol} {data.get('income', 0):,.2f}"
+        expenses_text = f"{currency_symbol} {data.get('expenses', 0):,.2f}"
+        savings_text = f"{currency_symbol} {data.get('savings', 0):,.2f}"
+        investments_text = f"{currency_symbol} {data.get('investments', 0):,.2f}"
         
         profit = data.get('profit', 0)
         cashflow = data.get('cashflow', 0)
         
-        profit_text = f"{currency_symbol}{profit:,.2f}"
-        cashflow_text = f"{currency_symbol}{cashflow:,.2f}"
-        
+        profit_text = f"{currency_symbol} {profit:,.2f}"
+        cashflow_text = f"{currency_symbol} {cashflow:,.2f}"
+
         # Use static border-primary class like yearly page
         profit_class = 'border-primary'
         cashflow_class = 'border-primary'
