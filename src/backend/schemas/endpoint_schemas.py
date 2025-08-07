@@ -305,6 +305,130 @@ class SummaryResponse(BaseModel):
 
 
 # ================================================================================================
+#                                Monthly Analytics Schemas
+# ================================================================================================
+
+class DailySpendingData(BaseModel):
+    """Schema for daily spending heatmap data"""
+    day: str = Field(..., description="Date in YYYY-MM-DD format")
+    amount: float = Field(..., description="Total spending amount for the day")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "day": "2025-01-15",
+                "amount": 125.50
+            }
+        }
+
+
+class CategoryBreakdownData(BaseModel):
+    """Schema for category breakdown data"""
+    category: str = Field(..., description="Category name")
+    total: float = Field(..., description="Total amount for the category")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "category": "Groceries",
+                "total": 450.75
+            }
+        }
+
+
+class SpendingTypeBreakdownData(BaseModel):
+    """Schema for spending type breakdown data"""
+    type: str = Field(..., description="Spending type (Core, Fun, or Future)")
+    amount: float = Field(..., description="Total amount for the spending type")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "type": "Core",
+                "amount": 1250.00
+            }
+        }
+
+
+class MonthlyAnalyticsData(BaseModel):
+    """Schema for monthly analytics data"""
+    year: int = Field(..., description="Year of the analysis")
+    month: int = Field(..., description="Month of the analysis (1-12)")
+    month_name: str = Field(..., description="Name of the month")
+    income: float = Field(..., description="Total income for the month")
+    expenses: float = Field(..., description="Total expenses for the month (absolute value)")
+    savings: float = Field(..., description="Total savings for the month (absolute value)")
+    investments: float = Field(..., description="Total investments for the month (absolute value)")
+    profit: float = Field(..., description="Calculated profit (income + expenses + investments)")
+    cashflow: float = Field(..., description="Calculated cashflow (income + expenses + investments + savings)")
+    daily_spending_heatmap: List[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
+    category_breakdown: List[CategoryBreakdownData] = Field(..., description="Breakdown by category")
+    spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "year": 2025,
+                "month": 1,
+                "month_name": "January",
+                "income": 5000.00,
+                "expenses": 2500.00,
+                "savings": 1000.00,
+                "investments": 500.00,
+                "profit": 2000.00,
+                "cashflow": 1000.00,
+                "daily_spending_heatmap": [
+                    {"day": "2025-01-15", "amount": 125.50},
+                    {"day": "2025-01-16", "amount": 75.25}
+                ],
+                "category_breakdown": [
+                    {"category": "Salary", "total": 5000.00},
+                    {"category": "Groceries", "total": 450.75}
+                ],
+                "spending_type_breakdown": [
+                    {"type": "Core", "amount": 1250.00},
+                    {"type": "Fun", "amount": 300.00}
+                ]
+            }
+        }
+
+
+class MonthlyAnalyticsResponse(BaseModel):
+    """Response schema for monthly analytics endpoint"""
+    data: MonthlyAnalyticsData = Field(..., description="Monthly analytics data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Success message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": {
+                    "year": 2025,
+                    "month": 1,
+                    "month_name": "January",
+                    "income": 5000.00,
+                    "expenses": 2500.00,
+                    "savings": 1000.00,
+                    "investments": 500.00,
+                    "profit": 2000.00,
+                    "cashflow": 1000.00,
+                    "daily_spending_heatmap": [
+                        {"day": "2025-01-15", "amount": 125.50}
+                    ],
+                    "category_breakdown": [
+                        {"category": "Salary", "total": 5000.00}
+                    ],
+                    "spending_type_breakdown": [
+                        {"type": "Core", "amount": 1250.00}
+                    ]
+                },
+                "success": True,
+                "message": "Monthly analytics for January 2025 retrieved successfully"
+            }
+        }
+
+
+# ================================================================================================
 #                                   Error Schemas
 # ================================================================================================
 

@@ -70,7 +70,7 @@ app.add_middleware(
 )
 
 # Include routers
-from routers import transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics
+from routers import transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics
 
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh"])
@@ -80,6 +80,7 @@ app.include_router(profile.router, prefix="/profile", tags=["Profile"])
 app.include_router(summary.router, prefix="/summary", tags=["Summary"])
 app.include_router(login.router, prefix="/auth", tags=["Authentication"])
 app.include_router(yearly_analytics.router, prefix="/yearly", tags=["Yearly Analytics"])
+app.include_router(monthly_analytics.router, prefix="/monthly", tags=["Monthly Analytics"])
 
 
 

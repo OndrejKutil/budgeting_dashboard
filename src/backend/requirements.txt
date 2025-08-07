@@ -22,3 +22,6 @@ httpx>=0.24.0
 
 # Additional dependencies that might be needed
 python-multipart==0.0.6  # For form data handling
+
+# pandas for data manipulation
+pandas==2.1.3
