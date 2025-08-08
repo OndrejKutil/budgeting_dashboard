@@ -3,7 +3,7 @@
 # =============================================================================
 # Main dashboard page that displays user information
 
-from dash import html, Input, Output, callback, ALL, State, callback_context, clientside_callback, ClientsideFunction
+from dash import html, Input, Output, callback, ALL, State, callback_context, clientside_callback, ClientsideFunction, dash
 
 from utils.tabs import Tab
 from components.navigation import create_navigation_bar
@@ -14,7 +14,6 @@ from pages.tabs.transactions import create_transactions_tab
 from pages.tabs.accounts import create_accounts_tab
 from pages.tabs.profile import create_profile_tab
 import json
-import dash
 from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
@@ -106,9 +105,10 @@ def get_tab_content(selected_tab):
 
 
 @callback(
-    Output("add-transaction-modal", "is_open"),
-    Output("transaction-account-dropdown", "options"),
-    Output("transaction-category-dropdown", "options"),
+    [Output("add-transaction-modal", "is_open"),
+     Output("transaction-account-dropdown", "options"),
+     Output("transaction-category-dropdown", "options"),
+     Output('token-store', 'data', allow_duplicate=True)],
     Input("open-add-transaction-button", "n_clicks"),
     Input("close-add-transaction-modal", "n_clicks"),
     State("add-transaction-modal", "is_open"),
@@ -117,28 +117,59 @@ def get_tab_content(selected_tab):
 )
 def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
     ctx = callback_context
-    if ctx.triggered_id == "open-add-transaction-button" and token_data:
-        accounts = get_accounts(token_data.get("access_token", ""))
-        categories = get_categories(token_data.get("access_token", ""))
-        acc_options = [
-            {"label": a.get("name"), "value": a.get("id")}
-            for a in accounts.get("data", [])
-        ]
-        cat_options = [
-            {"label": c.get("name"), "value": c.get("id")}
-            for c in categories.get("data", [])
-        ]
-        return True, acc_options, cat_options
+    
+    # Check if close button was clicked
+    if ctx.triggered_id == "close-add-transaction-modal" and close_click:
+        return False, dash.no_update, dash.no_update, dash.no_update
+    
+    # Check if open button was clicked and we have valid token data
+    if (ctx.triggered_id == "open-add-transaction-button" and 
+        open_click and open_click > 0 and token_data and 
+        token_data.get("access_token") and token_data.get("refresh_token")):
+        
+        try:
+            # Use the new API client with token refresh capability
+            accounts, new_access_token, new_refresh_token = get_accounts(
+                token_data.get("access_token", ""),
+                token_data.get("refresh_token", "")
+            )
+            
+            categories, final_access_token, final_refresh_token = get_categories(
+                new_access_token,
+                new_refresh_token
+            )
+            
+            # Update token store if tokens were refreshed
+            updated_token_store = token_data.copy()
+            if (final_access_token != token_data.get('access_token') or 
+                final_refresh_token != token_data.get('refresh_token')):
+                updated_token_store['access_token'] = final_access_token
+                updated_token_store['refresh_token'] = final_refresh_token
+                print("Tokens refreshed during add transaction modal open")
+            else:
+                updated_token_store = dash.no_update
+            
+            acc_options = [
+                {"label": a.get("name"), "value": a.get("id")}
+                for a in accounts.get("data", [])
+            ]
+            cat_options = [
+                {"label": c.get("name"), "value": c.get("id")}
+                for c in categories.get("data", [])
+            ]
+            return True, acc_options, cat_options, updated_token_store
+            
+        except Exception as e:
+            print(f"Error opening add transaction modal: {e}")
+            return True, [], [], dash.no_update
 
-    if ctx.triggered_id == "close-add-transaction-modal":
-        return False, dash.no_update, dash.no_update
-
-
-    return is_open, dash.no_update, dash.no_update
+    # No valid trigger, return current state
+    return is_open, dash.no_update, dash.no_update, dash.no_update
 
 
 @callback(
-    Output("add-transaction-modal", "is_open", allow_duplicate=True),
+    [Output("add-transaction-modal", "is_open", allow_duplicate=True),
+     Output('token-store', 'data', allow_duplicate=True)],
     Input("submit-transaction-button", "n_clicks"),
     State("transaction-account-dropdown", "value"),
     State("transaction-category-dropdown", "value"),
@@ -149,18 +180,45 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
     State("token-store", "data"),
     prevent_initial_call=True,
 )
-def submit_transaction(_, account_id, category_id, amount, date, notes, is_transfer, token_data):
-    if not token_data:
-        return "Not authenticated", True, dash.no_update
+def submit_transaction(n_clicks, account_id, category_id, amount, date, notes, is_transfer, token_data):
+    if not token_data or not n_clicks or n_clicks <= 0:
+        return dash.no_update, dash.no_update
 
-    payload = {
-        "account_id": account_id,
-        "category_id": category_id,
-        "amount": amount,
-        "date": date,
-        "notes": notes,
-        "is_transfer": bool(is_transfer),
-        "created_at": datetime.datetime.now().isoformat(),
-    }
-    create_transaction(token_data.get("access_token", ""), payload)
-    return False
+    # Validate required fields
+    if not account_id or not category_id or amount is None:
+        print("Missing required fields for transaction")
+        return dash.no_update, dash.no_update
+
+    try:
+        payload = {
+            "account_id": account_id,
+            "category_id": category_id,
+            "amount": amount,
+            "date": date,
+            "notes": notes or "",
+            "is_transfer": bool(is_transfer),
+            "created_at": datetime.datetime.now().isoformat(),
+        }
+        
+        # Use the new API client with token refresh capability
+        response_data, new_access_token, new_refresh_token = create_transaction(
+            token_data.get("access_token", ""),
+            token_data.get("refresh_token", ""),
+            payload
+        )
+        
+        # Update token store if tokens were refreshed
+        updated_token_store = token_data.copy()
+        if (new_access_token != token_data.get('access_token') or 
+            new_refresh_token != token_data.get('refresh_token')):
+            updated_token_store['access_token'] = new_access_token
+            updated_token_store['refresh_token'] = new_refresh_token
+            print("Tokens refreshed during transaction creation")
+        else:
+            updated_token_store = dash.no_update
+            
+        return False, updated_token_store
+        
+    except Exception as e:
+        print(f"Error creating transaction: {e}")
+        return dash.no_update, dash.no_update

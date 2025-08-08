@@ -1,4 +1,4 @@
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, State, callback, dash
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import plotly.express as px
@@ -193,6 +193,7 @@ def create_monthly_view_tab():
         Output('monthly-daily-heatmap', 'figure'),
         Output('monthly-category-breakdown', 'figure'),
         Output('monthly-spending-types', 'figure'),
+        Output('token-store', 'data', allow_duplicate=True),
     ],
     [
         Input('monthly-year-selector', 'value'),
@@ -202,7 +203,8 @@ def create_monthly_view_tab():
     [
         State('token-store', 'data'),
         State('user-settings-store', 'data')
-    ]
+    ],
+    prevent_initial_call=True
 )
 def update_monthly_analytics(year, month, navigation_data, token_data, user_settings):
     """Update all monthly analytics displays when year or month changes"""
@@ -218,9 +220,9 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
             xaxis={'showgrid': False, 'zeroline': False},
             yaxis={'showgrid': False, 'zeroline': False}
         )
-        return ('', '', '', '', '', '', 'border-primary', 'border-primary', empty_fig, empty_fig, empty_fig)
+        return ('', '', '', '', '', '', 'border-primary', 'border-primary', empty_fig, empty_fig, empty_fig, dash.no_update)
     
-    if not token_data or not token_data.get('access_token'):
+    if not token_data or not token_data.get('access_token') or not token_data.get('refresh_token'):
         empty_fig = go.Figure()
         empty_fig.update_layout(
             template='plotly_dark',
@@ -229,11 +231,26 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
             xaxis={'showgrid': False, 'zeroline': False},
             yaxis={'showgrid': False, 'zeroline': False}
         )
-        return ('', '', '', '', '', '', 'border-primary', 'border-primary', empty_fig, empty_fig, empty_fig)
+        return ('', '', '', '', '', '', 'border-primary', 'border-primary', empty_fig, empty_fig, empty_fig, dash.no_update)
     
     try:
-        # Fetch monthly analytics data
-        response = get_monthly_analytics(token_data['access_token'], year, month)
+        # Use the new API client with token refresh capability
+        response, new_access_token, new_refresh_token = get_monthly_analytics(
+            token_data['access_token'], 
+            token_data['refresh_token'],
+            year, 
+            month
+        )
+        
+        # Update token store if tokens were refreshed
+        updated_token_store = token_data.copy()
+        if new_access_token != token_data['access_token'] or new_refresh_token != token_data['refresh_token']:
+            updated_token_store['access_token'] = new_access_token
+            updated_token_store['refresh_token'] = new_refresh_token
+            print("Tokens refreshed during monthly analytics request")
+        else:
+            updated_token_store = dash.no_update
+        
         data = response.get('data', {})
         
         # Format currency values
@@ -266,17 +283,19 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
         return (
             income_text, expenses_text, savings_text, investments_text,
             profit_text, cashflow_text, profit_class, cashflow_class,
-            daily_heatmap_fig, category_breakdown_fig, spending_types_fig
+            daily_heatmap_fig, category_breakdown_fig, spending_types_fig,
+            updated_token_store
         )
         
     except Exception as e:
+        print(f"Error fetching monthly analytics data: {e}")
         empty_fig = go.Figure()
         empty_fig.update_layout(
             template='plotly_dark',
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        return ('Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'border-danger', 'border-danger', empty_fig, empty_fig, empty_fig)
+        return ('Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'border-danger', 'border-danger', empty_fig, empty_fig, empty_fig, dash.no_update)
 
 
 def create_daily_heatmap(daily_data, year, month):

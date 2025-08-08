@@ -1,49 +1,78 @@
-import requests
 import datetime
-import helper.environment as env
+from typing import Tuple, Dict, Any
+from helper.api_client import api_request
 
-BACKEND_URL = env.BACKEND_URL
-BACKEND_API_KEY = env.BACKEND_API_KEY
-
-def get_yearly_analytics(access_token: str, year: int = None) -> dict:
-    """Fetch yearly analytics data from the backend."""
+def get_yearly_analytics(access_token: str, refresh_token: str, year: int = None) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Fetch yearly analytics data from the backend with automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        year: Year for analytics (defaults to current year)
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
     
     if year is None:
         year = datetime.datetime.now().year
     
-    url = f"{BACKEND_URL}/yearly/analytics?year={year}"
-    
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY
-    }
-    
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
+        # Prepare query parameters
+        params = {
+            'year': year
+        }
+
+        # Make request using the new API client
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='GET',
+            endpoint='/yearly/analytics',
+            access_token=access_token,
+            refresh_token=refresh_token,
+            params=params
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+    
     except Exception as e:
         print(f"Error fetching yearly analytics data: {e}")
-        raise RuntimeError(f"Failed to fetch yearly analytics data from the backend.")
+        raise RuntimeError(f"Failed to fetch yearly analytics data from the backend: {str(e)}")
 
 
-def get_emergency_fund_analysis(access_token: str, year: int = None) -> dict:
-    """Fetch emergency fund analysis from the backend."""
+def get_emergency_fund_analysis(access_token: str, refresh_token: str, year: int = None) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Fetch emergency fund analysis from the backend with automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        year: Year for analysis (defaults to current year)
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
     
     if year is None:
         year = datetime.datetime.now().year
 
-    url = f"{BACKEND_URL}/yearly/emergency-fund?year={year}"
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY
-    }
-    
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
+        # Prepare query parameters
+        params = {
+            'year': year
+        }
+
+        # Make request using the new API client
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='GET',
+            endpoint='/yearly/emergency-fund',
+            access_token=access_token,
+            refresh_token=refresh_token,
+            params=params
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+    
     except Exception as e:
         print(f"Error fetching emergency fund analysis: {e}")
-        raise RuntimeError(f"Failed to fetch emergency fund analysis from the backend.")
+        raise RuntimeError(f"Failed to fetch emergency fund analysis from the backend: {str(e)}")

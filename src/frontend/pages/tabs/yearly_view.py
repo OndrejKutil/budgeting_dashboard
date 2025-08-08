@@ -1,4 +1,4 @@
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, State, callback, dash
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
@@ -272,11 +272,13 @@ def create_yearly_view_tab():
      Output('yearly-saving-investing-ratios-chart', 'figure'),
      Output('emergency-fund-3-month', 'children'),
      Output('emergency-fund-6-month', 'children'),
-     Output('core-expenses-breakdown', 'children')],
+     Output('core-expenses-breakdown', 'children'),
+     Output('token-store', 'data', allow_duplicate=True)],
     [Input('yearly-year-selector', 'value'),
      Input('navigation-store', 'data')],
     [State('token-store', 'data'),
-     State('user-settings-store', 'data')]
+     State('user-settings-store', 'data')],
+    prevent_initial_call=True
 )
 def update_yearly_content(selected_year, nav_data, token_store, user_settings):
     """Update all yearly content in a single callback to show loading spinners"""
@@ -286,14 +288,16 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
         return (
             '', '', '', '', '', '', '', '',  # metrics
             go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(),  # charts
-            '', '', ''  # emergency fund
+            '', '', '',  # emergency fund
+            dash.no_update  # token store
         )
     
-    if not token_store or not token_store.get('access_token'):
+    if not token_store or not token_store.get('access_token') or not token_store.get('refresh_token'):
         return (
             "No data", "No data", "No data", "No data", "No data", "No data", "No data", "No data",
             go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(),
-            "No data available", "No data available", "No data available"
+            "No data available", "No data available", "No data available",
+            dash.no_update
         )
     
     # Get currency symbol
@@ -307,9 +311,29 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
         return f"{val:.1f}%"
     
     try:
-        # Fetch both analytics and emergency fund data
-        analytics_data = get_yearly_analytics(token_store['access_token'], selected_year)
-        emergency_data = get_emergency_fund_analysis(token_store['access_token'], selected_year)
+        # Use the new API client with token refresh capability for analytics data
+        analytics_data, new_access_token, new_refresh_token = get_yearly_analytics(
+            token_store['access_token'], 
+            token_store['refresh_token'],
+            selected_year
+        )
+        
+        # Use the new API client with token refresh capability for emergency fund data
+        emergency_data, new_access_token_2, new_refresh_token_2 = get_emergency_fund_analysis(
+            new_access_token,  # Use the potentially refreshed token from the first call
+            new_refresh_token,
+            selected_year
+        )
+        
+        # Update token store if tokens were refreshed (use the latest tokens from the second call)
+        updated_token_store = token_store.copy()
+        if (new_access_token_2 != token_store['access_token'] or 
+            new_refresh_token_2 != token_store['refresh_token']):
+            updated_token_store['access_token'] = new_access_token_2
+            updated_token_store['refresh_token'] = new_refresh_token_2
+            print("Tokens refreshed during yearly analytics request")
+        else:
+            updated_token_store = dash.no_update
         
         if not analytics_data or 'data' not in analytics_data:
             raise ValueError("Invalid analytics data format")
@@ -546,7 +570,7 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
         
         emergency_fund_data = (three_month_content, six_month_content, breakdown_content)
 
-        return metrics + (income_expense_fig, expense_breakdown_fig, income_by_category_pie_chart, expense_by_category_pie_chart, savings_investment_fig, ratios_fig) + emergency_fund_data
+        return metrics + (income_expense_fig, expense_breakdown_fig, income_by_category_pie_chart, expense_by_category_pie_chart, savings_investment_fig, ratios_fig) + emergency_fund_data + (updated_token_store,)
 
     except Exception as e:
         print(f"Error fetching yearly data: {e}")
@@ -554,5 +578,6 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
         return (
             "Error", "Error", "Error", "Error", "Error", "Error", "Error", "Error",
             go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(), go.Figure(),
-            "Error loading data", "Error loading data", "Error loading data"
+            "Error loading data", "Error loading data", "Error loading data",
+            dash.no_update
         )

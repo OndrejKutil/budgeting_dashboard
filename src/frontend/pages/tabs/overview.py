@@ -1,4 +1,4 @@
-from dash import html, Input, Output, State, callback, dash_table, dcc
+from dash import html, Input, Output, State, callback, dash_table, dcc, dash
 import dash_bootstrap_components as dbc
 from helper.requests.overview_request import get_overview
 from utils.currency import CURRENCY_SYMBOLS
@@ -110,22 +110,24 @@ def create_overview_tab():
      Output('overview-investments', 'children'),
      Output('overview-profit', 'children'),
      Output('overview-cashflow', 'children'),
-     Output('overview-category-table', 'children')],
+     Output('overview-category-table', 'children'),
+     Output('token-store', 'data', allow_duplicate=True)],
     [Input('navigation-store', 'data')],
     [State('token-store', 'data'), 
-     State('user-settings-store', 'data')]
+     State('user-settings-store', 'data')],
+    prevent_initial_call=True
 )
 def update_overview_content(nav_data, token_store, user_settings):
     # Only update if overview tab is currently selected
     current_tab = nav_data.get('active_tab', 'overview') if nav_data else 'overview'
     if current_tab != 'overview':
         return (
-            '', '', '', '', '', '', ''
+            '', '', '', '', '', '', '', dash.no_update
         )
     
-    if not token_store or not token_store.get('access_token'):
+    if not token_store or not token_store.get('access_token') or not token_store.get('refresh_token'):
         return (
-            "No data", "No data", "No data", "No data", "No data", "No data", "No data available"
+            "No data", "No data", "No data", "No data", "No data", "No data", "No data available", dash.no_update
         )
     
     # Get selected currency and symbol
@@ -133,9 +135,24 @@ def update_overview_content(nav_data, token_store, user_settings):
     symbol = CURRENCY_SYMBOLS.get(currency, currency)
 
     try:
-        data = get_overview(token_store['access_token'])
+        # Use the new API client with token refresh capability
+        data, new_access_token, new_refresh_token = get_overview(
+            token_store['access_token'], 
+            token_store['refresh_token']
+        )
+        
         if not data or 'data' not in data:
             raise ValueError("Invalid data format")
+        
+        # Update token store if tokens were refreshed
+        updated_token_store = token_store.copy()
+        if new_access_token != token_store['access_token'] or new_refresh_token != token_store['refresh_token']:
+            updated_token_store['access_token'] = new_access_token
+            updated_token_store['refresh_token'] = new_refresh_token
+            print("Tokens refreshed during overview request")
+        else:
+            updated_token_store = dash.no_update
+            
         overview_data = data['data']
         
         # Format currency values
@@ -201,18 +218,15 @@ def update_overview_content(nav_data, token_store, user_settings):
             format_currency(expenses),    # expenses
             format_currency(savings),     # savings
             format_currency(investments), # investments
-            format_currency(profit),      # profit        # profit card style
-            format_currency(cashflow),    # cashflow        # cashflow card style
-            category_table               # category table
+            format_currency(profit),      # profit
+            format_currency(cashflow),    # cashflow
+            category_table,               # category table
+            updated_token_store           # updated tokens
         )
         
     except Exception as e:
         print(f"Error fetching overview data: {e}")
         error_msg = f"Error: {str(e)}"
         return (
-            "Error", "Error", "Error", "Error", "Error", {'margin': '0'},
-            {'backgroundColor': 'var(--background-secondary)', 'border': '1px solid var(--accent-danger)'},
-            "Error", {'margin': '0'},
-            {'backgroundColor': 'var(--background-secondary)', 'border': '1px solid var(--accent-danger)'},
-            "Error"
+            "Error", "Error", "Error", "Error", "Error", "Error", "Error", dash.no_update
         )

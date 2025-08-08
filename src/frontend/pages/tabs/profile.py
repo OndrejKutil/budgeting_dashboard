@@ -5,6 +5,7 @@ from datetime import datetime
 from helper.requests.profile_request import request_profile_data
 from utils.currency import CURRENCY_OPTIONS
 
+#TODO: Implement the new api_client for this profile page and the profile_request
 
 def create_profile_tab():
     """Create the profile tab content"""

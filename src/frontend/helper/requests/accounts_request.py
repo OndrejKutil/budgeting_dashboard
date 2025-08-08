@@ -1,78 +1,119 @@
-import requests
-import helper.environment as env
-
-BACKEND_URL = env.BACKEND_URL
-BACKEND_API_KEY = env.BACKEND_API_KEY
+from typing import Tuple, Dict, Any, Optional
+from helper.api_client import api_request
 
 
-def get_accounts(access_token: str, account_id: str | None = None) -> dict:
-    """Fetch accounts data with optional filtering by account ID."""
-    url = f"{BACKEND_URL}/accounts/"
+def get_accounts(access_token: str, refresh_token: str, account_id: Optional[str] = None) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Fetch accounts data with optional filtering by account ID and automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        account_id: Optional account ID for filtering
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
     params = {}
     if account_id:
         params["account_id"] = account_id
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY,
-    }
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
-    return response.json()
-
-
-def create_account(access_token: str, payload: dict) -> dict:
-    """Create a new account via POST request."""
-
-    url = f"{BACKEND_URL}/accounts/"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY,
-        "Content-Type": "application/json",
-    }
+    
     try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='GET',
+            endpoint='/accounts/',
+            access_token=access_token,
+            refresh_token=refresh_token,
+            params=params
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+        
     except Exception as e:
-        return {"success": False, "message": f"Error creating account: {e}"}
-
-    if response.status_code != 201:
-        error_message = response.json().get("detail", "Unknown error")
-        return {"success": False, "message": f"Failed to add account: {error_message}"}
-
-    return {"success": True, "message": "Account added"}
+        print(f"Error fetching accounts data: {e}")
+        raise RuntimeError(f"Failed to fetch accounts data from the backend: {str(e)}")
 
 
-def update_account(access_token: str, account_id: str, payload: dict) -> dict:
-    """Update an existing account via PUT request."""
-
-    url = f"{BACKEND_URL}/accounts/{account_id}"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY,
-        "Content-Type": "application/json",
-    }
+def create_account(access_token: str, refresh_token: str, payload: dict) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Create a new account via POST request with automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        payload: Account data to create
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
     try:
-        response = requests.put(url, headers=headers, json=payload)
-        response.raise_for_status()
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='POST',
+            endpoint='/accounts/',
+            access_token=access_token,
+            refresh_token=refresh_token,
+            data=payload
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+        
     except Exception as e:
-        return {"success": False, "message": f"Error updating account: {e}"}
+        print(f"Error creating account: {e}")
+        raise RuntimeError(f"Failed to create account: {str(e)}")
 
-    return {"success": True, "message": "Account updated"}
 
-
-def delete_account(access_token: str, account_id: str) -> dict:
-    """Delete an account via DELETE request."""
-
-    url = f"{BACKEND_URL}/accounts/{account_id}"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "X-API-KEY": BACKEND_API_KEY,
-    }
+def update_account(access_token: str, refresh_token: str, account_id: str, payload: dict) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Update an existing account via PUT request with automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        account_id: ID of the account to update
+        payload: Updated account data
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
     try:
-        response = requests.delete(url, headers=headers)
-        response.raise_for_status()
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='PUT',
+            endpoint=f'/accounts/{account_id}',
+            access_token=access_token,
+            refresh_token=refresh_token,
+            data=payload
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+        
     except Exception as e:
-        return {"success": False, "message": f"Error deleting account: {e}"}
+        print(f"Error updating account: {e}")
+        raise RuntimeError(f"Failed to update account: {str(e)}")
 
-    return {"success": True, "message": "Account deleted"}
+
+def delete_account(access_token: str, refresh_token: str, account_id: str) -> Tuple[Dict[str, Any], str, str]:
+    """
+    Delete an account via DELETE request with automatic token refresh.
+    
+    Args:
+        access_token: Current access token
+        refresh_token: Current refresh token
+        account_id: ID of the account to delete
+        
+    Returns:
+        Tuple of (response_data, new_access_token, new_refresh_token)
+    """
+    try:
+        response_data, new_access_token, new_refresh_token = api_request(
+            method='DELETE',
+            endpoint=f'/accounts/{account_id}',
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+        
+        return response_data, new_access_token, new_refresh_token
+        
+    except Exception as e:
+        print(f"Error deleting account: {e}")
+        raise RuntimeError(f"Failed to delete account: {str(e)}")
 
