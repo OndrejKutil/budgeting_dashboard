@@ -10,4 +10,5 @@ class Tab(Enum):
     YEARLY_VIEW = "Yearly View"
     ACCOUNTS = "Accounts"
     TRANSACTIONS = "Transactions"
+    CALCULATORS = "Calculators"
     PROFILE = "Profile"
