@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from helper.calc.investment_calculator import calculate_cumulative_growth, format_currency
 from utils.currency import CURRENCY_SYMBOLS
+from utils.colors import COLORS
 import dash_bootstrap_components as dbc
 
 
@@ -22,19 +23,16 @@ def create_calculators_tab():
             dbc.Tab(
                 label="Compound Growth Calculator",
                 tab_id="compound-growth-tab",
-                active_tab_style={"background-color": "#007bff", "color": "white"}
             ),
             dbc.Tab(
                 label="Retirement Calculator",
                 tab_id="retirement-tab",
                 disabled=True,  # Placeholder
-                active_tab_style={"background-color": "#007bff", "color": "white"}
             ),
             dbc.Tab(
                 label="Debt Payoff Calculator",
                 tab_id="debt-payoff-tab",
                 disabled=True,  # Placeholder
-                active_tab_style={"background-color": "#007bff", "color": "white"}
             )
         ], id="calculator-tabs", active_tab="compound-growth-tab"),
         
@@ -57,12 +55,12 @@ def create_compound_growth_calculator():
                     dbc.Input(
                         id="starting-balance-input",
                         type="number",
-                        value=1000,
+                        value=10_000,
                         min=0,
-                        step=100,
+                        step=1000,
                         className="mb-3"
                     )
-                ]),
+                ], className="growth-input-field"),
                 
                 # Periodic contribution
                 html.Div([
@@ -70,14 +68,14 @@ def create_compound_growth_calculator():
                     dbc.Input(
                         id="contribution-input",
                         type="number",
-                        value=500,
+                        value=1_000,
                         min=0,
-                        step=50,
+                        step=500,
                         className="mb-3"
                     )
-                ]),
-                
-                # Contribution frequency
+                ], className="growth-input-field"),
+
+                # Periodic contribution
                 html.Div([
                     html.Label("Contribution Frequency", className="form-label"),
                     dbc.Select(
@@ -91,8 +89,8 @@ def create_compound_growth_calculator():
                         value="monthly",
                         className="mb-3"
                     )
-                ]),
-                
+                ], className="growth-input-field"),
+
                 # Years investing
                 html.Div([
                     html.Label("Years Investing", className="form-label"),
@@ -101,13 +99,12 @@ def create_compound_growth_calculator():
                         type="number",
                         value=10,
                         min=1,
-                        max=50,
                         step=1,
                         className="mb-3"
                     )
-                ]),
-                
-                # Annual return
+                ], className="growth-input-field"),
+
+                # Years investing
                 html.Div([
                     html.Label("Expected Annual Return (%)", className="form-label"),
                     dbc.Input(
@@ -115,11 +112,10 @@ def create_compound_growth_calculator():
                         type="number",
                         value=7.0,
                         min=0,
-                        max=30,
-                        step=0.1,
+                        step=0.5,
                         className="mb-3"
                     )
-                ])
+                ], className="growth-input-field")
                 
             ], width=4),
             
@@ -168,8 +164,8 @@ def create_summary_cards(summary_data, currency_symbol="$"):
         dbc.Col([
             dbc.Card([
                 dbc.CardBody([
-                    html.H5("Interest Earned", className="card-title text-info"),
-                    html.H3(format_currency(summary_data['total_interest'], currency_symbol), className="text-info")
+                    html.H5("Interest Earned", className="card-title text-primary"),
+                    html.H3(format_currency(summary_data['total_interest'], currency_symbol), className="text-primary")
                 ])
             ])
         ], width=3),
@@ -177,8 +173,8 @@ def create_summary_cards(summary_data, currency_symbol="$"):
         dbc.Col([
             dbc.Card([
                 dbc.CardBody([
-                    html.H5("Effective Return", className="card-title text-warning"),
-                    html.H3(f"{summary_data['effective_annual_return']:.2%}", className="text-warning")
+                    html.H5("Effective Return", className="card-title text-primary"),
+                    html.H3(f"{summary_data['effective_annual_return']:.2%}", className="text-primary")
                 ])
             ])
         ], width=3)
@@ -193,36 +189,36 @@ def create_growth_chart(timeline_data, currency_symbol="$"):
     
     fig = go.Figure()
     
-    # Add total balance line
+    # Add total balance area (shaded)
     fig.add_trace(go.Scatter(
         x=timeline_data['years'],
         y=timeline_data['balance'],
         mode='lines',
         name='Total Balance',
-        line=dict(color='#28a745', width=3),
-        hovertemplate=f'Year %{{x:.1f}}<br>Balance: {currency_symbol}%{{y:,.2f}}<extra></extra>'
+        line=dict(color=COLORS['accent-success'], width=3),
+        fill='tozeroy',
+        fillcolor=f"rgba({int(COLORS['accent-success'][1:3], 16)}, {int(COLORS['accent-success'][3:5], 16)}, {int(COLORS['accent-success'][5:7], 16)}, 0.2)",
+        hovertemplate=f'Year %{{x:.1f}}<br>Balance: {currency_symbol} %{{y:,.2f}}<extra></extra>'
     ))
     
-    # Add contributions area
+    # Add contributions line (dotted, above the shaded area)
     fig.add_trace(go.Scatter(
         x=timeline_data['years'],
         y=timeline_data['contributions'],
         mode='lines',
         name='Total Contributions',
-        line=dict(color='#007bff', width=2),
-        fill='tozeroy',
-        fillcolor='rgba(0, 123, 255, 0.3)',
-        hovertemplate=f'Year %{{x:.1f}}<br>Contributions: {currency_symbol}%{{y:,.2f}}<extra></extra>'
+        line=dict(color=COLORS['accent-primary'], width=2, dash='dot'),
+        hovertemplate=f'Year %{{x:.1f}}<br>Contributions: {currency_symbol} %{{y:,.2f}}<extra></extra>'
     ))
     
-    # Add interest area
+    # Add interest line (dotted, above the shaded area)
     fig.add_trace(go.Scatter(
         x=timeline_data['years'],
         y=timeline_data['interest'],
         mode='lines',
         name='Interest Earned',
-        line=dict(color='#17a2b8', width=2),
-        hovertemplate=f'Year %{{x:.1f}}<br>Interest: {currency_symbol}%{{y:,.2f}}<extra></extra>'
+        line=dict(color=COLORS['savings-color'], width=2, dash='dot'),
+        hovertemplate=f'Year %{{x:.1f}}<br>Interest: {currency_symbol} %{{y:,.2f}}<extra></extra>'
     ))
     
     fig.update_layout(
@@ -292,8 +288,8 @@ def update_growth_calculation(starting_balance, contribution, frequency, years, 
     if user_settings and user_settings.get('currency'):
         currency_symbol = CURRENCY_SYMBOLS.get(user_settings['currency'], '$')
     
-    # Validate inputs
-    if not all([starting_balance, contribution, frequency, years, annual_return]):
+    # Validate inputs - check for None rather than falsy values to allow 0 contributions
+    if any(x is None for x in [starting_balance, contribution, frequency, years, annual_return]):
         return html.Div("Enter all parameters to see results."), {}
     
     # Additional validation

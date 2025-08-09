@@ -93,7 +93,7 @@ def calculate_cumulative_growth(
 
 def format_currency(amount: float, currency_symbol: str = "$") -> str:
     """Format number as currency with appropriate comma separators."""
-    return f"{currency_symbol}{amount:,.2f}"
+    return f"{currency_symbol} {amount:,.2f}"
 
 
 def calculate_retirement_goal(
