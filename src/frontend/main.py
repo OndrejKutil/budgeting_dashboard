@@ -81,12 +81,6 @@ app.layout = html.Div([
         data={},
         storage_type='local'
     ),
-    # Token refresh interval - checks every 45 minutes 
-    # (disabled in production until logged in)
-    dcc.Interval(
-        id='token-refresh-interval',
-        interval=30*60*1000,  # 30 minutes in milliseconds
-    ),
     
     # Main content area
     html.Div(id='main-content')
@@ -138,49 +132,6 @@ def handle_logout(n_clicks):
     
 
     return dash.no_update, dash.no_update
-
-
-# =============================================================================
-# Refresh Token Callback
-# =============================================================================
-
-@app.callback(
-    Output('auth-store', 'data', allow_duplicate=True),
-    Output('token-store', 'data', allow_duplicate=True),
-    Input('token-refresh-interval', 'n_intervals'),
-    State('token-store', 'data'),
-    prevent_initial_call=True
-)
-def refresh_token_periodically(n_intervals, token_data):
-    """Automatically refresh token when interval triggers"""
-    
-    # Only refresh if user is logged in and has a refresh token
-    if not token_data or not token_data.get('refresh_token'):
-        return dash.no_update, dash.no_update
-    
-    # Attempt to refresh the token
-    try:
-        data = refresh_access_token(token_data['refresh_token'])
-
-        # Update token data with new values
-        token_data['access_token'] = data.get('access_token', token_data['access_token'])
-        token_data['refresh_token'] = data.get('refresh_token', token_data['refresh_token'])
-        token_data['user'] = data.get('user', token_data['user'])
-        token_data['session'] = data.get('session', token_data['session'])
-
-        # Return auth data (unchanged) and updated token data
-        return dash.no_update, token_data
-
-    except Exception as e:
-        # If refresh fails, log out the user
-        print(f"Token refresh failed: {e}")
-        return {'logged': False}, {
-            'email': '',
-            'access_token': '',
-            'refresh_token': '',
-            'user': None,
-            'session': None
-        }
 
 
 # =============================================================================

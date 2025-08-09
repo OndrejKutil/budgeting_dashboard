@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-#? /login
+#? /auth
 
 @router.post("/login")
 async def login(

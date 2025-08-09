@@ -17,7 +17,7 @@ BACKEND_API_KEY = env.BACKEND_API_KEY
 def refresh_token(refresh_token: str) -> dict:
     """Refreshes the access token using the provided refresh token."""
 
-    url = f"{BACKEND_URL}/refresh"
+    url = f"{BACKEND_URL}/refresh/"
 
     headers = {
         "X-API-KEY": BACKEND_API_KEY,
@@ -27,11 +27,12 @@ def refresh_token(refresh_token: str) -> dict:
     try:
         response = requests.post(url, headers=headers)
         if response.status_code == 200:
+            data = response.json()
             return {
-                'access_token': response.json().get('session', {}).get('access_token'),
-                'refresh_token': response.json().get('session', {}).get('refresh_token'),
-                'user': response.json().get('user'),
-                'session': response.json().get('session')
+                'access_token': data.get('session').get('access_token'),
+                'refresh_token': data.get('session').get('refresh_token'),
+                'user': data.get('user'),
+                'session': data.get('session')
             }
         else:
             raise Exception(f"Failed to refresh token: {response.status_code} - {response.text}")
