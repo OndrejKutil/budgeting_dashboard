@@ -3,3 +3,4 @@ dash-bootstrap-components==1.5.0
 plotly==5.17.0
 requests
 python-dotenv
+pandas>=2.2.0
