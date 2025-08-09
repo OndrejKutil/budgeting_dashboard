@@ -133,6 +133,14 @@ def handle_logout(n_clicks):
 
     return dash.no_update, dash.no_update
 
+# =============================================================================
+# HEALTH ENDPOINT
+# =============================================================================
+
+@app.server.route('/health')
+def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
 
 # =============================================================================
 # RUN THE APPLICATION
