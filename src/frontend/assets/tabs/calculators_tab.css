@@ -131,6 +131,45 @@
     border-left: 4px solid #ffc107;
 }
 
+.summary-card.danger {
+    border-left: 4px solid #dc3545;
+}
+
+/* Input group styles for better spacing */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Calculator layout styles */
+.calculator-layout {
+    height: calc(100vh - 200px);
+    min-height: 600px;
+}
+
+.input-column {
+    height: 100%;
+}
+
+.results-column {
+    height: 100%;
+}
+
+.results-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 /* Chart container */
 .chart-container {
     background: white;
@@ -245,4 +284,75 @@
 
 .growth-input-field {
     margin-bottom: 3rem;
+}
+
+/* Fix card overlap issues in retirement and debt calculators */
+#retirement-summary-cards,
+#debt-summary-cards,
+#summary-cards {
+    margin-bottom: 2rem !important;
+    z-index: 10;
+    position: relative;
+}
+
+/* Ensure charts don't overlap cards */
+#retirement-chart,
+#debt-chart,
+#growth-chart {
+    z-index: 1;
+    position: relative;
+    margin-top: 1rem;
+}
+
+/* Update summary card styling to match app colors */
+.summary-card {
+    background: white;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 4px solid #3b82f6 !important;
+    border-radius: 12px;
+    padding: 10px 15px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Override Bootstrap card-body padding for calculator cards */
+.summary-card .card-body {
+    padding: 0.5rem !important;
+    flex: none !important;
+}
+
+.summary-card .card-body h4,
+.summary-card .card-body h5,
+.summary-card .card-body p {
+    margin-bottom: 0.25rem !important;
+}
+
+.summary-card .card-body p:last-child {
+    margin-bottom: 0 !important;
+}
+
+.summary-card.success {
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.summary-card.primary {
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.summary-card.info {
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.summary-card.warning {
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.summary-card.danger {
+    border-left: 4px solid #3b82f6 !important;
 }
