@@ -8,6 +8,7 @@ from helper.requests.transactions_request import (
     get_accounts,
     get_categories,
 )
+from helper.requests.savings_funds_request import get_savings_funds
 from components.edit_transaction_modal import create_edit_transaction_modal
 
 
@@ -45,11 +46,28 @@ def _attach_names(items: list[dict], access_token: str, refresh_token: str) -> t
         final_access_token = new_access_token
         final_refresh_token = new_refresh_token
 
+    try:
+        savings_fund_response, new_access_token_3, new_refresh_token_3 = get_savings_funds(final_access_token, final_refresh_token)
+        savings_fund_map = {
+            sf.get("id"): sf.get("name", sf.get("id"))
+            for sf in savings_fund_response
+        }
+        # Use the latest tokens from the savings funds request
+        final_access_token = new_access_token_3
+        final_refresh_token = new_refresh_token_3
+    except Exception:
+        savings_fund_map = {}
+        final_access_token = new_access_token
+        final_refresh_token = new_refresh_token
+
     for item in items:
         aid = item.get("account_id")
         cid = item.get("category_id")
+        sid = item.get("savings_fund_id")
+
         item["account_name"] = account_map.get(aid, aid)
         item["category_name"] = category_map.get(cid, cid)
+        item["savings_fund_name"] = savings_fund_map.get(sid, sid)
 
     return items, final_access_token, final_refresh_token
 
@@ -79,9 +97,9 @@ def create_transactions_tab():
                     {'name': 'amount', 'id': 'amount'},
                     {'name': 'category', 'id': 'category_name'},
                     {'name': 'notes', 'id': 'notes'},
-                    {'name': 'is_transfer', 'id': 'is_transfer'}
+                    {'name': 'savings_fund', 'id': 'savings_fund_name'}
                 ],
-                hidden_columns=['id', 'is_transfer'],
+                hidden_columns=['id'],
                 row_selectable='single',
                 style_cell={
                     'textAlign': 'left',
@@ -204,7 +222,8 @@ def update_transactions(nav_data, offset_data, _refresh, token_store):
         Output('edit-transaction-amount-input', 'value'),
         Output('edit-transaction-date-input', 'date'),
         Output('edit-transaction-notes-input', 'value'),
-        Output('edit-transaction-transfer-checkbox', 'value'),
+        Output('edit-transaction-savings-fund-dropdown', 'options'),
+        Output('edit-transaction-savings-fund-dropdown', 'value'),
         Output('token-store', 'data', allow_duplicate=True),
     ],
     Input('transactions-table', 'selected_rows'),
@@ -216,7 +235,8 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
     if not selected_rows or not token_data:
         return (dash.no_update, dash.no_update, dash.no_update, dash.no_update, 
                 dash.no_update, dash.no_update, dash.no_update, dash.no_update, 
-                dash.no_update, dash.no_update, dash.no_update)
+                dash.no_update, dash.no_update, dash.no_update, dash.no_update, 
+                dash.no_update)
 
     try:
         row = table_data[selected_rows[0]]
@@ -231,7 +251,13 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
             new_access_token,
             new_refresh_token
         )
-        
+
+        savings_funds, final_access_token, final_refresh_token = get_savings_funds(
+            new_access_token,
+            new_refresh_token
+        )
+
+
         # Update token store if tokens were refreshed
         updated_token_store = token_data.copy()
         if (final_access_token != token_data['access_token'] or 
@@ -250,6 +276,10 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
             {"label": c.get("name"), "value": c.get("id")}
             for c in categories.get("data", [])
         ]
+        savings_fund_options = [
+            {"label": sf.get("name"), "value": sf.get("id")}
+            for sf in savings_funds
+        ]
 
         return (
             True,
@@ -261,7 +291,8 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
             row.get('amount'),
             row.get('date'),
             row.get('notes'),
-            row.get('is_transfer'),
+            savings_fund_options,
+            row.get('savings_fund_id'),
             updated_token_store,
         )
         
@@ -269,7 +300,8 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
         print(f"Error opening edit transaction modal: {e}")
         return (dash.no_update, dash.no_update, dash.no_update, dash.no_update, 
                 dash.no_update, dash.no_update, dash.no_update, dash.no_update, 
-                dash.no_update, dash.no_update, dash.no_update)
+                dash.no_update, dash.no_update, dash.no_update, dash.no_update,
+                dash.no_update)
 
 
 @callback(
@@ -283,12 +315,12 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
     State('edit-transaction-amount-input', 'value'),
     State('edit-transaction-date-input', 'date'),
     State('edit-transaction-notes-input', 'value'),
-    State('edit-transaction-transfer-checkbox', 'value'),
+    State('edit-transaction-savings-fund-dropdown', 'value'),
     State('token-store', 'data'),
     State('transactions-refresh-store', 'data'),
     prevent_initial_call=True,
 )
-def update_transaction_cb(_, trans_id, account_id, category_id, amount, date, notes, is_transfer, token_data, refresh):
+def update_transaction_cb(_, trans_id, account_id, category_id, amount, date, notes, savings_fund_id, token_data, refresh):
     if not _ or not token_data or not trans_id:
         return dash.no_update, dash.no_update, dash.no_update
 
@@ -299,7 +331,7 @@ def update_transaction_cb(_, trans_id, account_id, category_id, amount, date, no
             'amount': amount,
             'date': date,
             'notes': notes,
-            'is_transfer': bool(is_transfer),
+            'savings_fund_id': savings_fund_id
         }
         
         # Use the new API client with token refresh capability

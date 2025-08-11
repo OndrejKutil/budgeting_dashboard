@@ -19,9 +19,8 @@ class TransactionData(BaseModel):
     date: Date = Field(..., description="Transaction date")
     notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Record update timestamp")
-    
-    
+    savings_fund_id: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
+
     class Config:
         # Allow Decimal to be serialized as float in JSON
         json_encoders = {
@@ -38,7 +37,7 @@ class TransactionData(BaseModel):
                 "date": "2025-01-15",
                 "notes": "",
                 "created_at": "2025-01-15T10:30:00Z",
-                "updated_at": "2025-01-15T10:30:00Z"
+                "savings_fund_id": None
             }
         }
 
@@ -107,7 +106,7 @@ class AllDataResponse(BaseModel):
                         "date": "2025-01-15",
                         "notes": "Weekly grocery shopping",
                         "created_at": "2025-01-15T10:30:00Z",
-                        "updated_at": "2025-01-15T10:30:00Z"
+                        "savings_fund_id": None
                     },
                     {
                         "id": "2",
@@ -118,7 +117,7 @@ class AllDataResponse(BaseModel):
                         "date": "2025-01-16",
                         "notes": "Coffee with friends",
                         "created_at": "2025-01-16T11:00:00Z",
-                        "updated_at": "2025-01-16T11:00:00Z"
+                        "savings_fund_id": None
                     }
                 ],
                 "count": 2,
@@ -202,8 +201,8 @@ class TransactionRequest(BaseModel):
     amount: Decimal = Field(..., description="Transaction amount")
     date: Date = Field(..., description="Transaction date")
     notes: Optional[str] = Field(None, description="Transaction description")
-    is_transfer: Optional[bool] = Field(False, description="Indicates if this is a transfer transaction")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+    savings_fund_id: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
 
     class Config:
         # Allow Decimal to be serialized as float in JSON
@@ -218,8 +217,8 @@ class TransactionRequest(BaseModel):
                 "amount": 49.99,
                 "date": "2025-01-15",
                 "notes": "",
-                "is_transfer": False,
-                "created_at": "2025-01-15T10:30:00Z"
+                "created_at": "2025-01-15T10:30:00Z",
+                "savings_fund_id": None
             }
         }
 
@@ -300,6 +299,49 @@ class SummaryResponse(BaseModel):
                         "Savings Account": 1000.00
                     }
                 }
+            }
+        }
+
+
+class SavingsFundsData(BaseModel):
+    id: str = Field(..., description="ID of the savings fund")
+    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    name: str = Field(..., description="Name of the savings fund")
+    target_amount: int = Field(..., description="Target amount for the savings fund")
+    created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "123aaa",
+                "user_id": "456user",
+                "name": "Emergency Fund",
+                "target_amount": 5000,
+                "created_at": "2025-01-15T10:30:00Z"
+            }
+        }
+
+
+class SavingsFundsRequest(BaseModel):
+    """Request schema for creating or updating savings funds"""
+    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    name: str = Field(..., description="Name of the savings fund")
+    target_amount: int = Field(..., description="Target amount for the savings fund")
+    created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
+
+class SavingsFundsRequest(BaseModel):
+    """Request schema for creating or updating savings funds"""
+    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    name: str = Field(..., description="Name of the savings fund")
+    target_amount: int = Field(..., description="Target amount for the savings fund")
+    created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": "456user",
+                "name": "Emergency Fund",
+                "target_amount": 5000
             }
         }
 

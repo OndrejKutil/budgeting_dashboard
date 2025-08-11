@@ -45,3 +45,12 @@ class CATEGORIES_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+    
+
+class SAVINGS_FUNDS_COLUMNS(Enum):
+    ID = "id"
+    USER_ID = "user_id"
+    NAME = "name"
+
+    def __str__(self):
+        return self.value

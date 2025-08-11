@@ -30,7 +30,10 @@ def create_add_transaction_modal():
                     html.Label("Notes", htmlFor="transaction-notes-input", className="text-primary"),
                     dbc.Input(id="transaction-notes-input", type="text", placeholder="Optional notes", className="form-input mb-10")
                 ]),
-                dbc.Checkbox(id="transaction-transfer-checkbox", value=False, label="Transfer", className="mb-10"),
+                html.Div([
+                    html.Label("Savings fund", htmlFor="transaction-savings-fund-dropdown", className="text-primary"),
+                    dcc.Dropdown(id="transaction-savings-fund-dropdown", options=[], placeholder="Select savings fund", className="mb-10")
+                ]),
             ]),
             dbc.ModalFooter([
                 dbc.Button("Add", id="submit-transaction-button", n_clicks=0, className="btn-primary width-120"),

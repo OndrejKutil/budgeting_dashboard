@@ -5,12 +5,14 @@
 
 from dash import html, Input, Output, callback, ALL, State, callback_context, clientside_callback, ClientsideFunction, dash
 
+from helper.requests.savings_funds_request import get_savings_funds
 from utils.tabs import Tab
 from components.navigation import create_navigation_bar
 from pages.tabs.overview import create_overview_tab
 from pages.tabs.monthly_view import create_monthly_view_tab
 from pages.tabs.yearly_view import create_yearly_view_tab
 from pages.tabs.transactions import create_transactions_tab
+from pages.tabs.saving import create_savings_tab
 from pages.tabs.accounts import create_accounts_tab
 from pages.tabs.calculators import create_calculators_tab
 from pages.tabs.profile import create_profile_tab
@@ -97,6 +99,9 @@ def get_tab_content(selected_tab):
     elif selected_tab == Tab.TRANSACTIONS.name.lower():
         return create_transactions_tab()
     
+    elif selected_tab == Tab.SAVINGS.name.lower():
+        return create_savings_tab()
+    
     elif selected_tab == Tab.CALCULATORS.name.lower():
         return create_calculators_tab()
     
@@ -112,6 +117,7 @@ def get_tab_content(selected_tab):
     [Output("add-transaction-modal", "is_open"),
      Output("transaction-account-dropdown", "options"),
      Output("transaction-category-dropdown", "options"),
+     Output("transaction-savings-fund-dropdown", "options"),
      Output('token-store', 'data', allow_duplicate=True)],
     Input("open-add-transaction-button", "n_clicks"),
     Input("close-add-transaction-modal", "n_clicks"),
@@ -142,7 +148,12 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
                 new_access_token,
                 new_refresh_token
             )
-            
+
+            savings_funds, final_access_token_2, final_refresh_token_2 = get_savings_funds(
+                final_access_token,
+                final_refresh_token
+            )
+
             # Update token store if tokens were refreshed
             updated_token_store = token_data.copy()
             if (final_access_token != token_data.get('access_token') or 
@@ -161,14 +172,18 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
                 {"label": c.get("name"), "value": c.get("id")}
                 for c in categories.get("data", [])
             ]
-            return True, acc_options, cat_options, updated_token_store
-            
+            savings_fund_options = [
+                {"label": s.get("name"), "value": s.get("id")}
+                for s in savings_funds
+            ]
+            return True, acc_options, cat_options, savings_fund_options, updated_token_store
+
         except Exception as e:
             print(f"Error opening add transaction modal: {e}")
-            return True, [], [], dash.no_update
+            return True, [], [], [], dash.no_update
 
     # No valid trigger, return current state
-    return is_open, dash.no_update, dash.no_update, dash.no_update
+    return is_open, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
 @callback(
@@ -180,11 +195,11 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
     State("transaction-amount-input", "value"),
     State("transaction-date-input", "date"),
     State("transaction-notes-input", "value"),
-    State("transaction-transfer-checkbox", "value"),
+    State("transaction-savings-fund-dropdown", "value"),
     State("token-store", "data"),
     prevent_initial_call=True,
 )
-def submit_transaction(n_clicks, account_id, category_id, amount, date, notes, is_transfer, token_data):
+def submit_transaction(n_clicks, account_id, category_id, amount, date, notes, savings_fund_id, token_data):
     if not token_data or not n_clicks or n_clicks <= 0:
         return dash.no_update, dash.no_update
 
@@ -200,8 +215,8 @@ def submit_transaction(n_clicks, account_id, category_id, amount, date, notes, i
             "amount": amount,
             "date": date,
             "notes": notes or "",
-            "is_transfer": bool(is_transfer),
             "created_at": datetime.datetime.now().isoformat(),
+            "savings_fund_id": savings_fund_id
         }
         
         # Use the new API client with token refresh capability
