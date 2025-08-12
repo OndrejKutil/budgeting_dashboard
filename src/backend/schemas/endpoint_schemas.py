@@ -67,8 +67,8 @@ class SpendingType(str, Enum):
 
 class CategoryData(BaseModel):
     """Schema for individual category data"""
-    id: int = Field(..., description="Category ID")
-    name: str = Field(..., description="Category name")
+    categories_id: int = Field(..., description="Category ID")
+    category_name: str = Field(..., description="Category name")
     type: CategoryType = Field(..., description="Category type (expense, income, etc.)")
     is_active: Optional[bool] = Field(True, description="Indicates if the category is active")
     spending_type: Optional[SpendingType] = Field(None, description="Type of spending associated with the category")
@@ -77,9 +77,9 @@ class CategoryData(BaseModel):
 
 class AccountData(BaseModel):
     """Schema for individual account data"""
-    id: str = Field(..., description="Account ID")
+    accounts_id: str = Field(..., description="Account ID")
     user_id: Optional[str] = Field(None, description="User ID who owns this account")
-    name: str = Field(..., description="Account name")
+    account_name: str = Field(..., description="Account name")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
@@ -140,15 +140,15 @@ class CategoriesResponse(BaseModel):
             "example": {
                 "data": [
                     {
-                        "id": "1",
-                        "name": "Groceries",
+                        "categories_id": "1",
+                        "category_name": "Groceries",
                         "type": CategoryType.EXPENSE,
                         "spending_type": SpendingType.CORE,
                         "is_active": True,
                         "created_at": "2025-01-15T10:30:00Z",
                     },
                     {
-                        "id": "2",
+                        "categories_id": "2",
                         "notes": "Coffee with friends",
                         "created_at": "2025-01-16T11:00:00Z",
                         "updated_at": "2025-01-16T11:00:00Z"
@@ -171,17 +171,17 @@ class AccountsResponse(BaseModel):
             "example": {
                 "data": [
                     {
-                        "id": "acc456",
+                        "accounts_id": "acc456",
                         "user_id": "user123",
-                        "name": "Main Checking Account",
+                        "account_name": "Main Checking Account",
                         "type": "checking",
                         "currency": "USD",
                         "created_at": "2025-01-15T10:30:00Z"
                     },
                     {
-                        "id": "acc789",
+                        "accounts_id": "acc789",
                         "user_id": "user123",
-                        "name": "Savings Account",
+                        "account_name": "Savings Account",
                         "type": "savings",
                         "currency": "USD",
                         "created_at": "2025-01-16T11:00:00Z"
@@ -225,7 +225,7 @@ class TransactionRequest(BaseModel):
 
 class AccountRequest(BaseModel):
     """Schema for creating a new account"""
-    name: str = Field(..., description="Name of the account")
+    account_name: str = Field(..., description="Name of the account")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
@@ -238,7 +238,7 @@ class AccountRequest(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "name": "",
+                "account_name": "",
                 "type": "",
                 "currency": "",
                 "created_at": "2025-01-15T10:30:00Z"
@@ -304,18 +304,18 @@ class SummaryResponse(BaseModel):
 
 
 class SavingsFundsData(BaseModel):
-    id: str = Field(..., description="ID of the savings fund")
+    savings_funds_id: str = Field(..., description="ID of the savings fund")
     user_id: str = Field(..., description="ID of the user who owns the savings fund")
-    name: str = Field(..., description="Name of the savings fund")
+    fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "id": "123aaa",
+                "savings_funds_id": "123aaa",
                 "user_id": "456user",
-                "name": "Emergency Fund",
+                "fund_name": "Emergency Fund",
                 "target_amount": 5000,
                 "created_at": "2025-01-15T10:30:00Z"
             }
@@ -325,14 +325,14 @@ class SavingsFundsData(BaseModel):
 class SavingsFundsRequest(BaseModel):
     """Request schema for creating or updating savings funds"""
     user_id: str = Field(..., description="ID of the user who owns the savings fund")
-    name: str = Field(..., description="Name of the savings fund")
+    fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
 
 class SavingsFundsRequest(BaseModel):
     """Request schema for creating or updating savings funds"""
     user_id: str = Field(..., description="ID of the user who owns the savings fund")
-    name: str = Field(..., description="Name of the savings fund")
+    fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
 
@@ -340,7 +340,7 @@ class SavingsFundsRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "user_id": "456user",
-                "name": "Emergency Fund",
+                "fund_name": "Emergency Fund",
                 "target_amount": 5000
             }
         }

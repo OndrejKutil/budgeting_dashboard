@@ -21,9 +21,9 @@ class TRANSACTIONS_COLUMNS(Enum):
     
 class ACCOUNTS_COLUMNS(Enum):
     
-    ID = "id"
+    ID = "accounts_id"
     USER_ID = "user_id"
-    NAME = "name"
+    NAME = "account_name"
     TYPE = "type"
     STARTING_BALANCE = "starting_balance"
     CURRENCY = "currency"
@@ -35,8 +35,8 @@ class ACCOUNTS_COLUMNS(Enum):
 
 class CATEGORIES_COLUMNS(Enum):
 
-    ID = "id"
-    NAME = "name"
+    ID = "categories_id"
+    NAME = "category_name"
     TYPE = "type"
     IS_ACTIVE = "is_active"
     CREATED_AT = "created_at"
@@ -48,9 +48,10 @@ class CATEGORIES_COLUMNS(Enum):
     
 
 class SAVINGS_FUNDS_COLUMNS(Enum):
-    ID = "id"
+    ID = "savings_funds_id"
     USER_ID = "user_id"
-    NAME = "name"
+    TARGET_AMOUNT = "target_amount"
+    NAME = "fund_name"
 
     def __str__(self):
         return self.value

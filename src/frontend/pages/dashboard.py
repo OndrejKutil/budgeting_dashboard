@@ -165,15 +165,15 @@ def toggle_add_transaction_modal(open_click, close_click, is_open, token_data):
                 updated_token_store = dash.no_update
             
             acc_options = [
-                {"label": a.get("name"), "value": a.get("id")}
+                {"label": a.get("account_name"), "value": a.get("id")}
                 for a in accounts.get("data", [])
             ]
             cat_options = [
-                {"label": c.get("name"), "value": c.get("id")}
+                {"label": c.get("category_name"), "value": c.get("id")}
                 for c in categories.get("data", [])
             ]
             savings_fund_options = [
-                {"label": s.get("name"), "value": s.get("id")}
+                {"label": s.get("fund_name"), "value": s.get("id")}
                 for s in savings_funds
             ]
             return True, acc_options, cat_options, savings_fund_options, updated_token_store

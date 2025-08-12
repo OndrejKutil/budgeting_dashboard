@@ -48,13 +48,13 @@ def create_accounts_tab():
                 id='accounts-table',
                 data=[],
                 columns=[
-                    {'name': 'id', 'id': 'id'},
-                    {'name': 'name', 'id': 'name'},
+                    {'name': 'accounts_id', 'id': 'accounts_id'},
+                    {'name': 'account_name', 'id': 'account_name'},
                     {'name': 'type', 'id': 'type'},
                     {'name': 'currency', 'id': 'currency'},
                     {'name': 'created_at', 'id': 'created_at'}
                 ],
-                hidden_columns=['id'],
+                hidden_columns=[],
                 row_selectable='single',
                 sort_action='native',
                 style_cell={
@@ -145,7 +145,7 @@ def update_accounts(nav_data, offset_data, _refresh, token_store):
 
 @callback(
     [
-        Output('edit-account-modal', 'is_open'),
+        Output('edit-account-modal', 'is_open', allow_duplicate=True),
         Output('edit-account-id', 'data'),
         Output('edit-account-name-input', 'value'),
         Output('edit-account-type-input', 'value'),
@@ -157,14 +157,14 @@ def update_accounts(nav_data, offset_data, _refresh, token_store):
 )
 def open_edit_account_modal(selected_rows, table_data):
     if not selected_rows:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     row = table_data[selected_rows[0]]
 
     return (
         True,
-        row.get('id'),
-        row.get('name'),
+        row.get('accounts_id'),
+        row.get('account_name'),
         row.get('type'),
         row.get('currency'),
     )
@@ -178,18 +178,15 @@ def open_edit_account_modal(selected_rows, table_data):
     State('edit-account-id', 'data'),
     State('edit-account-name-input', 'value'),
     State('edit-account-type-input', 'value'),
-    State('edit-account-balance-input', 'value'),
+    State('edit-account-currency-input', 'value'),
     State('token-store', 'data'),
     State('accounts-refresh-store', 'data'),
     prevent_initial_call=True,
 )
-def update_account_cb(_, acc_id, name, acc_type, currency, token_data, refresh):
-    if not _ or not token_data or not acc_id:
-        return dash.no_update, dash.no_update, dash.no_update
-
+def update_account_cb(n_clicks, acc_id, name, acc_type, currency, token_data, refresh):
     try:
         payload = {
-            'name': name,
+            'account_name': name,
             'type': acc_type,
             'currency': currency,
         }
@@ -230,9 +227,6 @@ def update_account_cb(_, acc_id, name, acc_type, currency, token_data, refresh):
     prevent_initial_call=True,
 )
 def delete_account_cb(n_clicks, acc_id, token_data, refresh):
-    if not n_clicks or not token_data or not acc_id:
-        return dash.no_update, dash.no_update, dash.no_update
-
     try:
         # Use the new API client with token refresh capability
         response_data, new_access_token, new_refresh_token = request_delete_account(
@@ -303,7 +297,7 @@ def submit_account(_, name, acc_type, currency, token_data, refresh):
 
     try:
         payload = {
-            "name": name,
+            "account_name": name,
             "type": acc_type,
             "currency": currency,
             "created_at": datetime.datetime.now().isoformat(),

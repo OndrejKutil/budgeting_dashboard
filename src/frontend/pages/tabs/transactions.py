@@ -24,7 +24,7 @@ def _attach_names(items: list[dict], access_token: str, refresh_token: str) -> t
     try:
         accounts_resp, new_access_token, new_refresh_token = get_accounts(access_token, refresh_token)
         account_map = {
-            acc.get("id"): acc.get("name", acc.get("id"))
+            acc.get("accounts_id"): acc.get("account_name", acc.get("id"))
             for acc in accounts_resp.get("data", [])
         }
     except Exception:
@@ -35,7 +35,7 @@ def _attach_names(items: list[dict], access_token: str, refresh_token: str) -> t
     try:
         categories_resp, new_access_token_2, new_refresh_token_2 = get_categories(new_access_token, new_refresh_token)
         category_map = {
-            cat.get("id"): cat.get("name", cat.get("id"))
+            cat.get("categories_id"): cat.get("category_name", cat.get("id"))
             for cat in categories_resp.get("data", [])
         }
         # Use the latest tokens from the categories request
@@ -49,7 +49,7 @@ def _attach_names(items: list[dict], access_token: str, refresh_token: str) -> t
     try:
         savings_fund_response, new_access_token_3, new_refresh_token_3 = get_savings_funds(final_access_token, final_refresh_token)
         savings_fund_map = {
-            sf.get("id"): sf.get("name", sf.get("id"))
+            sf.get("savings_funds_id"): sf.get("fund_name", sf.get("id"))
             for sf in savings_fund_response
         }
         # Use the latest tokens from the savings funds request
@@ -269,15 +269,15 @@ def open_edit_transaction_modal(selected_rows, table_data, token_data):
             updated_token_store = dash.no_update
         
         acc_options = [
-            {"label": a.get("name"), "value": a.get("id")}
+            {"label": a.get("account_name"), "value": a.get("accounts_id")}
             for a in accounts.get("data", [])
         ]
         cat_options = [
-            {"label": c.get("name"), "value": c.get("id")}
+            {"label": c.get("category_name"), "value": c.get("categories_id")}
             for c in categories.get("data", [])
         ]
         savings_fund_options = [
-            {"label": sf.get("name"), "value": sf.get("id")}
+            {"label": sf.get("fund_name"), "value": sf.get("savings_funds_id")}
             for sf in savings_funds
         ]
 

@@ -46,13 +46,19 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         end_date = date(year, month, last_day)
         
         # Query transactions with category joins for the month
-        query = user_supabase_client.table('transactions').select('*, categories(*)')
+        # Use explicit column selection to avoid conflicts
+        query = user_supabase_client.table('transactions').select(
+            '*',
+            'categories(*)'
+
+        )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         response = query.execute()
         transactions = response.data
+
     except Exception as e:
         logger.error(f'Database query failed for get_monthly_analytics: {str(e)}')
         logger.info(f'Query parameters - year: {year}, month: {month}')
@@ -63,20 +69,44 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         # Handle empty transactions case
         df = pd.DataFrame()
     else:
-        # Flatten the nested structure
-        flattened_transactions = []
-        for transaction in transactions:
-            category = transaction.get('categories', {})
-            flattened_transaction = {
-                'amount': float(transaction.get('amount', 0)),
-                'date': transaction.get('date', ''),
-                'category_type': category.get('type', '') if category else '',
-                'category_name': category.get('name', 'Unknown Category') if category else 'Unknown Category',
-                'spending_type': category.get('spending_type', '') if category else ''
-            }
-            flattened_transactions.append(flattened_transaction)
+        # Flatten the nested structure using pandas json_normalize without meta
+        df = pd.json_normalize(
+            transactions,
+            sep='.',
+            errors='ignore'
+        )
         
-        df = pd.DataFrame(flattened_transactions)
+        # Ensure we have the required columns, create them if missing
+        required_columns = {
+            'amount': 0.0,
+            'date': '',
+            'categories.type': '',
+            'categories.category_name': 'Unknown Category',
+            'categories.spending_type': '',
+            'savings_fund_id': None
+        }
+        
+        for col, default_val in required_columns.items():
+            if col not in df.columns:
+                df[col] = default_val
+        
+        # Rename columns to match the expected structure
+        column_mapping = {
+            'categories.type': 'category_type',
+            'categories.category_name': 'category_name', 
+            'categories.spending_type': 'spending_type',
+            'savings_fund_id': 'savings_funds'
+        }
+        
+        df = df.rename(columns=column_mapping)
+        
+        # Handle missing values using simple assignment
+        df.loc[df['category_type'].isna(), 'category_type'] = ''
+        df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
+        df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+        
+        # Convert amount to float
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
 
     if not df.empty:
         # Add date parsing for daily analysis
@@ -88,21 +118,23 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         # Calculate totals using pandas aggregation
         # Income: use original amount (positive)
         total_income = df[df['category_type'] == 'income']['amount'].sum()
-        
+        total_income_wo_savings_funds = total_income - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
+
         # Expenses, savings, investments: use absolute amounts for display
         # Note: These are stored as negative numbers, so we use abs() for totals
         total_expenses = df[df['category_type'] == 'expense']['abs_amount'].sum()
         total_savings = df[df['category_type'] == 'saving']['abs_amount'].sum()
+        total_savings_w_withdrawals = total_savings - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
         total_investments = df[df['category_type'] == 'investment']['abs_amount'].sum()
         
         # Calculate profit and cashflow
         # Since expenses/savings/investments are stored as negative, we use simple addition
         # Profit = income + expenses + investments (expenses and investments are negative)
-        profit = total_income + df[df['category_type'] == 'expense']['amount'].sum() + df[df['category_type'] == 'investment']['amount'].sum()
+        profit = total_income_wo_savings_funds - total_expenses - total_investments
         
         # Cashflow = income + expenses + investments + savings (all stored amounts with their signs)
-        cashflow = total_income + df[df['category_type'] == 'expense']['amount'].sum() + df[df['category_type'] == 'investment']['amount'].sum() + df[df['category_type'] == 'saving']['amount'].sum()
-        
+        cashflow = total_income - total_expenses - total_investments - total_savings
+
         # Daily spending heatmap - sum absolute amounts by day
         daily_spending = df[df['category_type'] == 'expense'].groupby('date_parsed')['abs_amount'].sum().reset_index()
         daily_spending_heatmap = [
@@ -115,7 +147,7 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         
         # Category breakdown - exclude income, use absolute amounts for expenses/savings/investments
         category_breakdown = []
-        for category_type in ['expense', 'saving', 'investment']:
+        for category_type in ['expense']:
             category_data = df[df['category_type'] == category_type]
             if not category_data.empty:
                 # Expenses, savings, investments: use absolute amounts
@@ -147,7 +179,7 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
             })
         
         # Future spending (savings and investments with Future spending_type)
-        future_amount = df[(df['category_type'].isin(['saving', 'investment'])) & (df['spending_type'] == 'Future')]['abs_amount'].sum()
+        future_amount = df[df['spending_type'] == 'Future']['abs_amount'].sum()
         if future_amount > 0:
             spending_type_breakdown.append({
                 'type': 'Future',
@@ -157,8 +189,10 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
     else:
         # Handle empty DataFrame case
         total_income = 0.0
+        total_income_wo_savings_funds = 0.0
         total_expenses = 0.0
         total_savings = 0.0
+        total_savings_w_withdrawals = 0.0
         total_investments = 0.0
         profit = 0.0
         cashflow = 0.0
@@ -167,9 +201,9 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         spending_type_breakdown = []
 
     # Round all values to 2 decimal places
-    total_income = round(total_income, 2)
+    total_income_wo_savings_funds = round(total_income_wo_savings_funds, 2)
     total_expenses = round(total_expenses, 2)
-    total_savings = round(total_savings, 2)
+    total_savings_w_withdrawals = round(total_savings_w_withdrawals, 2)
     total_investments = round(total_investments, 2)
     profit = round(profit, 2)
     cashflow = round(cashflow, 2)
@@ -178,9 +212,9 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         'year': year,
         'month': month,
         'month_name': calendar.month_name[month],
-        'income': total_income,
+        'income': total_income_wo_savings_funds,
         'expenses': total_expenses,
-        'savings': total_savings,
+        'savings': total_savings_w_withdrawals,
         'investments': total_investments,
         'profit': profit,
         'cashflow': cashflow,

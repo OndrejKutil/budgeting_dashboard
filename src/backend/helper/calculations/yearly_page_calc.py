@@ -47,20 +47,44 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         # Handle empty transactions case
         df = pd.DataFrame()
     else:
-        # Flatten the nested structure
-        flattened_transactions = []
-        for transaction in transactions:
-            category = transaction.get('categories', {})
-            flattened_transaction = {
-                'amount': float(transaction.get('amount', 0)),
-                'date': transaction.get('date', ''),
-                'category_type': category.get('type', '') if category else '',
-                'category_name': category.get('name', 'Unknown Category') if category else 'Unknown Category',
-                'spending_type': category.get('spending_type', '') if category else ''
-            }
-            flattened_transactions.append(flattened_transaction)
+        # Flatten the nested structure using pandas json_normalize without meta
+        df = pd.json_normalize(
+            transactions,
+            sep='.',
+            errors='ignore'
+        )
         
-        df = pd.DataFrame(flattened_transactions)
+        # Ensure we have the required columns, create them if missing
+        required_columns = {
+            'amount': 0.0,
+            'date': '',
+            'categories.type': '',
+            'categories.category_name': 'Unknown Category',
+            'categories.spending_type': '',
+            'savings_fund_id': None
+        }
+        
+        for col, default_val in required_columns.items():
+            if col not in df.columns:
+                df[col] = default_val
+        
+        # Rename columns to match the expected structure
+        column_mapping = {
+            'categories.type': 'category_type',
+            'categories.category_name': 'category_name', 
+            'categories.spending_type': 'spending_type',
+            'savings_fund_id': 'savings_funds'
+        }
+        
+        df = df.rename(columns=column_mapping)
+        
+        # Handle missing values using simple assignment
+        df.loc[df['category_type'].isna(), 'category_type'] = ''
+        df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
+        df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+        
+        # Convert amount to float
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
     
     # Initialize monthly data structure
     monthly_data = {}
@@ -68,8 +92,10 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         month_name = calendar.month_abbr[month]
         monthly_data[month_name] = {
             'income': 0.0,
+            'income_wo_savings_funds': 0.0,
             'expense': 0.0,
             'saving': 0.0,
+            'savings_w_withdrawals': 0.0,
             'investment': 0.0,
             'core_expense': 0.0,
             'fun_expense': 0.0,
@@ -93,6 +119,13 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         for _, row in income_monthly.iterrows():
             monthly_data[row['month_name']]['income'] = row['amount']
         
+        # Fill monthly data for income without savings funds withdrawals
+        income_wo_savings_funds_monthly = df[df['category_type'] == 'income'].groupby('month_name').apply(
+            lambda x: x['amount'].sum() - x[x['savings_funds'].notnull()]['amount'].sum()
+        ).reset_index(name='income_wo_savings_funds')
+        for _, row in income_wo_savings_funds_monthly.iterrows():
+            monthly_data[row['month_name']]['income_wo_savings_funds'] = row['income_wo_savings_funds']
+        
         # Fill monthly data for expenses (use absolute amount)
         expense_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'expense']
         for _, row in expense_monthly.iterrows():
@@ -102,6 +135,13 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         saving_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'saving']
         for _, row in saving_monthly.iterrows():
             monthly_data[row['month_name']]['saving'] = row['abs_amount']
+        
+        # Fill monthly data for savings with withdrawals
+        savings_w_withdrawals_monthly = df[df['category_type'] == 'saving'].groupby('month_name').apply(
+            lambda x: x['abs_amount'].sum() - x[(x['category_type'] == 'income') & (x['savings_funds'].notnull())]['amount'].sum()
+        ).reset_index(name='savings_w_withdrawals')
+        for _, row in savings_w_withdrawals_monthly.iterrows():
+            monthly_data[row['month_name']]['savings_w_withdrawals'] = row['savings_w_withdrawals']
         
         investment_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'investment']
         for _, row in investment_monthly.iterrows():
@@ -127,8 +167,10 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         
         # Calculate totals using pandas aggregation
         total_income = df[df['category_type'] == 'income']['amount'].sum()
+        total_income_wo_savings_funds = total_income - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
         total_expense = df[df['category_type'] == 'expense']['abs_amount'].sum()
         total_saving = df[df['category_type'] == 'saving']['abs_amount'].sum()
+        total_savings_w_withdrawals = total_saving - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
         total_investment = df[df['category_type'] == 'investment']['abs_amount'].sum()
         total_core_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]['abs_amount'].sum()
         total_fun_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')]['abs_amount'].sum()
@@ -143,8 +185,10 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
     else:
         # Handle empty DataFrame case
         total_income = 0.0
+        total_income_wo_savings_funds = 0.0
         total_expense = 0.0
         total_saving = 0.0
+        total_savings_w_withdrawals = 0.0
         total_investment = 0.0
         total_core_expense = 0.0
         total_fun_expense = 0.0
@@ -156,7 +200,7 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
 
 
     # Calculate derived metrics
-    profit = total_income - total_expense - total_investment
+    profit = total_income_wo_savings_funds - total_expense - total_investment
     net_cash_flow = total_income - total_expense - total_saving - total_investment
     savings_rate = (total_saving / total_income * 100) if total_income > 0 else 0
     investment_rate = (total_investment / total_income * 100) if total_income > 0 else 0
@@ -165,8 +209,10 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
     # Prepare monthly arrays for charts
     months = list(monthly_data.keys())
     monthly_income = [round(monthly_data[month]['income'], 2) for month in months]
+    monthly_income_wo_savings_funds = [round(monthly_data[month]['income_wo_savings_funds'], 2) for month in months]
     monthly_expense = [round(monthly_data[month]['expense'], 2) for month in months]
     monthly_saving = [round(monthly_data[month]['saving'], 2) for month in months]
+    monthly_savings_w_withdrawals = [round(monthly_data[month]['savings_w_withdrawals'], 2) for month in months]
     monthly_investment = [round(monthly_data[month]['investment'], 2) for month in months]
     monthly_core_expense = [round(monthly_data[month]['core_expense'], 2) for month in months]
     monthly_fun_expense = [round(monthly_data[month]['fun_expense'], 2) for month in months]
@@ -177,8 +223,10 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
 
     # Round all values to 2 decimal places
     total_income = round(total_income, 2)
+    total_income_wo_savings_funds = round(total_income_wo_savings_funds, 2)
     total_expense = round(total_expense, 2)
     total_saving = round(total_saving, 2)
+    total_savings_w_withdrawals = round(total_savings_w_withdrawals, 2)
     total_investment = round(total_investment, 2)
     total_core_expense = round(total_core_expense, 2)
     total_fun_expense = round(total_fun_expense, 2)
@@ -197,9 +245,9 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
 
     analytics_data = {
         'year': year,
-        'total_income': total_income,
+        'total_income': total_income_wo_savings_funds,
         'total_expense': total_expense,
-        'total_saving': total_saving,
+        'total_saving': total_savings_w_withdrawals,
         'total_investment': total_investment,
         'total_core_expense': total_core_expense,
         'total_fun_expense': total_fun_expense,
@@ -209,9 +257,9 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         'savings_rate': savings_rate,
         'investment_rate': investment_rate,
         'months': months,
-        'monthly_income': monthly_income,
+        'monthly_income': monthly_income_wo_savings_funds,
         'monthly_expense': monthly_expense,
-        'monthly_saving': monthly_saving,
+        'monthly_saving': monthly_savings_w_withdrawals,
         'monthly_investment': monthly_investment,
         'monthly_core_expense': monthly_core_expense,
         'monthly_fun_expense': monthly_fun_expense,
@@ -239,7 +287,7 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
         end_date = date(year, 12, 31)
         
         # Query transactions with category joins for core expenses only
-        query = user_supabase_client.table('transactions').select('*, categories(*)')
+        query = user_supabase_client.table('transactions').select('*, categories(*), savings_funds(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -257,22 +305,46 @@ def _emergency_fund_analysis(access_token: str, year: int) -> dict:
     if not transactions:
         df = pd.DataFrame()
     else:
-        # Flatten the nested structure
-        flattened_transactions = []
-        for transaction in transactions:
-            category = transaction.get('categories', {})
-            transaction_date = datetime.fromisoformat(transaction.get(TRANSACTIONS_COLUMNS.DATE.value, '')).date()
-            flattened_transaction = {
-                'amount': float(transaction.get(TRANSACTIONS_COLUMNS.AMOUNT.value, 0)),
-                'date': transaction_date,
-                'month_key': f'{transaction_date.year}-{transaction_date.month:02d}',
-                'category_type': category.get('type', '') if category else '',
-                'category_name': category.get('name', 'Unknown Category') if category else 'Unknown Category',
-                'spending_type': category.get('spending_type', '') if category else ''
-            }
-            flattened_transactions.append(flattened_transaction)
+        # Flatten the nested structure using pandas json_normalize without meta
+        df = pd.json_normalize(
+            transactions,
+            sep='.',
+            errors='ignore'
+        )
         
-        df = pd.DataFrame(flattened_transactions)
+        # Ensure we have the required columns, create them if missing
+        required_columns = {
+            'amount': 0.0,
+            'date': '',
+            'categories.type': '',
+            'categories.category_name': 'Unknown Category',
+            'categories.spending_type': '',
+            'savings_funds.fund_name': None
+        }
+        
+        for col, default_val in required_columns.items():
+            if col not in df.columns:
+                df[col] = default_val
+        
+        # Rename columns to match the expected structure
+        column_mapping = {
+            'categories.type': 'category_type',
+            'categories.category_name': 'category_name', 
+            'categories.spending_type': 'spending_type',
+            'savings_funds.fund_name': 'savings_funds'
+        }
+        
+        df = df.rename(columns=column_mapping)
+        
+        # Handle missing values using simple assignment
+        df.loc[df['category_type'].isna(), 'category_type'] = ''
+        df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
+        df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+        
+        # Convert amount to float and add date parsing
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
+        df['date_parsed'] = pd.to_datetime(df['date']).dt.date
+        df['month_key'] = df['date_parsed'].apply(lambda x: f'{x.year}-{x.month:02d}')
     
     # Calculate monthly core expenses using pandas
     if not df.empty:
