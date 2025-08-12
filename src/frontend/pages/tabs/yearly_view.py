@@ -439,11 +439,15 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
             values=list(data.get('expense_by_category', {}).values()),
         ))
 
+        # Income by category pie chart with 'Savings Funds' hidden by default (but still present)
+        income_by_category = data.get('income_by_category', {})
         income_by_category_pie_chart = go.Figure()
         income_by_category_pie_chart.add_trace(go.Pie(
-            labels=list(data.get('income_by_category', {}).keys()),
-            values=list(data.get('income_by_category', {}).values()),
+            labels=list(income_by_category.keys()),
+            values=list(income_by_category.values()),
         ))
+        # Use Plotly's hiddenlabels to hide specific slices initially
+        income_by_category_pie_chart.update_layout(hiddenlabels=["Savings Funds"])        
 
         # Savings & Investment Chart
         savings_investment_fig = go.Figure()
@@ -471,7 +475,7 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
             gridcolor=COLORS.get('background-tertiary'),
             gridwidth=1,
             zeroline=True,
-            zerolinecolor=COLORS.get('background-tertiary'),
+            zerolinecolor=COLORS['text-primary'],
             zerolinewidth=1,
             ),
         )
@@ -517,7 +521,7 @@ def update_yearly_content(selected_year, nav_data, token_store, user_settings):
             gridcolor=COLORS.get('background-tertiary'),
             gridwidth=1,
             zeroline=True,
-            zerolinecolor=COLORS.get('background-tertiary'),
+            zerolinecolor=COLORS['text-primary'],
             zerolinewidth=1,
             ),
         )
