@@ -169,6 +169,14 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
                 'type': 'Core',
                 'amount': round(core_expenses, 2)
             })
+
+        # Necessary spending (expenses only)
+        necessary_expenses = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Necessary')]['abs_amount'].sum()
+        if necessary_expenses > 0:
+            spending_type_breakdown.append({
+                'type': 'Necessary',
+                'amount': round(necessary_expenses, 2)
+            })
         
         # Fun spending (expenses only)
         fun_expenses = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')]['abs_amount'].sum()

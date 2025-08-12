@@ -11,7 +11,7 @@ Set-Location ..
 # Activate virtual environment if it exists
 $venvActivate = ".venv\Scripts\Activate.ps1"
 if (Test-Path $venvActivate) {
-    Write-Host "Activating virtual environment..." -ForegroundColor Green
+    Write-Host "Activating virtual environment..." -ForegroundColor Cyan
     & $venvActivate
 } else {
     Write-Host "Virtual environment not found: $venvActivate" -ForegroundColor Red
@@ -23,12 +23,12 @@ $global:childProcesses = @()
 
 # Function to cleanup child processes and their descendants
 function Cleanup-Processes {
-    Write-Host "Stopping all services..." -ForegroundColor Yellow
+    Write-Host "Stopping all services..." -ForegroundColor Red
     
     # Kill all Python and uvicorn processes (more aggressive cleanup)
     try {
         Get-Process -Name "python","uvicorn" -ErrorAction SilentlyContinue | Stop-Process -Force
-        Write-Host "Stopped all Python and uvicorn processes" -ForegroundColor Green
+        Write-Host "Stopped all Python and uvicorn processes" -ForegroundColor Red
     } catch {
         Write-Host "Error stopping some processes: $_" -ForegroundColor Red
     }
@@ -57,16 +57,16 @@ Write-Host "Starting budgeting dashboard application..." -ForegroundColor Cyan
 # Create logs directory and clean it up
 $logsDir = "scripts\logs"
 if (Test-Path $logsDir) {
-    Write-Host "Cleaning up old log files..." -ForegroundColor Yellow
+    Write-Host "Cleaning up old log files..." -ForegroundColor Cyan
     Remove-Item "$logsDir\*" -Force -ErrorAction SilentlyContinue
 } else {
-    Write-Host "Creating logs directory..." -ForegroundColor Green
+    Write-Host "Creating logs directory..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 }
 
 # Function to start backend server
 function Start-Backend {
-    Write-Host "Starting backend server..." -ForegroundColor Green
+    Write-Host "Starting backend server..." -ForegroundColor Cyan
     $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
     $backendLogFile = "logs/backend_$timestamp.log"
     Write-Host "Backend output will be logged to: $backendLogFile" -ForegroundColor Cyan
@@ -77,7 +77,7 @@ function Start-Backend {
 
 # Function to start frontend server
 function Start-Frontend {
-    Write-Host "Starting frontend server..." -ForegroundColor Green
+    Write-Host "Starting frontend server..." -ForegroundColor Cyan
     $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
     $frontendLogFile = "logs/frontend_$timestamp.log"
     Write-Host "Frontend output will be logged to: $frontendLogFile" -ForegroundColor Cyan

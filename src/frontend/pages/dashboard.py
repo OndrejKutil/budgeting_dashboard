@@ -16,6 +16,7 @@ from pages.tabs.saving import create_savings_tab
 from pages.tabs.accounts import create_accounts_tab
 from pages.tabs.calculators import create_calculators_tab
 from pages.tabs.profile import create_profile_tab
+from pages.tabs.budget import create_budget_tab
 import json
 from helper.requests.transactions_request import (
     get_accounts,
@@ -93,15 +94,18 @@ def get_tab_content(selected_tab):
     elif selected_tab == Tab.YEARLY_VIEW.name.lower():
         return create_yearly_view_tab()
 
+    elif selected_tab == Tab.SAVINGS.name.lower():
+        return create_savings_tab()
+    
+    elif selected_tab == Tab.BUDGET.name.lower():
+        return create_budget_tab()
+
     elif selected_tab == Tab.ACCOUNTS.name.lower():
         return create_accounts_tab()
 
     elif selected_tab == Tab.TRANSACTIONS.name.lower():
         return create_transactions_tab()
-    
-    elif selected_tab == Tab.SAVINGS.name.lower():
-        return create_savings_tab()
-    
+
     elif selected_tab == Tab.CALCULATORS.name.lower():
         return create_calculators_tab()
     

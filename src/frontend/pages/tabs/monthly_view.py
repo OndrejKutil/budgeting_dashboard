@@ -254,8 +254,9 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
         data = response.get('data', {})
         
         # Format currency values
-        currency_symbol = CURRENCY_SYMBOLS.get((user_settings or {}).get('currency', 'USD'), '$')
-        
+        currency = (user_settings or {}).get('currency', 'CZK')
+        currency_symbol = CURRENCY_SYMBOLS.get(currency, currency)
+
         income_text = f"{currency_symbol} {data.get('income', 0):,.2f}"
         expenses_text = f"{currency_symbol} {data.get('expenses', 0):,.2f}"
         savings_text = f"{currency_symbol} {data.get('savings', 0):,.2f}"
@@ -272,10 +273,14 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
         cashflow_class = 'border-primary'
         
         # Create daily spending heatmap
-        daily_heatmap_fig = create_daily_heatmap(data.get('daily_spending_heatmap', []), year, month)
+        daily_heatmap_fig = create_daily_heatmap(
+            data.get('daily_spending_heatmap', []), year, month, currency_symbol
+        )
         
         # Create category breakdown chart
-        category_breakdown_fig = create_category_breakdown_chart(data.get('category_breakdown', []))
+        category_breakdown_fig = create_category_breakdown_chart(
+            data.get('category_breakdown', []), currency_symbol
+        )
         
         # Create spending types chart
         spending_types_fig = create_spending_types_chart(data.get('spending_type_breakdown', []))
@@ -298,7 +303,7 @@ def update_monthly_analytics(year, month, navigation_data, token_data, user_sett
         return ('Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'border-danger', 'border-danger', empty_fig, empty_fig, empty_fig, dash.no_update)
 
 
-def create_daily_heatmap(daily_data, year, month):
+def create_daily_heatmap(daily_data, year, month, currency_symbol):
     """Create a calendar heatmap for daily spending"""
     
     if not daily_data:
@@ -338,7 +343,7 @@ def create_daily_heatmap(daily_data, year, month):
                 day_str = f"{year}-{month:02d}-{day:02d}"
                 amount = spending_dict.get(day_str, 0)
                 week_z.append(amount)
-                week_text.append(f"Day {day}<br>${amount:.2f}")
+                week_text.append(f"Day {day}<br>{currency_symbol} {amount:.2f}")
         z_data.append(week_z)
         text_data.append(week_text)
     
@@ -385,7 +390,7 @@ def create_daily_heatmap(daily_data, year, month):
     return fig
 
 
-def create_category_breakdown_chart(category_data):
+def create_category_breakdown_chart(category_data, currency_symbol):
     """Create a horizontal bar chart for category breakdown"""
     
     if not category_data:
@@ -412,7 +417,7 @@ def create_category_breakdown_chart(category_data):
             x=amounts,
             orientation='h',
             marker_color=COLORS.get('accent-primary', '#3498db'),
-            text=[f"${amount:,.2f}" for amount in amounts],
+            text=[f"{currency_symbol} {amount:,.2f}" for amount in amounts],
             textposition='auto'
         )
     ])
@@ -423,7 +428,7 @@ def create_category_breakdown_chart(category_data):
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         height=350,
-        xaxis_title="Amount ($)",
+    xaxis_title=f"Amount ({currency_symbol})",
         yaxis={
             'categoryorder': 'total ascending',
             'tickfont': dict(color=COLORS.get('text-primary', '#1e293b'))
