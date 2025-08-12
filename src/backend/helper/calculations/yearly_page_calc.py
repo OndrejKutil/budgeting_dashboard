@@ -137,11 +137,14 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
             monthly_data[row['month_name']]['saving'] = row['abs_amount']
         
         # Fill monthly data for savings with withdrawals
-        savings_w_withdrawals_monthly = df[df['category_type'] == 'saving'].groupby('month_name').apply(
-            lambda x: x['abs_amount'].sum() - x[(x['category_type'] == 'income') & (x['savings_funds'].notnull())]['amount'].sum()
-        ).reset_index(name='savings_w_withdrawals')
-        for _, row in savings_w_withdrawals_monthly.iterrows():
-            monthly_data[row['month_name']]['savings_w_withdrawals'] = row['savings_w_withdrawals']
+        # Calculate savings fund withdrawals by month first
+        savings_fund_withdrawals_monthly = df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())].groupby('month_name')['amount'].sum()
+        
+        # Then calculate savings with withdrawals for each month
+        for month in monthly_data.keys():
+            monthly_savings = monthly_data[month]['saving']
+            monthly_withdrawals = savings_fund_withdrawals_monthly.get(month, 0.0)
+            monthly_data[month]['savings_w_withdrawals'] = monthly_savings - monthly_withdrawals
         
         investment_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'investment']
         for _, row in investment_monthly.iterrows():
@@ -166,11 +169,11 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
                 monthly_data[month]['future_expense'] = amount
         
         # Calculate totals using pandas aggregation
-        total_income = df[df['category_type'] == 'income']['amount'].sum()
-        total_income_wo_savings_funds = total_income - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
+        total_income = df[df['category_type'] == 'income']['abs_amount'].sum()
+        total_income_wo_savings_funds = total_income - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['abs_amount'].sum()
         total_expense = df[df['category_type'] == 'expense']['abs_amount'].sum()
         total_saving = df[df['category_type'] == 'saving']['abs_amount'].sum()
-        total_savings_w_withdrawals = total_saving - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
+        total_savings_w_withdrawals = total_saving - df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['abs_amount'].sum()
         total_investment = df[df['category_type'] == 'investment']['abs_amount'].sum()
         total_core_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]['abs_amount'].sum()
         total_fun_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')]['abs_amount'].sum()
@@ -184,10 +187,8 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         
     else:
         # Handle empty DataFrame case
-        total_income = 0.0
         total_income_wo_savings_funds = 0.0
         total_expense = 0.0
-        total_saving = 0.0
         total_savings_w_withdrawals = 0.0
         total_investment = 0.0
         total_core_expense = 0.0
@@ -201,31 +202,32 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
 
     # Calculate derived metrics
     profit = total_income_wo_savings_funds - total_expense - total_investment
-    net_cash_flow = total_income - total_expense - total_saving - total_investment
-    savings_rate = (total_saving / total_income * 100) if total_income > 0 else 0
-    investment_rate = (total_investment / total_income * 100) if total_income > 0 else 0
+    net_cash_flow = df['amount'].sum()
+    savings_rate = (total_savings_w_withdrawals / total_income_wo_savings_funds * 100) if total_income_wo_savings_funds > 0 else 0
+    investment_rate = (total_investment / total_income_wo_savings_funds * 100) if total_income_wo_savings_funds > 0 else 0
 
  
     # Prepare monthly arrays for charts
     months = list(monthly_data.keys())
-    monthly_income = [round(monthly_data[month]['income'], 2) for month in months]
     monthly_income_wo_savings_funds = [round(monthly_data[month]['income_wo_savings_funds'], 2) for month in months]
     monthly_expense = [round(monthly_data[month]['expense'], 2) for month in months]
-    monthly_saving = [round(monthly_data[month]['saving'], 2) for month in months]
     monthly_savings_w_withdrawals = [round(monthly_data[month]['savings_w_withdrawals'], 2) for month in months]
     monthly_investment = [round(monthly_data[month]['investment'], 2) for month in months]
     monthly_core_expense = [round(monthly_data[month]['core_expense'], 2) for month in months]
     monthly_fun_expense = [round(monthly_data[month]['fun_expense'], 2) for month in months]
     monthly_future_expense = [round(monthly_data[month]['future_expense'], 2) for month in months]
-    monthly_savings_rate = [round((monthly_data[month]['saving'] / monthly_data[month]['income'] * 100) if monthly_data[month]['income'] > 0 else 0, 2) for month in months]
-    monthly_investment_rate = [round((monthly_data[month]['investment'] / monthly_data[month]['income'] * 100) if monthly_data[month]['income'] > 0 else 0, 2) for month in months]
+    monthly_savings_rate = [round((monthly_data[month]['savings_w_withdrawals'] / monthly_data[month]['income_wo_savings_funds'] * 100) if monthly_data[month]['income_wo_savings_funds'] > 0 else 0, 2) for month in months]
+    monthly_investment_rate = [round((monthly_data[month]['investment'] / monthly_data[month]['income_wo_savings_funds'] * 100) if monthly_data[month]['income_wo_savings_funds'] > 0 else 0, 2) for month in months]
 
+
+    print(total_income)
+    print(total_income_wo_savings_funds)
+    print(total_saving)
+    print(total_savings_w_withdrawals)
 
     # Round all values to 2 decimal places
-    total_income = round(total_income, 2)
     total_income_wo_savings_funds = round(total_income_wo_savings_funds, 2)
     total_expense = round(total_expense, 2)
-    total_saving = round(total_saving, 2)
     total_savings_w_withdrawals = round(total_savings_w_withdrawals, 2)
     total_investment = round(total_investment, 2)
     total_core_expense = round(total_core_expense, 2)
