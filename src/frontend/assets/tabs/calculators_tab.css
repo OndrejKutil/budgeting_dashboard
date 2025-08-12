@@ -4,7 +4,7 @@
 
 .calculators-container {
     padding: 20px;
-    max-width: 1200px;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -184,42 +184,6 @@
     font-weight: 600;
     margin-bottom: 20px;
     color: #495057;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .calculators-container {
-        padding: 15px;
-    }
-    
-    .calculator-form {
-        padding: 20px;
-    }
-    
-    .summary-card .card-value {
-        font-size: 1.5rem;
-    }
-    
-    .calculator-tabs .nav-link {
-        padding: 10px 16px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .calculator-tabs .nav-link {
-        padding: 8px 12px;
-        margin-right: 4px;
-        font-size: 0.8rem;
-    }
-    
-    .summary-card {
-        margin-bottom: 15px;
-    }
-    
-    .summary-card .card-value {
-        font-size: 1.3rem;
-    }
 }
 
 /* Input validation styles */

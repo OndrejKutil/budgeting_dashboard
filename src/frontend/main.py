@@ -32,6 +32,28 @@ app = dash.Dash(
     update_title=None
 )
 
+# Custom index string to disable mobile responsiveness
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <meta name="viewport" content="width=1200, user-scalable=no">
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
 # =============================================================================
 # MAIN APP LAYOUT
 # =============================================================================

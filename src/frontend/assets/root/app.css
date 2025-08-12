@@ -248,3 +248,86 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
     transform: translateY(-2px) !important;
 }
+
+/* =============================================================================
+   DISABLE MOBILE RESPONSIVENESS - FORCE DESKTOP LAYOUT
+   ============================================================================= */
+
+/* Force minimum width to prevent mobile layout */
+body, html {
+    min-width: 1200px !important;
+    overflow-x: auto !important;
+}
+
+/* Ensure all main containers maintain desktop width */
+.app-container,
+.dashboard-content,
+.login-page-content {
+    min-width: 1200px !important;
+    width: auto !important;
+}
+
+/* Prevent any elements from scaling down on mobile */
+* {
+    box-sizing: border-box !important;
+}
+
+/* Force charts and tables to maintain their size */
+.dash-graph,
+.plotly-graph-div {
+    min-width: 300px !important;
+    overflow-x: auto !important;
+}
+
+/* Table-specific fixes to prevent shrinking */
+.dash-table-container {
+    width: 100% !important;
+    min-width: 600px !important;
+    overflow-x: auto !important;
+}
+
+.dash-table-container table {
+    width: 100% !important;
+    min-width: 600px !important;
+    table-layout: auto !important;
+}
+
+.dash-table-container .dash-spreadsheet-container {
+    width: 100% !important;
+    min-width: 600px !important;
+}
+
+/* Ensure table cells don't shrink */
+.dash-table-container td,
+.dash-table-container th {
+    white-space: nowrap !important;
+    min-width: 80px !important;
+    padding: 8px 12px !important;
+}
+
+/* Bootstrap table classes */
+.table {
+    width: 100% !important;
+    min-width: 600px !important;
+}
+
+.table td,
+.table th {
+    white-space: nowrap !important;
+    min-width: 80px !important;
+    padding: 8px 12px !important;
+}
+
+/* Ensure modals and dropdowns work properly on mobile */
+.modal-dialog,
+.dropdown-menu {
+    max-width: none !important;
+}
+
+/* Disable any zoom or transform effects that might interfere */
+.app-container * {
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+}
