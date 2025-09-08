@@ -118,6 +118,29 @@ def create_compound_growth_calculator():
                         step=0.5,
                         className="mb-3"
                     )
+                ], className="growth-input-field"),
+
+                # Annual inflation rate
+                html.Div([
+                    html.Label("Annual Inflation Rate (%)", className="form-label"),
+                    dbc.Input(
+                        id="inflation-input",
+                        type="number",
+                        value=3.0,
+                        min=0,
+                        step=0.5,
+                        className="mb-3"
+                    )
+                ], className="growth-input-field"),
+
+                # Inflation adjust contributions checkbox
+                html.Div([
+                    dbc.Checkbox(
+                        id="inflation-adjust-checkbox",
+                        label="Increase contributions with inflation each year",
+                        value=False,
+                        className="mb-3"
+                    )
                 ], className="growth-input-field")
                 
             ], width=4),
@@ -228,6 +251,20 @@ def create_retirement_calculator():
                         value="monthly",
                         className="mb-3"
                     )
+                ], className="growth-input-field"),
+
+                # Annual inflation rate
+                html.Div([
+                    html.Label("Expected Annual Inflation (%)", className="form-label"),
+                    dbc.Input(
+                        id="retirement-inflation-input",
+                        type="number",
+                        value=3.0,
+                        min=0,
+                        max=10,
+                        step=0.1,
+                        className="mb-3"
+                    )
                 ], className="growth-input-field")
                 
             ], width=4),
@@ -323,12 +360,17 @@ def create_summary_cards(summary_data, currency_symbol="$"):
     if not summary_data:
         return html.Div("Enter parameters to see results.")
     
+    # Check if inflation data is available
+    has_inflation_data = 'final_real_value' in summary_data and summary_data.get('annual_inflation', 0) > 0
+    
     return dbc.Row([
         dbc.Col([
             dbc.Card([
                 dbc.CardBody([
                     html.H5("Final Balance", className="card-title text-primary"),
-                    html.H3(format_currency(summary_data['final_balance'], currency_symbol), className="text-primary")
+                    html.H3(format_currency(summary_data['final_balance'], currency_symbol), className="text-primary"),
+                    html.P(f"({format_currency(summary_data.get('final_real_value', summary_data['final_balance']), currency_symbol)} in today's buying power)" if has_inflation_data else "", 
+                           className="text-muted small")
                 ])
             ], className="summary-card primary")
         ], width=3),
@@ -375,12 +417,23 @@ def create_growth_chart(timeline_data, currency_symbol="$"):
         x=timeline_data['years'],
         y=timeline_data['balance'],
         mode='lines',
-        name='Total Balance',
+        name='Total Balance (Nominal)',
         line=dict(color=COLORS['accent-success'], width=3),
         fill='tozeroy',
         fillcolor=f"rgba({int(COLORS['accent-success'][1:3], 16)}, {int(COLORS['accent-success'][3:5], 16)}, {int(COLORS['accent-success'][5:7], 16)}, 0.2)",
         hovertemplate=f'Year %{{x:.1f}}<br>Balance: {currency_symbol} %{{y:,.2f}}<extra></extra>'
     ))
+    
+    # Add real value line if inflation data is available
+    if 'real_value_balance' in timeline_data and any(real != nom for real, nom in zip(timeline_data['real_value_balance'], timeline_data['balance'])):
+        fig.add_trace(go.Scatter(
+            x=timeline_data['years'],
+            y=timeline_data['real_value_balance'],
+            mode='lines',
+            name='Real Value (Today\'s Buying Power)',
+            line=dict(color=COLORS['accent-warning'], width=2, dash='dash'),
+            hovertemplate=f'Year %{{x:.1f}}<br>Real Value: {currency_symbol} %{{y:,.2f}}<extra></extra>'
+        ))
     
     # Add contributions line (dotted, above the shaded area)
     fig.add_trace(go.Scatter(
@@ -449,11 +502,13 @@ def update_calculator_content(active_tab):
      Input('contribution-input', 'value'),
      Input('frequency-select', 'value'),
      Input('years-input', 'value'),
-     Input('return-input', 'value')],
+     Input('return-input', 'value'),
+     Input('inflation-input', 'value'),
+     Input('inflation-adjust-checkbox', 'value')],
     [State('user-settings-store', 'data')],
     prevent_initial_call=False
 )
-def update_growth_calculation(starting_balance, contribution, frequency, years, annual_return, user_settings):
+def update_growth_calculation(starting_balance, contribution, frequency, years, annual_return, inflation_rate, inflation_adjust, user_settings):
     """Calculate and display compound growth results automatically when inputs change."""
     
     # Get currency symbol from user settings or default to $
@@ -462,16 +517,18 @@ def update_growth_calculation(starting_balance, contribution, frequency, years, 
         currency_symbol = CURRENCY_SYMBOLS.get(user_settings['currency'], '$')
     
     # Validate inputs - check for None rather than falsy values to allow 0 contributions
-    if any(x is None for x in [starting_balance, contribution, frequency, years, annual_return]):
+    if any(x is None for x in [starting_balance, contribution, frequency, years, annual_return, inflation_rate]):
         return html.Div("Enter all parameters to see results."), {}
     
     # Additional validation
-    if starting_balance < 0 or contribution < 0 or years <= 0 or annual_return < 0:
+    if (starting_balance < 0 or contribution < 0 or years <= 0 or 
+        annual_return < 0 or inflation_rate < 0):
         return html.Div("Please enter valid positive values."), {}
     
     try:
-        # Convert annual return from percentage to decimal
+        # Convert rates from percentage to decimal
         annual_return_decimal = annual_return / 100
+        inflation_decimal = inflation_rate / 100
         
         # Calculate growth
         results = calculate_cumulative_growth(
@@ -479,7 +536,9 @@ def update_growth_calculation(starting_balance, contribution, frequency, years, 
             periodic_contribution=float(contribution),
             contribution_frequency=frequency,
             years=int(years),
-            annual_return=annual_return_decimal
+            annual_return=annual_return_decimal,
+            annual_inflation=inflation_decimal,
+            inflation_adjust_contributions=bool(inflation_adjust)
         )
         
         # Create summary cards
@@ -506,11 +565,12 @@ def update_growth_calculation(starting_balance, contribution, frequency, years, 
      Input('retirement-age-input', 'value'),
      Input('current-savings-input', 'value'),
      Input('retirement-return-input', 'value'),
-     Input('retirement-frequency-select', 'value')],
+     Input('retirement-frequency-select', 'value'),
+     Input('retirement-inflation-input', 'value')],
     [State('user-settings-store', 'data')],
     prevent_initial_call=False
 )
-def update_retirement_calculation(target_amount, current_age, retirement_age, current_savings, annual_return, frequency, user_settings):
+def update_retirement_calculation(target_amount, current_age, retirement_age, current_savings, annual_return, frequency, inflation_rate, user_settings):
     """Calculate and display retirement planning results."""
     
     # Get currency symbol
@@ -519,12 +579,12 @@ def update_retirement_calculation(target_amount, current_age, retirement_age, cu
         currency_symbol = CURRENCY_SYMBOLS.get(user_settings['currency'], '$')
     
     # Validate inputs
-    if any(x is None for x in [target_amount, current_age, retirement_age, current_savings, annual_return]):
+    if any(x is None for x in [target_amount, current_age, retirement_age, current_savings, annual_return, inflation_rate]):
         return html.Div("Enter all parameters to see results."), {}
     
     # Additional validation
     if (target_amount < 0 or current_age < 0 or retirement_age <= current_age or 
-        current_savings < 0 or annual_return < 0):
+        current_savings < 0 or annual_return < 0 or inflation_rate < 0):
         return html.Div("Please enter valid values. Retirement age must be greater than current age."), {}
     
     try:
@@ -535,14 +595,15 @@ def update_retirement_calculation(target_amount, current_age, retirement_age, cu
             retirement_age=int(retirement_age),
             current_savings=float(current_savings),
             annual_return=annual_return / 100,
-            contribution_frequency=frequency
+            contribution_frequency=frequency,
+            annual_inflation=inflation_rate / 100
         )
         
         # Create summary cards
         summary_cards = create_retirement_summary_cards(results, currency_symbol)
         
         # Create projection chart
-        chart = create_retirement_chart(results, current_age, retirement_age, current_savings, annual_return / 100, currency_symbol)
+        chart = create_retirement_chart(results, current_age, retirement_age, current_savings, annual_return / 100, inflation_rate / 100, currency_symbol)
         
         return summary_cards, chart
         
@@ -614,6 +675,10 @@ def create_retirement_summary_cards(results, currency_symbol="$"):
         monthly_equivalent = results['required_contribution'] / 3
         contribution_text += f" ({format_currency(monthly_equivalent, currency_symbol)} / Monthly)"
     
+    # Check if inflation adjustments were made
+    has_inflation = results.get('annual_inflation', 0) > 0
+    inflation_note = f" (Target: {format_currency(results['target_amount_today'], currency_symbol)} today)" if has_inflation else ""
+    
     return dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -645,8 +710,9 @@ def create_retirement_summary_cards(results, currency_symbol="$"):
         dbc.Col([
             dbc.Card([
                 dbc.CardBody([
-                    html.H5("Total New Contributions", className="card-title text-primary"),
-                    html.H3(format_currency(results['total_contributions_needed'], currency_symbol), className="text-primary")
+                    html.H5("Inflation-Adjusted Goal", className="card-title text-primary"),
+                    html.H3(format_currency(results.get('inflation_adjusted_target', results.get('additional_needed', 0) + results['future_value_current_savings']), currency_symbol), className="text-primary"),
+                    html.P(inflation_note, className="text-muted small")
                 ])
             ], className="summary-card")
         ], width=3)
@@ -721,7 +787,7 @@ def create_debt_summary_cards(summary, currency_symbol="$"):
     ], className="g-2")
 
 
-def create_retirement_chart(results, current_age, retirement_age, current_savings, annual_return, currency_symbol="$"):
+def create_retirement_chart(results, current_age, retirement_age, current_savings, annual_return, annual_inflation, currency_symbol="$"):
     """Create retirement projection chart."""
     
     years = list(range(current_age, retirement_age + 1))
@@ -774,14 +840,26 @@ def create_retirement_chart(results, current_age, retirement_age, current_saving
         hovertemplate=f'Age %{{x}}<br>Value: {currency_symbol}%{{y:,.0f}}<extra></extra>'
     ))
     
-    # Target line
-    target_amount = results['additional_needed'] + results['future_value_current_savings']
+    # Target lines - both today's value and inflation-adjusted
+    target_amount_today = results.get('target_amount_today', results.get('additional_needed', 0) + results['future_value_current_savings'])
+    inflation_adjusted_target = results.get('inflation_adjusted_target', target_amount_today)
+    
+    # Inflation-adjusted target line
     fig.add_hline(
-        y=target_amount,
+        y=inflation_adjusted_target,
         line_dash="dot",
         line_color=COLORS['accent-primary'],
-        annotation_text="Retirement Goal"
+        annotation_text="Inflation-Adjusted Goal"
     )
+    
+    # Today's purchasing power target (if different)
+    if annual_inflation > 0:
+        fig.add_hline(
+            y=target_amount_today,
+            line_dash="dashdot",
+            line_color=COLORS['expense-color'],
+            annotation_text="Goal in Today's Dollars"
+        )
     
     fig.update_layout(
         title="Retirement Savings Projection",
