@@ -40,7 +40,7 @@ router = APIRouter()
 
 #? prefix - /categories
 
-@router.get("/", response_model=CategoriesResponse,)
+@router.get("/", response_model=CategoriesResponse)
 async def get_all_categories(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
