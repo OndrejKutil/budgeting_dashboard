@@ -1,10 +1,8 @@
-# 💰 Budgeting Dashboard
-
-*A comprehensive personal finance analytics web application for smart money management*
+# Budgeting Dashboard
 
 [![Live Demo](https://img.shields.io/badge/Live%20App-Click%20Here-brightgreen?style=for-the-badge)](https://budgeting-dashboard-frontend.onrender.com)
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### **Frontend**
 
@@ -12,9 +10,7 @@
 ![Dash](https://img.shields.io/badge/dash-008DE4?style=for-the-badge&logo=plotly&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/bootstrap-%23563D7C.svg?style=for-the-badge&logo=bootstrap&logoColor=white)
 
-- **Plotly Dash** - Interactive web framework
-- **Dash Bootstrap Components** - Responsive UI components
-- **Plotly** - Advanced data visualizations
+- **Plotly Dash** - used with plotly graphs and dash bootstrap components
 
 ### **Backend**
 
@@ -32,10 +28,9 @@
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
-- **Supabase** - Backend-as-a-Service with PostgreSQL
-- **Row-Level Security (RLS)** - Database-level security policies
+- **Supabase** - PostgreSQL database with auth handling
 
-## 📸 Screenshots
+## Screenshots
 
 | Dashboard Overview | Transaction Management |
 |:------------------:|:---------------------:|
@@ -52,7 +47,7 @@
 | ![Register](screenshots/register_page.png) | ![Modal](screenshots/add_transaction_modal.png) |
 | Secure user onboarding | Intuitive data entry |
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 budgeting_dashboard/
@@ -73,27 +68,18 @@ budgeting_dashboard/
 └── README.md
 ```
 
-## 🎯 Portfolio Highlight
-
-This project demonstrates comprehensive **full-stack development expertise** across multiple domains:
-
-### **Technical Excellence**
-
-- **🏗 Architecture Design** - Clean separation between FastAPI backend and Plotly Dash frontend
-- **🔒 Security Implementation** - JWT authentication with refresh tokens and database-level Row-Level Security
-
 ### **Real-World Application**
 
-- **💡 Problem Solving** - Addresses genuine personal finance management needs with intuitive design
-- **🚀 Production Ready** - Live deployed application with proper error handling and environment configuration
+- **Problem Solving** - Addresses genuine personal finance management needs with intuitive design
+- **Production Ready** - Live deployed application with proper error handling and environment configuration
 
 ### **Modern Development Practices**
 
-- **🔄 RESTful API Design** - Well-structured endpoints following REST principles with Pydantic validation
-- **📊 Data Visualization** - Interactive charts and analytics using modern visualization libraries
+- **RESTful API Design** - Well-structured endpoints following REST principles with Pydantic validation
+- **Data Visualization** - Interactive charts and analytics using modern visualization libraries
 
 This application showcases the ability to **transform complex financial requirements into an elegant, user-friendly solution** while maintaining high standards for security, performance, and code quality.
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](./LICENSE) file for details.
