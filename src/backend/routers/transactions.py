@@ -128,7 +128,7 @@ async def create_transaction(
         if data.get("created_at") is not None:
             data["created_at"] = data["created_at"].isoformat()
         
-        response = user_supabase_client.table("transactions").insert(data).execute()
+        response = user_supabase_client.table("fct_transactions").insert(data).execute()
         
         return {
             "data": response.data,
@@ -175,9 +175,9 @@ async def update_transaction(
         # Convert datetime to ISO string for JSON serialization
         if data.get("created_at") is not None:
             data["created_at"] = data["created_at"].isoformat()
-        
-        response = user_supabase_client.table("transactions").update(data).eq("id", transaction_id).execute()
-        
+
+        response = user_supabase_client.table("fct_transactions").update(data).eq("id", transaction_id).execute()
+
         return {
             "data": response.data,
             "count": len(response.data)
@@ -209,7 +209,7 @@ async def delete_transaction(
         
         user_supabase_client.postgrest.auth(user["access_token"])
         
-        response = user_supabase_client.table("transactions").delete().eq("id", transaction_id).execute()
+        response = user_supabase_client.table("fct_transactions").delete().eq("id", transaction_id).execute()
         
         return {"message": "Transaction deleted successfully"}
     

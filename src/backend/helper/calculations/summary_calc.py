@@ -31,9 +31,9 @@ def _summary_calc(access_token: str, start_date: date, end_date: date) -> dict:
     user_supabase_client.postgrest.auth(access_token)
 
     # Query transactions with category and account joins
-    query = user_supabase_client.table("transactions").select(
+    query = user_supabase_client.table("fct_transactions").select(
         '*',
-        'categories(*)'
+        'dim_categories(*)'
     )
 
     # Apply date filters if provided

@@ -29,7 +29,7 @@ def _yearly_analytics(access_token: str, year: int) -> dict:
         end_date = date(year, 12, 31)
         
         # Query transactions with category joins for the year
-        query = user_supabase_client.table('transactions').select('*, categories(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)

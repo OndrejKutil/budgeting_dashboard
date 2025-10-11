@@ -53,7 +53,7 @@ async def get_all_categories(
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        query = user_supabase_client.table("categories").select("*")
+        query = user_supabase_client.table("dim_categories").select("*")
 
         if category_id:
             query = query.eq(CATEGORIES_COLUMNS.ID.value, category_id)

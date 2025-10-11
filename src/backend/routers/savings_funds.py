@@ -54,7 +54,7 @@ def get_savings_funds(
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        query = user_supabase_client.table("savings_funds").select("*")
+        query = user_supabase_client.table("dim_savings_funds").select("*")
 
         if fund_id:
             query = query.eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id)
@@ -82,7 +82,7 @@ def create_savings_fund(
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("savings_funds").insert(fund).execute()
+        response = user_supabase_client.table("dim_savings_funds").insert(fund).execute()
 
         return response.data
 
@@ -102,7 +102,7 @@ def update_savings_fund(
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("savings_funds").update(fund).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
+        response = user_supabase_client.table("dim_savings_funds").update(fund).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 
         return response.data
 
@@ -121,7 +121,7 @@ def delete_savings_fund(
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
+        response = user_supabase_client.table("dim_savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 
         return {"message": "Savings fund deleted successfully"}
     

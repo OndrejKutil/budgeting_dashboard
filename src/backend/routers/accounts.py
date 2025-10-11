@@ -53,7 +53,7 @@ async def get_all_accounts(
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        query = user_supabase_client.table("accounts").select("*")
+        query = user_supabase_client.table("dim_accounts").select("*")
 
         if account_id:
             query = query.eq(ACCOUNTS_COLUMNS.ID.value, account_id)
@@ -104,7 +104,7 @@ async def create_account(
         if data.get("created_at") is not None:
             data["created_at"] = data["created_at"].isoformat()
 
-        response = user_supabase_client.table("accounts").insert(data).execute()
+        response = user_supabase_client.table("dim_accounts").insert(data).execute()
 
         return {"message": "Account created successfully", "data": response.data}
 
@@ -147,7 +147,7 @@ async def update_account(
         if data.get("created_at") is not None:
             data["created_at"] = data["created_at"].isoformat()
 
-        response = user_supabase_client.table("accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
+        response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
         return {"message": "Account updated successfully", "data": response.data}
 
@@ -175,7 +175,7 @@ async def delete_account(
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
+        response = user_supabase_client.table("dim_accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
         return {"message": "Account deleted successfully", "data": response.data}
 

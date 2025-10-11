@@ -6,23 +6,24 @@ Definition of columns used in the database.
 
 class TRANSACTIONS_COLUMNS(Enum):
     
-    ID = "id"
-    USER_ID = "user_id"
-    ACCOUNT_ID = "account_id"
-    CATEGORY_ID = "category_id"
+    ID = "id_pk"
+    USER_ID = "user_id_fk"
+    ACCOUNT_ID = "account_id_fk"
+    CATEGORY_ID = "category_id_fk"
     AMOUNT = "amount"
     DATE = "date"
     NOTES = "notes"
     IS_TRANSFER = "is_transfer"
     CREATED_AT = "created_at"
+    SAVINGS_FUND_ID = "savings_fund_id_fk"
 
     def __str__(self):
         return self.value
     
 class ACCOUNTS_COLUMNS(Enum):
-    
-    ID = "accounts_id"
-    USER_ID = "user_id"
+
+    ID = "accounts_id_pk"
+    USER_ID = "user_id_fk"
     NAME = "account_name"
     TYPE = "type"
     STARTING_BALANCE = "starting_balance"
@@ -35,7 +36,7 @@ class ACCOUNTS_COLUMNS(Enum):
 
 class CATEGORIES_COLUMNS(Enum):
 
-    ID = "categories_id"
+    ID = "categories_id_pk"
     NAME = "category_name"
     TYPE = "type"
     IS_ACTIVE = "is_active"
@@ -48,8 +49,8 @@ class CATEGORIES_COLUMNS(Enum):
     
 
 class SAVINGS_FUNDS_COLUMNS(Enum):
-    ID = "savings_funds_id"
-    USER_ID = "user_id"
+    ID = "savings_funds_id_pk"
+    USER_ID = "user_id_fk"
     TARGET_AMOUNT = "target_amount"
     NAME = "fund_name"
 

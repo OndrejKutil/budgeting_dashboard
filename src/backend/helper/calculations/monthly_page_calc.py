@@ -47,9 +47,9 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
         
         # Query transactions with category joins for the month
         # Use explicit column selection to avoid conflicts
-        query = user_supabase_client.table('transactions').select(
+        query = user_supabase_client.table('fct_transactions').select(
             '*',
-            'categories(*)'
+            'dim_categories(*)'
 
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
