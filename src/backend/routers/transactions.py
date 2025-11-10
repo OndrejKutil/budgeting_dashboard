@@ -61,7 +61,7 @@ async def get_all_data(
         user_supabase_client.postgrest.auth(user["access_token"])
         
 
-        query = user_supabase_client.table("transactions").select("*")
+        query = user_supabase_client.table("fct_transactions").select("*")
         
         if start_date:
             query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())

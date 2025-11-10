@@ -13,7 +13,6 @@ class TRANSACTIONS_COLUMNS(Enum):
     AMOUNT = "amount"
     DATE = "date"
     NOTES = "notes"
-    IS_TRANSFER = "is_transfer"
     CREATED_AT = "created_at"
     SAVINGS_FUND_ID = "savings_fund_id_fk"
 
@@ -26,7 +25,6 @@ class ACCOUNTS_COLUMNS(Enum):
     USER_ID = "user_id_fk"
     NAME = "account_name"
     TYPE = "type"
-    STARTING_BALANCE = "starting_balance"
     CURRENCY = "currency"
     CREATED_AT = "created_at"
 
@@ -41,7 +39,6 @@ class CATEGORIES_COLUMNS(Enum):
     TYPE = "type"
     IS_ACTIVE = "is_active"
     CREATED_AT = "created_at"
-    CATEGORY_CATEGORY = "category_category"
     SPENDING_TYPE = "spending_type"
 
     def __str__(self):
