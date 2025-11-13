@@ -11,15 +11,15 @@ from enum import Enum
 
 class TransactionData(BaseModel):
     """Schema for individual transaction data"""
-    id: str = Field(None, description="Transaction ID")
-    user_id: str = Field(None, description="User ID who owns this transaction")
-    account_id: str = Field(..., description="Account id associated with the transaction")
-    category_id: int = Field(..., description="Transaction category id")
+    id_pk: str = Field(None, description="Transaction ID")
+    user_id_fk: str = Field(None, description="User ID who owns this transaction")
+    account_id_fk: str = Field(..., description="Account id associated with the transaction")
+    category_id_fk: int = Field(..., description="Transaction category id")
     amount: Decimal = Field(..., description="Transaction amount")
     date: Date = Field(..., description="Transaction date")
     notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    savings_fund_id: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
+    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
 
     class Config:
         # Allow Decimal to be serialized as float in JSON
@@ -29,15 +29,15 @@ class TransactionData(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "id": "",
-                "user_id": "",
-                "account_id": "",
-                "category_id": 1,
+                "id_pk": "",
+                "user_id_fk": "",
+                "account_id_fk": "",
+                "category_id_fk": 1,
                 "amount": 100.00,
                 "date": "2025-01-15",
                 "notes": "",
                 "created_at": "2025-01-15T10:30:00Z",
-                "savings_fund_id": None
+                "savings_fund_id_fk": None
             }
         }
 
@@ -67,7 +67,7 @@ class SpendingType(str, Enum):
 
 class CategoryData(BaseModel):
     """Schema for individual category data"""
-    categories_id: int = Field(..., description="Category ID")
+    categories_id_pk: int = Field(..., description="Category ID")
     category_name: str = Field(..., description="Category name")
     type: CategoryType = Field(..., description="Category type (expense, income, etc.)")
     is_active: Optional[bool] = Field(True, description="Indicates if the category is active")
@@ -77,8 +77,8 @@ class CategoryData(BaseModel):
 
 class AccountData(BaseModel):
     """Schema for individual account data"""
-    accounts_id: str = Field(..., description="Account ID")
-    user_id: Optional[str] = Field(None, description="User ID who owns this account")
+    accounts_id_pk: str = Field(..., description="Account ID")
+    user_id_fk: Optional[str] = Field(None, description="User ID who owns this account")
     account_name: str = Field(..., description="Account name")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: Optional[str] = Field(..., description="Currency of the account")
@@ -98,26 +98,26 @@ class AllDataResponse(BaseModel):
             "example": {
                 "data": [
                     {
-                        "id": "1",
-                        "user_id": "user123",
-                        "account_id": "acc456",
-                        "category_id": 2,
+                        "id_pk": "1",
+                        "user_id_fk": "user123",
+                        "account_id_fk": "acc456",
+                        "category_id_fk": 2,
                         "amount": 49.99,
                         "date": "2025-01-15",
                         "notes": "Weekly grocery shopping",
                         "created_at": "2025-01-15T10:30:00Z",
-                        "savings_fund_id": None
+                        "savings_fund_id_fk": None
                     },
                     {
-                        "id": "2",
-                        "user_id": "user123",
-                        "account_id": "acc789",
-                        "category_id": 3,
+                        "id_pk": "2",
+                        "user_id_fk": "user123",
+                        "account_id_fk": "acc789",
+                        "category_id_fk": 3,
                         "amount": 19.99,
                         "date": "2025-01-16",
                         "notes": "Coffee with friends",
                         "created_at": "2025-01-16T11:00:00Z",
-                        "savings_fund_id": None
+                        "savings_fund_id_fk": None
                     }
                 ],
                 "count": 2,
@@ -140,7 +140,7 @@ class CategoriesResponse(BaseModel):
             "example": {
                 "data": [
                     {
-                        "categories_id": "1",
+                        "categories_id_pk": "1",
                         "category_name": "Groceries",
                         "type": CategoryType.EXPENSE,
                         "spending_type": SpendingType.CORE,
@@ -148,7 +148,7 @@ class CategoriesResponse(BaseModel):
                         "created_at": "2025-01-15T10:30:00Z",
                     },
                     {
-                        "categories_id": "2",
+                        "categories_id_pk": "2",
                         "notes": "Coffee with friends",
                         "created_at": "2025-01-16T11:00:00Z",
                         "updated_at": "2025-01-16T11:00:00Z"
@@ -171,16 +171,16 @@ class AccountsResponse(BaseModel):
             "example": {
                 "data": [
                     {
-                        "accounts_id": "acc456",
-                        "user_id": "user123",
+                        "accounts_id_pk": "acc456",
+                        "user_id_fk": "user123",
                         "account_name": "Main Checking Account",
                         "type": "checking",
                         "currency": "USD",
                         "created_at": "2025-01-15T10:30:00Z"
                     },
                     {
-                        "accounts_id": "acc789",
-                        "user_id": "user123",
+                        "accounts_id_pk": "acc789",
+                        "user_id_fk": "user123",
                         "account_name": "Savings Account",
                         "type": "savings",
                         "currency": "USD",
@@ -196,13 +196,13 @@ class AccountsResponse(BaseModel):
 # ================================================================================================
 
 class TransactionRequest(BaseModel):
-    account_id: str = Field(..., description="Account ID associated with the transaction")
-    category_id: int = Field(..., description="Transaction category ID")
+    account_id_fk: str = Field(..., description="Account ID associated with the transaction")
+    category_id_fk: int = Field(..., description="Transaction category ID")
     amount: Decimal = Field(..., description="Transaction amount")
     date: Date = Field(..., description="Transaction date")
     notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    savings_fund_id: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
+    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
 
     class Config:
         # Allow Decimal to be serialized as float in JSON
@@ -212,13 +212,13 @@ class TransactionRequest(BaseModel):
         # Example for documentation
         json_schema_extra = {
             "example": {
-                "account_id": "",
-                "category_id": 2,
+                "account_id_fk": "",
+                "category_id_fk": 2,
                 "amount": 49.99,
                 "date": "2025-01-15",
                 "notes": "",
                 "created_at": "2025-01-15T10:30:00Z",
-                "savings_fund_id": None
+                "savings_fund_id_fk": None
             }
         }
 
@@ -304,8 +304,8 @@ class SummaryResponse(BaseModel):
 
 
 class SavingsFundsData(BaseModel):
-    savings_funds_id: str = Field(..., description="ID of the savings fund")
-    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    savings_funds_id_pk: str = Field(..., description="ID of the savings fund")
+    user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
@@ -313,8 +313,8 @@ class SavingsFundsData(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "savings_funds_id": "123aaa",
-                "user_id": "456user",
+                "savings_funds_id_pk": "123aaa",
+                "user_id_fk": "456user",
                 "fund_name": "Emergency Fund",
                 "target_amount": 5000,
                 "created_at": "2025-01-15T10:30:00Z"
@@ -324,14 +324,14 @@ class SavingsFundsData(BaseModel):
 
 class SavingsFundsRequest(BaseModel):
     """Request schema for creating or updating savings funds"""
-    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
 
 class SavingsFundsRequest(BaseModel):
     """Request schema for creating or updating savings funds"""
-    user_id: str = Field(..., description="ID of the user who owns the savings fund")
+    user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
