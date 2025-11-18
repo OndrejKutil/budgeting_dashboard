@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 # import env configuration
-import helper.environment as env
+from .helper import environment as env
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -50,7 +50,7 @@ logger.info("Starting backend server...")
 logger.info(f"Log file path: {log_file_path}")
 
 # Import auth functions after logging is configured
-from auth.auth import api_key_auth, admin_key_auth
+from .auth.auth import api_key_auth, admin_key_auth
 
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
@@ -70,7 +70,7 @@ app.add_middleware(
 )
 
 # Include routers
-from routers import transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds
+from .routers import transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds
 
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh"])

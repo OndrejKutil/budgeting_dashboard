@@ -3,11 +3,11 @@ import fastapi
 from fastapi import APIRouter, Depends, Query, status
 
 # auth dependencies
-from auth.auth import api_key_auth, get_current_user
+from ..auth.auth import api_key_auth, get_current_user
 
 # Load environment variables
-import helper.environment as env
-from helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
+from ..helper import environment as env
+from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
 
 # logging
 import logging

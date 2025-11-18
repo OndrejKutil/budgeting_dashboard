@@ -3,10 +3,10 @@ import fastapi
 from fastapi import APIRouter, Depends, status
 
 # auth dependencies
-from auth.auth import api_key_auth, get_supabase_refresh_token
+from ..auth.auth import api_key_auth, get_supabase_refresh_token
 
 # Load environment variables
-import helper.environment as env
+from ..helper import environment as env
 
 # logging
 import logging
@@ -15,7 +15,7 @@ import logging
 from supabase import create_client, Client
 
 # helper
-from schemas.endpoint_schemas import RefreshTokenResponse
+from ..schemas.endpoint_schemas import RefreshTokenResponse
 
 
 # ================================================================================================

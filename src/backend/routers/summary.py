@@ -3,18 +3,18 @@ import fastapi
 from fastapi import APIRouter, Depends, Query, status
 
 # auth dependencies
-from auth.auth import api_key_auth, get_current_user
+from ..auth.auth import api_key_auth, get_current_user
 
 # Load environment variables
-import helper.environment as env
+from ..helper import environment as env
 
 # logging
 import logging
 
 
 # helper
-from schemas.endpoint_schemas import SummaryResponse
-from helper.calculations.summary_calc import _summary_calc
+from ..schemas.endpoint_schemas import SummaryResponse
+from ..helper.calculations.summary_calc import _summary_calc
 
 # other
 from datetime import date

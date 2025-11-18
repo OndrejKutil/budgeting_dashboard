@@ -2,8 +2,8 @@
 import calendar
 from datetime import date, datetime
 from collections import defaultdict
-from helper.columns import TRANSACTIONS_COLUMNS
-from helper.environment import PROJECT_URL, ANON_KEY
+from ..columns import TRANSACTIONS_COLUMNS
+from ..environment import PROJECT_URL, ANON_KEY
 from supabase import create_client, Client
 import logging
 import pandas as pd

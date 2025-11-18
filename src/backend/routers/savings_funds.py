@@ -3,10 +3,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, status, Query
 
 # auth dependencies
-from auth.auth import api_key_auth, get_current_user
+from ..auth.auth import api_key_auth, get_current_user
 
 # Load environment variables
-import helper.environment as env
+from ..helper import environment as env
 
 # logging
 import logging
@@ -14,8 +14,8 @@ import logging
 # supabase client
 from supabase import create_client, Client
 
-from helper.columns import SAVINGS_FUNDS_COLUMNS
-from schemas.endpoint_schemas import SavingsFundsData, SavingsFundsRequest
+from ..helper.columns import SAVINGS_FUNDS_COLUMNS
+from ..schemas.endpoint_schemas import SavingsFundsData, SavingsFundsRequest
 from typing import List
 
 
