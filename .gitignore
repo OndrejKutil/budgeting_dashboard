@@ -92,3 +92,6 @@ idk/*
 keys.py
 idk.md
 idkk.py
+
+.mypy_cache/
+.pytest_cache/

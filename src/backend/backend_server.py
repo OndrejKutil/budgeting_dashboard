@@ -52,10 +52,10 @@ logger.info(f"Log file path: {log_file_path}")
 # Import auth functions after logging is configured
 from .auth.auth import api_key_auth, admin_key_auth
 
-PROJECT_URL: str | None = env.PROJECT_URL
-ANON_KEY: str | None = env.ANON_KEY
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
-FRONTEND_URL: str | None = env.FRONTEND_URL
+FRONTEND_URL: str = env.FRONTEND_URL
 
 # Initialize FastAPI app
 app : FastAPI = FastAPI()

@@ -3,7 +3,22 @@ name = "budgeting-backend"
 version = "0.1.0"
 description = "Budgeting Dashboard Backend API"
 readme = "API_DOCUMENTATION.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
+authors = [
+    {name = "Budgeting Dashboard Team"}
+]
+license = {text = "MIT"}
+keywords = ["fastapi", "budgeting", "finance", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+]
+
 dependencies = [
     # FastAPI and server dependencies
     "fastapi==0.104.1",
@@ -31,6 +46,149 @@ dependencies = [
     "pandas>=2.2.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    # Type checking
+    "mypy>=1.8.0",
+    "lxml>=6.0.2",
+    
+    # Type stubs for third-party packages
+    "types-requests>=2.31.0",
+    "pandas-stubs>=2.1.0",
+    
+    # Testing
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.24.0",  # For TestClient
+]
+
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.24.0",
+]
+
+[project.scripts]
+# Entry points for running the application
+budgeting-backend = "backend_server:app"
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["backend_server"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["auth*", "helper*", "routers*", "schemas*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.py"]
+
+# =============================================================================
+#                              Tool Configuration
+# =============================================================================
+
+[tool.mypy]
+# Import discovery
+python_version = "3.13"
+files = ["**/*.py"]
+exclude = [
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+]
+
+# Platform configuration
+platform = "linux"
+
+# Strictness settings
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+warn_no_return = true
+warn_unreachable = true
+check_untyped_defs = true
+
+# Disallow dynamic typing
+disallow_any_unimported = false
+disallow_any_expr = false
+disallow_any_decorated = false
+disallow_any_explicit = false
+disallow_any_generics = false
+disallow_subclassing_any = false
+
+# Untyped definitions and calls
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+
+# None and Optional handling
+no_implicit_optional = true
+strict_optional = true
+
+# Error messages
+show_error_context = true
+show_column_numbers = true
+show_error_codes = true
+pretty = true
+color_output = true
+error_summary = true
+
+# Miscellaneous
+allow_redefinition = false
+local_partial_types = false
+implicit_reexport = true
+strict_equality = true
+
+# Ignore missing imports for third-party libraries without stubs
+[[tool.mypy.overrides]]
+module = [
+    "supabase.*",
+    "dotenv.*",
+    "jose.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+    "*/venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
