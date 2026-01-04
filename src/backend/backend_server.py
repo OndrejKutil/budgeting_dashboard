@@ -3,8 +3,11 @@ import os
 
 # fastapi
 import fastapi
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # logging
 import logging
@@ -52,6 +55,9 @@ logger.info(f"Log file path: {log_file_path}")
 # Import auth functions after logging is configured
 from .auth.auth import api_key_auth, admin_key_auth
 
+# Import rate limiter
+from .helper.rate_limiter import limiter, RATE_LIMITS
+
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
 
@@ -59,6 +65,11 @@ FRONTEND_URL: str = env.FRONTEND_URL
 
 # Initialize FastAPI app
 app : FastAPI = FastAPI()
+
+# Configure rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS configuration
 app.add_middleware(
@@ -90,22 +101,27 @@ app.include_router(savings_funds.router, prefix="/funds", tags=["Savings Funds"]
 
 
 @app.get("/")
-async def root():
+@limiter.limit(RATE_LIMITS["health"])
+async def root(request: Request):
     return {"message": "Backend server is running!"}
 
 
 @app.get("/health")
-async def health_check():
+@limiter.limit(RATE_LIMITS["health"])
+async def health_check(request: Request):
     return {"status": "healthy"}
 
 
 @app.get("/version")
-async def get_version():
+@limiter.limit(RATE_LIMITS["health"])
+async def get_version(request: Request):
     return {"version": "1.0.0", "description": "Budgeting Dashboard Backend Server"}
 
 
 @app.get("/log")
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_log(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     admin_key: str = Depends(admin_key_auth)
 ):

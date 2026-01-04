@@ -24,6 +24,9 @@ dependencies = [
     "fastapi==0.104.1",
     "uvicorn[standard]==0.24.0",
     
+    # Rate limiting
+    "slowapi>=0.1.9",
+    
     # Environment variable management
     "python-dotenv==1.0.0",
     
@@ -51,6 +54,8 @@ dev = [
     # Type checking
     "mypy>=1.8.0",
     "lxml>=6.0.2",
+
+    "requests>=2.31.0",
     
     # Type stubs for third-party packages
     "types-requests>=2.31.0",

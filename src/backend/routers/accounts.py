@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -41,7 +44,9 @@ router = APIRouter()
 #? prefix - /accounts
 
 @router.get("/", response_model=AccountsResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_all_accounts(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     account_id: Optional[int] = Query(None, description="Optional filtering for only the given account for getting its name"),
@@ -79,7 +84,9 @@ async def get_all_accounts(
     
 
 @router.post("/", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def create_account(
+    request: Request,
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
@@ -123,7 +130,9 @@ async def create_account(
 
 
 @router.put("/{account_id}", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def update_account(
+    request: Request,
     account_id: str,
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
@@ -168,7 +177,9 @@ async def update_account(
     
 
 @router.delete("/{account_id}", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def delete_account(
+    request: Request,
     account_id: str,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)

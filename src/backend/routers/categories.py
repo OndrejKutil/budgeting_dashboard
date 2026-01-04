@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -41,7 +44,9 @@ router = APIRouter()
 #? prefix - /categories
 
 @router.get("/", response_model=CategoriesResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_all_categories(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     category_id: Optional[int] = Query(None, description="Optional filtering for only the given category for getting its name"),

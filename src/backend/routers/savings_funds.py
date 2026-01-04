@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -48,7 +51,9 @@ router = APIRouter()
 #? This router prefix is /funds
 
 @router.get("/", response_model=SavingsFundsResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_savings_funds(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     fund_id: Optional[str] = Query(None, description="ID of the savings fund to retrieve"),
@@ -90,7 +95,9 @@ async def get_savings_funds(
 
 
 @router.post("/", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def create_savings_fund(
+    request: Request,
     fund: SavingsFundsRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
@@ -128,7 +135,9 @@ async def create_savings_fund(
 
 
 @router.put("/{fund_id}", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def update_savings_fund(
+    request: Request,
     fund_id: str,
     fund: SavingsFundsRequest,
     api_key: str = Depends(api_key_auth),
@@ -166,7 +175,9 @@ async def update_savings_fund(
 
 
 @router.delete("/{fund_id}", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def delete_savings_fund(
+    request: Request,
     fund_id: str,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)

@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -40,7 +43,9 @@ router = APIRouter()
 
 
 @router.get('/analytics', response_model=MonthlyAnalyticsResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
 async def get_monthly_analytics(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     year: int = Query(datetime.now().year, description='Year for analytics'),

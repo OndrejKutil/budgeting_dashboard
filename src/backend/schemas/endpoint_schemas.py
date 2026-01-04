@@ -57,6 +57,7 @@ class CategoryType(str, Enum):
 class SpendingType(str, Enum):
     """Enum for spending types"""
     CORE = "Core"
+    NECESSARY = "Necessary"
     FUN = "Fun"
     FUTURE = "Future"
     INCOME = "Income"
@@ -85,9 +86,15 @@ class AccountData(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
 class UserData(BaseModel):
+    """Schema for user registration data"""
+    email: str = Field(..., description="User email address")
+    password: str = Field(..., min_length=8, description="User password (min 8 characters)")
+    full_name: Optional[str] = Field(None, description="User full name")
+
+class LoginRequest(BaseModel):
+    """Schema for user login credentials"""
     email: str = Field(..., description="User email address")
     password: str = Field(..., description="User password")
-    full_name: Optional[str] = Field(None, description="User full name")
 
 # ================================================================================================
 #                                        Get Schemas

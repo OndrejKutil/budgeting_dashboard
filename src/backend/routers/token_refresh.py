@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_supabase_refresh_token
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -38,7 +41,9 @@ router = APIRouter()
 #? This router prefix is /refresh
 
 @router.post("/", response_model=RefreshTokenResponse)
+@limiter.limit(RATE_LIMITS["auth"])
 async def refresh_access_token(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     refresh_token: str = Depends(get_supabase_refresh_token)
 ) -> RefreshTokenResponse:

@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -42,7 +45,9 @@ router = APIRouter()
 #? This router prefix is /profile
 
 @router.get("/me", response_model=ProfileResponse)
+@limiter.limit(RATE_LIMITS["standard"])
 async def get_my_profile(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> ProfileResponse:

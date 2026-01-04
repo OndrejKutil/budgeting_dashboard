@@ -1,10 +1,13 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
-from ..auth.auth import api_key_auth, login_key_auth
-from ..schemas.endpoint_schemas import LoginResponse, UserData
+from ..auth.auth import api_key_auth
+from ..schemas.endpoint_schemas import LoginResponse, UserData, LoginRequest
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -36,17 +39,19 @@ router = APIRouter()
 #? /auth
 
 @router.post("/login", response_model=LoginResponse)
+@limiter.limit(RATE_LIMITS["login"])
 async def login(
-    api_key: str = Depends(api_key_auth),
-    login: UserData = Depends(login_key_auth)
+    request: Request,
+    credentials: LoginRequest,
+    api_key: str = Depends(api_key_auth)
 ) -> LoginResponse:
 
     try:
         supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
 
         response = supabase_client.auth.sign_in_with_password(
-            {"email": login.email,
-            "password": login.password}
+            {"email": credentials.email,
+            "password": credentials.password}
         )
 
         if response.session is None or response.user is None:
@@ -71,9 +76,11 @@ async def login(
         )
 
 @router.post("/register", response_model=LoginResponse)
+@limiter.limit(RATE_LIMITS["auth"])
 async def register(
-    api_key: str = Depends(api_key_auth),
-    user_data: UserData = Depends(login_key_auth)
+    request: Request,
+    user_data: UserData,
+    api_key: str = Depends(api_key_auth)
 ) -> LoginResponse:
 
     try:

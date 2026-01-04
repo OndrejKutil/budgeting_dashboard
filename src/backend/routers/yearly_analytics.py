@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -45,7 +48,9 @@ router = APIRouter()
 
 
 @router.get('/analytics', response_model=YearlyAnalyticsResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
 async def get_yearly_analytics(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     year: int = Query(datetime.now().year, description='Year for analytics')
@@ -93,7 +98,9 @@ async def get_yearly_analytics(
 
 
 @router.get('/emergency-fund', response_model=EmergencyFundResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
 async def get_emergency_fund_analysis(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     year: int = Query(datetime.now().year, description='Year for emergency fund calculation')
