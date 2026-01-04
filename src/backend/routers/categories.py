@@ -12,11 +12,11 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
 # helper
 from ..helper.columns import CATEGORIES_COLUMNS
-from ..schemas.endpoint_schemas import CategoriesResponse
+from ..schemas.endpoint_schemas import CategoriesResponse, CategoryData
 
 # other
 from typing import Optional
@@ -26,8 +26,8 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
+PROJECT_URL: str | None = env.PROJECT_URL
+ANON_KEY: str | None = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -46,8 +46,15 @@ async def get_all_categories(
     user: dict[str, str] = Depends(get_current_user),
     category_id: Optional[int] = Query(None, description="Optional filtering for only the given category for getting its name"),
     category_name: Optional[str] = Query(None, description="Optional filtering for only the given category for getting its name")
-):
-    
+) -> CategoriesResponse:
+
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Missing environment variables for database connection"
+        )   
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
@@ -62,10 +69,10 @@ async def get_all_categories(
         
         response = query.execute()
 
-        return {
-            "data": response.data,
-            "count": len(response.data)
-        }
+        return CategoriesResponse(
+            data=[CategoryData(**item) for item in response.data],
+            count=len(response.data)
+        )
 
     except Exception as e:
         logger.info(f"Database query failed for get_all_categories: {str(e)}")

@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Depends, status
 from fastapi.security import APIKeyHeader
 
-import os
-from dotenv import load_dotenv
+from ..schemas.endpoint_schemas import UserData
+
+from typing import Dict
 
 import logging
 
@@ -26,11 +27,11 @@ logger.setLevel(logging.INFO)
 
 
 
-API_KEY: str = env.API_KEY
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
-SUPABASE_JWT_SECRET: str = env.SUPABASE_JWT_SECRET
-ADMIN_KEY: str = env.ADMIN_KEY
+API_KEY: str | None = env.API_KEY
+PROJECT_URL: str | None = env.PROJECT_URL
+ANON_KEY: str | None = env.ANON_KEY
+SUPABASE_JWT_SECRET: str | None = env.SUPABASE_JWT_SECRET
+ADMIN_KEY: str | None = env.ADMIN_KEY
 
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="API Key")
 supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False, scheme_name="Refresh Token")
@@ -186,7 +187,7 @@ async def admin_key_auth(admin_key: str = Depends(admin_key_header)) -> str:
 #                                   Login Key Authentication
 # ================================================================================================
 
-async def login_key_auth(login_key: str = Depends(login_header)) -> str:
+async def login_key_auth(login_key: str = Depends(login_header)) -> UserData:
     """
     Dependency to check for Login key in request headers.
     Raises HTTPException if Login key is missing or invalid.
@@ -206,8 +207,8 @@ async def login_key_auth(login_key: str = Depends(login_header)) -> str:
             detail="Invalid Login key format. Expected 'email&&&password&&&full_name'."
         )
     
-    return {
-        "email": email,
-        "password": password,
-        "full_name": full_name if full_name else None
-    }
+    return UserData(
+        email=email,
+        password=password,
+        full_name=full_name
+    )

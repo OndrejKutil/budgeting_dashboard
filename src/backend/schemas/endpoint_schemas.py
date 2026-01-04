@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import date as Date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -11,8 +11,8 @@ from enum import Enum
 
 class TransactionData(BaseModel):
     """Schema for individual transaction data"""
-    id_pk: str = Field(None, description="Transaction ID")
-    user_id_fk: str = Field(None, description="User ID who owns this transaction")
+    id_pk: str | None = Field(None, description="Transaction ID")
+    user_id_fk: str | None = Field(None, description="User ID who owns this transaction")
     account_id_fk: str = Field(..., description="Account id associated with the transaction")
     category_id_fk: int = Field(..., description="Transaction category id")
     amount: Decimal = Field(..., description="Transaction amount")
@@ -84,6 +84,10 @@ class AccountData(BaseModel):
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
+class UserData(BaseModel):
+    email: str = Field(..., description="User email address")
+    password: str = Field(..., description="User password")
+    full_name: Optional[str] = Field(None, description="User full name")
 
 # ================================================================================================
 #                                        Get Schemas
@@ -329,13 +333,6 @@ class SavingsFundsRequest(BaseModel):
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
 
-class SavingsFundsRequest(BaseModel):
-    """Request schema for creating or updating savings funds"""
-    user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
-    fund_name: str = Field(..., description="Name of the savings fund")
-    target_amount: int = Field(..., description="Target amount for the savings fund")
-    created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -475,3 +472,46 @@ class MonthlyAnalyticsResponse(BaseModel):
 # ================================================================================================
 
 # TODO: Define error schemas for consistent error responses
+
+# ================================================================================================
+#                                   Message Schemas
+# ================================================================================================
+
+class AccountSuccessResponse(BaseModel):
+    """Response schema for account creation endpoint"""
+    success: bool = Field(..., description="Indicates if the account creation was successful")
+    message: str = Field(..., description="Success message for account creation")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Account created successfully"
+            }
+        }
+
+class LoginResponse(BaseModel):
+    """Response schema for login endpoint"""
+    access_token: str = Field(..., description="Access token for authenticated requests")
+    refresh_token: str = Field(..., description="Refresh token for obtaining new access tokens")
+    user_id: str = Field(..., description="ID of the authenticated user")
+    data: dict[Any, Any] = Field(..., description="Login response data containing user and session info")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "access_token": "access_token_value",
+                "refresh_token": "refresh_token_value",
+                "user_id": "user123",
+                "data": {
+                    "user": {
+                        "id": "user123",
+                        "email": "user@example.com"
+                    },
+                    "session": {
+                        "access_token": "access_token_value",
+                        "refresh_token": "refresh_token_value"
+                    }
+                }
+            }
+        }

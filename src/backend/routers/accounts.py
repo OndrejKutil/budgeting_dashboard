@@ -12,22 +12,22 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS
-from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest
+from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest, AccountData, AccountSuccessResponse
 
 # other
-from typing import Optional
+from typing import Optional, Dict, List
 
 # ================================================================================================
 #                                   Settings and Configuration
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
+PROJECT_URL: str | None = env.PROJECT_URL
+ANON_KEY: str | None = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -46,7 +46,14 @@ async def get_all_accounts(
     user: dict[str, str] = Depends(get_current_user),
     account_id: Optional[int] = Query(None, description="Optional filtering for only the given account for getting its name"),
     account_name: Optional[str] = Query(None, description="Optional filtering for only the given account for getting its name")
-):
+) -> AccountsResponse:
+    
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Missing environment variables for database connection"
+        )
     
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -62,10 +69,10 @@ async def get_all_accounts(
         
         response = query.execute()
 
-        return {
-            "data": response.data,
-            "count": len(response.data)
-        }
+        return AccountsResponse(
+            data=[AccountData(**item) for item in response.data],
+            count=len(response.data)
+        )
 
     except Exception as e:
         logger.info(f"Database query failed for get_all_accounts: {str(e)}")
@@ -78,19 +85,26 @@ async def get_all_accounts(
         )
     
 
-@router.post("/")
+@router.post("/", response_model=AccountSuccessResponse)
 async def create_account(
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
+) -> AccountSuccessResponse:
     
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Missing environment variables for database connection"
+        )
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        data = account_data.model_dump()
+        data : Dict = account_data.model_dump()
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
@@ -106,10 +120,12 @@ async def create_account(
 
         response = user_supabase_client.table("dim_accounts").insert(data).execute()
 
-        return {"message": "Account created successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account created successfully"
+        )
 
     except Exception as e:
-        logger.info(f"Account creation failed with data: {data}")
         logger.info(f"Full error details: {str(e)}")
         logger.error("Account creation failed")
         
@@ -120,14 +136,21 @@ async def create_account(
     
 
 
-@router.put("/{account_id}")
+@router.put("/{account_id}", response_model=AccountSuccessResponse)
 async def update_account(
     account_id: str,
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
+) -> AccountSuccessResponse:
     
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Missing environment variables for database connection"
+        )
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
@@ -149,11 +172,13 @@ async def update_account(
 
         response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
-        return {"message": "Account updated successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account updated successfully"
+        )
 
     except Exception as e:
         logger.info(f"Account update failed for account_id: {account_id}")
-        logger.info(f"Update data: {data}")
         logger.info(f"Full error details: {str(e)}")
         logger.error(f"Account update failed for account {account_id}")
         
@@ -163,13 +188,20 @@ async def update_account(
         )
     
 
-@router.delete("/{account_id}")
+@router.delete("/{account_id}", response_model=AccountSuccessResponse)
 async def delete_account(
     account_id: str,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
-    
+) -> AccountSuccessResponse:
+
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Missing environment variables for database connection"
+        )
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
@@ -177,7 +209,10 @@ async def delete_account(
 
         response = user_supabase_client.table("dim_accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
-        return {"message": "Account deleted successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account deleted successfully"
+        )
 
     except Exception as e:
         logger.info(f"Account deletion failed for account_id: {account_id}")

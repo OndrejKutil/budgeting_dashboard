@@ -1,11 +1,10 @@
 # imports
 import calendar
 import logging
-from datetime import date, datetime
-from collections import defaultdict
+from datetime import date
 from ..columns import TRANSACTIONS_COLUMNS
 from ..environment import PROJECT_URL, ANON_KEY
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 import pandas as pd
 
 
@@ -33,6 +32,9 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> dict:
     Returns:
         Dictionary containing monthly analytics data
     """
+    if PROJECT_URL is None or ANON_KEY is None:
+        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
+        raise EnvironmentError('Missing environment variables for database connection.')
 
     # Fetch transactions for the specified month
     try:
