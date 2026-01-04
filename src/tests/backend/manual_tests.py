@@ -1,3 +1,12 @@
+"""
+Quick API testing script for manual debugging.
+
+For comprehensive automated tests, use pytest:
+    pytest test_backend.py -v
+
+This file is kept for quick manual API calls during development.
+"""
+
 import requests
 import os
 from dotenv import load_dotenv
@@ -5,13 +14,13 @@ import pprint
 
 load_dotenv()
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("TEST_API_BASE_URL", "http://localhost:8000")
 
 API_KEY = os.getenv("TEST_API_KEY")
 ADMIN_API_KEY = os.getenv("TEST_ADMIN_API_KEY")
 
-EMAIL = os.getenv("EMAIL")
-PASSWORD = os.getenv("PASSWORD")
+EMAIL = os.getenv("TEST_EMAIL")
+PASSWORD = os.getenv("TEST_PASSWORD")
 
 def login_get_access_token():
     url = f"{API_BASE_URL}/auth/login"
