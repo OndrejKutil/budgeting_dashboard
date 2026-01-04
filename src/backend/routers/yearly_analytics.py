@@ -10,7 +10,7 @@ from ..helper import environment as env
 from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
 
 # schemas
-from ..schemas.yearly_schemas import (
+from ..schemas.endpoint_schemas import (
     YearlyAnalyticsResponse,
     YearlyAnalyticsData,
     EmergencyFundResponse,
@@ -29,8 +29,8 @@ from datetime import datetime
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str | None = env.PROJECT_URL
-ANON_KEY: str | None = env.ANON_KEY
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -53,13 +53,6 @@ async def get_yearly_analytics(
     '''
     Get comprehensive yearly analytics including totals, monthly breakdown, and trends.
     '''
-    
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Missing environment variables for database connection'
-        )
         
     try:
         analytics_data: YearlyAnalyticsData = _yearly_analytics(user['access_token'], year)
@@ -110,19 +103,14 @@ async def get_emergency_fund_analysis(
     
     Calculates 3-month and 6-month emergency fund targets based on average monthly core expenses.
     '''
-    
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Missing environment variables for database connection'
-        )
-    
+       
     try:
         emergency_fund_data: EmergencyFundData = _emergency_fund_analysis(user['access_token'], year)
 
         return EmergencyFundResponse(
-            data=emergency_fund_data
+            data=emergency_fund_data,
+            success=True,
+            message=f"Emergency fund analysis for {year} retrieved successfully"
         )
         
     except ValueError as e:

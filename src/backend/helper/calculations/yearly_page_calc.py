@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 
 # schemas
-from ...schemas.yearly_schemas import YearlyAnalyticsData, EmergencyFundData
+from ...schemas.endpoint_schemas import YearlyAnalyticsData, EmergencyFundData
 
 
 # Create logger for this module
@@ -93,7 +93,7 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
         EnvironmentError: If environment variables are not set
         ConnectionError: If database query fails
     """
-    if PROJECT_URL is None or ANON_KEY is None:
+    if PROJECT_URL == "" or ANON_KEY == "":
         logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
         raise EnvironmentError('Missing environment variables for database connection.')
 

@@ -26,8 +26,8 @@ from typing import Optional, Dict, List
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str | None = env.PROJECT_URL
-ANON_KEY: str | None = env.ANON_KEY
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -47,13 +47,6 @@ async def get_all_accounts(
     account_id: Optional[int] = Query(None, description="Optional filtering for only the given account for getting its name"),
     account_name: Optional[str] = Query(None, description="Optional filtering for only the given account for getting its name")
 ) -> AccountsResponse:
-    
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Missing environment variables for database connection"
-        )
     
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -91,13 +84,6 @@ async def create_account(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> AccountSuccessResponse:
-    
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Missing environment variables for database connection"
-        )
 
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -143,13 +129,6 @@ async def update_account(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> AccountSuccessResponse:
-    
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Missing environment variables for database connection"
-        )
 
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -194,13 +173,6 @@ async def delete_account(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> AccountSuccessResponse:
-
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Missing environment variables for database connection"
-        )
 
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)

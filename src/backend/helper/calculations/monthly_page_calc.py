@@ -74,7 +74,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         EnvironmentError: If environment variables are not set
         ConnectionError: If database query fails
     """
-    if PROJECT_URL is None or ANON_KEY is None:
+    if PROJECT_URL == "" or ANON_KEY == "":
         logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
         raise EnvironmentError('Missing environment variables for database connection.')
 

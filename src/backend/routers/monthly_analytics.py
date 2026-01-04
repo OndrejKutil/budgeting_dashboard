@@ -24,8 +24,8 @@ from datetime import datetime
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str | None = env.PROJECT_URL
-ANON_KEY: str | None = env.ANON_KEY
+PROJECT_URL: str = env.PROJECT_URL
+ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -60,14 +60,7 @@ async def get_monthly_analytics(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Month must be between 1 and 12'
         )
-
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Missing environment variables for database connection'
-        )
-        
+       
     try:
         analytics_data: MonthlyAnalyticsData = _monthly_analytics(user['access_token'], year, month)
 

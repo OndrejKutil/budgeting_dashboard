@@ -282,6 +282,8 @@ class SummaryData(BaseModel):
 class SummaryResponse(BaseModel):
     """Response schema for summary endpoint"""
     data: SummaryData = Field(..., description="Financial summary data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
     class Config:
         json_schema_extra = {
@@ -297,12 +299,10 @@ class SummaryResponse(BaseModel):
                         "Salary": 5000.00,
                         "Groceries": -800.00,
                         "Utilities": -300.00
-                    },
-                    "by_account": {
-                        "Main Checking": 2500.00,
-                        "Savings Account": 1000.00
                     }
-                }
+                },
+                "success": True,
+                "message": "Financial summary retrieved successfully"
             }
         }
 
@@ -468,6 +468,126 @@ class MonthlyAnalyticsResponse(BaseModel):
 
 
 # ================================================================================================
+#                                   Yearly Analytics Schemas
+# ================================================================================================
+
+class YearlyAnalyticsData(BaseModel):
+    """Schema for yearly analytics data"""
+    year: int = Field(..., description="Year of the analytics")
+    total_income: float = Field(..., description="Total income for the year")
+    total_expense: float = Field(..., description="Total expenses for the year")
+    total_saving: float = Field(..., description="Total savings for the year")
+    total_investment: float = Field(..., description="Total investments for the year")
+    total_core_expense: float = Field(..., description="Total core expenses for the year")
+    total_fun_expense: float = Field(..., description="Total fun expenses for the year")
+    total_future_expense: float = Field(..., description="Total future expenses for the year")
+    profit: float = Field(..., description="Profit (income - expenses)")
+    net_cash_flow: float = Field(..., description="Net cash flow")
+    savings_rate: float = Field(..., description="Savings rate as percentage of income")
+    investment_rate: float = Field(..., description="Investment rate as percentage of income")
+    months: List[str] = Field(..., description="Month names")
+    monthly_income: List[float] = Field(..., description="Monthly income amounts")
+    monthly_expense: List[float] = Field(..., description="Monthly expense amounts")
+    monthly_saving: List[float] = Field(..., description="Monthly saving amounts")
+    monthly_investment: List[float] = Field(..., description="Monthly investment amounts")
+    monthly_core_expense: List[float] = Field(..., description="Monthly core expense amounts")
+    monthly_fun_expense: List[float] = Field(..., description="Monthly fun expense amounts")
+    monthly_future_expense: List[float] = Field(..., description="Monthly future expense amounts")
+    monthly_savings_rate: List[float] = Field(..., description="Monthly savings rate percentages")
+    monthly_investment_rate: List[float] = Field(..., description="Monthly investment rate percentages")
+    by_category: dict[str, float] = Field(..., description="Breakdown by category")
+    core_categories: dict[str, float] = Field(..., description="Core category breakdown")
+    income_by_category: dict[str, float] = Field(..., description="Income breakdown by category")
+    expense_by_category: dict[str, float] = Field(..., description="Expense breakdown by category")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "year": 2024,
+                "total_income": 60000.00,
+                "total_expense": 45000.00,
+                "total_saving": 10000.00,
+                "total_investment": 5000.00,
+                "total_core_expense": 30000.00,
+                "total_fun_expense": 15000.00,
+                "total_future_expense": 5000.00,
+                "profit": 15000.00,
+                "net_cash_flow": 0.00,
+                "savings_rate": 16.67,
+                "investment_rate": 8.33,
+                "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                "monthly_income": [5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000],
+                "monthly_expense": [3750, 3750, 3750, 3750, 3750, 3750, 3750, 3750, 3750, 3750, 3750, 3750],
+                "monthly_saving": [833, 833, 833, 833, 833, 833, 833, 833, 833, 833, 833, 833],
+                "monthly_investment": [417, 417, 417, 417, 417, 417, 417, 417, 417, 417, 417, 417],
+                "monthly_core_expense": [2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500],
+                "monthly_fun_expense": [1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250],
+                "monthly_future_expense": [417, 417, 417, 417, 417, 417, 417, 417, 417, 417, 417, 417],
+                "monthly_savings_rate": [16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67, 16.67],
+                "monthly_investment_rate": [8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33, 8.33],
+                "by_category": {
+                    "Salary": 60000.00,
+                    "Rent": -18000.00,
+                    "Groceries": -12000.00
+                },
+                "core_categories": {
+                    "Rent": 18000.00,
+                    "Groceries": 12000.00
+                },
+                "income_by_category": {
+                    "Salary": 60000.00
+                },
+                "expense_by_category": {
+                    "Rent": 18000.00,
+                    "Groceries": 12000.00
+                }
+            }
+        }
+
+
+class YearlyAnalyticsResponse(BaseModel):
+    """Response schema for yearly analytics endpoint"""
+    data: YearlyAnalyticsData = Field(..., description="Yearly analytics data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class EmergencyFundData(BaseModel):
+    """Schema for emergency fund analysis data"""
+    year: int = Field(..., description="Year of the analysis")
+    average_monthly_core_expenses: float = Field(..., description="Average monthly core expenses")
+    total_core_expenses: float = Field(..., description="Total core expenses for the year")
+    three_month_fund_target: float = Field(..., description="Target amount for 3-month emergency fund")
+    six_month_fund_target: float = Field(..., description="Target amount for 6-month emergency fund")
+    core_category_breakdown: dict[str, float] = Field(..., description="Breakdown of core expenses by category")
+    months_analyzed: int = Field(..., description="Number of months with data")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "year": 2024,
+                "average_monthly_core_expenses": 2500.00,
+                "total_core_expenses": 30000.00,
+                "three_month_fund_target": 7500.00,
+                "six_month_fund_target": 15000.00,
+                "core_category_breakdown": {
+                    "Rent": 18000.00,
+                    "Groceries": 8000.00,
+                    "Utilities": 4000.00
+                },
+                "months_analyzed": 12
+            }
+        }
+
+
+class EmergencyFundResponse(BaseModel):
+    """Response schema for emergency fund analysis endpoint"""
+    data: EmergencyFundData = Field(..., description="Emergency fund analysis data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+# ================================================================================================
 #                                   Error Schemas
 # ================================================================================================
 
@@ -513,5 +633,211 @@ class LoginResponse(BaseModel):
                         "refresh_token": "refresh_token_value"
                     }
                 }
+            }
+        }
+
+
+# ================================================================================================
+#                                   Transactions Schemas
+# ================================================================================================
+
+class TransactionsResponse(BaseModel):
+    """Response schema for transactions list endpoint"""
+    data: List[TransactionData] = Field(..., description="List of transaction records")
+    count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": [
+                    {
+                        "id_pk": "1",
+                        "user_id_fk": "user123",
+                        "account_id_fk": "acc456",
+                        "category_id_fk": 2,
+                        "amount": 49.99,
+                        "date": "2025-01-15",
+                        "notes": "Weekly grocery shopping",
+                        "created_at": "2025-01-15T10:30:00Z",
+                        "savings_fund_id_fk": None
+                    }
+                ],
+                "count": 1,
+                "success": True,
+                "message": "Transactions retrieved successfully"
+            }
+        }
+
+
+class TransactionSuccessResponse(BaseModel):
+    """Response schema for transaction create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: Optional[List[TransactionData]] = Field(None, description="Transaction data if applicable")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Transaction created successfully",
+                "data": [
+                    {
+                        "id_pk": "1",
+                        "user_id_fk": "user123",
+                        "account_id_fk": "acc456",
+                        "category_id_fk": 2,
+                        "amount": 49.99,
+                        "date": "2025-01-15",
+                        "notes": "Weekly grocery shopping",
+                        "created_at": "2025-01-15T10:30:00Z",
+                        "savings_fund_id_fk": None
+                    }
+                ]
+            }
+        }
+
+
+# ================================================================================================
+#                                   Savings Funds Schemas
+# ================================================================================================
+
+class SavingsFundsResponse(BaseModel):
+    """Response schema for savings funds list endpoint"""
+    data: List[SavingsFundsData] = Field(..., description="List of savings fund records")
+    count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": [
+                    {
+                        "savings_funds_id_pk": "123aaa",
+                        "user_id_fk": "456user",
+                        "fund_name": "Emergency Fund",
+                        "target_amount": 5000,
+                        "created_at": "2025-01-15T10:30:00Z"
+                    }
+                ],
+                "count": 1,
+                "success": True,
+                "message": "Savings funds retrieved successfully"
+            }
+        }
+
+
+class SavingsFundSuccessResponse(BaseModel):
+    """Response schema for savings fund create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: Optional[List[SavingsFundsData]] = Field(None, description="Savings fund data if applicable")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Savings fund created successfully",
+                "data": [
+                    {
+                        "savings_funds_id_pk": "123aaa",
+                        "user_id_fk": "456user",
+                        "fund_name": "Emergency Fund",
+                        "target_amount": 5000,
+                        "created_at": "2025-01-15T10:30:00Z"
+                    }
+                ]
+            }
+        }
+
+
+# ================================================================================================
+#                                   Profile Schemas
+# ================================================================================================
+
+class IdentityData(BaseModel):
+    """Schema for user identity provider data"""
+    id: Optional[str] = Field(None, description="Identity ID")
+    identity_id: Optional[str] = Field(None, description="Provider identity ID")
+    user_id: Optional[str] = Field(None, description="Associated user ID")
+    provider: Optional[str] = Field(None, description="Identity provider name")
+    identity_data: Optional[dict] = Field(None, description="Provider-specific identity data")
+    created_at: Optional[str] = Field(None, description="Identity creation timestamp")
+    last_sign_in_at: Optional[str] = Field(None, description="Last sign in timestamp")
+    updated_at: Optional[str] = Field(None, description="Identity update timestamp")
+
+
+class ProfileData(BaseModel):
+    """Schema for user profile data"""
+    # Core identity
+    id: Optional[str] = Field(None, description="User ID")
+    aud: Optional[str] = Field(None, description="Audience claim")
+    role: Optional[str] = Field(None, description="User role")
+    is_anonymous: bool = Field(False, description="Whether user is anonymous")
+    
+    # Email information
+    email: Optional[str] = Field(None, description="User email address")
+    email_confirmed_at: Optional[str] = Field(None, description="Email confirmation timestamp")
+    email_change_sent_at: Optional[str] = Field(None, description="Email change request timestamp")
+    new_email: Optional[str] = Field(None, description="Pending new email address")
+    
+    # Phone information
+    phone: Optional[str] = Field(None, description="User phone number")
+    phone_confirmed_at: Optional[str] = Field(None, description="Phone confirmation timestamp")
+    new_phone: Optional[str] = Field(None, description="Pending new phone number")
+    
+    # Authentication timestamps
+    created_at: Optional[str] = Field(None, description="Account creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Profile update timestamp")
+    last_sign_in_at: Optional[str] = Field(None, description="Last sign in timestamp")
+    confirmed_at: Optional[str] = Field(None, description="Account confirmation timestamp")
+    confirmation_sent_at: Optional[str] = Field(None, description="Confirmation email sent timestamp")
+    recovery_sent_at: Optional[str] = Field(None, description="Recovery email sent timestamp")
+    invited_at: Optional[str] = Field(None, description="Invitation sent timestamp")
+    
+    # Metadata
+    app_metadata: Optional[dict] = Field(None, description="Application-specific metadata")
+    user_metadata: Optional[dict] = Field(None, description="User-specific metadata")
+    
+    # Identity and security
+    identities: Optional[List[IdentityData]] = Field(None, description="User identity providers")
+    factors: Optional[List[dict]] = Field(None, description="MFA factors")
+    action_link: Optional[str] = Field(None, description="Pending action link")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "user123",
+                "aud": "authenticated",
+                "role": "authenticated",
+                "is_anonymous": False,
+                "email": "user@example.com",
+                "email_confirmed_at": "2025-01-15T10:30:00Z",
+                "created_at": "2025-01-15T10:30:00Z",
+                "last_sign_in_at": "2025-01-20T14:00:00Z",
+                "app_metadata": {},
+                "user_metadata": {"full_name": "John Doe"}
+            }
+        }
+
+
+class ProfileResponse(BaseModel):
+    """Response schema for profile endpoint"""
+    data: ProfileData = Field(..., description="User profile data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": {
+                    "id": "user123",
+                    "email": "user@example.com",
+                    "role": "authenticated"
+                },
+                "success": True,
+                "message": "Profile retrieved successfully"
             }
         }
