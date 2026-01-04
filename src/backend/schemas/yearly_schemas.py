@@ -28,6 +28,8 @@ class YearlyAnalyticsData(BaseModel):
     monthly_investment_rate: List[float] = Field(..., description="Monthly investment rate percentages")
     by_category: Dict[str, float] = Field(..., description="Breakdown by category")
     core_categories: Dict[str, float] = Field(..., description="Core category breakdown")
+    income_by_category: Dict[str, float] = Field(..., description="Income breakdown by category")
+    expense_by_category: Dict[str, float] = Field(..., description="Expense breakdown by category")
 
     class Config:
         json_schema_extra = {
@@ -62,6 +64,13 @@ class YearlyAnalyticsData(BaseModel):
                 "core_categories": {
                     "Rent": 18000.00,
                     "Groceries": 12000.00
+                },
+                "income_by_category": {
+                    "Salary": 60000.00
+                },
+                "expense_by_category": {
+                    "Rent": 18000.00,
+                    "Groceries": 12000.00
                 }
             }
         }
@@ -69,8 +78,9 @@ class YearlyAnalyticsData(BaseModel):
 
 class YearlyAnalyticsResponse(BaseModel):
     """Response schema for yearly analytics endpoint"""
-    data: YearlyAnalyticsData = Field(..., description="Yearly analytics data"),
-    count: int = Field(..., description="Number of months with data")
+    data: YearlyAnalyticsData = Field(..., description="Yearly analytics data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
 
 class EmergencyFundData(BaseModel):
