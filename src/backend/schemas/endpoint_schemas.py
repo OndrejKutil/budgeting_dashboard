@@ -173,6 +173,8 @@ class AccountsResponse(BaseModel):
     """Response schema for accounts endpoint"""
     data: List[AccountData] = Field(..., description="List of account records")
     count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
     class Config:
         json_encoders = {

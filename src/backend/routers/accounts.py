@@ -69,7 +69,9 @@ async def get_all_accounts(
 
         return AccountsResponse(
             data=[AccountData(**item) for item in response.data],
-            count=len(response.data)
+            count=len(response.data),
+            success=True,
+            message="Accounts fetched successfully"
         )
 
     except Exception as e:
