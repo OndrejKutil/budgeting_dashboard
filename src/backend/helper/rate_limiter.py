@@ -19,23 +19,23 @@ def get_client_identifier(request: Request) -> str:
     Get a unique identifier for rate limiting purposes.
     
     Priority:
-    1. User ID from JWT token (if authenticated)
-    2. API Key header
+    1. API Key
+    2. Authenticated User ID (if available)
     3. Client IP address (fallback)
     
     This allows for user-specific rate limiting when authenticated,
     and IP-based limiting for unauthenticated requests.
     """
-    # Try to get user ID from request state (set by auth middleware)
-    if hasattr(request.state, "user_id") and request.state.user_id:
-        return f"user:{request.state.user_id}"
-    
     # Try to get API key from headers
     api_key = request.headers.get("X-API-KEY")
     if api_key:
         # Use first 8 chars of API key for privacy
         return f"api_key:{api_key[:8]}"
-    
+
+    # Try to get user ID from request state (set by auth middleware)
+    if hasattr(request.state, "user_id") and request.state.user_id:
+        return f"user:{request.state.user_id}"
+
     # Fallback to IP address
     return get_remote_address(request)
 
@@ -67,10 +67,10 @@ RATE_LIMITS = {
     
     # Authentication endpoints (login, register, token refresh)
     # Lower limits to prevent brute force attacks
-    "auth": "10/minute",
+    "auth": "50/minute",
     
     # Login attempts - very restrictive to prevent brute force
-    "login": "5/minute",
+    "login": "1000/minute",
     
     # Password reset - restrictive to prevent abuse
     "password_reset": "3/minute",

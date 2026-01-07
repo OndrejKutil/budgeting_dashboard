@@ -19,7 +19,8 @@ from supabase.client import create_client, Client
 
 # schemas
 from ..schemas.endpoint_schemas import (
-    ProfileResponse
+    ProfileResponse,
+    ProfileData
 )
 
 # helper
@@ -76,7 +77,7 @@ async def get_my_profile(
                 detail="User profile not found"
             )
         
-        profile_data = _build_profile_data(user_profile.user)
+        profile_data : ProfileData = _build_profile_data(user_profile.user)
         
         return ProfileResponse(data=profile_data, success=True, message="User profile retrieved successfully")
     

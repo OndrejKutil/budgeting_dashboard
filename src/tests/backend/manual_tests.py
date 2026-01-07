@@ -40,7 +40,7 @@ def login_get_access_token():
 access_token = login_get_access_token()
 
 def get_logs():
-    url = f"{API_BASE_URL}/log/"
+    url = f"{API_BASE_URL}/log"
     headers = {
         "X-API-KEY": API_KEY,
         "X-Admin-Key": ADMIN_API_KEY
@@ -50,26 +50,13 @@ def get_logs():
     data = response.json()
     pprint.pprint(data)
 
-# get_logs()
 
 # ================================================================================================
 #                                   Common Test Functions
 # ================================================================================================
 
-def test_get_transactions():
-    url = f"{API_BASE_URL}/transactions/"
-    headers = {
-        "X-API-KEY": API_KEY,
-        "Authorization": f"Bearer {access_token}"
-    }
-    response = requests.get(url, headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    print(data)
-
-def get_categories():
-    url = f"{API_BASE_URL}/categories/"
+def get_profile():
+    url = f"{API_BASE_URL}/profile/me"
     headers = {
         "X-API-KEY": API_KEY,
         "Authorization": f"Bearer {access_token}"
@@ -77,6 +64,38 @@ def get_categories():
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
-    print(data)
+    print(response.status_code)
+    pprint.pprint(data)
 
-get_categories()
+def test_yearly_analytics():
+    url = f"{API_BASE_URL}/yearly/analytics"
+    headers = {
+        "X-API-KEY": API_KEY,
+        "Authorization": f"Bearer {access_token}"
+    }
+    params = {"year": 2026}
+    response = requests.get(url, headers=headers, params=params)
+    print(f"Status: {response.status_code}")
+    pprint.pprint(response.json())
+
+def test_emergency_fund():
+    url = f"{API_BASE_URL}/yearly/emergency-fund"
+    headers = {
+        "X-API-KEY": API_KEY,
+        "Authorization": f"Bearer {access_token}"
+    }
+    params = {"year": 2026}
+    response = requests.get(url, headers=headers, params=params)
+    print(f"Status: {response.status_code}")
+    pprint.pprint(response.json())
+
+try:
+    # get_profile()
+    test_yearly_analytics()
+    print("\n" + "="*80 + "\n")
+    test_emergency_fund()
+except Exception as e:
+    print(f"Error: {e}")
+    import traceback
+    traceback.print_exc()
+# get_logs()

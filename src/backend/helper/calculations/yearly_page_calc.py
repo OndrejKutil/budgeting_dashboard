@@ -139,10 +139,10 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
     required_columns = {
         'amount': 0.0,
         'date': '',
-        'categories.type': '',
-        'categories.category_name': 'Unknown Category',
-        'categories.spending_type': '',
-        'savings_fund_id': None
+        'dim_categories.type': '',
+        'dim_categories.category_name': 'Unknown Category',
+        'dim_categories.spending_type': '',
+        'savings_fund_id_fk': None
     }
     
     for col, default_val in required_columns.items():
@@ -151,10 +151,10 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
     
     # Rename columns to match the expected structure
     column_mapping = {
-        'categories.type': 'category_type',
-        'categories.category_name': 'category_name', 
-        'categories.spending_type': 'spending_type',
-        'savings_fund_id': 'savings_funds'
+        'dim_categories.type': 'category_type',
+        'dim_categories.category_name': 'category_name', 
+        'dim_categories.spending_type': 'spending_type',
+        'savings_fund_id_fk': 'savings_funds'
     }
     
     df = df.rename(columns=column_mapping)
@@ -474,7 +474,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(access_token)
         
-        query = user_supabase_client.table('transactions').select('*, categories(*), savings_funds(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*), dim_savings_funds(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -511,10 +511,10 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pd.DataFrame:
     required_columns = {
         'amount': 0.0,
         'date': '',
-        'categories.type': '',
-        'categories.category_name': 'Unknown Category',
-        'categories.spending_type': '',
-        'savings_funds.fund_name': None
+        'dim_categories.type': '',
+        'dim_categories.category_name': 'Unknown Category',
+        'dim_categories.spending_type': '',
+        'dim_savings_funds.fund_name': None
     }
     
     for col, default_val in required_columns.items():
@@ -523,10 +523,10 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pd.DataFrame:
     
     # Rename columns
     column_mapping = {
-        'categories.type': 'category_type',
-        'categories.category_name': 'category_name', 
-        'categories.spending_type': 'spending_type',
-        'savings_funds.fund_name': 'savings_funds'
+        'dim_categories.type': 'category_type',
+        'dim_categories.category_name': 'category_name', 
+        'dim_categories.spending_type': 'spending_type',
+        'dim_savings_funds.fund_name': 'savings_funds'
     }
     
     df = df.rename(columns=column_mapping)

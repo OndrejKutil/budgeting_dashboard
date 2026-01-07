@@ -773,9 +773,9 @@ class IdentityData(BaseModel):
     user_id: Optional[str] = Field(None, description="Associated user ID")
     provider: Optional[str] = Field(None, description="Identity provider name")
     identity_data: Optional[dict] = Field(None, description="Provider-specific identity data")
-    created_at: Optional[str] = Field(None, description="Identity creation timestamp")
-    last_sign_in_at: Optional[str] = Field(None, description="Last sign in timestamp")
-    updated_at: Optional[str] = Field(None, description="Identity update timestamp")
+    created_at: Optional[datetime] = Field(None, description="Identity creation timestamp")
+    last_sign_in_at: Optional[datetime] = Field(None, description="Last sign in timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Identity update timestamp")
 
 
 class ProfileData(BaseModel):
@@ -788,23 +788,23 @@ class ProfileData(BaseModel):
     
     # Email information
     email: Optional[str] = Field(None, description="User email address")
-    email_confirmed_at: Optional[str] = Field(None, description="Email confirmation timestamp")
-    email_change_sent_at: Optional[str] = Field(None, description="Email change request timestamp")
+    email_confirmed_at: Optional[datetime] = Field(None, description="Email confirmation timestamp")
+    email_change_sent_at: Optional[datetime] = Field(None, description="Email change request timestamp")
     new_email: Optional[str] = Field(None, description="Pending new email address")
     
     # Phone information
     phone: Optional[str] = Field(None, description="User phone number")
-    phone_confirmed_at: Optional[str] = Field(None, description="Phone confirmation timestamp")
+    phone_confirmed_at: Optional[datetime] = Field(None, description="Phone confirmation timestamp")
     new_phone: Optional[str] = Field(None, description="Pending new phone number")
     
     # Authentication timestamps
-    created_at: Optional[str] = Field(None, description="Account creation timestamp")
-    updated_at: Optional[str] = Field(None, description="Profile update timestamp")
-    last_sign_in_at: Optional[str] = Field(None, description="Last sign in timestamp")
-    confirmed_at: Optional[str] = Field(None, description="Account confirmation timestamp")
-    confirmation_sent_at: Optional[str] = Field(None, description="Confirmation email sent timestamp")
-    recovery_sent_at: Optional[str] = Field(None, description="Recovery email sent timestamp")
-    invited_at: Optional[str] = Field(None, description="Invitation sent timestamp")
+    created_at: Optional[datetime] = Field(None, description="Account creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Profile update timestamp")
+    last_sign_in_at: Optional[datetime] = Field(None, description="Last sign in timestamp")
+    confirmed_at: Optional[datetime] = Field(None, description="Account confirmation timestamp")
+    confirmation_sent_at: Optional[datetime] = Field(None, description="Confirmation email sent timestamp")
+    recovery_sent_at: Optional[datetime] = Field(None, description="Recovery email sent timestamp")
+    invited_at: Optional[datetime] = Field(None, description="Invitation sent timestamp")
     
     # Metadata
     app_metadata: Optional[dict] = Field(None, description="Application-specific metadata")

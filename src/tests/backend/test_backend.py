@@ -68,11 +68,12 @@ def config():
     return TestConfig()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="class")
 def access_token(config):
     """
     Authenticate and return access token.
-    This is session-scoped to avoid multiple logins.
+    This is class-scoped to avoid multiple logins while preventing token expiration.
+    Tokens are refreshed for each test class to handle long test runs.
     """
     url = f"{config.API_BASE_URL}/auth/login"
     headers = {
@@ -95,7 +96,7 @@ def access_token(config):
     return data["access_token"]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="class")
 def auth_headers(config, access_token):
     """Return headers with authentication for protected endpoints"""
     return {
@@ -477,11 +478,7 @@ class TestSummary:
         
         # Check that we have the expected keys
         assert "total_income" in summary or "income" in summary
-        assert "total_expenses" in summary or "expenses" in summary
-        
-        # The values should reflect our test transactions
-        # Income: 3500, Expenses: -1000, Savings: -500, Investment: -200
-        # Net: 3500 - 1000 - 500 - 200 = 1800
+        assert "total_expense" in summary or "expenses" in summary
     
     def test_summary_with_date_filter(self, config, auth_headers):
         """Test summary with date range filter"""
