@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_supabase_refresh_token
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -12,9 +15,9 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
-# helper
+# schemas
 from ..schemas.endpoint_schemas import RefreshTokenResponse
 
 
@@ -23,7 +26,6 @@ from ..schemas.endpoint_schemas import RefreshTokenResponse
 # ================================================================================================
 
 # Load environment variables
-
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
 
@@ -39,13 +41,17 @@ router = APIRouter()
 #? This router prefix is /refresh
 
 @router.post("/", response_model=RefreshTokenResponse)
+@limiter.limit(RATE_LIMITS["auth"])
 async def refresh_access_token(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     refresh_token: str = Depends(get_supabase_refresh_token)
-):
+) -> RefreshTokenResponse:
     """
-    Endpoint to refresh the access token using refresh token.
-    Frontend should call this when access token expires.
+    Refresh the access token using the refresh token.
+    
+    Frontend should call this endpoint when the access token expires.
+    Returns new user and session information.
     """
     
     # Create a fresh client for token refresh
@@ -62,10 +68,10 @@ async def refresh_access_token(
             user_dict = response.user.model_dump() if response.user else None
             session_dict = response.session.model_dump() if response.session else None
             
-            return {
-                "user": user_dict,
-                "session": session_dict
-            }
+            return RefreshTokenResponse(
+                user=user_dict,
+                session=session_dict
+            )
         else:
             logger.warning("Failed to refresh session - no session returned")
             raise fastapi.HTTPException(
@@ -73,9 +79,12 @@ async def refresh_access_token(
                 detail="Failed to refresh session. Please log in again."
             )
     
+    except fastapi.HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    
     except Exception as e:
-        logger.info(f"Token refresh failed with detailed error: {str(e)}")
-        logger.error(f"Token refresh failed: {e}")
+        logger.error(f"Token refresh failed: {str(e)}")
         
         # Handle specific refresh errors
         if "refresh_token_not_found" in str(e) or "Invalid refresh token" in str(e):

@@ -1,9 +1,12 @@
 # fastapi
-from typing import Optional
-from fastapi import APIRouter, Depends, status, Query
+import fastapi
+from fastapi import APIRouter, Depends, status, Query, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -12,11 +15,19 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
+# schemas
 from ..helper.columns import SAVINGS_FUNDS_COLUMNS
-from ..schemas.endpoint_schemas import SavingsFundsData, SavingsFundsRequest
-from typing import List
+from ..schemas.endpoint_schemas import (
+    SavingsFundsData,
+    SavingsFundsRequest,
+    SavingsFundsResponse,
+    SavingsFundSuccessResponse
+)
+
+# other
+from typing import Optional
 
 
 # ================================================================================================
@@ -24,7 +35,6 @@ from typing import List
 # ================================================================================================
 
 # Load environment variables
-
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
 
@@ -40,18 +50,21 @@ router = APIRouter()
 
 #? This router prefix is /funds
 
-@router.get("/", response_model=List[SavingsFundsData])
-def get_savings_funds(
+@router.get("/", response_model=SavingsFundsResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
+async def get_savings_funds(
+    request: Request,
     api_key: str = Depends(api_key_auth),
-    user: dict = Depends(get_current_user),
+    user: dict[str, str] = Depends(get_current_user),
     fund_id: Optional[str] = Query(None, description="ID of the savings fund to retrieve"),
     fund_name: Optional[str] = Query(None, description="Name of the savings fund to retrieve")
-):
-
+) -> SavingsFundsResponse:
+    """
+    Get all savings funds for the current user with optional filtering.
+    """
+    
     try:
-
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
         user_supabase_client.postgrest.auth(user["access_token"])
 
         query = user_supabase_client.table("dim_savings_funds").select("*")
@@ -64,67 +77,130 @@ def get_savings_funds(
 
         response = query.execute()
 
-        return response.data
+        return SavingsFundsResponse(
+            data=[SavingsFundsData(**item) for item in response.data],
+            count=len(response.data),
+            success=True,
+            message="Savings funds retrieved successfully"
+        )
 
     except Exception as e:
-        logger.error(f"Exception occurred: {e}")
-        return {"error": "Internal Server Error"}, status.HTTP_500_INTERNAL_SERVER_ERROR
-    
+        logger.error(f"Failed to fetch savings funds: {str(e)}")
+        logger.info(f"Query parameters - fund_id: {fund_id}, fund_name: {fund_name}")
+        
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch savings funds"
+        )
 
 
-@router.post("/", response_model=List[SavingsFundsData])
-def create_savings_fund(
+@router.post("/", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
+async def create_savings_fund(
+    request: Request,
     fund: SavingsFundsRequest,
     api_key: str = Depends(api_key_auth),
-    user: dict = Depends(get_current_user)
-):
+    user: dict[str, str] = Depends(get_current_user)
+) -> SavingsFundSuccessResponse:
+    """
+    Create a new savings fund.
+    """
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("dim_savings_funds").insert(fund).execute()
+        data = fund.model_dump()
+        
+        # Convert datetime to ISO string for JSON serialization
+        if data.get("created_at") is not None:
+            data["created_at"] = data["created_at"].isoformat()
 
-        return response.data
+        response = user_supabase_client.table("dim_savings_funds").insert(data).execute()
+
+        return SavingsFundSuccessResponse(
+            success=True,
+            message="Savings fund created successfully",
+            data=[SavingsFundsData(**item) for item in response.data] if response.data else None
+        )
 
     except Exception as e:
-        logger.error(f"Exception occurred: {e}")
-        return {"error": "Internal Server Error"}, status.HTTP_500_INTERNAL_SERVER_ERROR
-    
+        logger.error(f"Failed to create savings fund: {str(e)}")
+        logger.info(f"Fund data: {fund}")
+        
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create savings fund"
+        )
 
-@router.put("/{fund_id}", response_model=List[SavingsFundsData])
-def update_savings_fund(
+
+@router.put("/{fund_id}", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
+async def update_savings_fund(
+    request: Request,
     fund_id: str,
     fund: SavingsFundsRequest,
     api_key: str = Depends(api_key_auth),
-    user: dict = Depends(get_current_user)
-):
+    user: dict[str, str] = Depends(get_current_user)
+) -> SavingsFundSuccessResponse:
+    """
+    Update an existing savings fund by its ID.
+    """
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        response = user_supabase_client.table("dim_savings_funds").update(fund).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
+        data = fund.model_dump()
+        
+        # Convert datetime to ISO string for JSON serialization
+        if data.get("created_at") is not None:
+            data["created_at"] = data["created_at"].isoformat()
 
-        return response.data
+        response = user_supabase_client.table("dim_savings_funds").update(data).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
+
+        return SavingsFundSuccessResponse(
+            success=True,
+            message=f"Savings fund {fund_id} updated successfully",
+            data=[SavingsFundsData(**item) for item in response.data] if response.data else None
+        )
 
     except Exception as e:
-        logger.error(f"Exception occurred: {e}")
-        return {"error": "Internal Server Error"}, status.HTTP_500_INTERNAL_SERVER_ERROR
-    
+        logger.error(f"Failed to update savings fund {fund_id}: {str(e)}")
+        logger.info(f"Fund data: {fund}")
+        
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update savings fund"
+        )
 
-@router.delete("/{fund_id}")
-def delete_savings_fund(
+
+@router.delete("/{fund_id}", response_model=SavingsFundSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
+async def delete_savings_fund(
+    request: Request,
     fund_id: str,
     api_key: str = Depends(api_key_auth),
-    user: dict = Depends(get_current_user)
-):
+    user: dict[str, str] = Depends(get_current_user)
+) -> SavingsFundSuccessResponse:
+    """
+    Delete a savings fund by its ID.
+    """
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
 
         response = user_supabase_client.table("dim_savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 
-        return {"message": "Savings fund deleted successfully"}
+        return SavingsFundSuccessResponse(
+            success=True,
+            message=f"Savings fund {fund_id} deleted successfully",
+            data=None
+        )
     
     except Exception as e:
-        logger.error(f"Exception occurred: {e}")
-        return {"error": "Internal Server Error"}, status.HTTP_500_INTERNAL_SERVER_ERROR
+        logger.error(f"Failed to delete savings fund {fund_id}: {str(e)}")
+        
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete savings fund"
+        )

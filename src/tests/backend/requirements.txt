@@ -1,0 +1,11 @@
+# Backend API Test Dependencies
+
+# HTTP client
+requests>=2.31.0
+
+# Testing framework
+pytest>=7.4.0
+pytest-html>=4.1.0  # Optional: Generate HTML reports
+
+# Environment variables
+python-dotenv>=1.0.0

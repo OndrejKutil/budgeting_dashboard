@@ -3,8 +3,11 @@ import os
 
 # fastapi
 import fastapi
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # logging
 import logging
@@ -18,7 +21,7 @@ from .helper import environment as env
 
 
 # set up logging
-log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
+log_file_path : str = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
 
 # Configure logging with different levels for console and file
 # Remove any existing handlers
@@ -26,31 +29,34 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 # Create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # File handler - logs everything (DEBUG and above)
-file_handler = logging.FileHandler(log_file_path, mode='w')
+file_handler: logging.FileHandler = logging.FileHandler(log_file_path, mode='w')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(formatter)
 
 # Console handler - only warnings and above
-console_handler = logging.StreamHandler()
+console_handler: logging.StreamHandler = logging.StreamHandler()
 console_handler.setLevel(logging.WARNING)
 console_handler.setFormatter(formatter)
 
 # Configure root logger
-root_logger = logging.getLogger()
+root_logger: logging.Logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 root_logger.addHandler(file_handler)
 root_logger.addHandler(console_handler)
 
 # Create logger for this module
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 logger.info("Starting backend server...")
 logger.info(f"Log file path: {log_file_path}")
 
 # Import auth functions after logging is configured
 from .auth.auth import api_key_auth, admin_key_auth
+
+# Import rate limiter
+from .helper.rate_limiter import limiter, RATE_LIMITS
 
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
@@ -58,7 +64,12 @@ ANON_KEY: str = env.ANON_KEY
 FRONTEND_URL: str = env.FRONTEND_URL
 
 # Initialize FastAPI app
-app = FastAPI()
+app : FastAPI = FastAPI()
+
+# Configure rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS configuration
 app.add_middleware(
@@ -70,7 +81,7 @@ app.add_middleware(
 )
 
 # Include routers
-from .routers import transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds
+from .routers import (transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds)
 
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh"])
@@ -90,22 +101,27 @@ app.include_router(savings_funds.router, prefix="/funds", tags=["Savings Funds"]
 
 
 @app.get("/")
-async def root():
+@limiter.limit(RATE_LIMITS["health"])
+async def root(request: Request):
     return {"message": "Backend server is running!"}
 
 
 @app.get("/health")
-async def health_check():
+@limiter.limit(RATE_LIMITS["health"])
+async def health_check(request: Request):
     return {"status": "healthy"}
 
 
 @app.get("/version")
-async def get_version():
+@limiter.limit(RATE_LIMITS["health"])
+async def get_version(request: Request):
     return {"version": "1.0.0", "description": "Budgeting Dashboard Backend Server"}
 
 
 @app.get("/log")
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_log(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     admin_key: str = Depends(admin_key_auth)
 ):

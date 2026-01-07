@@ -1,9 +1,13 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
-from ..auth.auth import api_key_auth, login_key_auth
+from ..auth.auth import api_key_auth
+from ..schemas.endpoint_schemas import LoginResponse, UserData, LoginRequest
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -12,7 +16,7 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -34,24 +38,35 @@ router = APIRouter()
 
 #? /auth
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
+@limiter.limit(RATE_LIMITS["login"])
 async def login(
-    api_key: str = Depends(api_key_auth),
-    login: dict[str, str] = Depends(login_key_auth)
-):
-    
+    request: Request,
+    credentials: LoginRequest,
+    api_key: str = Depends(api_key_auth)
+) -> LoginResponse:
+
     try:
         supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
 
         response = supabase_client.auth.sign_in_with_password(
-            {"email": login["email"],
-            "password": login["password"]}
+            {"email": credentials.email,
+            "password": credentials.password}
         )
 
-        return {
-            "data": response
-        }
-    
+        if response.session is None or response.user is None:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+
+        return LoginResponse(
+            access_token=response.session.access_token,
+            refresh_token=response.session.refresh_token,
+            user_id=response.user.id,
+            data=dict(response)
+        )
+            
     except Exception as e:
         logger.error(f"Login failed")
         logger.info(f"Login failed with error: {str(e)}")
@@ -60,23 +75,25 @@ async def login(
             detail=f"Server error: {str(e)}"
         )
 
-@router.post("/register")
+@router.post("/register", response_model=LoginResponse)
+@limiter.limit(RATE_LIMITS["auth"])
 async def register(
-    api_key: str = Depends(api_key_auth),
-    register: dict[str, str] = Depends(login_key_auth)
-):
-    
+    request: Request,
+    user_data: UserData,
+    api_key: str = Depends(api_key_auth)
+) -> LoginResponse:
+
     try:
         supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
 
-        if register.get("full_name") == "None":
+        if user_data.full_name == None:
             full_name = None
         else:
-            full_name = register.get("full_name")
+            full_name = user_data.full_name
 
         response = supabase_client.auth.sign_up(
-            {"email": register.get("email"),
-            "password": register.get("password"),
+            {"email": user_data.email,
+            "password": user_data.password,
             "options": {
                 "data": {
                     "full_name": full_name
@@ -84,9 +101,18 @@ async def register(
             }}
         )
 
-        return {
-            "data": response
-        }
+        if response.session is None or response.user is None:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+
+        return LoginResponse(
+            access_token=response.session.access_token,
+            refresh_token=response.session.refresh_token,
+            user_id=response.user.id,
+            data=dict(response)
+        )
     
     except Exception as e:
         logger.error(f"Registration failed")

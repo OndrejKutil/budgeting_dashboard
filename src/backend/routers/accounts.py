@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -12,14 +15,14 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS
-from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest
+from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest, AccountData, AccountSuccessResponse
 
 # other
-from typing import Optional
+from typing import Optional, Dict, List
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -41,12 +44,14 @@ router = APIRouter()
 #? prefix - /accounts
 
 @router.get("/", response_model=AccountsResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_all_accounts(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     account_id: Optional[int] = Query(None, description="Optional filtering for only the given account for getting its name"),
     account_name: Optional[str] = Query(None, description="Optional filtering for only the given account for getting its name")
-):
+) -> AccountsResponse:
     
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -62,10 +67,12 @@ async def get_all_accounts(
         
         response = query.execute()
 
-        return {
-            "data": response.data,
-            "count": len(response.data)
-        }
+        return AccountsResponse(
+            data=[AccountData(**item) for item in response.data],
+            count=len(response.data),
+            success=True,
+            message="Accounts fetched successfully"
+        )
 
     except Exception as e:
         logger.info(f"Database query failed for get_all_accounts: {str(e)}")
@@ -78,19 +85,21 @@ async def get_all_accounts(
         )
     
 
-@router.post("/")
+@router.post("/", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def create_account(
+    request: Request,
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
-    
+) -> AccountSuccessResponse:
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
         user_supabase_client.postgrest.auth(user["access_token"])
 
-        data = account_data.model_dump()
+        data : Dict = account_data.model_dump()
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
@@ -106,10 +115,12 @@ async def create_account(
 
         response = user_supabase_client.table("dim_accounts").insert(data).execute()
 
-        return {"message": "Account created successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account created successfully"
+        )
 
     except Exception as e:
-        logger.info(f"Account creation failed with data: {data}")
         logger.info(f"Full error details: {str(e)}")
         logger.error("Account creation failed")
         
@@ -120,14 +131,16 @@ async def create_account(
     
 
 
-@router.put("/{account_id}")
+@router.put("/{account_id}", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def update_account(
+    request: Request,
     account_id: str,
     account_data: AccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
-    
+) -> AccountSuccessResponse:
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
@@ -149,11 +162,13 @@ async def update_account(
 
         response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
-        return {"message": "Account updated successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account updated successfully"
+        )
 
     except Exception as e:
         logger.info(f"Account update failed for account_id: {account_id}")
-        logger.info(f"Update data: {data}")
         logger.info(f"Full error details: {str(e)}")
         logger.error(f"Account update failed for account {account_id}")
         
@@ -163,13 +178,15 @@ async def update_account(
         )
     
 
-@router.delete("/{account_id}")
+@router.delete("/{account_id}", response_model=AccountSuccessResponse)
+@limiter.limit(RATE_LIMITS["write"])
 async def delete_account(
+    request: Request,
     account_id: str,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
-):
-    
+) -> AccountSuccessResponse:
+
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         
@@ -177,7 +194,10 @@ async def delete_account(
 
         response = user_supabase_client.table("dim_accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
-        return {"message": "Account deleted successfully", "data": response.data}
+        return AccountSuccessResponse(
+            success=True,
+            message="Account deleted successfully"
+        )
 
     except Exception as e:
         logger.info(f"Account deletion failed for account_id: {account_id}")

@@ -1,16 +1,19 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
 from ..helper.calculations.monthly_page_calc import _monthly_analytics
 
 # schemas
-from ..schemas.endpoint_schemas import MonthlyAnalyticsResponse
+from ..schemas.endpoint_schemas import MonthlyAnalyticsResponse, MonthlyAnalyticsData
 
 # logging
 import logging
@@ -40,7 +43,9 @@ router = APIRouter()
 
 
 @router.get('/analytics', response_model=MonthlyAnalyticsResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
 async def get_monthly_analytics(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     year: int = Query(datetime.now().year, description='Year for analytics'),
@@ -60,22 +65,15 @@ async def get_monthly_analytics(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Month must be between 1 and 12'
         )
-        
+       
     try:
-        data = _monthly_analytics(user['access_token'], year, month)
+        analytics_data: MonthlyAnalyticsData = _monthly_analytics(user['access_token'], year, month)
 
-        if not data:
-            logger.info(f'No data found for year: {year}, month: {month}')
-            raise fastapi.HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail='No data found for the specified month'
-            )
-
-        return {
-            'data': data,
-            'success': True,
-            'message': f'Monthly analytics for {data.get("month_name", "")} {year} retrieved successfully'
-        }
+        return MonthlyAnalyticsResponse(
+            data=analytics_data,
+            success=True,
+            message=f'Monthly analytics for {analytics_data.month_name} {year} retrieved successfully'
+        )
         
     except ValueError as e:
         logger.warning(f'Invalid parameters for get_monthly_analytics: {str(e)}')
@@ -84,6 +82,15 @@ async def get_monthly_analytics(
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail='Invalid year or month parameters'
+        )
+    
+    except ConnectionError as e:
+        logger.error(f'Database connection failed: {str(e)}')
+        logger.info(f'Query parameters - year: {year}, month: {month}')
+        
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database connection failed. Please try again later.'
         )
         
     except Exception as e:

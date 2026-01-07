@@ -1,9 +1,12 @@
 # fastapi
 import fastapi
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
+
+# rate limiting
+from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
@@ -12,11 +15,11 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 
 # helper
 from ..helper.columns import CATEGORIES_COLUMNS
-from ..schemas.endpoint_schemas import CategoriesResponse
+from ..schemas.endpoint_schemas import CategoriesResponse, CategoryData
 
 # other
 from typing import Optional
@@ -41,12 +44,14 @@ router = APIRouter()
 #? prefix - /categories
 
 @router.get("/", response_model=CategoriesResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
 async def get_all_categories(
+    request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     category_id: Optional[int] = Query(None, description="Optional filtering for only the given category for getting its name"),
     category_name: Optional[str] = Query(None, description="Optional filtering for only the given category for getting its name")
-):
+) -> CategoriesResponse:
     
     try:
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
@@ -62,10 +67,10 @@ async def get_all_categories(
         
         response = query.execute()
 
-        return {
-            "data": response.data,
-            "count": len(response.data)
-        }
+        return CategoriesResponse(
+            data=[CategoryData(**item) for item in response.data],
+            count=len(response.data)
+        )
 
     except Exception as e:
         logger.info(f"Database query failed for get_all_categories: {str(e)}")
