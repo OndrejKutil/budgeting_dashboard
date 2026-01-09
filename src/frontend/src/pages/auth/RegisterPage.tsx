@@ -171,9 +171,9 @@ export default function RegisterPage() {
 
         <p className="text-center text-xs text-muted-foreground">
           By signing up, you agree to our{' '}
-          <a href="#" className="text-primary hover:underline">Terms</a>{' '}
+          <Link to="/terms" className="text-primary hover:underline">Terms</Link>{' '}
           and{' '}
-          <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
         </p>
       </form>
     </AuthLayout>

@@ -9,6 +9,8 @@ import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 
 // Dashboard
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
             {/* Protected dashboard routes */}
             <Route

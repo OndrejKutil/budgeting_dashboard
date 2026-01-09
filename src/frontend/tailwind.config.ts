@@ -74,7 +74,7 @@ export default {
           expense: "hsl(var(--chart-expense))",
           savings: "hsl(var(--chart-savings))",
           investment: "hsl(var(--chart-investment))",
-          blurple: "hsl(var(--chart-blurple))",
+          blue: "hsl(var(--chart-blue))",
           teal: "hsl(var(--chart-teal))",
         },
         sidebar: {
@@ -146,9 +146,9 @@ export default {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-blurple": "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(280 67% 60%) 100%)",
+        "gradient-blurple": "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(195 100% 70%) 100%)",
         "gradient-card": "linear-gradient(180deg, hsl(var(--card-elevated)) 0%, hsl(var(--card)) 100%)",
-        "gradient-hero": "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(239 40% 12%) 50%, hsl(var(--background)) 100%)",
+        "gradient-hero": "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(210 40% 12%) 50%, hsl(var(--background)) 100%)",
       },
     },
   },

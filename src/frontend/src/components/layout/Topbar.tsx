@@ -30,7 +30,7 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
       <div className="flex items-center gap-4">
         <MobileSidebarTrigger onClick={onMobileMenuClick} />
         <div className="hidden text-sm text-muted-foreground lg:block">
-          Welcome back! Here's your financial overview.
+          Welcome back!
         </div>
       </div>
 

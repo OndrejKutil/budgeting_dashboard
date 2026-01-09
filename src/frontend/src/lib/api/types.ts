@@ -24,46 +24,40 @@ export interface AuthResponse {
 }
 
 export interface Transaction {
-  id: string;
-  user_id: string;
-  date: string;
+  id_pk: string;
+  user_id_fk: string | null;
+  account_id_fk: string;
+  category_id_fk: number;
   amount: number;
-  description: string;
-  category_id: string;
-  account_id: string;
-  fund_id?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
+  date: string;
+  notes: string | null;
+  created_at: string | null;
+  savings_fund_id_fk: string | null;
 }
 
 export interface TransactionsResponse {
-  transactions: Transaction[];
-  total_count: number;
-  limit: number;
-  offset: number;
+  data: Transaction[];
+  count: number;
+  success: boolean;
+  message: string;
 }
 
 export interface Category {
-  id: string;
-  name: string;
-  type: 'expense' | 'income' | 'saving' | 'investment';
-  spending_type: 'Core' | 'Necessary' | 'Fun' | 'Future' | 'Income';
-  icon?: string;
-  color?: string;
-  is_active: boolean;
+  categories_id_pk: number;
+  category_name: string;
+  type: 'expense' | 'income' | 'transfer' | 'saving' | 'investment' | 'exclude';
+  is_active: boolean | null;
+  spending_type: 'Core' | 'Necessary' | 'Fun' | 'Future' | 'Income' | null;
+  created_at: string | null;
 }
 
 export interface Account {
-  id: string;
-  user_id: string;
-  name: string;
+  accounts_id_pk: string;
+  user_id_fk: string | null;
+  account_name: string;
   type: string;
-  currency: string;
-  balance?: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  currency: string | null;
+  created_at: string | null;
 }
 
 export interface SavingsFund {

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -37,6 +38,8 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,32 +48,230 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { transactionsApi, categoriesApi, accountsApi, ApiError } from '@/lib/api/client';
+import { Transaction, Category, Account } from '@/lib/api/types';
+import { toast } from '@/hooks/use-toast';
 
-// Mock data
-const mockTransactions = [
-  { id: '1', date: '2026-01-08', description: 'Grocery Store', category: 'Food', account: 'Checking', amount: -85.42 },
-  { id: '2', date: '2026-01-07', description: 'Salary Deposit', category: 'Income', account: 'Checking', amount: 4500.00 },
-  { id: '3', date: '2026-01-06', description: 'Electric Bill', category: 'Utilities', account: 'Checking', amount: -125.00 },
-  { id: '4', date: '2026-01-05', description: 'Coffee Shop', category: 'Food', account: 'Credit Card', amount: -12.50 },
-  { id: '5', date: '2026-01-04', description: 'Netflix', category: 'Entertainment', account: 'Credit Card', amount: -15.99 },
-  { id: '6', date: '2026-01-03', description: 'Gas Station', category: 'Transport', account: 'Credit Card', amount: -48.00 },
-  { id: '7', date: '2026-01-02', description: 'Investment Transfer', category: 'Investment', account: 'Brokerage', amount: -500.00 },
-  { id: '8', date: '2026-01-01', description: 'Rent Payment', category: 'Housing', account: 'Checking', amount: -1800.00 },
-];
+const ITEMS_PER_PAGE = 20;
+
+function TableRowSkeleton() {
+  return (
+    <TableRow>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+      <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+    </TableRow>
+  );
+}
 
 export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<typeof mockTransactions[0] | null>(null);
-
-  const filteredTransactions = mockTransactions.filter((t) => {
-    const matchesSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+    category_id_fk: '',
+    account_id_fk: '',
   });
 
-  const categories = [...new Set(mockTransactions.map((t) => t.category))];
+  // Create lookup maps for categories and accounts
+  const categoryMap = useMemo(() => {
+    return categories.reduce((acc, cat) => {
+      acc[cat.categories_id_pk] = cat;
+      return acc;
+    }, {} as Record<number, Category>);
+  }, [categories]);
+
+  const accountMap = useMemo(() => {
+    return accounts.reduce((acc, account) => {
+      acc[account.accounts_id_pk] = account;
+      return acc;
+    }, {} as Record<string, Account>);
+  }, [accounts]);
+
+  // Fetch data
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const [transactionsRes, categoriesRes, accountsRes] = await Promise.all([
+          transactionsApi.getAll({ limit: ITEMS_PER_PAGE, offset: currentPage * ITEMS_PER_PAGE }),
+          categoriesApi.getAll(),
+          accountsApi.getAll(),
+        ]);
+        
+        setTransactions(transactionsRes.data);
+        setTotalCount(transactionsRes.count);
+        setCategories(categoriesRes.data);
+        setAccounts(accountsRes.data);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.detail : 'Failed to load transactions';
+        setError(message || 'Failed to load transactions');
+        toast({
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [currentPage]);
+
+  // Filter transactions locally
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const category = categoryMap[t.category_id_fk];
+      const matchesSearch = t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           category?.category_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || t.category_id_fk.toString() === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [transactions, searchQuery, categoryFilter, categoryMap]);
+
+  const handleDelete = async (transactionId: string) => {
+    try {
+      await transactionsApi.delete(transactionId);
+      setTransactions(transactions.filter(t => t.id_pk !== transactionId));
+      toast({
+        title: 'Transaction deleted',
+        description: 'The transaction has been removed successfully.',
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to delete transaction';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.account_id_fk || !formData.category_id_fk || !formData.amount) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        account_id_fk: formData.account_id_fk,
+        category_id_fk: parseInt(formData.category_id_fk),
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        notes: formData.notes || null,
+      };
+
+      if (selectedTransaction) {
+        const result = await transactionsApi.update(selectedTransaction.id_pk, payload);
+        if (result.data && result.data[0]) {
+          setTransactions(transactions.map(t => 
+            t.id_pk === selectedTransaction.id_pk ? result.data[0] : t
+          ));
+        }
+        toast({ title: 'Transaction updated successfully' });
+      } else {
+        const result = await transactionsApi.create(payload);
+        if (result.data && result.data[0]) {
+          setTransactions([result.data[0], ...transactions]);
+        }
+        toast({ title: 'Transaction created successfully' });
+      }
+
+      setIsCreateModalOpen(false);
+      setSelectedTransaction(null);
+      setFormData({
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: '',
+        category_id_fk: '',
+        account_id_fk: '',
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditModal = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setFormData({
+      amount: Math.abs(transaction.amount).toString(),
+      date: transaction.date,
+      notes: transaction.notes || '',
+      category_id_fk: transaction.category_id_fk.toString(),
+      account_id_fk: transaction.account_id_fk,
+    });
+  };
+
+  const closeModal = () => {
+    setIsCreateModalOpen(false);
+    setSelectedTransaction(null);
+    setFormData({
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      notes: '',
+      category_id_fk: '',
+      account_id_fk: '',
+    });
+  };
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  if (error && !isLoading && transactions.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Transactions"
+          description="View and manage all your financial transactions"
+          actions={
+            <Button onClick={() => setIsCreateModalOpen(true)} className="bg-gradient-blurple hover:opacity-90">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </Button>
+          }
+        />
+        <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h3 className="text-lg font-semibold">Failed to load transactions</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -108,7 +309,9 @@ export default function TransactionsPage() {
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
+                {cat.category_name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -121,7 +324,25 @@ export default function TransactionsPage() {
         transition={{ delay: 0.1 }}
         className="rounded-xl border border-border bg-card shadow-card"
       >
-        {filteredTransactions.length === 0 ? (
+        {isLoading ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-28">Date</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead className="hidden sm:table-cell">Category</TableHead>
+                <TableHead className="hidden md:table-cell">Account</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="w-12" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <TableRowSkeleton key={i} />
+              ))}
+            </TableBody>
+          </Table>
+        ) : filteredTransactions.length === 0 ? (
           <EmptyState
             icon={<Receipt className="h-8 w-8 text-muted-foreground" />}
             title="No transactions found"
@@ -138,7 +359,7 @@ export default function TransactionsPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-28">Date</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead className="hidden sm:table-cell">Category</TableHead>
                   <TableHead className="hidden md:table-cell">Account</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
@@ -146,71 +367,88 @@ export default function TransactionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="group">
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {new Date(transaction.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </TableCell>
-                    <TableCell className="font-medium">{transaction.description}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                        {transaction.category}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {transaction.account}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-right font-medium font-mono',
-                        transaction.amount > 0 ? 'text-success' : 'text-foreground'
-                      )}
-                    >
-                      {transaction.amount > 0 ? '+' : ''}
-                      ${Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredTransactions.map((transaction) => {
+                  const category = categoryMap[transaction.category_id_fk];
+                  const account = accountMap[transaction.account_id_fk];
+                  return (
+                    <TableRow key={transaction.id_pk} className="group">
+                      <TableCell className="font-mono text-sm text-muted-foreground">
+                        {new Date(transaction.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </TableCell>
+                      <TableCell className="font-medium">{transaction.notes || '-'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                          {category?.category_name || 'Unknown'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {account?.account_name || 'Unknown'}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'text-right font-medium font-mono',
+                          transaction.amount > 0 ? 'text-success' : 'text-foreground'
+                        )}
+                      >
+                        {transaction.amount > 0 ? '+' : ''}
+                        ${Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditModal(transaction)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(transaction.id_pk)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
 
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                Showing {filteredTransactions.length} of {mockTransactions.length} transactions
+                Showing {filteredTransactions.length} of {totalCount} transactions
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === 0}
+                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                >
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" disabled>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage >= totalPages - 1}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
                   Next
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
@@ -223,8 +461,7 @@ export default function TransactionsPage() {
       {/* Create/Edit Modal */}
       <Dialog open={isCreateModalOpen || !!selectedTransaction} onOpenChange={(open) => {
         if (!open) {
-          setIsCreateModalOpen(false);
-          setSelectedTransaction(null);
+          closeModal();
         }
       }}>
         <DialogContent className="sm:max-w-md">
@@ -235,11 +472,12 @@ export default function TransactionsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="notes">Notes</Label>
               <Input
-                id="description"
+                id="notes"
                 placeholder="e.g., Grocery Store"
-                defaultValue={selectedTransaction?.description}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -248,8 +486,10 @@ export default function TransactionsPage() {
                 <Input
                   id="amount"
                   type="number"
+                  step="0.01"
                   placeholder="0.00"
-                  defaultValue={selectedTransaction ? Math.abs(selectedTransaction.amount) : ''}
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -257,32 +497,58 @@ export default function TransactionsPage() {
                 <Input
                   id="date"
                   type="date"
-                  defaultValue={selectedTransaction?.date || new Date().toISOString().split('T')[0]}
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select defaultValue={selectedTransaction?.category}>
+              <Select 
+                value={formData.category_id_fk} 
+                onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
+                      {cat.category_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="account">Account</Label>
+              <Select 
+                value={formData.account_id_fk} 
+                onValueChange={(value) => setFormData({ ...formData, account_id_fk: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
+                      {acc.account_name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsCreateModalOpen(false);
-              setSelectedTransaction(null);
-            }}>
+            <Button variant="outline" onClick={closeModal}>
               Cancel
             </Button>
-            <Button className="bg-gradient-blurple hover:opacity-90">
+            <Button 
+              className="bg-gradient-blurple hover:opacity-90"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedTransaction ? 'Save Changes' : 'Add Transaction'}
             </Button>
           </DialogFooter>

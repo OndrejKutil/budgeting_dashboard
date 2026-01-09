@@ -10,7 +10,24 @@ import {
   Sparkles,
   BarChart3,
   PiggyBank,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
 } from 'lucide-react';
+
+const forYouPoints = [
+  "You want a clean monthly overview of income, expenses, and net flow",
+  "You’re fine with manual entry or CSV import to stay in control",
+  "You want categories + simple analytics that actually explain your spending",
+  "You want savings goals (including an emergency fund analysis) in the same dashboard",
+];
+
+const notForYouPoints = [
+  "You need automatic bank sync (not supported right now)",
+  "You want investment/portfolio tracking and performance analytics",
+  "You need receipts, invoices, or business expense workflows",
+  "You want AI recommendations and coaching-style insights",
+];
 
 const features = [
   {
@@ -60,13 +77,13 @@ export default function LandingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-blurple">
               <Wallet className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold font-display">FinanceApp</span>
+            <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
               <Link to="/auth/login">Log in</Link>
             </Button>
-            <Button asChild className="bg-gradient-blurple hover:opacity-90">
+            <Button asChild className="bg-gradient-blurple transition-all duration-300 ease-out hover:opacity-90">
               <Link to="/auth/register">
                 Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -101,20 +118,20 @@ export default function LandingPage() {
             variants={fadeInUp}
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground"
           >
-            Track expenses, analyze spending patterns, and achieve your savings goals with our
-            powerful yet simple personal finance dashboard.
+            Know exactly where your money goes. Every month.
+            No more guessing, no unnecessary stress.
           </motion.p>
 
           <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" asChild className="bg-gradient-blurple px-8 hover:opacity-90 glow-blurple">
+            <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
               <Link to="/auth/register">
                 Start Free Today
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="transition-all duration-300 ease-out">
               <Link to="/auth/login">
-                Sign in to Dashboard
+                Log in to Dashboard
               </Link>
             </Button>
           </motion.div>
@@ -231,7 +248,7 @@ export default function LandingPage() {
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/50 hover:shadow-glow-sm"
+                className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-glow-sm hover:-translate-y-1"
               >
                 <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary">
                   <feature.icon className="h-6 w-6" />
@@ -244,31 +261,74 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Is This For Me Section */}
       <section className="py-24">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-12 text-center"
+            className="mx-auto mb-16 max-w-2xl text-center"
           >
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-chart-investment/20 blur-3xl" />
-            <div className="relative">
-              <h2 className="mb-4 text-3xl font-bold font-display sm:text-4xl">
-                Ready to transform your finances?
-              </h2>
-              <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-                Join thousands of users who have taken control of their financial future. Start tracking today.
-              </p>
-              <Button size="lg" asChild className="bg-gradient-blurple px-8 hover:opacity-90">
-                <Link to="/auth/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+            <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary">
+              <HelpCircle className="h-8 w-8" />
             </div>
+            <h2 className="mb-4 text-3xl font-bold font-display sm:text-4xl">
+              Is this app for you?
+            </h2>
+            <p className="text-muted-foreground">
+              This is a personal project built for simple tracking and insights
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2"
+          >
+            {/* For You */}
+            <motion.div
+              variants={fadeInUp}
+              className="rounded-xl border border-success/30 bg-success/5 p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-success/10"
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <div className="inline-flex rounded-lg bg-success/10 p-2 text-success">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-semibold font-display">This app is for you if...</h3>
+              </div>
+              <ul className="space-y-3">
+                {forYouPoints.map((point, index) => (
+                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
+                    <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-success" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            {/* Not For You */}
+            <motion.div
+              variants={fadeInUp}
+              className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-destructive/10"
+            >
+              <div className="mb-4 flex items-center gap-3">
+                <div className="inline-flex rounded-lg bg-destructive/10 p-2 text-destructive">
+                  <XCircle className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-semibold font-display">This app is not for you if...</h3>
+              </div>
+              <ul className="space-y-3">
+                {notForYouPoints.map((point, index) => (
+                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
+                    <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -276,14 +336,16 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary" />
-            <span>© 2026 FinanceApp. All rights reserved.</span>
-          </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+          <span className="text-xs sm:text-sm">Built by Ondřej Kutil</span>
+          <div className="flex items-center gap-6">
+            <a
+              href="https://github.com/OndrejKutil"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs sm:text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>

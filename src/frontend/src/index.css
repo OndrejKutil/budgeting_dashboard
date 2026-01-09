@@ -4,40 +4,40 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Blurple Dark Theme - Personal Finance App */
+/* Blue Dark Theme - Personal Finance App */
 
 @layer base {
   :root {
     /* Core backgrounds */
-    --background: 228 84% 5%;
-    --background-secondary: 224 47% 8%;
+    --background: 222 47% 5%;
+    --background-secondary: 220 40% 8%;
     --foreground: 210 40% 98%;
 
     /* Card/surface */
-    --card: 222 47% 9%;
+    --card: 220 40% 9%;
     --card-foreground: 210 40% 98%;
-    --card-elevated: 224 47% 11%;
+    --card-elevated: 220 40% 11%;
 
     /* Popover */
-    --popover: 222 47% 9%;
+    --popover: 220 40% 9%;
     --popover-foreground: 210 40% 98%;
 
-    /* Blurple primary accent */
-    --primary: 239 84% 67%;
+    /* Blue primary accent */
+    --primary: 210 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 239 84% 73%;
-    --primary-muted: 243 75% 59%;
+    --primary-hover: 210 100% 60%;
+    --primary-muted: 210 80% 45%;
 
     /* Secondary */
-    --secondary: 217 33% 17%;
+    --secondary: 215 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
     /* Muted */
-    --muted: 217 19% 27%;
+    --muted: 215 19% 27%;
     --muted-foreground: 215 14% 64%;
 
     /* Accent */
-    --accent: 239 84% 67%;
+    --accent: 210 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive */
@@ -56,35 +56,35 @@
     --chart-income: 142 71% 45%;
     --chart-expense: 0 84% 60%;
     --chart-savings: 199 89% 48%;
-    --chart-investment: 280 67% 60%;
-    --chart-blurple: 239 84% 67%;
+    --chart-investment: 195 100% 40%;
+    --chart-blue: 210 100% 50%;
     --chart-teal: 168 84% 42%;
 
     /* Border/input */
-    --border: 217 19% 20%;
-    --input: 217 19% 20%;
-    --ring: 239 84% 67%;
+    --border: 215 19% 20%;
+    --input: 215 19% 20%;
+    --ring: 210 100% 50%;
 
     --radius: 0.75rem;
 
     /* Sidebar */
-    --sidebar-background: 224 47% 7%;
+    --sidebar-background: 220 40% 7%;
     --sidebar-foreground: 215 14% 64%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 210 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent: 215 33% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 19% 15%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-border: 215 19% 15%;
+    --sidebar-ring: 210 100% 50%;
 
     /* Glass effects */
-    --glass-bg: 224 47% 8% / 0.85;
-    --glass-border: 217 19% 30% / 0.3;
+    --glass-bg: 220 40% 8% / 0.85;
+    --glass-border: 215 19% 30% / 0.3;
 
     /* Gradients */
-    --gradient-blurple: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 9%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(228 84% 5%) 0%, hsl(239 40% 12%) 50%, hsl(228 84% 5%) 100%);
+    --gradient-blurple: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(220 40% 11%) 0%, hsl(220 40% 9%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 5%) 0%, hsl(210 40% 12%) 50%, hsl(222 47% 5%) 100%);
   }
 }
 
@@ -118,22 +118,22 @@
     @apply bg-card/80 backdrop-blur-lg border border-border/50 rounded-xl;
   }
 
-  /* Blurple gradient text */
+  /* Blue gradient text */
   .text-gradient-blurple {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%);
+    background-image: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 70%) 100%);
   }
 
-  /* Blurple glow effect */
+  /* Blue glow effect */
   .glow-blurple {
     box-shadow: 
-      0 0 20px hsl(239 84% 67% / 0.3),
-      0 0 40px hsl(239 84% 67% / 0.2),
-      0 0 60px hsl(239 84% 67% / 0.1);
+      0 0 20px hsl(210 100% 50% / 0.3),
+      0 0 40px hsl(210 100% 50% / 0.2),
+      0 0 60px hsl(210 100% 50% / 0.1);
   }
 
   .glow-blurple-sm {
-    box-shadow: 0 0 15px hsl(239 84% 67% / 0.25);
+    box-shadow: 0 0 15px hsl(210 100% 50% / 0.25);
   }
 
   /* Subtle card shadow */
@@ -153,7 +153,7 @@
   .border-gradient {
     position: relative;
     background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-                linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%) border-box;
+                linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 70%) 100%) border-box;
     border: 1px solid transparent;
   }
 

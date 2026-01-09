@@ -74,7 +74,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blurple">
                 <Wallet className="h-4 w-4 text-white" />
               </div>
-              <span className="text-lg font-bold font-display text-foreground">FinanceApp</span>
+              <span className="text-lg font-bold font-display text-foreground">Budgeting Dashboard</span>
             </motion.div>
           )}
         </AnimatePresence>

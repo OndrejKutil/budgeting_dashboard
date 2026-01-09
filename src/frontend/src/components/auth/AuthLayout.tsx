@@ -23,7 +23,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-blurple">
               <Wallet className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold font-display">FinanceApp</span>
+            <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </Link>
         </div>
 
@@ -50,15 +50,15 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
             className="mt-12 rounded-xl border border-border/50 bg-card/50 p-6 backdrop-blur-sm"
           >
             <p className="mb-4 text-sm italic text-foreground">
-              "This app completely changed how I manage my money. The analytics are incredible and the interface is beautiful."
+              "This app helped me organize my finances in one place and saved me so much time!"
             </p>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-blurple text-sm font-bold text-white">
-                JD
+                O
               </div>
               <div>
-                <div className="text-sm font-medium">Jane Doe</div>
-                <div className="text-xs text-muted-foreground">Product Designer</div>
+                <div className="text-sm font-medium">Ondřej's family</div>
+                <div className="text-xs text-muted-foreground">Family user</div>
               </div>
             </div>
           </motion.div>
@@ -74,7 +74,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-blurple">
                 <Wallet className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold font-display">FinanceApp</span>
+              <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
             </Link>
           </div>
 

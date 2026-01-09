@@ -215,3 +215,113 @@ export const authApi = {
     tokenManager.clearTokens();
   },
 };
+
+// Categories API
+import type { Category, Account, Transaction, TransactionsResponse } from './types';
+
+interface CategoriesResponse {
+  data: Category[];
+  count: number;
+}
+
+export const categoriesApi = {
+  getAll: async (params?: { category_id?: number; category_name?: string }) => {
+    const response = await apiClient.get<CategoriesResponse>(
+      '/categories/',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+};
+
+// Accounts API
+interface AccountsResponse {
+  data: Account[];
+  count: number;
+  success: boolean;
+  message: string;
+}
+
+export const accountsApi = {
+  getAll: async (params?: { account_id?: string; account_name?: string }) => {
+    const response = await apiClient.get<AccountsResponse>(
+      '/accounts/',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+
+  create: async (account: { account_name: string; type: string; currency: string }) => {
+    const response = await apiClient.post<{ success: boolean; message: string }>(
+      '/accounts/',
+      account
+    );
+    return response.data;
+  },
+
+  update: async (accountId: string, account: { account_name: string; type: string; currency: string }) => {
+    const response = await apiClient.put<{ success: boolean; message: string }>(
+      `/accounts/${accountId}`,
+      account
+    );
+    return response.data;
+  },
+
+  delete: async (accountId: string) => {
+    const response = await apiClient.delete<{ success: boolean; message: string }>(
+      `/accounts/${accountId}`
+    );
+    return response.data;
+  },
+};
+
+// Transactions API
+interface TransactionCreateUpdate {
+  account_id_fk: string;
+  category_id_fk: number;
+  amount: number;
+  date: string;
+  notes?: string | null;
+  savings_fund_id_fk?: string | null;
+}
+
+export const transactionsApi = {
+  getAll: async (params?: {
+    start_date?: string;
+    end_date?: string;
+    category_id?: string;
+    account_id?: string;
+    transaction_id?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const response = await apiClient.get<TransactionsResponse>(
+      '/transactions/',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+
+  create: async (transaction: TransactionCreateUpdate) => {
+    const response = await apiClient.post<{ success: boolean; message: string; data: Transaction[] }>(
+      '/transactions/',
+      transaction
+    );
+    return response.data;
+  },
+
+  update: async (transactionId: string, transaction: TransactionCreateUpdate) => {
+    const response = await apiClient.put<{ success: boolean; message: string; data: Transaction[] }>(
+      `/transactions/${transactionId}`,
+      transaction
+    );
+    return response.data;
+  },
+
+  delete: async (transactionId: string) => {
+    const response = await apiClient.delete<{ success: boolean; message: string }>(
+      `/transactions/${transactionId}`
+    );
+    return response.data;
+  },
+};
