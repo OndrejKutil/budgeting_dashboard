@@ -13,12 +13,8 @@ from ..helper import environment as env
 from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
 
 # schemas
-from ..schemas.endpoint_schemas import (
-    YearlyAnalyticsResponse,
-    YearlyAnalyticsData,
-    EmergencyFundResponse,
-    EmergencyFundData
-)
+from ..schemas.base import EmergencyFundData, YearlyAnalyticsData
+from ..schemas.responses import EmergencyFundResponse, YearlyAnalyticsResponse
 
 # logging
 import logging
@@ -32,8 +28,6 @@ from datetime import datetime
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

@@ -13,7 +13,8 @@ from ..helper import environment as env
 from ..helper.calculations.monthly_page_calc import _monthly_analytics
 
 # schemas
-from ..schemas.endpoint_schemas import MonthlyAnalyticsResponse, MonthlyAnalyticsData
+from ..schemas.base import MonthlyAnalyticsData
+from ..schemas.responses import MonthlyAnalyticsResponse
 
 # logging
 import logging
@@ -27,8 +28,6 @@ from datetime import datetime
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

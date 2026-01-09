@@ -15,7 +15,8 @@ from ..helper import environment as env
 import logging
 
 # schemas
-from ..schemas.endpoint_schemas import SummaryResponse, SummaryData
+from ..schemas.base import SummaryData
+from ..schemas.responses import SummaryResponse
 
 # helper
 from ..helper.calculations.summary_calc import _summary_calc
@@ -29,8 +30,6 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

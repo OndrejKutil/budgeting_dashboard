@@ -46,7 +46,7 @@ dependencies = [
     "python-multipart==0.0.6",
     
     # Data manipulation
-    "pandas>=2.2.0",
+    "polars>=0.20.0",
 ]
 
 [project.optional-dependencies]
@@ -59,7 +59,7 @@ dev = [
     
     # Type stubs for third-party packages
     "types-requests>=2.31.0",
-    "pandas-stubs>=2.1.0",
+
     
     # Testing
     "pytest>=7.4.0",

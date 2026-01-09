@@ -4,13 +4,16 @@ from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth
-from ..schemas.endpoint_schemas import LoginResponse, UserData, LoginRequest
+from ..schemas.base import UserData
+from ..schemas.requests import LoginRequest
+from ..schemas.responses import LoginResponse
 
 # rate limiting
 from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
+from ..data.database import get_db_client
 
 # logging
 import logging
@@ -23,9 +26,6 @@ from supabase.client import create_client, Client
 # ================================================================================================
 
 # Load environment variables
-
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def login(
 ) -> LoginResponse:
 
     try:
-        supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
+        supabase_client: Client = get_db_client()
 
         response = supabase_client.auth.sign_in_with_password(
             {"email": credentials.email,
@@ -84,7 +84,7 @@ async def register(
 ) -> LoginResponse:
 
     try:
-        supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
+        supabase_client: Client = get_db_client()
 
         if user_data.full_name == None:
             full_name = None

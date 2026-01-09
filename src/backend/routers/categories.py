@@ -15,11 +15,12 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import CATEGORIES_COLUMNS
-from ..schemas.endpoint_schemas import CategoriesResponse, CategoryData
+from ..schemas.base import CategoryData
+from ..schemas.responses import CategoriesResponse
 
 # other
 from typing import Optional
@@ -29,8 +30,6 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -54,9 +53,7 @@ async def get_all_categories(
 ) -> CategoriesResponse:
     
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         query = user_supabase_client.table("dim_categories").select("*")
 
