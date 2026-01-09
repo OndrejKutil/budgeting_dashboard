@@ -15,7 +15,7 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # schemas
 from ..helper.columns import SAVINGS_FUNDS_COLUMNS, TRANSACTIONS_COLUMNS
@@ -37,8 +37,6 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -66,8 +64,7 @@ async def get_savings_funds(
     """
     
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         query = user_supabase_client.table("dim_savings_funds").select("*")
 
@@ -81,7 +78,7 @@ async def get_savings_funds(
 
         # Fetch transactions for metrics
         # Filter for transactions that have a savings_fund_id_fk
-        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}").neq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
+        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}").not_.is_(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
         transactions_response = transactions_query.execute()
         
         metrics = {}
@@ -133,8 +130,7 @@ async def create_savings_fund(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = fund.model_dump()
         
@@ -173,8 +169,7 @@ async def update_savings_fund(
     Update an existing savings fund by its ID.
     """
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = fund.model_dump()
         
@@ -212,8 +207,7 @@ async def delete_savings_fund(
     Delete a savings fund by its ID.
     """
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         response = user_supabase_client.table("dim_savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 

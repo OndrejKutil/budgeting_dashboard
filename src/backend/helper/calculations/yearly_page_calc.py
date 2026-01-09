@@ -5,8 +5,7 @@ from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
 
 from ..columns import TRANSACTIONS_COLUMNS
-from ..environment import PROJECT_URL, ANON_KEY
-from supabase.client import create_client, Client
+from ...data.database import get_db_client
 import logging
 import polars as pl
 
@@ -93,13 +92,9 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
         EnvironmentError: If environment variables are not set
         ConnectionError: If database query fails
     """
-    if PROJECT_URL == "" or ANON_KEY == "":
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise EnvironmentError('Missing environment variables for database connection.')
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(access_token)
+        user_supabase_client = get_db_client(access_token)
         
         query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
@@ -148,6 +143,20 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         struct_col = 'categories'
         
     if struct_col:
+        existing_cols = set(df.columns)
+        
+        struct_dtype = df.schema[struct_col]
+        field_names = []
+        if hasattr(struct_dtype, 'fields'):
+             field_names = [f.name for f in struct_dtype.fields]
+        elif hasattr(struct_dtype, 'to_schema'):
+             field_names = list(struct_dtype.to_schema().keys())
+             
+        if field_names:
+            new_names = [f"{struct_col}_{x}" if x in existing_cols else x for x in field_names]
+            df = df.with_columns(
+                pl.col(struct_col).struct.rename_fields(new_names)
+            )
         df = df.unnest(struct_col)
     
     # Helper to safe add column if missing
@@ -545,13 +554,9 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
         EnvironmentError: If environment variables are not set
         ConnectionError: If database query fails
     """
-    if PROJECT_URL is None or ANON_KEY is None:
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise EnvironmentError('Missing environment variables for database connection.')
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(access_token)
+        user_supabase_client = get_db_client(access_token)
         
         query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*), dim_savings_funds(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
@@ -595,9 +600,35 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     
     # Unnest dim_categories and dim_savings_funds if they exist
     if 'dim_categories' in df.columns:
+        existing_cols = set(df.columns)
+        struct_dtype = df.schema['dim_categories']
+        field_names = []
+        if hasattr(struct_dtype, 'fields'):
+             field_names = [f.name for f in struct_dtype.fields]
+        elif hasattr(struct_dtype, 'to_schema'):
+             field_names = list(struct_dtype.to_schema().keys())
+             
+        if field_names:
+            new_names = [f"dim_categories_{x}" if x in existing_cols else x for x in field_names]
+            df = df.with_columns(
+                pl.col('dim_categories').struct.rename_fields(new_names)
+            )
         df = df.unnest('dim_categories')
     
     if 'dim_savings_funds' in df.columns:
+        existing_cols = set(df.columns)
+        struct_dtype = df.schema['dim_savings_funds']
+        field_names = []
+        if hasattr(struct_dtype, 'fields'):
+             field_names = [f.name for f in struct_dtype.fields]
+        elif hasattr(struct_dtype, 'to_schema'):
+             field_names = list(struct_dtype.to_schema().keys())
+
+        if field_names:
+            new_names = [f"dim_savings_funds_{x}" if x in existing_cols else x for x in field_names]
+            df = df.with_columns(
+                pl.col('dim_savings_funds').struct.rename_fields(new_names)
+            )
         df = df.unnest('dim_savings_funds')
         
     # Helper to safe add column if missing

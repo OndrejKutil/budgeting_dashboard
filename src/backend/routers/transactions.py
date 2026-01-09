@@ -14,8 +14,7 @@ from ..helper import environment as env
 # logging
 import logging
 
-# supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import TRANSACTIONS_COLUMNS
@@ -35,8 +34,7 @@ from typing import Optional, List
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
+# Create logger for this module
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -70,8 +68,7 @@ async def get_all_data(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
         
         query = user_supabase_client.table("fct_transactions").select("*")
         
@@ -125,8 +122,7 @@ async def create_transaction(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
         
         data = transaction_data.model_dump()
         data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
@@ -175,8 +171,7 @@ async def update_transaction(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
         
         data = transaction_data.model_dump()
         data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
@@ -223,8 +218,7 @@ async def delete_transaction(
     Delete a transaction record by its ID.
     """
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
         
         response = user_supabase_client.table("fct_transactions").delete().eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id).execute()
         

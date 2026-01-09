@@ -15,7 +15,7 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
@@ -31,8 +31,6 @@ from typing import Optional, Dict, List
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -56,9 +54,7 @@ async def get_all_accounts(
 ) -> AccountsResponse:
     
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         query = user_supabase_client.table("dim_accounts").select("*")
 
@@ -120,9 +116,7 @@ async def create_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data : Dict = account_data.model_dump()
 
@@ -164,9 +158,7 @@ async def update_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = account_data.model_dump()
 
@@ -206,9 +198,7 @@ async def delete_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         response = user_supabase_client.table("dim_accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 

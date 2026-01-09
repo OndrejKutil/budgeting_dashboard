@@ -6,8 +6,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from ..columns import TRANSACTIONS_COLUMNS
-from ..environment import PROJECT_URL, ANON_KEY
-from supabase.client import create_client, Client
+from ...data.database import get_db_client
 import polars as pl
 
 # schemas
@@ -74,13 +73,9 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         EnvironmentError: If environment variables are not set
         ConnectionError: If database query fails
     """
-    if PROJECT_URL == "" or ANON_KEY == "":
-        logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise EnvironmentError('Missing environment variables for database connection.')
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(access_token)
+        user_supabase_client = get_db_client(access_token)
         
         query = user_supabase_client.table('fct_transactions').select(
             '*',
@@ -140,6 +135,27 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         struct_col = 'categories'
         
     if struct_col:
+        # Rename colliding columns in the struct (like created_at) to avoid DuplicateError
+        existing_cols = set(df.columns)
+        
+        # Get struct fields to generate new names
+        struct_dtype = df.schema[struct_col]
+        # Depending on polars version, struct fields access varies
+        # We try to get field names safely
+        field_names = []
+        if hasattr(struct_dtype, 'fields'): # Recent polars
+             field_names = [f.name for f in struct_dtype.fields]
+        elif hasattr(struct_dtype, 'to_schema'):
+             field_names = list(struct_dtype.to_schema().keys())
+        
+        # fallback if we can't get names (shouldn't happen with standard polars)
+        if field_names:
+            new_names = [f"{struct_col}_{x}" if x in existing_cols else x for x in field_names]
+            
+            df = df.with_columns(
+                pl.col(struct_col).struct.rename_fields(new_names)
+            )
+            
         # Unnest the struct
         df = df.unnest(struct_col)
     

@@ -29,8 +29,6 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

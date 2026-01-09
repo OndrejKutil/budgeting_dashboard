@@ -15,7 +15,7 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client, Client
 
 # schemas
 from ..schemas.endpoint_schemas import RefreshTokenResponse
@@ -26,8 +26,7 @@ from ..schemas.endpoint_schemas import RefreshTokenResponse
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
+# Load environment variables
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ async def refresh_access_token(
     """
     
     # Create a fresh client for token refresh
-    refresh_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
+    refresh_supabase_client: Client = get_db_client()
     
     try:
         # Use the refresh token to get new tokens
