@@ -19,7 +19,9 @@ from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
-from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest, AccountData, AccountSuccessResponse
+from ..schemas.base import AccountData
+from ..schemas.requests import AccountRequest
+from ..schemas.responses import AccountsResponse, AccountSuccessResponse
 from ..helper.calculations import accounts_calc
 
 # other

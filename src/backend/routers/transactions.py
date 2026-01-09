@@ -18,12 +18,9 @@ from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import TRANSACTIONS_COLUMNS
-from ..schemas.endpoint_schemas import (
-    TransactionsResponse,
-    TransactionSuccessResponse,
-    TransactionRequest,
-    TransactionData
-)
+from ..schemas.base import TransactionData
+from ..schemas.requests import TransactionRequest
+from ..schemas.responses import TransactionsResponse, TransactionSuccessResponse
 
 # other
 from datetime import date

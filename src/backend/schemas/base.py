@@ -1,9 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Any
 from datetime import date as Date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import List, Optional
 
+from pydantic import BaseModel, Field
 
 # ================================================================================================
 #                                   Data Schemas
@@ -93,173 +93,23 @@ class UserData(BaseModel):
     password: str = Field(..., min_length=8, description="User password (min 8 characters)")
     full_name: Optional[str] = Field(None, description="User full name")
 
-class LoginRequest(BaseModel):
-    """Schema for user login credentials"""
-    email: str = Field(..., description="User email address")
-    password: str = Field(..., description="User password")
-
-# ================================================================================================
-#                                        Get Schemas
-# ================================================================================================
-
-class AllDataResponse(BaseModel):
-    data: List[TransactionData] = Field(..., description="List of transaction records")
-    count: int = Field(..., description="Total number of records returned")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "id_pk": "1",
-                        "user_id_fk": "user123",
-                        "account_id_fk": "acc456",
-                        "category_id_fk": 2,
-                        "amount": 49.99,
-                        "date": "2025-01-15",
-                        "notes": "Weekly grocery shopping",
-                        "created_at": "2025-01-15T10:30:00Z",
-                        "savings_fund_id_fk": None
-                    },
-                    {
-                        "id_pk": "2",
-                        "user_id_fk": "user123",
-                        "account_id_fk": "acc789",
-                        "category_id_fk": 3,
-                        "amount": 19.99,
-                        "date": "2025-01-16",
-                        "notes": "Coffee with friends",
-                        "created_at": "2025-01-16T11:00:00Z",
-                        "savings_fund_id_fk": None
-                    }
-                ],
-                "count": 2,
-            }
-        }
+class CategoryInsight(BaseModel):
+    """Schema for category insight data"""
+    name: str = Field(..., description="Category name")
+    total: float = Field(..., description="Total amount spent")
+    share_of_total: float = Field(..., description="Percentage share of total expenses")
 
 
-class RefreshTokenResponse(BaseModel):
-    """Response schema for token refresh endpoint"""
-    user: Optional[dict] = Field(None, description="User information after refresh")
-    session: Optional[dict] = Field(None, description="Session information after refresh")
-
-
-class CategoriesResponse(BaseModel):
-    data: List[CategoryData] = Field(..., description="List of category records")
-    count: int = Field(..., description="Total number of records returned")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "categories_id_pk": "1",
-                        "category_name": "Groceries",
-                        "type": CategoryType.EXPENSE,
-                        "spending_type": SpendingType.CORE,
-                        "is_active": True,
-                        "created_at": "2025-01-15T10:30:00Z",
-                    },
-                    {
-                        "categories_id_pk": "2",
-                        "notes": "Coffee with friends",
-                        "created_at": "2025-01-16T11:00:00Z",
-                        "updated_at": "2025-01-16T11:00:00Z"
-                    }
-                ],
-                "count": 2,
-        }}
-
-
-class AccountsResponse(BaseModel):
-    """Response schema for accounts endpoint"""
-    data: List[AccountData] = Field(..., description="List of account records")
-    count: int = Field(..., description="Total number of records returned")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-    class Config:
-        json_encoders = {
-            Decimal: float
-        }
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "accounts_id_pk": "acc456",
-                        "user_id_fk": "user123",
-                        "account_name": "Main Checking Account",
-                        "type": "checking",
-                        "currency": "USD",
-                        "created_at": "2025-01-15T10:30:00Z"
-                    },
-                    {
-                        "accounts_id_pk": "acc789",
-                        "user_id_fk": "user123",
-                        "account_name": "Savings Account",
-                        "type": "savings",
-                        "currency": "USD",
-                        "created_at": "2025-01-16T11:00:00Z"
-                    }
-                ],
-                "count": 2,
-            }
-        }
-
-# ================================================================================================
-#                                   Insert Schemas
-# ================================================================================================
-
-class TransactionRequest(BaseModel):
-    account_id_fk: str = Field(..., description="Account ID associated with the transaction")
-    category_id_fk: int = Field(..., description="Transaction category ID")
-    amount: Decimal = Field(..., description="Transaction amount")
-    date: Date = Field(..., description="Transaction date")
-    notes: Optional[str] = Field(None, description="Transaction description")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
-
-    class Config:
-        # Allow Decimal to be serialized as float in JSON
-        json_encoders = {
-            Decimal: float
-        }
-        # Example for documentation
-        json_schema_extra = {
-            "example": {
-                "account_id_fk": "",
-                "category_id_fk": 2,
-                "amount": 49.99,
-                "date": "2025-01-15",
-                "notes": "",
-                "created_at": "2025-01-15T10:30:00Z",
-                "savings_fund_id_fk": None
-            }
-        }
-
-
-class AccountRequest(BaseModel):
-    """Schema for creating a new account"""
-    account_name: str = Field(..., description="Name of the account")
-    type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
-    currency: Optional[str] = Field(..., description="Currency of the account")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-
-    class Config:
-        # Allow Decimal to be serialized as float in JSON
-        json_encoders = {
-            Decimal: float
-        }
-        # Example for documentation
-        json_schema_extra = {
-            "example": {
-                "account_name": "",
-                "type": "",
-                "currency": "",
-                "created_at": "2025-01-15T10:30:00Z"
-            }
-        }
-
+class PeriodComparison(BaseModel):
+    """Schema for period-over-period comparison data"""
+    income_delta: float = Field(..., description="Absolute change in income vs previous period")
+    income_delta_pct: float = Field(..., description="Percentage change in income vs previous period")
+    expense_delta: float = Field(..., description="Absolute change in expenses vs previous period")
+    expense_delta_pct: float = Field(..., description="Percentage change in expenses vs previous period")
+    saving_delta: float = Field(..., description="Absolute change in savings vs previous period")
+    investment_delta: float = Field(..., description="Absolute change in investments vs previous period")
+    profit_delta: float = Field(..., description="Absolute change in profit vs previous period")
+    cashflow_delta: float = Field(..., description="Absolute change in cashflow vs previous period")
 
 
 class SummaryData(BaseModel):
@@ -270,6 +120,15 @@ class SummaryData(BaseModel):
     total_investment: float = Field(..., description="Total investment amount")
     profit: float = Field(..., description="Profit (income - expenses)")
     net_cash_flow: float = Field(..., description="Net cash flow (income - expenses - savings - investments)")
+    
+    # New fields
+    comparison: PeriodComparison = Field(..., description="Period-over-period comparison metrics")
+    savings_rate: float = Field(..., description="Savings rate as percentage of income")
+    investment_rate: float = Field(..., description="Investment rate as percentage of income")
+    top_expenses: List[CategoryInsight] = Field(..., description="Top 3 expense categories")
+    biggest_mover: Optional[CategoryInsight] = Field(None, description="Category with largest absolute spending change vs previous period")
+    largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
+    
     by_category: dict = Field(..., description="Summary grouped by category name")
 
     class Config:
@@ -281,39 +140,30 @@ class SummaryData(BaseModel):
                 "total_investment": 500.00,
                 "profit": 1500.00,
                 "net_cash_flow": 0.00,
+                "comparison": {
+                    "income_delta": 500.00,
+                    "income_delta_pct": 11.1,
+                    "expense_delta": -200.00,
+                    "expense_delta_pct": -5.4,
+                    "saving_delta": 100.00,
+                    "investment_delta": 0.00,
+                    "profit_delta": 700.00,
+                    "cashflow_delta": 0.00
+                },
+                "savings_rate": 20.0,
+                "investment_rate": 10.0,
+                "top_expenses": [
+                     {"name": "Rent", "total": 1500.0, "share_of_total": 42.8},
+                     {"name": "Groceries", "total": 600.0, "share_of_total": 17.1},
+                     {"name": "Utilities", "total": 200.0, "share_of_total": 5.7}
+                ],
+                "biggest_mover": {"name": "Travel", "total": 500.0, "share_of_total": 14.2},
+                "largest_transactions": [],
                 "by_category": {
                     "Salary": 5000.00,
                     "Groceries": -800.00,
                     "Utilities": -300.00
                 }
-            }
-        }
-
-
-class SummaryResponse(BaseModel):
-    """Response schema for summary endpoint"""
-    data: SummaryData = Field(..., description="Financial summary data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": {
-                    "total_income": 5000.00,
-                    "total_expense": 3500.00,
-                    "total_saving": 1000.00,
-                    "total_investment": 500.00,
-                    "profit": 1500.00,
-                    "net_cash_flow": 0.00,
-                    "by_category": {
-                        "Salary": 5000.00,
-                        "Groceries": -800.00,
-                        "Utilities": -300.00
-                    }
-                },
-                "success": True,
-                "message": "Financial summary retrieved successfully"
             }
         }
 
@@ -337,24 +187,6 @@ class SavingsFundsData(BaseModel):
                 "created_at": "2025-01-15T10:30:00Z"
             }
         }
-
-
-class SavingsFundsRequest(BaseModel):
-    """Request schema for creating or updating savings funds"""
-    user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
-    fund_name: str = Field(..., description="Name of the savings fund")
-    target_amount: int = Field(..., description="Target amount for the savings fund")
-    created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "user_id": "456user",
-                "fund_name": "Emergency Fund",
-                "target_amount": 5000
-            }
-        }
-
 
 # ================================================================================================
 #                                Monthly Analytics Schemas
@@ -402,6 +234,43 @@ class SpendingTypeBreakdownData(BaseModel):
         }
 
 
+
+class RunRateForecast(BaseModel):
+    """Schema for run-rate and forecast data"""
+    average_daily_spend: float = Field(..., description="Average daily spending so far")
+    projected_month_end_expenses: float = Field(..., description="Projected total expenses for the month")
+    days_elapsed: int = Field(..., description="Number of days elapsed in the month")
+    days_remaining: int = Field(..., description="Number of days remaining in the month")
+
+
+class DaySplit(BaseModel):
+    """Schema for weekend vs weekday spending split"""
+    average_weekday_spend: float = Field(..., description="Average daily spend on weekdays")
+    average_weekend_spend: float = Field(..., description="Average daily spend on weekends")
+
+
+class CategoryConcentration(BaseModel):
+    """Schema for category concentration insights"""
+    top_3_share_pct: float = Field(..., description="Percentage share of expenses from top 3 categories")
+    top_3_categories: List[CategoryBreakdownData] = Field(..., description="Top 3 categories by spending")
+
+
+class MonthlyPeriodComparison(BaseModel):
+    """Schema for monthly period-over-period comparison"""
+    income_delta: float = Field(..., description="Absolute change in income vs previous month")
+    income_delta_pct: float = Field(..., description="Percentage change in income vs previous month")
+    expenses_delta: float = Field(..., description="Absolute change in expenses vs previous month")
+    expenses_delta_pct: float = Field(..., description="Percentage change in expenses vs previous month")
+    savings_delta: float = Field(..., description="Absolute change in savings vs previous month")
+    savings_delta_pct: float = Field(..., description="Percentage change in savings vs previous month")
+    investments_delta: float = Field(..., description="Absolute change in investments vs previous month")
+    investments_delta_pct: float = Field(..., description="Percentage change in investments vs previous month")
+    profit_delta: float = Field(..., description="Absolute change in profit vs previous month")
+    profit_delta_pct: float = Field(..., description="Percentage change in profit vs previous month")
+    cashflow_delta: float = Field(..., description="Absolute change in cashflow vs previous month")
+    cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous month")
+
+
 class MonthlyAnalyticsData(BaseModel):
     """Schema for monthly analytics data"""
     year: int = Field(..., description="Year of the analysis")
@@ -413,6 +282,13 @@ class MonthlyAnalyticsData(BaseModel):
     investments: float = Field(..., description="Total investments for the month (absolute value)")
     profit: float = Field(..., description="Calculated profit (income + expenses + investments)")
     cashflow: float = Field(..., description="Calculated cashflow (income + expenses + investments + savings)")
+    
+    # New fields
+    run_rate: RunRateForecast = Field(..., description="Run-rate and forecast data")
+    day_split: DaySplit = Field(..., description="Weekday vs Weekend spending split")
+    category_concentration: CategoryConcentration = Field(..., description="Category concentration insights")
+    comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
+    
     daily_spending_heatmap: List[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
     category_breakdown: List[CategoryBreakdownData] = Field(..., description="Breakdown by category")
     spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
@@ -445,44 +321,32 @@ class MonthlyAnalyticsData(BaseModel):
         }
 
 
-class MonthlyAnalyticsResponse(BaseModel):
-    """Response schema for monthly analytics endpoint"""
-    data: MonthlyAnalyticsData = Field(..., description="Monthly analytics data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Success message")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": {
-                    "year": 2025,
-                    "month": 1,
-                    "month_name": "January",
-                    "income": 5000.00,
-                    "expenses": 2500.00,
-                    "savings": 1000.00,
-                    "investments": 500.00,
-                    "profit": 2000.00,
-                    "cashflow": 1000.00,
-                    "daily_spending_heatmap": [
-                        {"day": "2025-01-15", "amount": 125.50}
-                    ],
-                    "category_breakdown": [
-                        {"category": "Salary", "total": 5000.00}
-                    ],
-                    "spending_type_breakdown": [
-                        {"type": "Core", "amount": 1250.00}
-                    ]
-                },
-                "success": True,
-                "message": "Monthly analytics for January 2025 retrieved successfully"
-            }
-        }
-
-
 # ================================================================================================
 #                                   Yearly Analytics Schemas
 # ================================================================================================
+
+
+class MonthMetric(BaseModel):
+    """Schema for single month metric"""
+    month: str = Field(..., description="Month name")
+    value: float = Field(..., description="Metric value")
+
+class YearlyHighlights(BaseModel):
+    """Schema for yearly highlights"""
+    highest_cashflow_month: MonthMetric = Field(..., description="Month with highest cashflow")
+    highest_expense_month: MonthMetric = Field(..., description="Month with highest expenses")
+    highest_savings_rate_month: MonthMetric = Field(..., description="Month with highest savings rate")
+
+class VolatilityMetrics(BaseModel):
+    """Schema for volatility metrics (standard deviation)"""
+    expense_volatility: float = Field(..., description="Standard deviation of monthly expenses")
+    income_volatility: float = Field(..., description="Standard deviation of monthly income")
+
+class YearlySpendingBalance(BaseModel):
+    """Schema for yearly spending balance"""
+    core_share_pct: float = Field(..., description="Share of Core expenses (%)")
+    fun_share_pct: float = Field(..., description="Share of Fun expenses (%)")
+    future_share_pct: float = Field(..., description="Share of Future expenses (%)")
 
 class YearlyAnalyticsData(BaseModel):
     """Schema for yearly analytics data"""
@@ -498,6 +362,12 @@ class YearlyAnalyticsData(BaseModel):
     net_cash_flow: float = Field(..., description="Net cash flow")
     savings_rate: float = Field(..., description="Savings rate as percentage of income")
     investment_rate: float = Field(..., description="Investment rate as percentage of income")
+    
+    # New fields
+    highlights: YearlyHighlights = Field(..., description="Yearly highlights")
+    volatility: VolatilityMetrics = Field(..., description="Volatility metrics")
+    spending_balance: YearlySpendingBalance = Field(..., description="Spending balance summary")
+    
     months: List[str] = Field(..., description="Month names")
     monthly_income: List[float] = Field(..., description="Monthly income amounts")
     monthly_expense: List[float] = Field(..., description="Monthly expense amounts")
@@ -558,13 +428,6 @@ class YearlyAnalyticsData(BaseModel):
         }
 
 
-class YearlyAnalyticsResponse(BaseModel):
-    """Response schema for yearly analytics endpoint"""
-    data: YearlyAnalyticsData = Field(..., description="Yearly analytics data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-
 class EmergencyFundData(BaseModel):
     """Schema for emergency fund analysis data"""
     year: int = Field(..., description="Year of the analysis")
@@ -589,179 +452,6 @@ class EmergencyFundData(BaseModel):
                     "Utilities": 4000.00
                 },
                 "months_analyzed": 12
-            }
-        }
-
-
-class EmergencyFundResponse(BaseModel):
-    """Response schema for emergency fund analysis endpoint"""
-    data: EmergencyFundData = Field(..., description="Emergency fund analysis data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-
-# ================================================================================================
-#                                   Error Schemas
-# ================================================================================================
-
-# TODO: Define error schemas for consistent error responses
-
-# ================================================================================================
-#                                   Message Schemas
-# ================================================================================================
-
-class AccountSuccessResponse(BaseModel):
-    """Response schema for account creation endpoint"""
-    success: bool = Field(..., description="Indicates if the account creation was successful")
-    message: str = Field(..., description="Success message for account creation")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "Account created successfully"
-            }
-        }
-
-class LoginResponse(BaseModel):
-    """Response schema for login endpoint"""
-    access_token: str = Field(..., description="Access token for authenticated requests")
-    refresh_token: str = Field(..., description="Refresh token for obtaining new access tokens")
-    user_id: str = Field(..., description="ID of the authenticated user")
-    data: dict[Any, Any] = Field(..., description="Login response data containing user and session info")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "access_token": "access_token_value",
-                "refresh_token": "refresh_token_value",
-                "user_id": "user123",
-                "data": {
-                    "user": {
-                        "id": "user123",
-                        "email": "user@example.com"
-                    },
-                    "session": {
-                        "access_token": "access_token_value",
-                        "refresh_token": "refresh_token_value"
-                    }
-                }
-            }
-        }
-
-
-# ================================================================================================
-#                                   Transactions Schemas
-# ================================================================================================
-
-class TransactionsResponse(BaseModel):
-    """Response schema for transactions list endpoint"""
-    data: List[TransactionData] = Field(..., description="List of transaction records")
-    count: int = Field(..., description="Total number of records returned")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "id_pk": "1",
-                        "user_id_fk": "user123",
-                        "account_id_fk": "acc456",
-                        "category_id_fk": 2,
-                        "amount": 49.99,
-                        "date": "2025-01-15",
-                        "notes": "Weekly grocery shopping",
-                        "created_at": "2025-01-15T10:30:00Z",
-                        "savings_fund_id_fk": None
-                    }
-                ],
-                "count": 1,
-                "success": True,
-                "message": "Transactions retrieved successfully"
-            }
-        }
-
-
-class TransactionSuccessResponse(BaseModel):
-    """Response schema for transaction create/update/delete operations"""
-    success: bool = Field(..., description="Indicates if the operation was successful")
-    message: str = Field(..., description="Success/error message")
-    data: Optional[List[TransactionData]] = Field(None, description="Transaction data if applicable")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "Transaction created successfully",
-                "data": [
-                    {
-                        "id_pk": "1",
-                        "user_id_fk": "user123",
-                        "account_id_fk": "acc456",
-                        "category_id_fk": 2,
-                        "amount": 49.99,
-                        "date": "2025-01-15",
-                        "notes": "Weekly grocery shopping",
-                        "created_at": "2025-01-15T10:30:00Z",
-                        "savings_fund_id_fk": None
-                    }
-                ]
-            }
-        }
-
-
-# ================================================================================================
-#                                   Savings Funds Schemas
-# ================================================================================================
-
-class SavingsFundsResponse(BaseModel):
-    """Response schema for savings funds list endpoint"""
-    data: List[SavingsFundsData] = Field(..., description="List of savings fund records")
-    count: int = Field(..., description="Total number of records returned")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "savings_funds_id_pk": "123aaa",
-                        "user_id_fk": "456user",
-                        "fund_name": "Emergency Fund",
-                        "target_amount": 5000,
-                        "created_at": "2025-01-15T10:30:00Z"
-                    }
-                ],
-                "count": 1,
-                "success": True,
-                "message": "Savings funds retrieved successfully"
-            }
-        }
-
-
-class SavingsFundSuccessResponse(BaseModel):
-    """Response schema for savings fund create/update/delete operations"""
-    success: bool = Field(..., description="Indicates if the operation was successful")
-    message: str = Field(..., description="Success/error message")
-    data: Optional[List[SavingsFundsData]] = Field(None, description="Savings fund data if applicable")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "Savings fund created successfully",
-                "data": [
-                    {
-                        "savings_funds_id_pk": "123aaa",
-                        "user_id_fk": "456user",
-                        "fund_name": "Emergency Fund",
-                        "target_amount": 5000,
-                        "created_at": "2025-01-15T10:30:00Z"
-                    }
-                ]
             }
         }
 
@@ -832,25 +522,5 @@ class ProfileData(BaseModel):
                 "last_sign_in_at": "2025-01-20T14:00:00Z",
                 "app_metadata": {},
                 "user_metadata": {"full_name": "John Doe"}
-            }
-        }
-
-
-class ProfileResponse(BaseModel):
-    """Response schema for profile endpoint"""
-    data: ProfileData = Field(..., description="User profile data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": {
-                    "id": "user123",
-                    "email": "user@example.com",
-                    "role": "authenticated"
-                },
-                "success": True,
-                "message": "Profile retrieved successfully"
             }
         }

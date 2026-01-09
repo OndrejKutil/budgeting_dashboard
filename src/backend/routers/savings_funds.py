@@ -19,12 +19,9 @@ from ..data.database import get_db_client
 
 # schemas
 from ..helper.columns import SAVINGS_FUNDS_COLUMNS, TRANSACTIONS_COLUMNS
-from ..schemas.endpoint_schemas import (
-    SavingsFundsData,
-    SavingsFundsRequest,
-    SavingsFundsResponse,
-    SavingsFundSuccessResponse
-)
+from ..schemas.base import SavingsFundsData
+from ..schemas.requests import SavingsFundsRequest
+from ..schemas.responses import SavingsFundsResponse, SavingsFundSuccessResponse
 from ..helper.calculations import savings_funds_calc
 
 # other

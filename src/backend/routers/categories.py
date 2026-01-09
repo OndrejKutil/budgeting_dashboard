@@ -19,7 +19,8 @@ from ..data.database import get_db_client
 
 # helper
 from ..helper.columns import CATEGORIES_COLUMNS
-from ..schemas.endpoint_schemas import CategoriesResponse, CategoryData
+from ..schemas.base import CategoryData
+from ..schemas.responses import CategoriesResponse
 
 # other
 from typing import Optional

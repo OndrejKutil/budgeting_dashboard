@@ -1,20 +1,26 @@
+
 # imports
 import calendar
 import logging
-from datetime import date
-from typing import List
+from datetime import date, timedelta
+from typing import List, Tuple, Dict
 from pydantic import BaseModel, Field
 
 from ..columns import TRANSACTIONS_COLUMNS
 from ...data.database import get_db_client
 import polars as pl
+from dateutil.relativedelta import relativedelta
 
 # schemas
-from ...schemas.endpoint_schemas import (
+from ...schemas.base import (
     MonthlyAnalyticsData,
     DailySpendingData,
     CategoryBreakdownData,
-    SpendingTypeBreakdownData
+    SpendingTypeBreakdownData,
+    RunRateForecast,
+    DaySplit,
+    CategoryConcentration,
+    MonthlyPeriodComparison
 )
 
 
@@ -43,13 +49,6 @@ class MonthlyTotals(BaseModel):
 def _get_month_date_range(year: int, month: int) -> tuple[date, date]:
     """
     Get the start and end dates for a specific month.
-    
-    Args:
-        year: Year for the date range
-        month: Month for the date range (1-12)
-    
-    Returns:
-        Tuple of (start_date, end_date)
     """
     start_date = date(year, month, 1)
     last_day = calendar.monthrange(year, month)[1]
@@ -60,20 +59,7 @@ def _get_month_date_range(year: int, month: int) -> tuple[date, date]:
 def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: date) -> List[dict]:
     """
     Fetch transactions from the database for a specific date range.
-    
-    Args:
-        access_token: User's access token for database authentication
-        start_date: Start date for the query
-        end_date: End date for the query
-    
-    Returns:
-        List of transaction dictionaries with category data
-    
-    Raises:
-        EnvironmentError: If environment variables are not set
-        ConnectionError: If database query fails
     """
-
     try:
         user_supabase_client = get_db_client(access_token)
         
@@ -97,12 +83,6 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
 def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
     Convert raw transaction data to a prepared polars DataFrame.
-    
-    Args:
-        transactions: List of transaction dictionaries from database
-    
-    Returns:
-        Prepared DataFrame with normalized columns and derived fields
     """
     if not transactions:
         return pl.DataFrame({
@@ -117,54 +97,29 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         })
 
     # Polars unnest logic
-    # First create DF from list of dicts. Nested dicts become Structs.
     df = pl.from_dicts(transactions)
-    
-    # Check if 'categories' or 'dim_categories' exists. 
-    # The Supabase query returns 'dim_categories' (aliased or not?).
-    # In pandas json_normalize it flattened categories.*
-    # Here we should look for the struct column.
-    
-    # Note: The fetch function selects 'dim_categories(*)'.
-    # If the response has 'dim_categories' as a key.
     
     struct_col = None
     if 'dim_categories' in df.columns:
         struct_col = 'dim_categories'
-    elif 'categories' in df.columns: # fallback if alias used
+    elif 'categories' in df.columns:
         struct_col = 'categories'
         
     if struct_col:
-        # Rename colliding columns in the struct (like created_at) to avoid DuplicateError
         existing_cols = set(df.columns)
-        
-        # Get struct fields to generate new names
         struct_dtype = df.schema[struct_col]
-        # Depending on polars version, struct fields access varies
-        # We try to get field names safely
         field_names = []
-        if hasattr(struct_dtype, 'fields'): # Recent polars
+        if hasattr(struct_dtype, 'fields'):
              field_names = [f.name for f in struct_dtype.fields]
         elif hasattr(struct_dtype, 'to_schema'):
              field_names = list(struct_dtype.to_schema().keys())
-        
-        # fallback if we can't get names (shouldn't happen with standard polars)
+             
         if field_names:
             new_names = [f"{struct_col}_{x}" if x in existing_cols else x for x in field_names]
-            
             df = df.with_columns(
                 pl.col(struct_col).struct.rename_fields(new_names)
             )
-            
-        # Unnest the struct
         df = df.unnest(struct_col)
-    
-    # Rename columns if needed. 
-    # After unnest, if 'type', 'category_name', 'spending_type' were in the struct, they are now columns.
-    # If there were name collisions, Polars might handle them or we need to check.
-    # Assuming 'categories' struct had 'type', 'category_name', 'spending_type'.
-    
-    # Required columns and filling nulls
     
     # Helper to safe add column if missing
     def safe_with_column(df, name, default, dtype):
@@ -177,10 +132,7 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'type', '', pl.Utf8)
     df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
-    df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8) # Original was savings_fund_id
-    
-    # Rename to match internal logic expectations
-    # pandas code mapped: 'categories.type' -> 'category_type'
+    df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8)
     
     rename_map = {}
     if 'type' in df.columns: rename_map['type'] = 'category_type'
@@ -197,8 +149,6 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     ])
     
     # Derived columns
-    # date is string YYYY-MM-DD
-    
     df = df.with_columns([
         pl.col('date').str.to_date().alias('date_parsed'),
         pl.col('amount').abs().alias('abs_amount')
@@ -210,12 +160,6 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
 def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
     """
     Calculate all monthly financial totals from the transactions DataFrame.
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        MonthlyTotals dataclass with all calculated values
     """
     if df.is_empty():
         return MonthlyTotals(income=0.0, expenses=0.0, savings=0.0, investments=0.0, profit=0.0, cashflow=0.0)
@@ -246,16 +190,148 @@ def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
         cashflow=round(cashflow, 2)
     )
 
+def _calculate_run_rate(df: pl.DataFrame, year: int, month: int) -> RunRateForecast:
+    """
+    Calculate daily run-rate and month-end forecast.
+    """
+    total_days = calendar.monthrange(year, month)[1]
+    today = date.today()
+    
+    # If analyzing past month, full duration. If current month, partial.
+    if year < today.year or (year == today.year and month < today.month):
+        days_elapsed = total_days
+    elif year == today.year and month == today.month:
+        days_elapsed = today.day
+    else:
+        days_elapsed = 0 # Future month
+        
+    days_remaining = total_days - days_elapsed
+    
+    # Calculate expenses so far
+    expenses_so_far = 0.0
+    if not df.is_empty():
+         expenses_so_far = df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
+    
+    avg_daily = 0.0
+    if days_elapsed > 0:
+        avg_daily = expenses_so_far / days_elapsed
+        
+    projected = expenses_so_far + (avg_daily * days_remaining)
+    
+    return RunRateForecast(
+        average_daily_spend=round(avg_daily, 2),
+        projected_month_end_expenses=round(projected, 2),
+        days_elapsed=days_elapsed,
+        days_remaining=days_remaining
+    )
+
+def _calculate_day_split(df: pl.DataFrame) -> DaySplit:
+    """
+    Calculate average spending on weekdays vs weekends.
+    """
+    if df.is_empty():
+        return DaySplit(average_weekday_spend=0.0, average_weekend_spend=0.0)
+        
+    expenses = df.filter(pl.col('category_type') == 'expense')
+    if expenses.is_empty():
+        return DaySplit(average_weekday_spend=0.0, average_weekend_spend=0.0)
+    
+    # Extract weekday: 1 (Mon) - 7 (Sun)
+    # Polars dt.weekday(): 1=Mon, 7=Sun
+    expenses = expenses.with_columns(
+        pl.col('date_parsed').dt.weekday().alias('weekday_iso')
+    )
+    
+    # Weekday: 1-5, Weekend: 6-7
+    weekday_exp = expenses.filter(pl.col('weekday_iso') <= 5)
+    weekend_exp = expenses.filter(pl.col('weekday_iso') >= 6)
+    
+    # We need unique dates with spending to calculate valid average
+    # Or should we divide by total weekdays/weekends in that period?
+    # Simple approach: sum / count of days *with transactions* OR sum / count of distinct dates found
+    # Better: sum / count of distinct dates where spending happened.
+    # If we want true daily average including zero days, we'd need to know the full date range range.
+    # Let's use count of days in the DF for now, as filling zeros is complex without generating date range series.
+    # Actually, simpler metrics are usually just average of spend days.
+    
+    def calc_avg(sub_df):
+        if sub_df.is_empty(): return 0.0
+        total = sub_df.select(pl.col('abs_amount').sum()).item() or 0.0
+        # Count unique days
+        n_days = sub_df.select(pl.col('date_parsed').n_unique()).item()
+        return total / n_days if n_days > 0 else 0.0
+        
+    avg_weekday = calc_avg(weekday_exp)
+    avg_weekend = calc_avg(weekend_exp)
+    
+    return DaySplit(
+        average_weekday_spend=round(avg_weekday, 2),
+        average_weekend_spend=round(avg_weekend, 2)
+    )
+
+def _calculate_concentration(df: pl.DataFrame) -> CategoryConcentration:
+    """
+    Calculate share of top 3 categories.
+    """
+    if df.is_empty():
+        return CategoryConcentration(top_3_share_pct=0.0, top_3_categories=[])
+        
+    expenses = df.filter(pl.col('category_type') == 'expense')
+    total_expenses = expenses.select(pl.col('abs_amount').sum()).item() or 0.0
+    
+    if total_expenses == 0:
+         return CategoryConcentration(top_3_share_pct=0.0, top_3_categories=[])
+         
+    cat_breakdown = (
+        expenses.group_by('category_name')
+        .agg(pl.col('abs_amount').sum().alias('total'))
+        .sort('total', descending=True)
+        .head(3)
+    )
+    
+    top_3_sum = cat_breakdown.select(pl.col('total').sum()).item() or 0.0
+    share_pct = (top_3_sum / total_expenses) * 100
+    
+    top_cats = [
+        CategoryBreakdownData(category=row['category_name'], total=round(row['total'], 2))
+        for row in cat_breakdown.iter_rows(named=True)
+    ]
+    
+    return CategoryConcentration(
+        top_3_share_pct=round(share_pct, 1),
+        top_3_categories=top_cats
+    )
+
+def _calculate_comparison(current: MonthlyTotals, previous: MonthlyTotals) -> MonthlyPeriodComparison:
+    """
+    Calculate month-over-month comparison.
+    """
+    def delta(curr, prev):
+        return round(curr - prev, 2)
+    
+    def delta_pct(curr, prev):
+        if prev == 0:
+            return 0.0 if curr == 0 else 100.0
+        return round(((curr - prev) / abs(prev)) * 100, 1)
+        
+    return MonthlyPeriodComparison(
+        income_delta=delta(current.income, previous.income),
+        income_delta_pct=delta_pct(current.income, previous.income),
+        expenses_delta=delta(current.expenses, previous.expenses),
+        expenses_delta_pct=delta_pct(current.expenses, previous.expenses),
+        savings_delta=delta(current.savings, previous.savings),
+        savings_delta_pct=delta_pct(current.savings, previous.savings),
+        investments_delta=delta(current.investments, previous.investments),
+        investments_delta_pct=delta_pct(current.investments, previous.investments),
+        profit_delta=delta(current.profit, previous.profit),
+        profit_delta_pct=delta_pct(current.profit, previous.profit),
+        cashflow_delta=delta(current.cashflow, previous.cashflow),
+        cashflow_delta_pct=delta_pct(current.cashflow, previous.cashflow)
+    )
 
 def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingData]:
     """
     Calculate daily spending amounts for heatmap visualization.
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        List of DailySpendingData objects with day and amount
     """
     if df.is_empty():
         return []
@@ -268,7 +344,6 @@ def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingDat
     )
     
     result = []
-    # iter_rows usually returns tuple values
     for row in daily_spending.iter_rows(named=True):
         if row['date_parsed']:
             result.append(
@@ -283,12 +358,6 @@ def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingDat
 def _calculate_category_breakdown(df: pl.DataFrame) -> List[CategoryBreakdownData]:
     """
     Calculate spending breakdown by category (expenses only).
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        List of CategoryBreakdownData objects with category name and total
     """
     if df.is_empty():
         return []
@@ -314,20 +383,11 @@ def _calculate_category_breakdown(df: pl.DataFrame) -> List[CategoryBreakdownDat
 def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBreakdownData]:
     """
     Calculate spending breakdown by spending type (Core, Necessary, Fun, Future).
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        List of SpendingTypeBreakdownData objects with type and amount
     """
     if df.is_empty():
         return []
 
     breakdown = []
-    
-    # Define spending types and their filters in a list of tuples (name, expression)
-    # Using expressions directly
     
     configs = [
         ('Core', (pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core')),
@@ -338,7 +398,6 @@ def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBre
     
     for type_name, condition in configs:
         amount = df.filter(condition).select(pl.col('abs_amount').sum()).item()
-        # amount can be None if filter is empty in some polars versions or 0.0
         if amount and amount > 0:
             breakdown.append(
                 SpendingTypeBreakdownData(
@@ -357,42 +416,35 @@ def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBre
 def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnalyticsData:
     """
     Calculate comprehensive monthly analytics for a specific month and year.
-    
-    This function orchestrates the monthly analytics calculation by:
-    1. Fetching transactions from the database
-    2. Preparing the data in a DataFrame
-    3. Calculating various metrics and breakdowns
-    
-    Important: Expenses, savings, and investments are stored as negative numbers in the database.
-    We use absolute values for display purposes and simple addition for calculations since 
-    the negative signs are already embedded in the stored amounts.
-    
-    Args:
-        access_token: User's access token for database authentication
-        year: Year for the analysis
-        month: Month for the analysis (1-12)
-    
-    Returns:
-        MonthlyAnalyticsData containing all calculated analytics
-    
-    Raises:
-        EnvironmentError: If environment variables are not set
-        ConnectionError: If database query fails
     """
-    # Get date range for the month
+    # 1. Get dates for current month
     start_date, end_date = _get_month_date_range(year, month)
     
-    # Fetch transactions from database
-    transactions = _fetch_monthly_transactions(access_token, start_date, end_date)
+    # 2. Get dates for previous month
+    prev_date = start_date - relativedelta(months=1)
+    prev_year, prev_month = prev_date.year, prev_date.month
+    prev_start_date, prev_end_date = _get_month_date_range(prev_year, prev_month)
     
-    # Prepare DataFrame for calculations
-    df = _prepare_transactions_dataframe(transactions)
+    # 3. Fetch data
+    current_transactions = _fetch_monthly_transactions(access_token, start_date, end_date)
+    previous_transactions = _fetch_monthly_transactions(access_token, prev_start_date, prev_end_date)
     
-    # Calculate all metrics
-    totals = _calculate_monthly_totals(df)
-    daily_heatmap = _calculate_daily_spending_heatmap(df)
-    category_breakdown = _calculate_category_breakdown(df)
-    spending_type_breakdown = _calculate_spending_type_breakdown(df)
+    # 4. Prepare DFs
+    current_df = _prepare_transactions_dataframe(current_transactions)
+    previous_df = _prepare_transactions_dataframe(previous_transactions)
+    
+    # 5. Calculate Metrics
+    totals = _calculate_monthly_totals(current_df)
+    prev_totals = _calculate_monthly_totals(previous_df)
+    
+    run_rate = _calculate_run_rate(current_df, year, month)
+    day_split = _calculate_day_split(current_df)
+    concentration = _calculate_concentration(current_df)
+    comparison = _calculate_comparison(totals, prev_totals)
+    
+    daily_heatmap = _calculate_daily_spending_heatmap(current_df)
+    category_breakdown = _calculate_category_breakdown(current_df)
+    spending_type_breakdown = _calculate_spending_type_breakdown(current_df)
 
     return MonthlyAnalyticsData(
         year=year,
@@ -404,6 +456,10 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
         investments=totals.investments,
         profit=totals.profit,
         cashflow=totals.cashflow,
+        run_rate=run_rate,
+        day_split=day_split,
+        category_concentration=concentration,
+        comparison=comparison,
         daily_spending_heatmap=daily_heatmap,
         category_breakdown=category_breakdown,
         spending_type_breakdown=spending_type_breakdown

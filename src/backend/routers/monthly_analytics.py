@@ -13,7 +13,8 @@ from ..helper import environment as env
 from ..helper.calculations.monthly_page_calc import _monthly_analytics
 
 # schemas
-from ..schemas.endpoint_schemas import MonthlyAnalyticsResponse, MonthlyAnalyticsData
+from ..schemas.base import MonthlyAnalyticsData
+from ..schemas.responses import MonthlyAnalyticsResponse
 
 # logging
 import logging

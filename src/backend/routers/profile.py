@@ -18,10 +18,8 @@ import logging
 from ..data.database import get_db_client
 
 # schemas
-from ..schemas.endpoint_schemas import (
-    ProfileResponse,
-    ProfileData
-)
+from ..schemas.base import ProfileData
+from ..schemas.responses import ProfileResponse
 
 # helper
 from ..helper.calculations.profile_page_calc import _build_profile_data

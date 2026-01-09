@@ -18,7 +18,7 @@ import logging
 from ..data.database import get_db_client, Client
 
 # schemas
-from ..schemas.endpoint_schemas import RefreshTokenResponse
+from ..schemas.responses import RefreshTokenResponse
 
 
 # ================================================================================================

@@ -1,15 +1,23 @@
+
 # imports
 import logging
-from datetime import date
-from typing import List, Dict, Optional
+from datetime import date, timedelta
+from typing import List, Dict, Optional, Tuple
+from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from ..columns import TRANSACTIONS_COLUMNS
 from ...data.database import get_db_client
 import polars as pl
+from dateutil.relativedelta import relativedelta
 
 # schemas
-from ...schemas.endpoint_schemas import SummaryData
+from ...schemas.base import (
+    SummaryData, 
+    PeriodComparison, 
+    CategoryInsight, 
+    TransactionData
+)
 
 
 # Create logger for this module
@@ -34,6 +42,56 @@ class SummaryTotals(BaseModel):
 #                                   Helper Functions
 # ================================================================================================
 
+def _get_previous_period_dates(start_date: Optional[date], end_date: Optional[date]) -> Tuple[date, date]:
+    """
+    Calculate the start and end dates for the previous period.
+    Defaults to previous month if dates are not provided.
+    
+    Args:
+        start_date: Current period start date
+        end_date: Current period end date
+        
+    Returns:
+        Tuple of (prev_start_date, prev_end_date)
+    """
+    today = date.today()
+    
+    # Default to current month if no dates provided
+    if not start_date:
+        start_date = today.replace(day=1)
+    if not end_date:
+        # End of current month
+        next_month = start_date + relativedelta(months=1)
+        end_date = next_month - timedelta(days=1)
+        
+    # Calculate duration
+    duration = (end_date - start_date).days + 1
+    
+    # Logic for "previous period"
+    # If it looks like a full month (approx 28-31 days), compare to previous month
+    # Otherwise compare to immediate previous timeframe of same duration
+    
+    is_full_month = False
+    if start_date.day == 1:
+        # Check if end_date is last day of month
+        next_month_of_start = start_date + relativedelta(months=1)
+        last_day = next_month_of_start - timedelta(days=1)
+        if end_date == last_day:
+            is_full_month = True
+            
+    if is_full_month:
+        # Previous month
+        prev_start = start_date - relativedelta(months=1)
+        # End of previous month
+        prev_end = start_date - timedelta(days=1)
+        return prev_start, prev_end
+    else:
+        # Shift back by duration
+        prev_end = start_date - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=duration - 1)
+        return prev_start, prev_end
+
+
 def _fetch_summary_transactions(
     access_token: str, 
     start_date: Optional[date], 
@@ -41,20 +99,7 @@ def _fetch_summary_transactions(
 ) -> List[dict]:
     """
     Fetch transactions from the database with optional date filtering.
-    
-    Args:
-        access_token: User's access token for database authentication
-        start_date: Optional start date for filtering
-        end_date: Optional end date for filtering
-    
-    Returns:
-        List of transaction dictionaries with category data
-    
-    Raises:
-        EnvironmentError: If environment variables are not set
-        ConnectionError: If database query fails
     """
-
     try:
         user_supabase_client = get_db_client(access_token)
         
@@ -84,12 +129,6 @@ def _fetch_summary_transactions(
 def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
     Convert raw transaction data to a prepared polars DataFrame.
-    
-    Args:
-        transactions: List of transaction dictionaries from database
-    
-    Returns:
-        Prepared DataFrame with normalized columns and derived fields
     """
     if not transactions:
         return pl.DataFrame({
@@ -99,7 +138,9 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
             'category_name': pl.Series(dtype=pl.Utf8),
             'spending_type': pl.Series(dtype=pl.Utf8),
             'savings_funds': pl.Series(dtype=pl.Utf8),
-            'abs_amount': pl.Series(dtype=pl.Float64)
+            'abs_amount': pl.Series(dtype=pl.Float64),
+            'notes': pl.Series(dtype=pl.Utf8),
+            'account_id_fk': pl.Series(dtype=pl.Utf8)
         })
 
     # Polars unnest logic
@@ -139,6 +180,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
     df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8)
+    df = safe_with_column(df, 'notes', '', pl.Utf8)
+    df = safe_with_column(df, 'account_id_fk', '', pl.Utf8)
     
     rename_map = {}
     if 'type' in df.columns: rename_map['type'] = 'category_type'
@@ -151,7 +194,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         pl.col('category_type').fill_null(''),
         pl.col('category_name').fill_null('Unknown Category'),
         pl.col('spending_type').fill_null(''),
-        pl.col('amount').cast(pl.Float64).fill_null(0.0)
+        pl.col('amount').cast(pl.Float64).fill_null(0.0),
+        pl.col('notes').fill_null('')
     ])
     
     # Derived column
@@ -165,12 +209,6 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
 def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:
     """
     Calculate financial summary totals from the transactions DataFrame.
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        SummaryTotals with all calculated values
     """
     if df.is_empty():
         return SummaryTotals()
@@ -201,19 +239,185 @@ def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:
         net_cash_flow=round(net_cash_flow, 2)
     )
 
+def _calculate_period_comparison(current: SummaryTotals, previous: SummaryTotals) -> PeriodComparison:
+    """
+    Calculate period-over-period comparison metrics.
+    """
+    def calc_delta(curr, prev):
+        return round(curr - prev, 2)
+        
+    def calc_pct(curr, prev):
+        if prev == 0:
+            return 0.0 if curr == 0 else 100.0 # or some other indicator for infinite growth
+        return round(((curr - prev) / abs(prev)) * 100, 1)
+
+    return PeriodComparison(
+        income_delta=calc_delta(current.income, previous.income),
+        income_delta_pct=calc_pct(current.income, previous.income),
+        expense_delta=calc_delta(current.expense, previous.expense),
+        expense_delta_pct=calc_pct(current.expense, previous.expense),
+        saving_delta=calc_delta(current.saving, previous.saving),
+        investment_delta=calc_delta(current.investment, previous.investment),
+        profit_delta=calc_delta(current.profit, previous.profit),
+        cashflow_delta=calc_delta(current.net_cash_flow, previous.net_cash_flow)
+    )
+
+def _get_top_expenses(df: pl.DataFrame) -> List[CategoryInsight]:
+    """
+    Get top 3 expense categories by total amount.
+    """
+    if df.is_empty():
+        return []
+        
+    expense_df = df.filter(pl.col('category_type') == 'expense')
+    if expense_df.is_empty():
+        return []
+        
+    total_expense = expense_df.select(pl.col('abs_amount').sum()).item() or 0.0
+    if total_expense == 0:
+        return []
+
+    # Group by category
+    top_cats = (
+        expense_df.group_by('category_name')
+        .agg(pl.col('abs_amount').sum().alias('total'))
+        .sort('total', descending=True)
+        .head(3)
+    )
+    
+    results = []
+    for row in top_cats.iter_rows(named=True):
+        share = (row['total'] / total_expense) * 100
+        results.append(CategoryInsight(
+            name=row['category_name'],
+            total=round(row['total'], 2),
+            share_of_total=round(share, 1)
+        ))
+        
+    return results
+
+def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> Optional[CategoryInsight]:
+    """
+    Identify the category with the largest absolute change in spending (increase or decrease).
+    """
+    # Helper to aggregate expenses by category
+    def agg_expenses(df):
+        if df.is_empty(): return pl.DataFrame({'category_name': [], 'total': []})
+        return (
+            df.filter(pl.col('category_type') == 'expense')
+            .group_by('category_name')
+            .agg(pl.col('abs_amount').sum().alias('total'))
+        )
+
+    curr_agg = agg_expenses(current_df)
+    prev_agg = agg_expenses(previous_df)
+    
+    if curr_agg.is_empty() and prev_agg.is_empty():
+        return None
+        
+    # Join on category name. We need outer join to capture new categories or dropped ones.
+    # Polars join only supports left, right, inner, outer, cross, anti, semi, asof
+    
+    # Simple approach: convert to dicts and compare in python or use join
+    # Using join for robustness
+    
+    # Rename for join
+    curr_agg = curr_agg.rename({'total': 'curr_total'})
+    prev_agg = prev_agg.rename({'total': 'prev_total'})
+    
+    joined = curr_agg.join(prev_agg, on='category_name', how='full', coalesce=True)
+    
+    # Fill nulls
+    joined = joined.with_columns([
+        pl.col('curr_total').fill_null(0.0),
+        pl.col('prev_total').fill_null(0.0)
+    ])
+    
+    # Calculate delta
+    joined = joined.with_columns(
+        (pl.col('curr_total') - pl.col('prev_total')).alias('delta')
+    )
+    
+    if joined.is_empty():
+        return None
+        
+    # Find max absolute delta
+    # Sort by absolute delta desc
+    biggest = joined.sort(pl.col('delta').abs(), descending=True).row(0, named=True)
+    
+    # Should we return the details of the 'current' period for this category?
+    # The requirement says: "name + total + share of total expenses" (implied format for insights, though 'biggest mover' might just need name & delta)
+    # The schema for CategoryInsight has name, total, share.
+    # Let's interpret: Total = current total, Share = current share.
+    
+    current_total_expenses = current_df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
+    
+    share = 0.0
+    if current_total_expenses > 0:
+        share = (biggest['curr_total'] / current_total_expenses) * 100
+        
+    return CategoryInsight(
+        name=biggest['category_name'],
+        total=round(biggest['curr_total'], 2), # Showing current spending
+        share_of_total=round(share, 1)
+    )
+
+def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> List[TransactionData]:
+    """
+    Get list of largest transactions by amount.
+    """
+    if df.is_empty():
+        return []
+        
+    # Filter out income? Typically largest transactions of interest are expenses.
+    # But request says "Largest transactions list", amount.
+    # Usually people want to see big expenses. Let's filter for expenses only.
+    expenses = df.filter(pl.col('category_type') == 'expense')
+    
+    if expenses.is_empty():
+        return []
+        
+    top_tx = expenses.sort(pl.col('abs_amount'), descending=True).head(limit)
+    
+    results = []
+    for row in top_tx.iter_rows(named=True):
+        # Map back to TransactionData schema
+        # Note: df has flattened/renamed columns. We need to reconstruct or just use what we have.
+        # TransactionData requires fields like id, etc.
+        # _prepare_transactions_dataframe keeps original fields if they were in input dicts?
+        # It unnests struct_col but might lose some if not careful.
+        # Let's check _prepare... it safely adds missing columns but doesn't drop others unless strict.
+        # It does `df.select`? No, it uses `with_columns` and `rename`. So all original cols should be there.
+        
+        # We need to ensure we populate fields required by TransactionData
+        # id_pk, user_id_fk, account_id_fk, category_id_fk, amount, date, notes, etc.
+        
+        # In prepared DF, we might have renamed things.
+        # We need to map them back.
+        
+        # Assuming we can just pull them.
+        # We need to be careful about strict schema validation.
+        # Let's do best effort mapping.
+        
+        tx_data = TransactionData(
+            id_pk=str(row.get('id_pk', '')) if row.get('id_pk') else None,
+            user_id_fk=str(row.get('user_id_fk', '')) if row.get('user_id_fk') else None,
+            account_id_fk=str(row.get('account_id_fk', '')),
+            category_id_fk=int(row.get('category_id_fk', 0)),
+            amount=Decimal(str(row.get('amount', 0))), # Original signed amount
+            date=date.fromisoformat(row['date']) if row.get('date') else date.today(),
+            notes=row.get('notes'),
+            created_at=None, # Optional
+            savings_fund_id_fk=row.get('savings_funds')
+        )
+        results.append(tx_data)
+        
+    return results
+
 
 def _calculate_category_breakdown(df: pl.DataFrame) -> Dict[str, float]:
     """
     Calculate breakdown of amounts by category, sorted by category type and amount.
-    
-    Categories are sorted in order: income, expenses, savings, investments.
-    Within each type, they are sorted by absolute amount descending.
-    
-    Args:
-        df: Prepared transactions DataFrame (Polars)
-    
-    Returns:
-        Dictionary mapping category names to their total amounts
     """
     if df.is_empty():
         return {}
@@ -226,23 +430,6 @@ def _calculate_category_breakdown(df: pl.DataFrame) -> Dict[str, float]:
     
     if category_totals.is_empty():
         return {}
-    
-    # We need to sort by type (specific order) and then amount descending (abs)
-    # Mapping type to priority index
-    # income: 0, expense: 1, saving: 2, investment: 3
-    
-    def type_priority(t):
-        if t == 'income': return 0
-        if t == 'expense': return 1
-        if t == 'saving': return 2
-        if t == 'investment': return 3
-        return 4
-        
-    # Polars doesn't have custom sort key easily in eager mode like python sort, 
-    # but we can add conditional column or use python logic on the result since it's small.
-    # Actually, we can just split and sort like original code or use Polars expressions.
-    
-    # Easier to replicate original logic: specific order of types.
     
     result_dict = {}
     
@@ -259,6 +446,46 @@ def _calculate_category_breakdown(df: pl.DataFrame) -> Dict[str, float]:
     return result_dict
 
 
+def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> SummaryData:
+    """
+    Internal calculation logic separated from IO.
+    """
+    current_totals = _calculate_summary_totals(current_df)
+    previous_totals = _calculate_summary_totals(previous_df)
+    
+    comparison = _calculate_period_comparison(current_totals, previous_totals)
+    
+    # Rates
+    savings_rate = 0.0
+    if current_totals.income > 0:
+        savings_rate = round((current_totals.saving / current_totals.income) * 100, 1)
+        
+    investment_rate = 0.0
+    if current_totals.income > 0:
+        investment_rate = round((current_totals.investment / current_totals.income) * 100, 1)
+        
+    by_category = _calculate_category_breakdown(current_df)
+    top_expenses = _get_top_expenses(current_df)
+    biggest_mover = _get_biggest_mover(current_df, previous_df)
+    largest_transactions = _get_largest_transactions(current_df)
+    
+    return SummaryData(
+        total_income=current_totals.income,
+        total_expense=current_totals.expense,
+        total_saving=current_totals.saving,
+        total_investment=current_totals.investment,
+        profit=current_totals.profit,
+        net_cash_flow=current_totals.net_cash_flow,
+        comparison=comparison,
+        savings_rate=savings_rate,
+        investment_rate=investment_rate,
+        top_expenses=top_expenses,
+        biggest_mover=biggest_mover,
+        largest_transactions=largest_transactions,
+        by_category=by_category
+    )
+
+
 # ================================================================================================
 #                                   Main Summary Function
 # ================================================================================================
@@ -270,43 +497,29 @@ def _summary_calc(
 ) -> SummaryData:
     """
     Calculate financial summary for the specified date range.
-    
-    This function orchestrates the summary calculation by:
-    1. Fetching transactions from the database
-    2. Preparing the data in a DataFrame
-    3. Calculating totals and category breakdowns
-    
-    Important: Expenses, savings, and investments are stored as negative numbers in the database.
-    We use absolute values for display purposes.
-    
-    Args:
-        access_token: User's access token for database authentication
-        start_date: Optional start date for filtering
-        end_date: Optional end date for filtering
-    
-    Returns:
-        SummaryData containing the financial summary
-    
-    Raises:
-        EnvironmentError: If environment variables are not set
-        ConnectionError: If database query fails
     """
-    # Fetch transactions from database
-    transactions = _fetch_summary_transactions(access_token, start_date, end_date)
-    
-    # Prepare DataFrame for calculations
-    df = _prepare_transactions_dataframe(transactions)
-    
-    # Calculate totals and breakdown
-    totals = _calculate_summary_totals(df)
-    by_category = _calculate_category_breakdown(df)
+    # 1. Determine date ranges
+    # If no dates provided, use current month
+    today = date.today()
+    if not start_date:
+        start_date = today.replace(day=1)
+    if not end_date:
+        # End of current month
+        next_month = start_date + relativedelta(months=1)
+        end_date = next_month - timedelta(days=1)
 
-    return SummaryData(
-        total_income=totals.income,
-        total_expense=totals.expense,
-        total_saving=totals.saving,
-        total_investment=totals.investment,
-        profit=totals.profit,
-        net_cash_flow=totals.net_cash_flow,
-        by_category=by_category
-    )
+    prev_start_date, prev_end_date = _get_previous_period_dates(start_date, end_date)
+
+    # 2. Fetch transactions for both periods
+    # We could fetch in one query and split in memory, or two queries.
+    # Two queries is cleaner for now.
+    
+    current_transactions = _fetch_summary_transactions(access_token, start_date, end_date)
+    previous_transactions = _fetch_summary_transactions(access_token, prev_start_date, prev_end_date)
+    
+    # 3. Prepare DataFrames
+    current_df = _prepare_transactions_dataframe(current_transactions)
+    previous_df = _prepare_transactions_dataframe(previous_transactions)
+    
+    # 4. Calculate everything
+    return _calculate_enriched_summary(current_df, previous_df)

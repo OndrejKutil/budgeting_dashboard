@@ -13,12 +13,8 @@ from ..helper import environment as env
 from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
 
 # schemas
-from ..schemas.endpoint_schemas import (
-    YearlyAnalyticsResponse,
-    YearlyAnalyticsData,
-    EmergencyFundResponse,
-    EmergencyFundData
-)
+from ..schemas.base import EmergencyFundData, YearlyAnalyticsData
+from ..schemas.responses import EmergencyFundResponse, YearlyAnalyticsResponse
 
 # logging
 import logging

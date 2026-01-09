@@ -15,7 +15,8 @@ from ..helper import environment as env
 import logging
 
 # schemas
-from ..schemas.endpoint_schemas import SummaryResponse, SummaryData
+from ..schemas.base import SummaryData
+from ..schemas.responses import SummaryResponse
 
 # helper
 from ..helper.calculations.summary_calc import _summary_calc

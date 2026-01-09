@@ -45,15 +45,16 @@ class TestConfig:
     TEST_TRANSACTION_INVESTMENT_ID = os.getenv("TEST_TRANSACTION_INVESTMENT_ID")
     
     # Expected test data values
-    EXPECTED_INCOME = Decimal("3500")
-    EXPECTED_EXPENSE = Decimal("-1000")
-    EXPECTED_SAVING = Decimal("-500")
-    EXPECTED_INVESTMENT = Decimal("-200")
-    EXPECTED_TOTAL_TRANSACTIONS = 4
+    EXPECTED_INCOME_1 = Decimal("5000")
+    EXPECTED_INCOME_2 = Decimal("10000")
+    EXPECTED_EXPENSE_GROCERY = Decimal("-200")
+    EXPECTED_EXPENSE_BITCOIN = Decimal("-2000")
+    EXPECTED_SAVING = Decimal("-2500")
+    EXPECTED_TOTAL_TRANSACTIONS = 5
     
     # Account info
     EXPECTED_ACCOUNT_1_NAME = "Bank 1"
-    EXPECTED_ACCOUNT_2_NAME = "bank 2"
+    EXPECTED_ACCOUNT_2_NAME = "Bank 1" # Only 1 account in new data
     EXPECTED_SAVINGS_FUND_NAME = "Emergency fund"
     EXPECTED_SAVINGS_FUND_TARGET = Decimal("10000")
 
@@ -274,9 +275,9 @@ class TestTransactions:
         
         data = response.json()
         assert data["success"] is True
-        # All test transactions are from 2026-01-04
+        # All test transactions are from 2026-01-09 (today in test env)
         for transaction in data["data"]:
-            assert transaction["date"] == "2026-01-04"
+            assert transaction["date"] == today
     
     def test_get_transactions_by_account(self, config, auth_headers):
         """Test filtering transactions by account"""
@@ -338,10 +339,11 @@ class TestTransactions:
         
         amounts = {Decimal(str(t["amount"])) for t in data["data"]}
         expected_amounts = {
-            config.EXPECTED_INCOME,
-            config.EXPECTED_EXPENSE,
-            config.EXPECTED_SAVING,
-            config.EXPECTED_INVESTMENT
+            config.EXPECTED_INCOME_1,
+            config.EXPECTED_INCOME_2,
+            config.EXPECTED_EXPENSE_GROCERY,
+            config.EXPECTED_EXPENSE_BITCOIN,
+            config.EXPECTED_SAVING
         }
         
         assert amounts == expected_amounts, f"Amounts mismatch. Got: {amounts}, Expected: {expected_amounts}"
@@ -365,7 +367,7 @@ class TestAccounts:
         assert data["success"] is True
         assert "data" in data
         assert isinstance(data["data"], list)
-        assert len(data["data"]) == 2  # User has 2 accounts
+        assert len(data["data"]) == 1  # User has 1 account in new data
     
     def test_get_account_by_id(self, config, auth_headers):
         """Test retrieving a specific account by ID"""
@@ -479,6 +481,28 @@ class TestSummary:
         # Check that we have the expected keys
         assert "total_income" in summary or "income" in summary
         assert "total_expense" in summary or "expenses" in summary
+    
+    def test_summary_enriched_fields(self, config, auth_headers):
+        """Test existence of enriched summary fields (comparison, rates, etc)"""
+        url = f"{config.API_BASE_URL}/summary/"
+        response = requests.get(url, headers=auth_headers)
+        data = response.json().get("data", {})
+        
+        # New enriched fields
+        assert "comparison" in data
+        assert "savings_rate" in data
+        assert "investment_rate" in data
+        assert "top_expenses" in data
+        assert "biggest_mover" in data
+        assert "largest_transactions" in data
+        
+        # Verify comparison structure
+        comp = data["comparison"]
+        assert "income_delta_pct" in comp
+        
+        # Verify lists
+        assert isinstance(data["top_expenses"], list)
+        assert isinstance(data["largest_transactions"], list)
     
     def test_summary_with_date_filter(self, config, auth_headers):
         """Test summary with date range filter"""
@@ -595,6 +619,29 @@ class TestMonthlyAnalytics:
             assert Decimal(str(analytics["total_income"])) >= 0
         if "total_expenses" in analytics:
             assert Decimal(str(analytics["total_expenses"])) >= 0
+            
+    def test_monthly_enriched_fields(self, config, auth_headers):
+        """Test existence of enriched monthly analytics fields"""
+        url = f"{config.API_BASE_URL}/monthly/analytics"
+        params = {"year": 2026, "month": 1}
+        response = requests.get(url, headers=auth_headers, params=params)
+        data = response.json().get("data", {})
+        
+        # New enriched fields
+        assert "run_rate" in data
+        assert "day_split" in data
+        assert "category_concentration" in data
+        assert "comparison" in data
+        
+        # Verify run_rate structure
+        rr = data["run_rate"]
+        assert "days_elapsed" in rr
+        assert "projected_month_end_expenses" in rr
+        
+        # Verify comparison
+        comp = data["comparison"]
+        assert "income_delta" in comp
+        assert "income_delta_pct" in comp
     
     def test_monthly_analytics_invalid_month(self, config, auth_headers):
         """Test that invalid month returns error"""
@@ -655,7 +702,33 @@ class TestYearlyAnalytics:
         
         # Should have data for January 2026 where our transactions are
         # Check that the analytics is not empty for 2026
+        # Check that the analytics is not empty for 2026
         assert analytics is not None
+        
+    def test_yearly_enriched_fields(self, config, auth_headers):
+        """Test existence of enriched yearly analytics fields"""
+        url = f"{config.API_BASE_URL}/yearly/analytics"
+        params = {"year": 2026}
+        response = requests.get(url, headers=auth_headers, params=params)
+        data = response.json().get("data", {})
+        
+        # New enriched fields
+        assert "highlights" in data
+        assert "volatility" in data
+        assert "spending_balance" in data
+        
+        # Verify highlights
+        hl = data["highlights"]
+        assert "highest_cashflow_month" in hl
+        assert "month" in hl["highest_cashflow_month"]
+        
+        # Verify volatility
+        vol = data["volatility"]
+        assert "income_volatility" in vol
+        
+        # Verify balance
+        bal = data["spending_balance"]
+        assert "core_share_pct" in bal
     
     def test_yearly_analytics_empty_year(self, config, auth_headers):
         """Test analytics for year with no transactions"""
@@ -761,7 +834,8 @@ class TestIntegration:
         summary_data = summary_response.json()
         
         # Verify income matches
-        assert income == config.EXPECTED_INCOME
+        expected_total_income = config.EXPECTED_INCOME_1 + config.EXPECTED_INCOME_2
+        assert income == expected_total_income
     
     def test_savings_fund_linked_to_transaction(self, config, auth_headers):
         """Verify savings transaction is linked to savings fund"""

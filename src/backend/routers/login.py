@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
 from ..auth.auth import api_key_auth
-from ..schemas.endpoint_schemas import LoginResponse, UserData, LoginRequest
+from ..schemas.base import UserData
+from ..schemas.requests import LoginRequest
+from ..schemas.responses import LoginResponse
 
 # rate limiting
 from ..helper.rate_limiter import limiter, RATE_LIMITS
