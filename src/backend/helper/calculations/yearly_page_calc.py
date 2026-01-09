@@ -8,7 +8,7 @@ from ..columns import TRANSACTIONS_COLUMNS
 from ..environment import PROJECT_URL, ANON_KEY
 from supabase.client import create_client, Client
 import logging
-import pandas as pd
+import polars as pl
 
 # schemas
 from ...schemas.endpoint_schemas import YearlyAnalyticsData, EmergencyFundData
@@ -115,9 +115,9 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
+def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
-    Convert raw transaction data to a prepared pandas DataFrame.
+    Convert raw transaction data to a prepared polars DataFrame.
     
     Args:
         transactions: List of transaction dictionaries from database
@@ -126,51 +126,73 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
         Prepared DataFrame with normalized columns and derived fields
     """
     if not transactions:
-        return pd.DataFrame()
+        return pl.DataFrame({
+            'amount': pl.Series(dtype=pl.Float64),
+            'date': pl.Series(dtype=pl.Utf8),
+            'category_type': pl.Series(dtype=pl.Utf8),
+            'category_name': pl.Series(dtype=pl.Utf8),
+            'spending_type': pl.Series(dtype=pl.Utf8),
+            'savings_funds': pl.Series(dtype=pl.Utf8),
+            'date_parsed': pl.Series(dtype=pl.Date),
+            'month_name': pl.Series(dtype=pl.Utf8),
+            'abs_amount': pl.Series(dtype=pl.Float64)
+        })
 
-    # Flatten the nested structure using pandas json_normalize
-    df = pd.json_normalize(
-        transactions,
-        sep='.',
-        errors='ignore'
-    )
+    # Polars unnest logic
+    df = pl.from_dicts(transactions)
     
-    # Ensure we have the required columns, create them if missing
-    required_columns = {
-        'amount': 0.0,
-        'date': '',
-        'dim_categories.type': '',
-        'dim_categories.category_name': 'Unknown Category',
-        'dim_categories.spending_type': '',
-        'savings_fund_id_fk': None
-    }
+    struct_col = None
+    if 'dim_categories' in df.columns:
+        struct_col = 'dim_categories'
+    elif 'categories' in df.columns:
+        struct_col = 'categories'
+        
+    if struct_col:
+        df = df.unnest(struct_col)
     
-    for col, default_val in required_columns.items():
-        if col not in df.columns:
-            df[col] = default_val
+    # Helper to safe add column if missing
+    def safe_with_column(df, name, default, dtype):
+        if name not in df.columns:
+            return df.with_columns(pl.lit(default).cast(dtype).alias(name))
+        return df
+
+    df = safe_with_column(df, 'amount', 0.0, pl.Float64)
+    df = safe_with_column(df, 'date', None, pl.Utf8)
+    df = safe_with_column(df, 'type', '', pl.Utf8)
+    df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
+    df = safe_with_column(df, 'spending_type', '', pl.Utf8)
+    # df = safe_with_column(df, 'savings_fund_id_fk', None, pl.Utf8) 
+    # Use savings_fund_id_fk or savings_fund_id based on source. 
+    # Logic: yearly uses `savings_fund_id_fk` -> `savings_funds`.
     
-    # Rename columns to match the expected structure
-    column_mapping = {
-        'dim_categories.type': 'category_type',
-        'dim_categories.category_name': 'category_name', 
-        'dim_categories.spending_type': 'spending_type',
-        'savings_fund_id_fk': 'savings_funds'
-    }
+    rename_map = {}
+    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'savings_fund_id_fk' in df.columns: rename_map['savings_fund_id_fk'] = 'savings_funds'
+    elif 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
     
-    df = df.rename(columns=column_mapping)
+    df = df.rename(rename_map)
+    df = safe_with_column(df, 'savings_funds', None, pl.Utf8) # Ensure it exists after rename try
     
-    # Handle missing values using simple assignment
-    df.loc[df['category_type'].isna(), 'category_type'] = ''
-    df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
-    df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+    # Fill nulls
+    df = df.with_columns([
+        pl.col('category_type').fill_null(''),
+        pl.col('category_name').fill_null('Unknown Category'),
+        pl.col('spending_type').fill_null(''),
+        pl.col('amount').cast(pl.Float64).fill_null(0.0)
+    ])
     
-    # Convert amount to float
-    df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
+    # Derived columns
+    # month_name: Polars str.to_date().dt.strftime('%b') or using python map.
+    # %b gives abbreviated month name (Jan, Feb).
     
-    # Add derived columns
-    df['date_parsed'] = pd.to_datetime(df['date']).dt.date
-    df['month_name'] = df['date_parsed'].apply(lambda x: calendar.month_abbr[x.month])
-    df['abs_amount'] = df['amount'].abs()
+    df = df.with_columns([
+        pl.col('date').str.to_date().alias('date_parsed'),
+        pl.col('amount').abs().alias('abs_amount')
+    ])
+    
+    df = df.with_columns([
+        pl.col('date_parsed').dt.strftime('%b').alias('month_name')
+    ])
 
     return df
 
@@ -189,113 +211,165 @@ def _initialize_monthly_data() -> Dict[str, MonthlyDataPoint]:
     return monthly_data
 
 
-def _calculate_monthly_aggregations(df: pd.DataFrame, monthly_data: Dict[str, MonthlyDataPoint]) -> Dict[str, MonthlyDataPoint]:
+def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: Dict[str, MonthlyDataPoint]) -> Dict[str, MonthlyDataPoint]:
     """
     Calculate monthly aggregations from the transactions DataFrame.
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
         monthly_data: Initialized monthly data structure
     
     Returns:
         Updated monthly data with calculated values
     """
-    if df.empty:
+    if df.is_empty():
         return monthly_data
 
-    # Group by month and category type for monthly aggregations
-    monthly_groups = df.groupby(['month_name', 'category_type'])['amount'].sum().reset_index()
-    monthly_groups_abs = df.groupby(['month_name', 'category_type'])['abs_amount'].sum().reset_index()
+    # Group by month and category type
+    monthly_groups = (
+        df.group_by(['month_name', 'category_type'])
+          .agg([
+              pl.col('amount').sum().alias('amount'),
+              pl.col('abs_amount').sum().alias('abs_amount')
+          ])
+    )
     
-    # Fill monthly data for income (use original amount)
-    income_monthly = monthly_groups[monthly_groups['category_type'] == 'income']
-    for _, row in income_monthly.iterrows():
-        monthly_data[row['month_name']].income = row['amount']
+    # Income (original amount)
+    income_rows = monthly_groups.filter(pl.col('category_type') == 'income')
+    for row in income_rows.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].income = row['amount']
     
-    # Fill monthly data for income without savings funds withdrawals
-    income_wo_savings_funds_monthly = df[df['category_type'] == 'income'].groupby('month_name').apply(
-        lambda x: x['amount'].sum() - x[x['savings_funds'].notnull()]['amount'].sum()
-    ).reset_index(name='income_wo_savings_funds')
-    for _, row in income_wo_savings_funds_monthly.iterrows():
-        monthly_data[row['month_name']].income_wo_savings_funds = row['income_wo_savings_funds']
+    # Income without savings funds withdrawals
+    # Logic: income - income_where_savings_fund_not_null
     
-    # Fill monthly data for expenses (use absolute amount)
-    expense_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'expense']
-    for _, row in expense_monthly.iterrows():
-        monthly_data[row['month_name']].expense = row['abs_amount']
+    # We can do this with polars group by month.
+    income_wo_savings = (
+        df.filter(pl.col('category_type') == 'income')
+          .group_by('month_name')
+          .agg([
+              (pl.col('amount').sum() - 
+               pl.col('amount').filter(pl.col('savings_funds').is_not_null()).sum().fill_null(0.0)
+              ).alias('income_wo_savings_funds')
+          ])
+    )
     
-    # Fill monthly data for saving (use absolute amount)
-    saving_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'saving']
-    for _, row in saving_monthly.iterrows():
-        monthly_data[row['month_name']].saving = row['abs_amount']
+    for row in income_wo_savings.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].income_wo_savings_funds = row['income_wo_savings_funds']
+            
+    # Expenses (abs amount)
+    expense_rows = monthly_groups.filter(pl.col('category_type') == 'expense')
+    for row in expense_rows.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].expense = row['abs_amount']
+            
+    # Saving (abs amount)
+    saving_rows = monthly_groups.filter(pl.col('category_type') == 'saving')
+    for row in saving_rows.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].saving = row['abs_amount']
+            
+    # Savings withdrawals (income with savings_funds set)
+    savings_withdrawals = (
+        df.filter((pl.col('category_type') == 'income') & (pl.col('savings_funds').is_not_null()))
+          .group_by('month_name')
+          .agg(pl.col('amount').sum().alias('amount'))
+    )
     
-    # Calculate savings fund withdrawals by month
-    savings_fund_withdrawals_monthly = df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())].groupby('month_name')['amount'].sum()
+    withdrawals_map = {row['month_name']: row['amount'] for row in savings_withdrawals.iter_rows(named=True)}
     
-    # Calculate savings with withdrawals for each month
+    # Apply withdrawals
     for month in monthly_data.keys():
-        monthly_savings = monthly_data[month].saving
-        monthly_withdrawals = savings_fund_withdrawals_monthly.get(month, 0.0)
-        monthly_data[month].savings_w_withdrawals = monthly_savings - monthly_withdrawals
-    
-    # Fill monthly data for investment (use absolute amount)
-    investment_monthly = monthly_groups_abs[monthly_groups_abs['category_type'] == 'investment']
-    for _, row in investment_monthly.iterrows():
-        monthly_data[row['month_name']].investment = row['abs_amount']
-    
-    # Handle core and fun expenses
-    expense_df = df[df['category_type'] == 'expense']
-    if not expense_df.empty:
-        core_expense_monthly = expense_df[expense_df['spending_type'] == 'Core'].groupby('month_name')['abs_amount'].sum()
-        for month, amount in core_expense_monthly.items():
-            monthly_data[str(month)].core_expense = amount
+        monthly_data[month].savings_w_withdrawals = monthly_data[month].saving - withdrawals_map.get(month, 0.0)
         
-        fun_expense_monthly = expense_df[expense_df['spending_type'] == 'Fun'].groupby('month_name')['abs_amount'].sum()
-        for month, amount in fun_expense_monthly.items():
-            monthly_data[str(month)].fun_expense = amount
+    # Investment (abs amount)
+    investment_rows = monthly_groups.filter(pl.col('category_type') == 'investment')
+    for row in investment_rows.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].investment = row['abs_amount']
+            
+    # Core/Fun expenses
+    expense_details = (
+        df.filter(pl.col('category_type') == 'expense')
+          .group_by(['month_name', 'spending_type'])
+          .agg(pl.col('abs_amount').sum())
+    )
     
-    # Handle future expenses (from saving and investment with Future spending_type)
-    future_df = df[(df['category_type'].isin(['saving', 'investment'])) & (df['spending_type'] == 'Future')]
-    if not future_df.empty:
-        future_expense_monthly = future_df.groupby('month_name')['abs_amount'].sum()
-        for month, amount in future_expense_monthly.items():
-            monthly_data[str(month)].future_expense = amount
+    for row in expense_details.iter_rows(named=True):
+        m = row['month_name']
+        if m in monthly_data:
+            if row['spending_type'] == 'Core':
+                monthly_data[m].core_expense = row['abs_amount']
+            elif row['spending_type'] == 'Fun':
+                monthly_data[m].fun_expense = row['abs_amount']
+                
+    # Future expenses (saving/investment + Future)
+    future_rows = (
+        df.filter(pl.col('category_type').is_in(['saving', 'investment']) & (pl.col('spending_type') == 'Future'))
+          .group_by('month_name')
+          .agg(pl.col('abs_amount').sum())
+    )
+    
+    for row in future_rows.iter_rows(named=True):
+        if row['month_name'] in monthly_data:
+            monthly_data[row['month_name']].future_expense = row['abs_amount']
 
     return monthly_data
 
 
-def _calculate_yearly_totals(df: pd.DataFrame) -> YearlyTotals:
+def _calculate_yearly_totals(df: pl.DataFrame) -> YearlyTotals:
     """
     Calculate yearly totals from the transactions DataFrame.
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         YearlyTotals with all calculated values
     """
-    if df.empty:
+    if df.is_empty():
         return YearlyTotals()
 
-    # Calculate totals using pandas aggregation
-    total_income = df[df['category_type'] == 'income']['abs_amount'].sum()
-    savings_fund_income = df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['abs_amount'].sum()
+    # Helpers
+    def get_sum(cond, col='abs_amount'):
+        res = df.filter(cond).select(pl.col(col).sum()).item()
+        return res if res else 0.0
+
+    total_income = get_sum(pl.col('category_type') == 'income', 'abs_amount') # Wait, income uses abs? original used abs_amount for total_income variable but amount logic check.
+    # Original: total_income = df[...]['abs_amount'].sum(). Since income is positive, abs is same.
+    # But savings_fund_income check:
+    # savings_fund_income = df[(category_type==income) & savings_funds not null]['abs_amount'].sum()
+    
+    income_cond = pl.col('category_type') == 'income'
+    savings_funds_cond = income_cond & pl.col('savings_funds').is_not_null()
+    
+    total_income = get_sum(income_cond)
+    savings_fund_income = get_sum(savings_funds_cond)
     total_income_wo_savings_funds = total_income - savings_fund_income
     
-    total_expense = df[df['category_type'] == 'expense']['abs_amount'].sum()
-    total_saving = df[df['category_type'] == 'saving']['abs_amount'].sum()
+    total_expense = get_sum(pl.col('category_type') == 'expense')
+    total_saving = get_sum(pl.col('category_type') == 'saving')
     total_savings_w_withdrawals = total_saving - savings_fund_income
-    total_investment = df[df['category_type'] == 'investment']['abs_amount'].sum()
+    total_investment = get_sum(pl.col('category_type') == 'investment')
     
-    total_core_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]['abs_amount'].sum()
-    total_fun_expense = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')]['abs_amount'].sum()
-    total_future_expense = df[(df['category_type'].isin(['saving', 'investment'])) & (df['spending_type'] == 'Future')]['abs_amount'].sum()
+    total_core_expense = get_sum((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core'))
+    total_fun_expense = get_sum((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Fun'))
+    total_future_expense = get_sum(pl.col('category_type').is_in(['saving', 'investment']) & (pl.col('spending_type') == 'Future'))
 
-    # Calculate derived metrics
+    # Profit
     profit = total_income_wo_savings_funds - total_expense - total_investment
-    net_cash_flow = df['amount'].sum()
-    savings_rate = (total_savings_w_withdrawals / total_income_wo_savings_funds * 100) if total_income_wo_savings_funds > 0 else 0
-    investment_rate = (total_investment / total_income_wo_savings_funds * 100) if total_income_wo_savings_funds > 0 else 0
+    
+    # Net cash flow = sum of amount (signed)
+    net_cash_flow = df.select(pl.col('amount').sum()).item() or 0.0
+    
+    # Rates
+    if total_income_wo_savings_funds > 0:
+        savings_rate = (total_savings_w_withdrawals / total_income_wo_savings_funds * 100)
+        investment_rate = (total_investment / total_income_wo_savings_funds * 100)
+    else:
+        savings_rate = 0.0
+        investment_rate = 0.0
 
     return YearlyTotals(
         income=round(total_income_wo_savings_funds, 2),
@@ -312,30 +386,35 @@ def _calculate_yearly_totals(df: pd.DataFrame) -> YearlyTotals:
     )
 
 
-def _calculate_category_breakdowns(df: pd.DataFrame) -> CategoryBreakdowns:
+def _calculate_category_breakdowns(df: pl.DataFrame) -> CategoryBreakdowns:
     """
     Calculate category breakdowns from the transactions DataFrame.
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         CategoryBreakdowns with all category aggregations
     """
-    if df.empty:
+    if df.is_empty():
         return CategoryBreakdowns()
 
-    by_category = df.groupby('category_name')['amount'].sum().to_dict()
-    core_categories = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')].groupby('category_name')['abs_amount'].sum().to_dict()
-    income_by_category = df[df['category_type'] == 'income'].groupby('category_name')['amount'].sum().to_dict()
-    expense_by_category = df[df['category_type'] == 'expense'].groupby('category_name')['abs_amount'].sum().to_dict()
+    # Generic helper
+    def group_to_dict(cond, col='amount'):
+        # cond can be True (all) or boolean expression
+        res_df = df.filter(cond).group_by('category_name').agg(pl.col(col).sum())
+        return {row['category_name']: round(row[col], 2) for row in res_df.iter_rows(named=True)}
 
-    # Round all values
+    by_category = group_to_dict(pl.lit(True), 'amount')
+    core_categories = group_to_dict((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core'), 'abs_amount')
+    income_by_category = group_to_dict(pl.col('category_type') == 'income', 'amount')
+    expense_by_category = group_to_dict(pl.col('category_type') == 'expense', 'abs_amount')
+
     return CategoryBreakdowns(
-        by_category={k: round(v, 2) for k, v in by_category.items()},
-        core_categories={k: round(v, 2) for k, v in core_categories.items()},
-        income_by_category={k: round(v, 2) for k, v in income_by_category.items()},
-        expense_by_category={k: round(v, 2) for k, v in expense_by_category.items()}
+        by_category=by_category,
+        core_categories=core_categories,
+        income_by_category=income_by_category,
+        expense_by_category=expense_by_category
     )
 
 
@@ -488,7 +567,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pd.DataFrame:
+def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
     Prepare DataFrame for emergency fund analysis.
     
@@ -499,78 +578,94 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pd.DataFrame:
         Prepared DataFrame with normalized columns
     """
     if not transactions:
-        return pd.DataFrame()
+        return pl.DataFrame({
+            'amount': pl.Series(dtype=pl.Float64),
+            'date': pl.Series(dtype=pl.Utf8),
+            'category_type': pl.Series(dtype=pl.Utf8),
+            'category_name': pl.Series(dtype=pl.Utf8),
+            'spending_type': pl.Series(dtype=pl.Utf8),
+            'savings_funds': pl.Series(dtype=pl.Utf8),
+            'date_parsed': pl.Series(dtype=pl.Date),
+            'month_key': pl.Series(dtype=pl.Utf8),
+            'abs_amount': pl.Series(dtype=pl.Float64)
+        })
 
-    df = pd.json_normalize(
-        transactions,
-        sep='.',
-        errors='ignore'
-    )
+    # Unnest logic
+    df = pl.from_dicts(transactions)
     
-    # Ensure we have the required columns
-    required_columns = {
-        'amount': 0.0,
-        'date': '',
-        'dim_categories.type': '',
-        'dim_categories.category_name': 'Unknown Category',
-        'dim_categories.spending_type': '',
-        'dim_savings_funds.fund_name': None
-    }
+    # Unnest dim_categories and dim_savings_funds if they exist
+    if 'dim_categories' in df.columns:
+        df = df.unnest('dim_categories')
     
-    for col, default_val in required_columns.items():
-        if col not in df.columns:
-            df[col] = default_val
+    if 'dim_savings_funds' in df.columns:
+        df = df.unnest('dim_savings_funds')
+        
+    # Helper to safe add column if missing
+    def safe_with_column(df, name, default, dtype):
+        if name not in df.columns:
+            return df.with_columns(pl.lit(default).cast(dtype).alias(name))
+        return df
+
+    df = safe_with_column(df, 'amount', 0.0, pl.Float64)
+    df = safe_with_column(df, 'date', None, pl.Utf8)
+    df = safe_with_column(df, 'type', '', pl.Utf8)
+    df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
+    df = safe_with_column(df, 'spending_type', '', pl.Utf8)
     
-    # Rename columns
-    column_mapping = {
-        'dim_categories.type': 'category_type',
-        'dim_categories.category_name': 'category_name', 
-        'dim_categories.spending_type': 'spending_type',
-        'dim_savings_funds.fund_name': 'savings_funds'
-    }
+    rename_map = {}
+    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'fund_name' in df.columns: rename_map['fund_name'] = 'savings_funds'
     
-    df = df.rename(columns=column_mapping)
+    df = df.rename(rename_map)
+    df = safe_with_column(df, 'savings_funds', None, pl.Utf8)
     
-    # Handle missing values
-    df.loc[df['category_type'].isna(), 'category_type'] = ''
-    df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
-    df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+    # Fill nulls
+    df = df.with_columns([
+        pl.col('category_type').fill_null(''),
+        pl.col('category_name').fill_null('Unknown Category'),
+        pl.col('spending_type').fill_null(''),
+        pl.col('amount').cast(pl.Float64).fill_null(0.0)
+    ])
     
-    # Convert amount to float and add derived columns
-    df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
-    df['date_parsed'] = pd.to_datetime(df['date']).dt.date
-    df['month_key'] = df['date_parsed'].apply(lambda x: f'{x.year}-{x.month:02d}')
+    # Derived
+    df = df.with_columns([
+        pl.col('date').str.to_date().alias('date_parsed'),
+        pl.col('amount').abs().alias('abs_amount')
+    ])
+    
+    df = df.with_columns([
+        pl.col('date_parsed').dt.strftime('%Y-%m').alias('month_key')
+    ])
 
     return df
 
 
-def _calculate_core_expenses(df: pd.DataFrame) -> tuple[Dict[str, float], Dict[str, float]]:
+def _calculate_core_expenses(df: pl.DataFrame) -> tuple[Dict[str, float], Dict[str, float]]:
     """
     Calculate core expenses by month and category.
     
     Args:
-        df: Prepared DataFrame
+        df: Prepared DataFrame (Polars)
     
     Returns:
         Tuple of (monthly_core_expenses, core_category_breakdown)
     """
-    if df.empty:
+    if df.is_empty():
         return {}, {}
 
     # Filter for core expenses only
-    core_expenses_df = df[(df['category_type'] == 'expense') & (df['spending_type'] == 'Core')]
+    core_expenses_df = df.filter((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core'))
     
-    if core_expenses_df.empty:
+    if core_expenses_df.is_empty():
         return {}, {}
 
-    core_expenses_df = core_expenses_df.copy()
-    core_expenses_df['abs_amount'] = core_expenses_df['amount'].abs()
-    
     # Group by month
-    monthly_core_expenses = core_expenses_df.groupby('month_key')['abs_amount'].sum().to_dict()
+    monthly_agg = core_expenses_df.group_by('month_key').agg(pl.col('abs_amount').sum())
+    monthly_core_expenses = {row['month_key']: row['abs_amount'] for row in monthly_agg.iter_rows(named=True)}
     
     # Group by category
-    core_category_breakdown = core_expenses_df.groupby('category_name')['abs_amount'].sum().to_dict()
+    category_agg = core_expenses_df.group_by('category_name').agg(pl.col('abs_amount').sum())
+    core_category_breakdown = {row['category_name']: row['abs_amount'] for row in category_agg.iter_rows(named=True)}
 
     return monthly_core_expenses, core_category_breakdown
 

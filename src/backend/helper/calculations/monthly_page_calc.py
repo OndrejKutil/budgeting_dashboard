@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from ..columns import TRANSACTIONS_COLUMNS
 from ..environment import PROJECT_URL, ANON_KEY
 from supabase.client import create_client, Client
-import pandas as pd
+import polars as pl
 
 # schemas
 from ...schemas.endpoint_schemas import (
@@ -99,9 +99,9 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
+def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
-    Convert raw transaction data to a prepared pandas DataFrame.
+    Convert raw transaction data to a prepared polars DataFrame.
     
     Args:
         transactions: List of transaction dictionaries from database
@@ -110,82 +110,114 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
         Prepared DataFrame with normalized columns and derived fields
     """
     if not transactions:
-        return pd.DataFrame()
+        return pl.DataFrame({
+            'amount': pl.Series(dtype=pl.Float64),
+            'date': pl.Series(dtype=pl.Utf8),
+            'category_type': pl.Series(dtype=pl.Utf8),
+            'category_name': pl.Series(dtype=pl.Utf8),
+            'spending_type': pl.Series(dtype=pl.Utf8),
+            'savings_funds': pl.Series(dtype=pl.Utf8),
+            'date_parsed': pl.Series(dtype=pl.Date),
+            'abs_amount': pl.Series(dtype=pl.Float64)
+        })
 
-    # Flatten the nested structure using pandas json_normalize
-    df = pd.json_normalize(
-        transactions,
-        sep='.',
-        errors='ignore'
-    )
+    # Polars unnest logic
+    # First create DF from list of dicts. Nested dicts become Structs.
+    df = pl.from_dicts(transactions)
     
-    # Ensure we have the required columns, create them if missing
-    required_columns = {
-        'amount': 0.0,
-        'date': '',
-        'categories.type': '',
-        'categories.category_name': 'Unknown Category',
-        'categories.spending_type': '',
-        'savings_fund_id': None
-    }
+    # Check if 'categories' or 'dim_categories' exists. 
+    # The Supabase query returns 'dim_categories' (aliased or not?).
+    # In pandas json_normalize it flattened categories.*
+    # Here we should look for the struct column.
     
-    for col, default_val in required_columns.items():
-        if col not in df.columns:
-            df[col] = default_val
+    # Note: The fetch function selects 'dim_categories(*)'.
+    # If the response has 'dim_categories' as a key.
     
-    # Rename columns to match the expected structure
-    column_mapping = {
-        'categories.type': 'category_type',
-        'categories.category_name': 'category_name', 
-        'categories.spending_type': 'spending_type',
-        'savings_fund_id': 'savings_funds'
-    }
+    struct_col = None
+    if 'dim_categories' in df.columns:
+        struct_col = 'dim_categories'
+    elif 'categories' in df.columns: # fallback if alias used
+        struct_col = 'categories'
+        
+    if struct_col:
+        # Unnest the struct
+        df = df.unnest(struct_col)
     
-    df = df.rename(columns=column_mapping)
+    # Rename columns if needed. 
+    # After unnest, if 'type', 'category_name', 'spending_type' were in the struct, they are now columns.
+    # If there were name collisions, Polars might handle them or we need to check.
+    # Assuming 'categories' struct had 'type', 'category_name', 'spending_type'.
     
-    # Handle missing values using simple assignment
-    df.loc[df['category_type'].isna(), 'category_type'] = ''
-    df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
-    df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+    # Required columns and filling nulls
     
-    # Convert amount to float
-    df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
-    
-    # Add derived columns
-    df['date_parsed'] = pd.to_datetime(df['date']).dt.date
-    df['abs_amount'] = df['amount'].abs()
+    # Helper to safe add column if missing
+    def safe_with_column(df, name, default, dtype):
+        if name not in df.columns:
+            return df.with_columns(pl.lit(default).cast(dtype).alias(name))
+        return df
 
+    df = safe_with_column(df, 'amount', 0.0, pl.Float64)
+    df = safe_with_column(df, 'date', None, pl.Utf8)
+    df = safe_with_column(df, 'type', '', pl.Utf8)
+    df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
+    df = safe_with_column(df, 'spending_type', '', pl.Utf8)
+    df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8) # Original was savings_fund_id
+    
+    # Rename to match internal logic expectations
+    # pandas code mapped: 'categories.type' -> 'category_type'
+    
+    rename_map = {}
+    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
+    
+    df = df.rename(rename_map)
+    
+    # Fill nulls
+    df = df.with_columns([
+        pl.col('category_type').fill_null(''),
+        pl.col('category_name').fill_null('Unknown Category'),
+        pl.col('spending_type').fill_null(''),
+        pl.col('amount').cast(pl.Float64).fill_null(0.0)
+    ])
+    
+    # Derived columns
+    # date is string YYYY-MM-DD
+    
+    df = df.with_columns([
+        pl.col('date').str.to_date().alias('date_parsed'),
+        pl.col('amount').abs().alias('abs_amount')
+    ])
+    
     return df
 
 
-def _calculate_monthly_totals(df: pd.DataFrame) -> MonthlyTotals:
+def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
     """
     Calculate all monthly financial totals from the transactions DataFrame.
     
-    Important: Expenses, savings, and investments are stored as negative numbers in the database.
-    We use absolute values for display purposes.
-    
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         MonthlyTotals dataclass with all calculated values
     """
-    if df.empty:
+    if df.is_empty():
         return MonthlyTotals(income=0.0, expenses=0.0, savings=0.0, investments=0.0, profit=0.0, cashflow=0.0)
 
-    # Income: use original amount (positive)
-    total_income = df[df['category_type'] == 'income']['amount'].sum()
-    savings_fund_income = df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
+    # Income
+    income_df = df.filter(pl.col('category_type') == 'income')
+    total_income = income_df.select(pl.col('amount').sum()).item() or 0.0
+    
+    savings_fund_income = income_df.filter(pl.col('savings_funds').is_not_null()).select(pl.col('amount').sum()).item() or 0.0
     total_income_wo_savings_funds = total_income - savings_fund_income
 
-    # Expenses, savings, investments: use absolute amounts for display
-    total_expenses = df[df['category_type'] == 'expense']['abs_amount'].sum()
-    total_savings = df[df['category_type'] == 'saving']['abs_amount'].sum()
+    # Expenses, savings, investments (absolute)
+    total_expenses = df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
+    total_savings = df.filter(pl.col('category_type') == 'saving').select(pl.col('abs_amount').sum()).item() or 0.0
     total_savings_w_withdrawals = total_savings - savings_fund_income
-    total_investments = df[df['category_type'] == 'investment']['abs_amount'].sum()
+    total_investments = df.filter(pl.col('category_type') == 'investment').select(pl.col('abs_amount').sum()).item() or 0.0
     
-    # Calculate profit and cashflow
+    # Profit and Cashflow
     profit = total_income_wo_savings_funds - total_expenses - total_investments
     cashflow = total_income - total_expenses - total_investments - total_savings
 
@@ -199,84 +231,99 @@ def _calculate_monthly_totals(df: pd.DataFrame) -> MonthlyTotals:
     )
 
 
-def _calculate_daily_spending_heatmap(df: pd.DataFrame) -> List[DailySpendingData]:
+def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingData]:
     """
     Calculate daily spending amounts for heatmap visualization.
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         List of DailySpendingData objects with day and amount
     """
-    if df.empty:
+    if df.is_empty():
         return []
 
-    daily_spending = df[df['category_type'] == 'expense'].groupby('date_parsed')['abs_amount'].sum().reset_index()
+    daily_spending = (
+        df.filter(pl.col('category_type') == 'expense')
+          .group_by('date_parsed')
+          .agg(pl.col('abs_amount').sum())
+          .sort('date_parsed')
+    )
     
-    return [
-        DailySpendingData(
-            day=row['date_parsed'].isoformat(),
-            amount=round(row['abs_amount'], 2)
-        )
-        for _, row in daily_spending.iterrows()
-    ]
+    result = []
+    # iter_rows usually returns tuple values
+    for row in daily_spending.iter_rows(named=True):
+        if row['date_parsed']:
+            result.append(
+                DailySpendingData(
+                    day=row['date_parsed'].isoformat(),
+                    amount=round(row['abs_amount'], 2)
+                )
+            )
+    return result
 
 
-def _calculate_category_breakdown(df: pd.DataFrame) -> List[CategoryBreakdownData]:
+def _calculate_category_breakdown(df: pl.DataFrame) -> List[CategoryBreakdownData]:
     """
     Calculate spending breakdown by category (expenses only).
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         List of CategoryBreakdownData objects with category name and total
     """
-    if df.empty:
+    if df.is_empty():
         return []
 
-    category_data = df[df['category_type'] == 'expense']
-    if category_data.empty:
+    category_data = (
+        df.filter(pl.col('category_type') == 'expense')
+          .group_by('category_name')
+          .agg(pl.col('abs_amount').sum())
+    )
+    
+    if category_data.is_empty():
         return []
-    
-    category_totals = category_data.groupby('category_name')['abs_amount'].sum()
-    
+        
     return [
         CategoryBreakdownData(
-            category=str(category_name),
-            total=round(total, 2)
+            category=str(row['category_name']),
+            total=round(row['abs_amount'], 2)
         )
-        for category_name, total in category_totals.items()
+        for row in category_data.iter_rows(named=True)
     ]
 
 
-def _calculate_spending_type_breakdown(df: pd.DataFrame) -> List[SpendingTypeBreakdownData]:
+def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBreakdownData]:
     """
     Calculate spending breakdown by spending type (Core, Necessary, Fun, Future).
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         List of SpendingTypeBreakdownData objects with type and amount
     """
-    if df.empty:
+    if df.is_empty():
         return []
 
     breakdown = []
     
-    # Define spending types and their filters
-    spending_type_configs = [
-        ('Core', (df['category_type'] == 'expense') & (df['spending_type'] == 'Core')),
-        ('Necessary', (df['category_type'] == 'expense') & (df['spending_type'] == 'Necessary')),
-        ('Fun', (df['category_type'] == 'expense') & (df['spending_type'] == 'Fun')),
-        ('Future', df['spending_type'] == 'Future'),
+    # Define spending types and their filters in a list of tuples (name, expression)
+    # Using expressions directly
+    
+    configs = [
+        ('Core', (pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core')),
+        ('Necessary', (pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Necessary')),
+        ('Fun', (pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Fun')),
+        ('Future', pl.col('spending_type') == 'Future'),
     ]
     
-    for type_name, filter_condition in spending_type_configs:
-        amount = df[filter_condition]['abs_amount'].sum()
-        if amount > 0:
+    for type_name, condition in configs:
+        amount = df.filter(condition).select(pl.col('abs_amount').sum()).item()
+        # amount can be None if filter is empty in some polars versions or 0.0
+        if amount and amount > 0:
             breakdown.append(
                 SpendingTypeBreakdownData(
                     type=type_name,

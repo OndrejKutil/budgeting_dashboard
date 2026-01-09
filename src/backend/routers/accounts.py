@@ -103,15 +103,12 @@ async def create_account(
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
-            data["user_id"] = user["user_id"]
+            data[ACCOUNTS_COLUMNS.USER_ID.value] = user["user_id"]
 
-        # Convert Decimal to float for JSON serialization
-        if data.get("starting_balance") is not None:
-            data["starting_balance"] = float(data["starting_balance"])
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
+            data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_accounts").insert(data).execute()
 
@@ -149,17 +146,13 @@ async def update_account(
         data = account_data.model_dump()
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
-        if not data.get("user_id"):
-            data["user_id"] = user["user_id"]
-
-        # Convert Decimal to float for JSON serialization
-        if data.get("starting_balance") is not None:
-            data["starting_balance"] = float(data["starting_balance"])
+        if not data.get(ACCOUNTS_COLUMNS.USER_ID.value):
+            data[ACCOUNTS_COLUMNS.USER_ID.value] = user["user_id"]
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
-
+        if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
+            data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
+            
         response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
         return AccountSuccessResponse(

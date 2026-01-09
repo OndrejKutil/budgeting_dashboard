@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from ..columns import TRANSACTIONS_COLUMNS
 from ..environment import PROJECT_URL, ANON_KEY
 from supabase.client import create_client, Client
-import pandas as pd
+import polars as pl
 
 # schemas
 from ...schemas.endpoint_schemas import SummaryData
@@ -86,9 +86,9 @@ def _fetch_summary_transactions(
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
+def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     """
-    Convert raw transaction data to a prepared pandas DataFrame.
+    Convert raw transaction data to a prepared polars DataFrame.
     
     Args:
         transactions: List of transaction dictionaries from database
@@ -97,79 +97,88 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pd.DataFrame:
         Prepared DataFrame with normalized columns and derived fields
     """
     if not transactions:
-        return pd.DataFrame()
+        return pl.DataFrame({
+            'amount': pl.Series(dtype=pl.Float64),
+            'date': pl.Series(dtype=pl.Utf8),
+            'category_type': pl.Series(dtype=pl.Utf8),
+            'category_name': pl.Series(dtype=pl.Utf8),
+            'spending_type': pl.Series(dtype=pl.Utf8),
+            'savings_funds': pl.Series(dtype=pl.Utf8),
+            'abs_amount': pl.Series(dtype=pl.Float64)
+        })
 
-    # Flatten the nested structure using pandas json_normalize
-    df = pd.json_normalize(
-        transactions,
-        sep='.',
-        errors='ignore'
-    )
+    # Polars unnest logic
+    df = pl.from_dicts(transactions)
     
-    # Ensure we have the required columns, create them if missing
-    required_columns = {
-        'amount': 0.0,
-        'date': '',
-        'categories.type': '',
-        'categories.category_name': 'Unknown Category',
-        'categories.spending_type': '',
-        'savings_fund_id': None
-    }
+    struct_col = None
+    if 'dim_categories' in df.columns:
+        struct_col = 'dim_categories'
+    elif 'categories' in df.columns:
+        struct_col = 'categories'
+        
+    if struct_col:
+        df = df.unnest(struct_col)
     
-    for col, default_val in required_columns.items():
-        if col not in df.columns:
-            df[col] = default_val
+    # Helper to safe add column if missing
+    def safe_with_column(df, name, default, dtype):
+        if name not in df.columns:
+            return df.with_columns(pl.lit(default).cast(dtype).alias(name))
+        return df
+
+    df = safe_with_column(df, 'amount', 0.0, pl.Float64)
+    df = safe_with_column(df, 'date', None, pl.Utf8)
+    df = safe_with_column(df, 'type', '', pl.Utf8)
+    df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
+    df = safe_with_column(df, 'spending_type', '', pl.Utf8)
+    df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8)
     
-    # Rename columns to match the expected structure
-    column_mapping = {
-        'categories.type': 'category_type',
-        'categories.category_name': 'category_name', 
-        'categories.spending_type': 'spending_type',
-        'savings_fund_id': 'savings_funds'
-    }
+    rename_map = {}
+    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
     
-    df = df.rename(columns=column_mapping)
+    df = df.rename(rename_map)
     
-    # Handle missing values using simple assignment
-    df.loc[df['category_type'].isna(), 'category_type'] = ''
-    df.loc[df['category_name'].isna(), 'category_name'] = 'Unknown Category'
-    df.loc[df['spending_type'].isna(), 'spending_type'] = ''
+    # Fill nulls and types
+    df = df.with_columns([
+        pl.col('category_type').fill_null(''),
+        pl.col('category_name').fill_null('Unknown Category'),
+        pl.col('spending_type').fill_null(''),
+        pl.col('amount').cast(pl.Float64).fill_null(0.0)
+    ])
     
-    # Convert amount to float
-    df['amount'] = pd.to_numeric(df['amount'], errors='coerce').replace({pd.NA: 0.0, None: 0.0})
-    
-    # Add derived column
-    df['abs_amount'] = df['amount'].abs()
+    # Derived column
+    df = df.with_columns([
+        pl.col('amount').abs().alias('abs_amount')
+    ])
 
     return df
 
 
-def _calculate_summary_totals(df: pd.DataFrame) -> SummaryTotals:
+def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:
     """
     Calculate financial summary totals from the transactions DataFrame.
     
-    Important: Expenses, savings, and investments are stored as negative numbers in the database.
-    We use absolute values for display purposes.
-    
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         SummaryTotals with all calculated values
     """
-    if df.empty:
+    if df.is_empty():
         return SummaryTotals()
 
-    # Income: use original amount (positive)
-    total_income = df[df['category_type'] == 'income']['amount'].sum()
-    savings_fund_income = df[(df['category_type'] == 'income') & (df['savings_funds'].notnull())]['amount'].sum()
+    # Income
+    income_df = df.filter(pl.col('category_type') == 'income')
+    total_income = income_df.select(pl.col('amount').sum()).item() or 0.0
+    
+    savings_fund_income = income_df.filter(pl.col('savings_funds').is_not_null()).select(pl.col('amount').sum()).item() or 0.0
     total_income_wo_savings_funds = total_income - savings_fund_income
 
-    # Expenses, savings, investments: use absolute amounts for display
-    total_expense = df[df['category_type'] == 'expense']['abs_amount'].sum()
-    total_saving = df[df['category_type'] == 'saving']['abs_amount'].sum()
+    # Expenses, savings, investments (absolute)
+    total_expense = df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
+    total_saving = df.filter(pl.col('category_type') == 'saving').select(pl.col('abs_amount').sum()).item() or 0.0
     total_saving_w_withdrawals = total_saving - savings_fund_income
-    total_investment = df[df['category_type'] == 'investment']['abs_amount'].sum()
+    total_investment = df.filter(pl.col('category_type') == 'investment').select(pl.col('abs_amount').sum()).item() or 0.0
     
     # Calculate profit and cashflow
     profit = total_income_wo_savings_funds - total_expense - total_investment
@@ -185,7 +194,7 @@ def _calculate_summary_totals(df: pd.DataFrame) -> SummaryTotals:
     )
 
 
-def _calculate_category_breakdown(df: pd.DataFrame) -> Dict[str, float]:
+def _calculate_category_breakdown(df: pl.DataFrame) -> Dict[str, float]:
     """
     Calculate breakdown of amounts by category, sorted by category type and amount.
     
@@ -193,48 +202,53 @@ def _calculate_category_breakdown(df: pd.DataFrame) -> Dict[str, float]:
     Within each type, they are sorted by absolute amount descending.
     
     Args:
-        df: Prepared transactions DataFrame
+        df: Prepared transactions DataFrame (Polars)
     
     Returns:
         Dictionary mapping category names to their total amounts
     """
-    if df.empty:
+    if df.is_empty():
         return {}
 
-    # Group by category name using pandas aggregation
-    category_totals = df.groupby(['category_name', 'category_type'])['amount'].sum().reset_index()
-    
-    # Separate categories by type for custom sorting
-    expense_categories = category_totals[category_totals['category_type'] == 'expense'].copy()
-    income_categories = category_totals[category_totals['category_type'] == 'income'].copy()
-    saving_categories = category_totals[category_totals['category_type'] == 'saving'].copy()
-    investment_categories = category_totals[category_totals['category_type'] == 'investment'].copy()
-    
-    # Sort each type descending by amount (using absolute value for proper sorting)
-    expense_categories = expense_categories.reindex(
-        expense_categories['amount'].abs().sort_values(ascending=False).index
-    )
-    income_categories = income_categories.reindex(
-        income_categories['amount'].abs().sort_values(ascending=False).index
-    )
-    saving_categories = saving_categories.reindex(
-        saving_categories['amount'].abs().sort_values(ascending=False).index
-    )
-    investment_categories = investment_categories.reindex(
-        investment_categories['amount'].abs().sort_values(ascending=False).index
+    # Group by category name and type
+    category_totals = (
+        df.group_by(['category_name', 'category_type'])
+          .agg(pl.col('amount').sum())
     )
     
-    # Combine in desired order: income, expenses, then savings and investments at the end
-    sorted_categories = pd.concat([
-        income_categories,
-        expense_categories,
-        saving_categories,
-        investment_categories
-    ], ignore_index=True)
+    if category_totals.is_empty():
+        return {}
     
-    # Convert to dictionary and round values
-    by_category = dict(zip(sorted_categories['category_name'], sorted_categories['amount']))
-    return {k: round(v, 2) for k, v in by_category.items()}
+    # We need to sort by type (specific order) and then amount descending (abs)
+    # Mapping type to priority index
+    # income: 0, expense: 1, saving: 2, investment: 3
+    
+    def type_priority(t):
+        if t == 'income': return 0
+        if t == 'expense': return 1
+        if t == 'saving': return 2
+        if t == 'investment': return 3
+        return 4
+        
+    # Polars doesn't have custom sort key easily in eager mode like python sort, 
+    # but we can add conditional column or use python logic on the result since it's small.
+    # Actually, we can just split and sort like original code or use Polars expressions.
+    
+    # Easier to replicate original logic: specific order of types.
+    
+    result_dict = {}
+    
+    for type_name in ['income', 'expense', 'saving', 'investment']:
+        type_df = category_totals.filter(pl.col('category_type') == type_name)
+        if not type_df.is_empty():
+            # Sort by absolute amount descending
+            type_df = type_df.sort(pl.col('amount').abs(), descending=True)
+            
+            # Add to result
+            for row in type_df.iter_rows(named=True):
+                result_dict[row['category_name']] = round(row['amount'], 2)
+                
+    return result_dict
 
 
 # ================================================================================================

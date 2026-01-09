@@ -113,8 +113,8 @@ async def create_savings_fund(
         data = fund.model_dump()
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
+            data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_savings_funds").insert(data).execute()
 
@@ -153,8 +153,8 @@ async def update_savings_fund(
         data = fund.model_dump()
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
+            data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_savings_funds").update(data).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 

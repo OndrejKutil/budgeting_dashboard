@@ -129,19 +129,19 @@ async def create_transaction(
         user_supabase_client.postgrest.auth(user["access_token"])
         
         data = transaction_data.model_dump()
-        data["user_id"] = user["user_id"]
+        data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
         
         # Convert Decimal to float for JSON serialization
-        if data.get("amount") is not None:
-            data["amount"] = float(data["amount"])
+        if data.get(TRANSACTIONS_COLUMNS.AMOUNT.value) is not None:
+            data[TRANSACTIONS_COLUMNS.AMOUNT.value] = float(data[TRANSACTIONS_COLUMNS.AMOUNT.value])
         
         # Convert date to ISO string for JSON serialization
-        if data.get("date") is not None:
-            data["date"] = data["date"].isoformat()
+        if data.get(TRANSACTIONS_COLUMNS.DATE.value) is not None:
+            data[TRANSACTIONS_COLUMNS.DATE.value] = data[TRANSACTIONS_COLUMNS.DATE.value].isoformat()
             
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(TRANSACTIONS_COLUMNS.CREATED_AT.value) is not None:
+            data[TRANSACTIONS_COLUMNS.CREATED_AT.value] = data[TRANSACTIONS_COLUMNS.CREATED_AT.value].isoformat()
         
         response = user_supabase_client.table("fct_transactions").insert(data).execute()
         
@@ -179,21 +179,21 @@ async def update_transaction(
         user_supabase_client.postgrest.auth(user["access_token"])
         
         data = transaction_data.model_dump()
-        data["user_id"] = user["user_id"]
+        data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
         
         # Convert Decimal to float for JSON serialization
-        if data.get("amount") is not None:
-            data["amount"] = float(data["amount"])
+        if data.get(TRANSACTIONS_COLUMNS.AMOUNT.value) is not None:
+            data[TRANSACTIONS_COLUMNS.AMOUNT.value] = float(data[TRANSACTIONS_COLUMNS.AMOUNT.value])
         
         # Convert date to ISO string for JSON serialization
-        if data.get("date") is not None:
-            data["date"] = data["date"].isoformat()
+        if data.get(TRANSACTIONS_COLUMNS.DATE.value) is not None:
+            data[TRANSACTIONS_COLUMNS.DATE.value] = data[TRANSACTIONS_COLUMNS.DATE.value].isoformat()
             
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(TRANSACTIONS_COLUMNS.CREATED_AT.value) is not None:
+            data[TRANSACTIONS_COLUMNS.CREATED_AT.value] = data[TRANSACTIONS_COLUMNS.CREATED_AT.value].isoformat()
 
-        response = user_supabase_client.table("fct_transactions").update(data).eq("id", transaction_id).execute()
+        response = user_supabase_client.table("fct_transactions").update(data).eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id).execute()
 
         return TransactionSuccessResponse(
             success=True,
@@ -226,7 +226,7 @@ async def delete_transaction(
         user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
         user_supabase_client.postgrest.auth(user["access_token"])
         
-        response = user_supabase_client.table("fct_transactions").delete().eq("id", transaction_id).execute()
+        response = user_supabase_client.table("fct_transactions").delete().eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id).execute()
         
         return TransactionSuccessResponse(
             success=True,
