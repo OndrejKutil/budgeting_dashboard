@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Blurple Dark Theme - Personal Finance App */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Core backgrounds */
+    --background: 228 84% 5%;
+    --background-secondary: 224 47% 8%;
+    --foreground: 210 40% 98%;
+
+    /* Card/surface */
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --card-elevated: 224 47% 11%;
+
+    /* Popover */
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Blurple primary accent */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 239 84% 73%;
+    --primary-muted: 243 75% 59%;
+
+    /* Secondary */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 14% 64%;
+
+    /* Accent */
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Status colors */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Chart colors */
+    --chart-income: 142 71% 45%;
+    --chart-expense: 0 84% 60%;
+    --chart-savings: 199 89% 48%;
+    --chart-investment: 280 67% 60%;
+    --chart-blurple: 239 84% 67%;
+    --chart-teal: 168 84% 42%;
+
+    /* Border/input */
+    --border: 217 19% 20%;
+    --input: 217 19% 20%;
+    --ring: 239 84% 67%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 224 47% 7%;
+    --sidebar-foreground: 215 14% 64%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 19% 15%;
+    --sidebar-ring: 239 84% 67%;
+
+    /* Glass effects */
+    --glass-bg: 224 47% 8% / 0.85;
+    --glass-border: 217 19% 30% / 0.3;
+
+    /* Gradients */
+    --gradient-blurple: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 9%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(228 84% 5%) 0%, hsl(239 40% 12%) 50%, hsl(228 84% 5%) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Glass morphism */
+  .glass {
+    @apply bg-[hsl(var(--glass-bg))] backdrop-blur-xl border border-[hsl(var(--glass-border))];
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-lg border border-border/50 rounded-xl;
+  }
+
+  /* Blurple gradient text */
+  .text-gradient-blurple {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%);
+  }
+
+  /* Blurple glow effect */
+  .glow-blurple {
+    box-shadow: 
+      0 0 20px hsl(239 84% 67% / 0.3),
+      0 0 40px hsl(239 84% 67% / 0.2),
+      0 0 60px hsl(239 84% 67% / 0.1);
+  }
+
+  .glow-blurple-sm {
+    box-shadow: 0 0 15px hsl(239 84% 67% / 0.25);
+  }
+
+  /* Subtle card shadow */
+  .shadow-card {
+    box-shadow: 
+      0 4px 6px -1px hsl(0 0% 0% / 0.3),
+      0 2px 4px -2px hsl(0 0% 0% / 0.2),
+      inset 0 1px 0 0 hsl(217 19% 30% / 0.1);
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+  }
+
+  /* Animated gradient border */
+  .border-gradient {
+    position: relative;
+    background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+                linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(280 67% 60%) 100%) border-box;
+    border: 1px solid transparent;
+  }
+
+  /* Skeleton animation */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Smooth transitions */
+  .transition-base {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  /* Chart grid subtle */
+  .chart-grid {
+    stroke: hsl(var(--border) / 0.3);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background-secondary));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}

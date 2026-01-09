@@ -95,3 +95,4 @@ idkk.py
 
 .mypy_cache/
 .pytest_cache/
+.env.example
