@@ -18,15 +18,17 @@ import logging
 from supabase.client import create_client, Client
 
 # schemas
-from ..helper.columns import SAVINGS_FUNDS_COLUMNS
+from ..helper.columns import SAVINGS_FUNDS_COLUMNS, TRANSACTIONS_COLUMNS
 from ..schemas.endpoint_schemas import (
     SavingsFundsData,
     SavingsFundsRequest,
     SavingsFundsResponse,
     SavingsFundSuccessResponse
 )
+from ..helper.calculations import savings_funds_calc
 
 # other
+import polars as pl
 from typing import Optional
 
 
@@ -77,8 +79,32 @@ async def get_savings_funds(
 
         response = query.execute()
 
+        # Fetch transactions for metrics
+        # Filter for transactions that have a savings_fund_id_fk
+        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}").neq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
+        transactions_response = transactions_query.execute()
+        
+        metrics = {}
+        if transactions_response.data:
+            funds_df = pl.from_dicts(transactions_response.data)
+            metrics = savings_funds_calc.calculate_fund_metrics(funds_df)
+
+        # Merge metrics
+        data = []
+        for item in response.data:
+            fund_id = item.get(SAVINGS_FUNDS_COLUMNS.ID.value)
+            # Find metrics for this fund
+            if fund_id in metrics:
+                fund_metrics = metrics[fund_id]
+                item['current_amount'] = fund_metrics["current_amount"]
+                item['net_flow_30d'] = fund_metrics["net_flow_30d"]
+            else:
+                item['current_amount'] = 0.0
+                item['net_flow_30d'] = 0.0
+            data.append(SavingsFundsData(**item))
+
         return SavingsFundsResponse(
-            data=[SavingsFundsData(**item) for item in response.data],
+            data=data,
             count=len(response.data),
             success=True,
             message="Savings funds retrieved successfully"

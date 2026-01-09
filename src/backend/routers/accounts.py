@@ -18,10 +18,12 @@ import logging
 from supabase.client import create_client, Client
 
 # helper
-from ..helper.columns import ACCOUNTS_COLUMNS
+from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
 from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest, AccountData, AccountSuccessResponse
+from ..helper.calculations import accounts_calc
 
 # other
+import polars as pl
 from typing import Optional, Dict, List
 
 # ================================================================================================
@@ -67,8 +69,31 @@ async def get_all_accounts(
         
         response = query.execute()
 
+        # Fetch transactions for metrics calculation
+        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.ACCOUNT_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}")
+        transactions_response = transactions_query.execute()
+        
+        metrics = {}
+        if transactions_response.data:
+            transactions_df = pl.from_dicts(transactions_response.data)
+            metrics = accounts_calc.calculate_account_metrics(transactions_df)
+
+        # Merge metrics
+        data = []
+        for item in response.data:
+            account_id = item.get(ACCOUNTS_COLUMNS.ID.value)
+            if account_id in metrics:
+                acc_metrics = metrics[account_id]
+                item['current_balance'] = acc_metrics["current_balance"]
+                item['net_flow_30d'] = acc_metrics["net_flow_30d"]
+            else:
+                # Default values if no transactions
+                item['current_balance'] = 0.0
+                item['net_flow_30d'] = 0.0
+            data.append(AccountData(**item))
+
         return AccountsResponse(
-            data=[AccountData(**item) for item in response.data],
+            data=data,
             count=len(response.data),
             success=True,
             message="Accounts fetched successfully"

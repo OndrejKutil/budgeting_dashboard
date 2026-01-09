@@ -83,6 +83,8 @@ class AccountData(BaseModel):
     account_name: str = Field(..., description="Account name")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: Optional[str] = Field(..., description="Currency of the account")
+    current_balance: Optional[float] = Field(0.0, description="Current balance of the account")
+    net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the account in the last 30 days")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
 class UserData(BaseModel):
@@ -321,6 +323,8 @@ class SavingsFundsData(BaseModel):
     user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
+    current_amount: Optional[float] = Field(0.0, description="Current amount in the savings fund")
+    net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the savings fund in the last 30 days")
     created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
 
     class Config:
