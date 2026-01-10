@@ -131,42 +131,176 @@ export interface ProfileResponse {
   message: string;
 }
 
-export interface MonthlySummary {
+export interface MonthlyPeriodComparison {
+  income_delta: number;
+  income_delta_pct: number;
+  expenses_delta: number;
+  expenses_delta_pct: number;
+  savings_delta: number;
+  savings_delta_pct: number;
+  investments_delta: number;
+  investments_delta_pct: number;
+  profit_delta: number;
+  profit_delta_pct: number;
+  cashflow_delta: number;
+  cashflow_delta_pct: number;
+}
+
+export interface DailySpendingData {
+  day: string;
+  amount: number;
+}
+
+export interface CategoryBreakdownData {
+  category: string;
+  total: number;
+}
+
+export interface SpendingTypeBreakdownData {
+  type: string;
+  amount: number;
+}
+
+export interface RunRateForecast {
+  average_daily_spend: number;
+  projected_month_end_expenses: number;
+  days_elapsed: number;
+  days_remaining: number;
+}
+
+export interface DaySplit {
+  average_weekday_spend: number;
+  average_weekend_spend: number;
+}
+
+export interface CategoryConcentration {
+  top_3_share_pct: number;
+  top_3_categories: CategoryBreakdownData[];
+}
+
+export interface MonthlyAnalytics {
   year: number;
   month: number;
+  month_name: string;
   income: number;
   expenses: number;
   savings: number;
   investments: number;
   profit: number;
-  net_cash_flow: number;
+  cashflow: number;
+  run_rate: RunRateForecast;
+  day_split: DaySplit;
+  category_concentration: CategoryConcentration;
+  comparison: MonthlyPeriodComparison;
+  daily_spending_heatmap: DailySpendingData[];
+  income_breakdown: CategoryBreakdownData[];
+  expenses_breakdown: CategoryBreakdownData[];
+  spending_type_breakdown: SpendingTypeBreakdownData[];
 }
 
-export interface MonthlyAnalytics extends MonthlySummary {
-  daily_spending_heatmap: Array<{ date: string; amount: number }>;
-  category_breakdown: Array<{ category_id: string; category_name: string; amount: number; percentage: number }>;
-  spending_type_breakdown: Array<{ spending_type: string; amount: number; percentage: number }>;
+export interface MonthlyAnalyticsResponse {
+  data: MonthlyAnalytics;
+  success: boolean;
+  message: string;
 }
 
-export interface YearlyAnalytics {
+
+export interface MenuOption {
+  name: string;
+  value: string;
+}
+
+export interface MonthMetric {
+  month: string;
+  value: number;
+}
+
+export interface YearlyHighlights {
+  highest_cashflow_month: MonthMetric;
+  highest_expense_month: MonthMetric;
+  highest_savings_rate_month: MonthMetric;
+}
+
+export interface VolatilityMetrics {
+  expense_volatility: number;
+  income_volatility: number;
+}
+
+export interface YearlySpendingBalance {
+  core_share_pct: number;
+  fun_share_pct: number;
+  future_share_pct: number;
+}
+
+export interface YearlyAnalyticsData {
   year: number;
-  income: number;
-  expenses: number;
-  savings: number;
-  investments: number;
+  total_income: number;
+  total_expense: number;
+  total_saving: number;
+  total_investment: number;
+  total_core_expense: number;
+  total_fun_expense: number;
+  total_future_expense: number;
   profit: number;
   net_cash_flow: number;
+  savings_rate: number;
+  investment_rate: number;
+  highlights: YearlyHighlights;
+  volatility: VolatilityMetrics;
+  spending_balance: YearlySpendingBalance;
+  months: string[];
   monthly_income: number[];
-  monthly_expenses: number[];
-  monthly_savings: number[];
-  category_breakdown: Array<{ category_id: string; category_name: string; amount: number; percentage: number }>;
+  monthly_expense: number[];
+  monthly_saving: number[];
+  monthly_investment: number[];
+  monthly_core_expense: number[];
+  monthly_fun_expense: number[];
+  monthly_future_expense: number[];
+  monthly_savings_rate: number[];
+  monthly_investment_rate: number[];
+  by_category: Record<string, number>;
+  core_categories: Record<string, number>;
+  income_by_category: Record<string, number>;
+  expense_by_category: Record<string, number>;
 }
 
-export interface EmergencyFundAnalysis {
+export interface YearlyAnalyticsResponse {
+  data: YearlyAnalyticsData;
+  success: boolean;
+  message: string;
+}
+
+export interface EmergencyFundData {
   year: number;
-  recommended_3_month: number;
-  recommended_6_month: number;
-  core_category_breakdown: Array<{ category_name: string; amount: number }>;
+
+  // Core
+  average_monthly_core_expenses: number;
+  total_core_expenses: number;
+  three_month_core_target: number;
+  six_month_core_target: number;
+  core_category_breakdown: Record<string, number>;
+
+  // Core + Necessary
+  average_monthly_core_necessary: number;
+  total_core_necessary: number;
+  three_month_core_necessary_target: number;
+  six_month_core_necessary_target: number;
+
+  // All
+  average_monthly_all_expenses: number;
+  total_all_expenses: number;
+  three_month_all_target: number;
+  six_month_all_target: number;
+
+  // Current
+  current_savings_amount: number;
+  months_analyzed: number;
+}
+
+export interface EmergencyFundResponse {
+  data: EmergencyFundData;
+  success: boolean;
+  message: string;
 }
 
 
@@ -202,7 +336,6 @@ export interface SummaryData {
   top_expenses: CategoryInsight[];
   biggest_mover: CategoryInsight | null;
   largest_transactions: Transaction[];
-  by_category: Record<string, number>;
 }
 
 export interface SummaryResponse {

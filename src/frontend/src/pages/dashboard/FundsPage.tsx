@@ -151,7 +151,17 @@ export default function FundsPage() {
       }
       handleCloseModal();
     } catch (err) {
-      const message = err instanceof ApiError ? err.detail : 'Failed to save fund';
+      let message = 'Failed to save fund';
+      if (err instanceof ApiError) {
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          // Handle Pydantic validation errors (array of objects)
+          message = err.detail.map((e: any) => e.msg).join(', ');
+        } else if (typeof err.detail === 'object' && err.detail !== null) {
+          message = JSON.stringify(err.detail);
+        }
+      }
       toast({
         title: 'Error',
         description: message,

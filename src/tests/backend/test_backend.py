@@ -642,6 +642,13 @@ class TestMonthlyAnalytics:
         comp = data["comparison"]
         assert "income_delta" in comp
         assert "income_delta_pct" in comp
+        
+        # Verify breakdowns
+        assert "income_breakdown" in data
+        assert isinstance(data["income_breakdown"], list)
+        assert "expenses_breakdown" in data
+        assert isinstance(data["expenses_breakdown"], list)
+        assert "spending_type_breakdown" in data
     
     def test_monthly_analytics_invalid_month(self, config, auth_headers):
         """Test that invalid month returns error"""
@@ -757,9 +764,30 @@ class TestYearlyAnalytics:
         response = requests.get(url, headers=auth_headers, params=params)
         assert response.status_code == 200
         
-        data = response.json()
-        assert data["success"] is True
-        assert "data" in data
+        body = response.json()
+        assert body["success"] is True
+        
+        data = body["data"]
+        
+        # Verify Core fields
+        assert "average_monthly_core_expenses" in data
+        assert "three_month_core_target" in data
+        assert "six_month_core_target" in data
+        
+        # Verify Core + Necessary fields
+        assert "average_monthly_core_necessary" in data
+        assert "three_month_core_necessary_target" in data
+        
+        # Verify All Expenses fields
+        assert "average_monthly_all_expenses" in data
+        assert "total_all_expenses" in data
+        
+        # Verify Current Savings
+        assert "current_savings_amount" in data
+        
+        # Basic logical check
+        if data["current_savings_amount"] > 0:
+            assert data["months_analyzed"] > 0
 
 
 # ================================================================================================

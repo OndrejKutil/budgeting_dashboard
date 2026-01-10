@@ -94,15 +94,6 @@ export default function DashboardOverview() {
     );
   }
 
-  // Format category data for Pie Chart
-  const categoryChartData = Object.entries(data.by_category)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, value], index) => ({
-      name,
-      value,
-      color: COLORS[index % COLORS.length],
-    }));
 
   return (
     <div className="space-y-6">
@@ -211,110 +202,7 @@ export default function DashboardOverview() {
         </motion.div>
       </motion.div>
 
-      {/* Charts Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Income Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
-        >
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold font-display">Income Breakdown</h3>
-              <p className="text-sm text-muted-foreground">Income sources</p>
-            </div>
-          </div>
-          <div className="h-[400px]">
-            {Object.keys(data.by_category).filter(k => data.by_category[k] > 0).length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={Object.entries(data.by_category)
-                    .filter(([, value]) => value > 0)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([name, value]) => ({ name, value }))
-                  }
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <XAxis type="number" hide />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={100}
-                    tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(217, 19%, 20%)', opacity: 0.5 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
-                      borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
-                    }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
-                  />
-                  <Bar dataKey="value" fill="hsl(142, 71%, 45%)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No income data</div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Outgoing Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
-        >
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold font-display">Outgoing Breakdown</h3>
-              <p className="text-sm text-muted-foreground">Expenses, Savings, & Investments</p>
-            </div>
-          </div>
-          <div className="h-[400px]">
-            {Object.keys(data.by_category).filter(k => data.by_category[k] < 0).length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={Object.entries(data.by_category)
-                    .filter(([, value]) => value < 0)
-                    .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
-                    .map(([name, value]) => ({ name, value: Math.abs(value), original: value }))
-                  }
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <XAxis type="number" hide />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={100}
-                    tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(217, 19%, 20%)', opacity: 0.5 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
-                      borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
-                    }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
-                  />
-                  <Bar dataKey="value" fill="hsl(0, 84%, 60%)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No outgoing data</div>
-            )}
-          </div>
-        </motion.div>
-      </div>
+      {/* Charts Moved to Monthly Analytics Page */}
 
       {/* Insights Row */}
       <div className="grid gap-6 lg:grid-cols-2">

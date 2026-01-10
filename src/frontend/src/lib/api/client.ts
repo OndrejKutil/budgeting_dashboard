@@ -36,7 +36,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public detail?: string
+    public detail?: any
   ) {
     super(message);
     this.name = 'ApiError';
@@ -386,6 +386,35 @@ export const summaryApi = {
   get: async (params?: { start_date?: string; end_date?: string }) => {
     const response = await apiClient.get<SummaryResponse>(
       '/summary/',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+};
+
+// Analytics API
+import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse } from './types';
+
+export const analyticsApi = {
+  getMonthly: async (params?: { year?: number; month?: number }) => {
+    const response = await apiClient.get<MonthlyAnalyticsResponse>(
+      '/monthly/analytics',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+
+  getYearly: async (params?: { year?: number }) => {
+    const response = await apiClient.get<YearlyAnalyticsResponse>(
+      '/yearly/analytics',
+      params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+
+  getEmergencyFund: async (params?: { year?: number }) => {
+    const response = await apiClient.get<EmergencyFundResponse>(
+      '/yearly/emergency-fund',
       params as Record<string, string | number | undefined>
     );
     return response.data;
