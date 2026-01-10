@@ -613,14 +613,92 @@ def _calculate_core_expenses(df: pl.DataFrame) -> tuple[Dict[str, float], Dict[s
     return monthly_core_expenses, core_category_breakdown
 
 
+def _fetch_savings_funds_balance(access_token: str) -> float:
+    """
+    Fetch current total balance of proper emergency funds.
+    Criteria:
+    1. Fund name must contain "emergency fund" (case-insensitive, space-insensitive).
+    2. Sum of all transactions linked to matching funds.
+    """
+    try:
+        user_supabase_client = get_db_client(access_token)
+        
+        # 1. Get all savings funds to check names in Python (for better fuzzy matching)
+        # or use ILIKE if simple enough. User asked for "space insensitive" which implies regex or normalization.
+        # Let's fetch all and filter in python to be safe and precise with the logic requested.
+        funds_response = user_supabase_client.table('dim_savings_funds').select('savings_funds_id_pk, fund_name').execute()
+        
+        if not funds_response.data:
+            return 0.0
+            
+        matching_fund_ids = []
+        for fund in funds_response.data:
+            name = fund.get('fund_name', '').lower()
+            # Normalize spaces: remove all spaces to check for "emergencyfund" sequence?
+            # User said: "check for case and space insensitive match for Emergency fund"
+            # "accept anything after" -> substring match
+            # Let's normalize: reduce multiple spaces to one, then check "emergency fund"?
+            # Or remove all spaces and check "emergencyfund"? 
+            # "space insensitive" usually can mean "EmergencyFund" == "Emergency Fund".
+            normalized_name = name.replace(" ", "")
+            if "emergencyfund" in normalized_name:
+                matching_fund_ids.append(fund['savings_funds_id_pk'])
+                
+        if not matching_fund_ids:
+            return 0.0
+
+        # 2. Fetch transactions for these specific funds
+        query = user_supabase_client.table('fct_transactions')\
+            .select('amount')\
+            .in_('savings_fund_id_fk', matching_fund_ids)
+        
+        response = query.execute()
+        
+        if not response.data:
+            return 0.0
+            
+        # Savings are stored as negative values (money leaving account to fund)
+        total_balance = abs(sum(item.get('amount', 0.0) for item in response.data))
+        return total_balance
+    except Exception as e:
+        logger.error(f'Database query failed for emergency funds filters: {str(e)}')
+        return 0.0
+
+
+def _calculate_expense_stats(df: pl.DataFrame, spending_types: List[str]) -> tuple[float, float]:
+    """Calculate average monthly and total expenses for given spending types."""
+    if df.is_empty():
+        return 0.0, 0.0
+
+    target_expenses = df.filter(
+        (pl.col('category_type') == 'expense') & 
+        (pl.col('spending_type').is_in(spending_types))
+    )
+    
+    if target_expenses.is_empty():
+        return 0.0, 0.0
+
+    monthly_agg = target_expenses.group_by('month_key').agg(pl.col('abs_amount').sum())
+    
+    total_expenses = monthly_agg.select(pl.col('abs_amount').sum()).item()
+    months_with_data = monthly_agg.height
+    
+    average_monthly = total_expenses / months_with_data if months_with_data > 0 else 0.0
+    
+    return average_monthly, total_expenses
+
+
 def _emergency_fund_analysis(access_token: str, year: int) -> EmergencyFundData:
     """Calculate emergency fund requirements based on core expenses."""
     start_date, end_date = _get_year_date_range(year)
     transactions = _fetch_emergency_fund_transactions(access_token, start_date, end_date)
     df = _prepare_emergency_fund_dataframe(transactions)
     
-    monthly_core_expenses, core_category_breakdown = _calculate_core_expenses(df)
+    # 1. Fetch Current Savings
+    current_savings = _fetch_savings_funds_balance(access_token)
     
+    # 2. Calculate Core Stats
+    monthly_core_expenses, core_category_breakdown = _calculate_core_expenses(df)
     if monthly_core_expenses:
         total_core_expenses = sum(monthly_core_expenses.values())
         months_with_data = len(monthly_core_expenses)
@@ -629,16 +707,36 @@ def _emergency_fund_analysis(access_token: str, year: int) -> EmergencyFundData:
         average_monthly_core = 0
         total_core_expenses = 0
         months_with_data = 0
+        
+    # 3. Calculate Core + Necessary Stats
+    avg_core_nec, total_core_nec = _calculate_expense_stats(df, ['Core', 'Necessary'])
     
-    three_month_fund = average_monthly_core * 3
-    six_month_fund = average_monthly_core * 6
+    # 4. Calculate All Expenses (Core + Necessary + Fun) Stats
+    avg_all, total_all = _calculate_expense_stats(df, ['Core', 'Necessary', 'Fun'])
 
     return EmergencyFundData(
         year=year,
+        
+        # Core
         average_monthly_core_expenses=round(average_monthly_core, 2),
         total_core_expenses=round(total_core_expenses, 2),
-        three_month_fund_target=round(three_month_fund, 2),
-        six_month_fund_target=round(six_month_fund, 2),
+        three_month_core_target=round(average_monthly_core * 3, 2),
+        six_month_core_target=round(average_monthly_core * 6, 2),
         core_category_breakdown={k: round(v, 2) for k, v in core_category_breakdown.items()},
+        
+        # Core + Necessary
+        average_monthly_core_necessary=round(avg_core_nec, 2),
+        total_core_necessary=round(total_core_nec, 2),
+        three_month_core_necessary_target=round(avg_core_nec * 3, 2),
+        six_month_core_necessary_target=round(avg_core_nec * 6, 2),
+        
+        # All
+        average_monthly_all_expenses=round(avg_all, 2),
+        total_all_expenses=round(total_all, 2),
+        three_month_all_target=round(avg_all * 3, 2),
+        six_month_all_target=round(avg_all * 6, 2),
+        
+        # Current
+        current_savings_amount=round(current_savings, 2),
         months_analyzed=months_with_data
     )

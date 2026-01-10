@@ -69,7 +69,7 @@ class SavingsFundsRequest(BaseModel):
     user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
-    created_at: Optional[datetime] = Field(..., description="Creation timestamp of the savings fund")
+    created_at: Optional[datetime] = Field(None, description="Creation timestamp of the savings fund")
 
     class Config:
         json_schema_extra = {
@@ -77,5 +77,19 @@ class SavingsFundsRequest(BaseModel):
                 "user_id": "456user",
                 "fund_name": "Emergency Fund",
                 "target_amount": 5000
+            }
+        }
+
+
+class UpdateProfileRequest(BaseModel):
+    """Schema for updating user profile"""
+    full_name: Optional[str] = Field(None, description="User full name")
+    currency: Optional[str] = Field(None, description="User preferred currency (e.g., USD, CZK)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "full_name": "John Doe",
+                "currency": "CZK"
             }
         }

@@ -20,6 +20,7 @@ from ..data.database import get_db_client
 # schemas
 from ..schemas.base import ProfileData
 from ..schemas.responses import ProfileResponse
+from ..schemas.requests import UpdateProfileRequest
 
 # helper
 from ..helper.calculations.profile_page_calc import _build_profile_data
@@ -74,6 +75,7 @@ async def get_my_profile(
         
         profile_data : ProfileData = _build_profile_data(user_profile.user)
         
+        
         return ProfileResponse(data=profile_data, success=True, message="User profile retrieved successfully")
     
     except fastapi.HTTPException:
@@ -87,4 +89,71 @@ async def get_my_profile(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="Failed to fetch user profile"
+        )
+
+
+@router.put("/me", response_model=ProfileResponse)
+@limiter.limit(RATE_LIMITS["standard"])
+async def update_profile(
+    request: Request,
+    profile_update: UpdateProfileRequest,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user)
+) -> ProfileResponse:
+    """
+    Update the current user's profile information.
+    """
+    try:
+        # Import here to avoid circular dependency if placed at top
+        from ..schemas.requests import UpdateProfileRequest
+        
+        if not isinstance(profile_update, UpdateProfileRequest):
+             # This handle the pydantic validation error if passed directly
+            pass
+
+        user_supabase_client = get_db_client(user["access_token"])
+        
+        # Prepare metadata update
+        metadata_update = {}
+        if profile_update.full_name is not None:
+            metadata_update["full_name"] = profile_update.full_name
+        if profile_update.currency is not None:
+            metadata_update["currency"] = profile_update.currency
+            
+        if not metadata_update:
+             # Nothing to update, fetch current profile and return
+            user_profile = user_supabase_client.auth.get_user(user["access_token"])
+            if user_profile and user_profile.user:
+                 return ProfileResponse(
+                    data=_build_profile_data(user_profile.user), 
+                    success=True, 
+                    message="No changes provided"
+                )
+
+        # Update user metadata in Supabase Auth
+        update_attributes = {"data": metadata_update}
+        updated_user = user_supabase_client.auth.update_user(update_attributes)
+        
+        if updated_user is None or updated_user.user is None:
+             raise fastapi.HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update user profile"
+            )
+
+        profile_data = _build_profile_data(updated_user.user)
+        
+        return ProfileResponse(
+            data=profile_data, 
+            success=True, 
+            message="User profile updated successfully"
+        )
+
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Profile update failed for user_id: {user['user_id']}")
+        logger.error(f"Full error details: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user profile"
         )

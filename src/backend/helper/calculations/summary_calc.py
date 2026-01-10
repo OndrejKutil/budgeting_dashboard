@@ -302,7 +302,10 @@ def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> O
     """
     # Helper to aggregate expenses by category
     def agg_expenses(df):
-        if df.is_empty(): return pl.DataFrame({'category_name': [], 'total': []})
+        if df.is_empty(): 
+            return pl.DataFrame(
+                schema={'category_name': pl.Utf8, 'total': pl.Float64}
+            )
         return (
             df.filter(pl.col('category_type') == 'expense')
             .group_by('category_name')
@@ -415,37 +418,6 @@ def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> List[Transact
     return results
 
 
-def _calculate_category_breakdown(df: pl.DataFrame) -> Dict[str, float]:
-    """
-    Calculate breakdown of amounts by category, sorted by category type and amount.
-    """
-    if df.is_empty():
-        return {}
-
-    # Group by category name and type
-    category_totals = (
-        df.group_by(['category_name', 'category_type'])
-          .agg(pl.col('amount').sum())
-    )
-    
-    if category_totals.is_empty():
-        return {}
-    
-    result_dict = {}
-    
-    for type_name in ['income', 'expense', 'saving', 'investment']:
-        type_df = category_totals.filter(pl.col('category_type') == type_name)
-        if not type_df.is_empty():
-            # Sort by absolute amount descending
-            type_df = type_df.sort(pl.col('amount').abs(), descending=True)
-            
-            # Add to result
-            for row in type_df.iter_rows(named=True):
-                result_dict[row['category_name']] = round(row['amount'], 2)
-                
-    return result_dict
-
-
 def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> SummaryData:
     """
     Internal calculation logic separated from IO.
@@ -464,7 +436,6 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
     if current_totals.income > 0:
         investment_rate = round((current_totals.investment / current_totals.income) * 100, 1)
         
-    by_category = _calculate_category_breakdown(current_df)
     top_expenses = _get_top_expenses(current_df)
     biggest_mover = _get_biggest_mover(current_df, previous_df)
     largest_transactions = _get_largest_transactions(current_df)
@@ -481,8 +452,8 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
         investment_rate=investment_rate,
         top_expenses=top_expenses,
         biggest_mover=biggest_mover,
-        largest_transactions=largest_transactions,
-        by_category=by_category
+        largest_transactions=largest_transactions
+        # by_category removed
     )
 
 

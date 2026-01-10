@@ -355,15 +355,16 @@ def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingDat
     return result
 
 
-def _calculate_category_breakdown(df: pl.DataFrame) -> List[CategoryBreakdownData]:
+
+def _calculate_category_breakdown(df: pl.DataFrame, cat_type: str = 'expense') -> List[CategoryBreakdownData]:
     """
-    Calculate spending breakdown by category (expenses only).
+    Calculate spending/income breakdown by category.
     """
     if df.is_empty():
         return []
 
     category_data = (
-        df.filter(pl.col('category_type') == 'expense')
+        df.filter(pl.col('category_type') == cat_type)
           .group_by('category_name')
           .agg(pl.col('abs_amount').sum())
     )
@@ -443,7 +444,10 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
     comparison = _calculate_comparison(totals, prev_totals)
     
     daily_heatmap = _calculate_daily_spending_heatmap(current_df)
-    category_breakdown = _calculate_category_breakdown(current_df)
+    
+    income_breakdown = _calculate_category_breakdown(current_df, 'income')
+    expenses_breakdown = _calculate_category_breakdown(current_df, 'expense')
+    
     spending_type_breakdown = _calculate_spending_type_breakdown(current_df)
 
     return MonthlyAnalyticsData(
@@ -461,6 +465,7 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
         category_concentration=concentration,
         comparison=comparison,
         daily_spending_heatmap=daily_heatmap,
-        category_breakdown=category_breakdown,
+        income_breakdown=income_breakdown,
+        expenses_breakdown=expenses_breakdown,
         spending_type_breakdown=spending_type_breakdown
     )

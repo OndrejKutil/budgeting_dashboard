@@ -129,7 +129,9 @@ class SummaryData(BaseModel):
     biggest_mover: Optional[CategoryInsight] = Field(None, description="Category with largest absolute spending change vs previous period")
     largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
     
-    by_category: dict = Field(..., description="Summary grouped by category name")
+    largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
+    
+    # by_category removed as requested
 
     class Config:
         json_schema_extra = {
@@ -290,7 +292,9 @@ class MonthlyAnalyticsData(BaseModel):
     comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
     
     daily_spending_heatmap: List[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
-    category_breakdown: List[CategoryBreakdownData] = Field(..., description="Breakdown by category")
+    # breakdown: List[CategoryBreakdownData] # REMOVED
+    income_breakdown: List[CategoryBreakdownData] = Field(..., description="Income breakdown by category")
+    expenses_breakdown: List[CategoryBreakdownData] = Field(..., description="Expenses breakdown by category")
     spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
 
     class Config:
@@ -431,11 +435,28 @@ class YearlyAnalyticsData(BaseModel):
 class EmergencyFundData(BaseModel):
     """Schema for emergency fund analysis data"""
     year: int = Field(..., description="Year of the analysis")
+    
+    # Core Expenses (Existing)
     average_monthly_core_expenses: float = Field(..., description="Average monthly core expenses")
     total_core_expenses: float = Field(..., description="Total core expenses for the year")
-    three_month_fund_target: float = Field(..., description="Target amount for 3-month emergency fund")
-    six_month_fund_target: float = Field(..., description="Target amount for 6-month emergency fund")
+    three_month_core_target: float = Field(..., description="Target amount for 3-month core emergency fund")
+    six_month_core_target: float = Field(..., description="Target amount for 6-month core emergency fund")
     core_category_breakdown: dict[str, float] = Field(..., description="Breakdown of core expenses by category")
+    
+    # Core + Necessary Expenses (New)
+    average_monthly_core_necessary: float = Field(..., description="Average monthly core + necessary expenses")
+    total_core_necessary: float = Field(..., description="Total core + necessary expenses for the year")
+    three_month_core_necessary_target: float = Field(..., description="Target amount for 3-month core + necessary emergency fund")
+    six_month_core_necessary_target: float = Field(..., description="Target amount for 6-month core + necessary emergency fund")
+    
+    # All Expenses (New - sans Future)
+    average_monthly_all_expenses: float = Field(..., description="Average monthly all expenses (excluding future)")
+    total_all_expenses: float = Field(..., description="Total all expenses for the year (excluding future)")
+    three_month_all_target: float = Field(..., description="Target amount for 3-month all expenses emergency fund")
+    six_month_all_target: float = Field(..., description="Target amount for 6-month all expenses emergency fund")
+    
+    # Current State
+    current_savings_amount: float = Field(..., description="Current total amount in savings funds")
     months_analyzed: int = Field(..., description="Number of months with data")
 
     class Config:
