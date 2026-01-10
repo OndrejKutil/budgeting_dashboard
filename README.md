@@ -1,16 +1,19 @@
 # Budgeting Dashboard
 
-[![Live Demo](https://img.shields.io/badge/Live%20App-Click%20Here-brightgreen?style=for-the-badge)](https://budgeting-dashboard-frontend.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20App-Click%20Here-brightgreen?style=for-the-badge)](https://budgeting-dashboard-site.onrender.com)
 
 ## Tech Stack
 
 ### **Frontend**
 
-![Plotly](https://img.shields.io/badge/plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
-![Dash](https://img.shields.io/badge/dash-008DE4?style=for-the-badge&logo=plotly&logoColor=white)
-![Bootstrap](https://img.shields.io/badge/bootstrap-%23563D7C.svg?style=for-the-badge&logo=bootstrap&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-- **Plotly Dash** - used with plotly graphs and dash bootstrap components
+- **React** - UI Library
+- **Vite** - Build tool
+- **TailwindCSS** - Utility-first CSS framework
+- **Recharts** - Composable charting library for React components
 
 ### **Backend**
 
@@ -21,7 +24,7 @@
 - **FastAPI** - High-performance async API framework
 - **Pydantic** - Data validation and serialization
 - **PyJWT** - JSON Web Token implementation
-- **Pandas** - Data manipulation and analysis
+- **Polars** - Blazingly fast DataFrames
 
 ### **Database & Infrastructure**
 
@@ -30,41 +33,53 @@
 
 - **Supabase** - PostgreSQL database with auth handling
 
+### **Development Process**
+
+To accelerate development, the first version of the UI was scaffolded using Lovable.
+From there, the application was iteratively redesigned, extended, and connected to a custom backend API, including authentication, analytics endpoints, and state handling.
+
+The final implementation reflects deliberate architectural and UX decisions beyond the initial scaffold.
+
+Crucially, the entire backend and database development was performed manually, ensuring a robust and custom-tailored solution.
+
 ## Screenshots
 
-| Dashboard Overview | Transaction Management |
+| Landing Page | Registration |
 |:------------------:|:---------------------:|
-| ![Dashboard](screenshots/yearly_metrics_and_upper_charts.png) | ![Transactions](screenshots/transactions_page_table.png) |
-| Main dashboard with key metrics | Complete transaction CRUD interface |
+| ![Landing Page](screenshots/Landing_page.png) | ![Registration](screenshots/registration_page.png) |
+| Welcome screen and dashboard entry | Secure user registration |
 
-| Analytics & Reports | Investment Calculator |
+| Monthly Analytics | Yearly Analytics |
 |:------------------:|:--------------------:|
-| ![Analytics](screenshots/monthly_charts.png) | ![Investment](screenshots/investing_growth_calculator.png) |
-| Detailed financial analytics | Growth projection tools |
+| ![Monthly Analytics](screenshots/monthly_analytics_page.png) | ![Yearly Analytics](screenshots/yearly_analytics_page.png) |
+| Detailed monthly breakdown | Long-term trend analysis |
 
-| User Registration | Transaction Modals |
+| Accounts Overview | Emergency Fund |
 |:-----------------:|:-----------------:|
-| ![Register](screenshots/register_page.png) | ![Modal](screenshots/add_transaction_modal.png) |
-| Secure user onboarding | Intuitive data entry |
+| ![Accounts](screenshots/accounts_page.png) | ![Emergency Fund](screenshots/em_analysis.png) |
+| Comprehensive accounts management | dedicated emergency fund tracking |
 
 ## Project Structure
 
-```text
+```bash
 budgeting_dashboard/
 ├── src/
-│   ├── backend/                 # FastAPI backend
-│   │   ├── backend_server.py    # Main application
-│   │   ├── auth/               # Authentication
-│   │   ├── routers/            # API endpoints
-│   │   ├── schemas/            # Data models
-│   │   └── helper/             # Utilities
-│   └── frontend/               # Plotly Dash frontend
-│       ├── main.py             # Main application
-│       ├── components/         # UI components
-│       ├── pages/              # Application pages
-│       └── helper/             # Frontend utilities
-├── scripts/                    # Deployment scripts
-├── screenshots/                # Application screenshots
+│   ├── backend/                    # FastAPI backend
+│   │   ├── backend_server.py       # Main application
+│   │   ├── Dockerfile              # Dockerfile for backend
+│   │   ├── auth/                   # Authentication
+│   │   ├── routers/                # API endpoints
+│   │   ├── schemas/                # Data models
+│   │   └── helper/                 # Utilities
+│   ├── frontend/                   # React + Vite frontend
+│   │   ├── src/
+│   │   │   ├── main.tsx            # Application entry point
+│   │   │   ├── components/         # UI components
+│   │   │   ├── pages/              # Application pages
+│   │   │   └── lib/                # Utilities
+│   └── tests/                      # Automated tests
+├── screenshots/                    # Application screenshots
+├── docs/                           # Documentation
 └── README.md
 ```
 
