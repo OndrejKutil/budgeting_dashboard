@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { healthApi } from '@/lib/api/client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,6 +70,13 @@ const fadeInUp = {
 };
 
 export default function LandingPage() {
+  useEffect(() => {
+    // Warm up backend
+    healthApi.check().catch(() => {
+      // Ignore errors as this is just a warm-up call
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}

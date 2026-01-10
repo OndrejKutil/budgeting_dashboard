@@ -420,3 +420,9 @@ export const analyticsApi = {
     return response.data;
   },
 };
+
+export const healthApi = {
+  check: () => {
+    return apiClient.get<{ status: string }>('/health');
+  },
+};

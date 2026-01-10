@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -13,10 +13,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLongLoading, setIsLongLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      timer = setTimeout(() => setIsLongLoading(true), 3000);
+    } else {
+      setIsLongLoading(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -119,6 +130,13 @@ export default function LoginPage() {
             'Sign in'
           )}
         </Button>
+
+        {isLongLoading && (
+          <p className="text-center text-xs text-muted-foreground animate-pulse">
+            The server is waking up from its nap... 😴 <br />
+            This might take a few seconds!
+          </p>
+        )}
 
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{' '}
