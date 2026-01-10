@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet } from 'lucide-react';
+import { Wallet, LayoutDashboard, BarChart, PiggyBank } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AuthLayoutProps {
@@ -17,7 +17,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-chart-investment/10" />
         <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-primary/30 blur-3xl" />
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-chart-investment/20 blur-3xl" />
-        
+
         <div className="relative z-10 p-8">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-blurple">
@@ -37,28 +37,47 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
               Your financial journey{' '}
               <span className="text-gradient-blurple">starts here</span>
             </h2>
-            <p className="max-w-md text-muted-foreground">
-              Track expenses, set goals, and gain insights into your spending habits with our powerful analytics.
-            </p>
           </motion.div>
 
-          {/* Testimonial */}
+          {/* Features List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="mt-12 rounded-xl border border-border/50 bg-card/50 p-6 backdrop-blur-sm"
+            className="mt-12 space-y-6"
           >
-            <p className="mb-4 text-sm italic text-foreground">
-              "This app helped me organize my finances in one place and saved me so much time!"
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-blurple text-sm font-bold text-white">
-                O
+            <h3 className="text-lg font-semibold text-foreground">
+              After signing in, you’ll get:
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <LayoutDashboard className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-medium">A clear monthly summary</div>
+                  <div className="text-sm text-muted-foreground">Track your cash flow instantly</div>
+                </div>
               </div>
-              <div>
-                <div className="text-sm font-medium">Ondřej's family</div>
-                <div className="text-xs text-muted-foreground">Family user</div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-investment/10 text-chart-investment">
+                  <BarChart className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-medium">Visual spending analytics</div>
+                  <div className="text-sm text-muted-foreground">See where your money goes</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-saving/10 text-chart-saving">
+                  <PiggyBank className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-medium">Savings goals in one place</div>
+                  <div className="text-sm text-muted-foreground">Plan for your future</div>
+                </div>
               </div>
             </div>
           </motion.div>

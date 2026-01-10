@@ -302,7 +302,10 @@ def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> O
     """
     # Helper to aggregate expenses by category
     def agg_expenses(df):
-        if df.is_empty(): return pl.DataFrame({'category_name': [], 'total': []})
+        if df.is_empty(): 
+            return pl.DataFrame(
+                schema={'category_name': pl.Utf8, 'total': pl.Float64}
+            )
         return (
             df.filter(pl.col('category_type') == 'expense')
             .group_by('category_name')

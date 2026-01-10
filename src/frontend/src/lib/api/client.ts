@@ -15,19 +15,19 @@ export const tokenManager = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
   getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
   getUserId: () => localStorage.getItem(USER_ID_KEY),
-  
+
   setTokens: (accessToken: string, refreshToken: string, userId?: string) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     if (userId) localStorage.setItem(USER_ID_KEY, userId);
   },
-  
+
   clearTokens: () => {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_ID_KEY);
   },
-  
+
   isAuthenticated: () => !!localStorage.getItem(ACCESS_TOKEN_KEY),
 };
 
@@ -101,7 +101,7 @@ async function request<T>(
   retryOnExpired = true
 ): Promise<ApiResponse<T>> {
   const accessToken = tokenManager.getAccessToken();
-  
+
   const headers: HeadersInit = {
     'X-API-KEY': API_KEY,
     'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ export const authApi = {
 };
 
 // Categories API
-import type { Category, Account, Transaction, TransactionsResponse } from './types';
+import type { Category, Account, Transaction, TransactionsResponse, SavingsFund } from './types';
 
 interface CategoriesResponse {
   data: Category[];
@@ -229,6 +229,44 @@ export const categoriesApi = {
     const response = await apiClient.get<CategoriesResponse>(
       '/categories/',
       params as Record<string, string | number | undefined>
+    );
+    return response.data;
+  },
+};
+
+// Savings Funds API
+interface FundsResponse {
+  data: SavingsFund[];
+  count: number;
+  success: boolean;
+  message: string;
+}
+
+export const fundsApi = {
+  getAll: async (params?: { fund_id?: string; fund_name?: string }) => {
+    const response = await apiClient.get<FundsResponse>('/funds/', params);
+    return response.data;
+  },
+
+  create: async (fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
+    const response = await apiClient.post<{ success: boolean; message: string; data: SavingsFund[] }>(
+      '/funds/',
+      fund
+    );
+    return response.data;
+  },
+
+  update: async (fundId: string, fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
+    const response = await apiClient.put<{ success: boolean; message: string; data: SavingsFund[] }>(
+      `/funds/${fundId}`,
+      fund
+    );
+    return response.data;
+  },
+
+  delete: async (fundId: string) => {
+    const response = await apiClient.delete<{ success: boolean; message: string }>(
+      `/funds/${fundId}`
     );
     return response.data;
   },
@@ -321,6 +359,34 @@ export const transactionsApi = {
   delete: async (transactionId: string) => {
     const response = await apiClient.delete<{ success: boolean; message: string }>(
       `/transactions/${transactionId}`
+    );
+    return response.data;
+  },
+};
+
+// Summary API
+import type { SummaryResponse } from './types';
+
+// Profile API
+import type { ProfileResponse } from './types';
+
+export const profileApi = {
+  getMe: async () => {
+    const response = await apiClient.get<ProfileResponse>('/profile/me');
+    return response.data;
+  },
+
+  updateProfile: async (data: { full_name?: string; currency?: string }) => {
+    const response = await apiClient.put<ProfileResponse>('/profile/me', data);
+    return response.data;
+  },
+};
+
+export const summaryApi = {
+  get: async (params?: { start_date?: string; end_date?: string }) => {
+    const response = await apiClient.get<SummaryResponse>(
+      '/summary/',
+      params as Record<string, string | number | undefined>
     );
     return response.data;
   },

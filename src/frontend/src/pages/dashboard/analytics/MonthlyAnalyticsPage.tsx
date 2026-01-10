@@ -30,6 +30,7 @@ import {
   Bar,
 } from 'recharts';
 import { useState } from 'react';
+import { useUser } from '@/contexts/UserContext';
 
 // Mock data
 const dailySpending = Array.from({ length: 30 }, (_, i) => ({
@@ -54,6 +55,7 @@ const spendingType = [
 ];
 
 export default function MonthlyAnalyticsPage() {
+  const { formatCurrency } = useUser();
   const [selectedMonth, setSelectedMonth] = useState('january');
 
   return (
@@ -81,12 +83,12 @@ export default function MonthlyAnalyticsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
       >
-        <KPICard title="Income" value={8450} icon={<TrendingUp className="h-5 w-5" />} variant="income" />
-        <KPICard title="Expenses" value={3240} icon={<TrendingDown className="h-5 w-5" />} variant="expense" />
-        <KPICard title="Savings" value={2100} icon={<PiggyBank className="h-5 w-5" />} variant="savings" />
-        <KPICard title="Investments" value={1500} icon={<Briefcase className="h-5 w-5" />} variant="investment" />
-        <KPICard title="Profit" value={5210} icon={<DollarSign className="h-5 w-5" />} />
-        <KPICard title="Net Cash Flow" value={3110} icon={<Wallet className="h-5 w-5" />} />
+        <KPICard title="Income" value={8450} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} />
+        <KPICard title="Expenses" value={3240} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} />
+        <KPICard title="Savings" value={2100} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} />
+        <KPICard title="Investments" value={1500} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} />
+        <KPICard title="Profit" value={5210} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} />
+        <KPICard title="Net Cash Flow" value={3110} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} />
       </motion.div>
 
       {/* Charts */}
@@ -117,7 +119,7 @@ export default function MonthlyAnalyticsPage() {
                     borderRadius: '8px',
                     color: 'hsl(210, 40%, 98%)',
                   }}
-                  formatter={(value: number) => [`$${value}`, 'Spending']}
+                  formatter={(value: number) => [formatCurrency(value), 'Spending']}
                   labelFormatter={(label) => `Day ${label}`}
                 />
                 <Area
@@ -164,7 +166,7 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(210, 40%, 98%)',
                     }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                    formatter={(value: number) => [formatCurrency(value), '']}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -176,7 +178,7 @@ export default function MonthlyAnalyticsPage() {
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: cat.color }} />
                     <span className="text-sm">{cat.name}</span>
                   </div>
-                  <span className="text-sm font-medium">${cat.value.toLocaleString()}</span>
+                  <span className="text-sm font-medium">{formatCurrency(cat.value)}</span>
                 </div>
               ))}
             </div>
@@ -204,7 +206,7 @@ export default function MonthlyAnalyticsPage() {
                   borderRadius: '8px',
                   color: 'hsl(210, 40%, 98%)',
                 }}
-                formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name]}
+                formatter={(value: number, name: string) => [formatCurrency(value), name]}
               />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                 {spendingType.map((_, index) => (

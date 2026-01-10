@@ -57,29 +57,78 @@ export interface Account {
   account_name: string;
   type: string;
   currency: string | null;
+  current_balance: number | null;
+  net_flow_30d: number | null;
   created_at: string | null;
 }
 
 export interface SavingsFund {
-  id: string;
-  user_id: string;
-  name: string;
+  savings_funds_id_pk: string;
+  user_id_fk: string;
+  fund_name: string;
   target_amount: number;
   current_amount?: number;
-  description?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  net_flow_30d?: number;
+  created_at: string | null;
 }
 
-export interface Profile {
-  id: string;
-  email: string;
+export interface SavingsFundRequest {
+  user_id_fk: string;
+  fund_name: string;
+  target_amount: number;
+  created_at?: string | null;
+}
+
+export interface IdentityData {
+  id: string | null;
+  identity_id: string | null;
+  user_id: string | null;
+  provider: string | null;
+  identity_data: Record<string, unknown> | null;
+  created_at: string | null;
+  last_sign_in_at: string | null;
+  updated_at: string | null;
+}
+
+export interface UpdateProfileRequest {
   full_name?: string;
-  avatar_url?: string;
-  last_sign_in_at?: string;
-  created_at: string;
-  user_metadata?: Record<string, unknown>;
+  currency?: string;
+}
+
+export interface ProfileData {
+  id: string | null;
+  aud: string | null;
+  role: string | null;
+  is_anonymous: boolean;
+  email: string | null;
+  email_confirmed_at: string | null;
+  email_change_sent_at: string | null;
+  new_email: string | null;
+  phone: string | null;
+  phone_confirmed_at: string | null;
+  new_phone: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  last_sign_in_at: string | null;
+  confirmed_at: string | null;
+  confirmation_sent_at: string | null;
+  recovery_sent_at: string | null;
+  invited_at: string | null;
+  app_metadata: Record<string, unknown> | null;
+  user_metadata: {
+    full_name?: string;
+    avatar_url?: string;
+    [key: string]: unknown;
+  } | null;
+  identities: IdentityData[] | null;
+  factors: Record<string, unknown>[] | null;
+  action_link: string | null;
+}
+
+export interface ProfileResponse {
+  data: ProfileData;
+  success: boolean;
+  message: string;
 }
 
 export interface MonthlySummary {
@@ -120,12 +169,44 @@ export interface EmergencyFundAnalysis {
   core_category_breakdown: Array<{ category_name: string; amount: number }>;
 }
 
-export interface Summary {
-  start_date: string;
-  end_date: string;
+
+export interface PeriodComparison {
+  income_delta: number;
+  income_delta_pct: number;
+  expense_delta: number;
+  expense_delta_pct: number;
+  saving_delta: number;
+  investment_delta: number;
+  profit_delta: number;
+  profit_delta_pct: number;
+  cashflow_delta: number;
+  cashflow_delta_pct: number;
+}
+
+export interface CategoryInsight {
+  name: string;
+  total: number;
+  share_of_total: number;
+}
+
+export interface SummaryData {
   total_income: number;
-  total_expenses: number;
-  total_savings: number;
-  total_investments: number;
-  net_change: number;
+  total_expense: number;
+  total_saving: number;
+  total_investment: number;
+  profit: number;
+  net_cash_flow: number;
+  comparison: PeriodComparison;
+  savings_rate: number;
+  investment_rate: number;
+  top_expenses: CategoryInsight[];
+  biggest_mover: CategoryInsight | null;
+  largest_transactions: Transaction[];
+  by_category: Record<string, number>;
+}
+
+export interface SummaryResponse {
+  data: SummaryData;
+  success: boolean;
+  message: string;
 }

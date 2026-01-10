@@ -6,6 +6,7 @@ import { categoriesApi, ApiError } from '@/lib/api/client';
 import { Category } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import {
   ShoppingCart,
   Home,
@@ -19,7 +20,13 @@ import {
   CreditCard,
   Loader2,
   AlertCircle,
+  ChevronDown,
 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Housing: Home,
@@ -129,7 +136,7 @@ export default function CategoriesPage() {
 
       {isLoading ? (
         <div className="space-y-6">
-          {['expense', 'income', 'saving'].map((type) => (
+          {['income', 'expense', 'saving'].map((type) => (
             <div key={type} className="space-y-4">
               <Skeleton className="h-6 w-24" />
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -141,57 +148,75 @@ export default function CategoriesPage() {
           ))}
         </div>
       ) : (
-        Object.entries(groupedCategories).map(([type, cats]) => (
-          <motion.div
-            key={type}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <h2 className="text-lg font-semibold font-display capitalize">{type}</h2>
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              animate="show"
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {cats.map((category) => {
-                const Icon = iconMap[category.category_name] || CreditCard;
-                return (
+        <div className="space-y-6">
+          {['income', 'expense', 'saving', 'investment', 'exclude'].map((type) => {
+            const cats = groupedCategories[type];
+            if (!cats?.length) return null;
+
+            return (
+              <Collapsible
+                key={type}
+                defaultOpen={false}
+                className="space-y-4 rounded-xl border border-border/50 bg-card/50 p-4"
+              >
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg p-2 group">
+                  <h2 className="text-lg font-semibold font-display capitalize flex items-center gap-2">
+                    {type}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      ({cats.length})
+                    </span>
+                  </h2>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+
+                <CollapsibleContent className="space-y-4 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <motion.div
-                    key={category.categories_id_pk}
-                    variants={fadeIn}
-                    className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:border-primary/50 hover:shadow-glow-sm"
+                    variants={stagger}
+                    initial="hidden"
+                    animate="show"
+                    className="grid gap-4 pt-2 sm:grid-cols-2 lg:grid-cols-3"
                   >
-                    <div className="rounded-lg bg-primary/10 p-3 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{category.category_name}</h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        {category.spending_type && (
-                          <span
-                            className={cn(
-                              'rounded-full border px-2 py-0.5 text-xs',
-                              spendingTypeColors[category.spending_type] || 'bg-muted text-muted-foreground'
-                            )}
-                          >
-                            {category.spending_type}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {category.is_active === false && (
-                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        Inactive
-                      </span>
-                    )}
+                    {cats.map((category) => {
+                      const Icon = iconMap[category.category_name] || CreditCard;
+                      return (
+                        <motion.div
+                          key={category.categories_id_pk}
+                          variants={fadeIn}
+                          className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:border-primary/50 hover:shadow-glow-sm"
+                        >
+                          <div className="rounded-lg bg-primary/10 p-3 text-primary">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium">{category.category_name}</h3>
+                            <div className="mt-1 flex items-center gap-2">
+                              {category.spending_type && (
+                                <span
+                                  className={cn(
+                                    'rounded-full border px-2 py-0.5 text-xs',
+                                    spendingTypeColors[category.spending_type] ||
+                                    'bg-muted text-muted-foreground'
+                                  )}
+                                >
+                                  {category.spending_type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {category.is_active === false && (
+                            <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                              Inactive
+                            </span>
+                          )}
+                        </motion.div>
+                      );
+                    })}
                   </motion.div>
-                );
-              })}
-            </motion.div>
-          </motion.div>
-        ))
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
+        </div>
       )}
     </div>
   );

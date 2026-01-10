@@ -79,3 +79,17 @@ class SavingsFundsRequest(BaseModel):
                 "target_amount": 5000
             }
         }
+
+
+class UpdateProfileRequest(BaseModel):
+    """Schema for updating user profile"""
+    full_name: Optional[str] = Field(None, description="User full name")
+    currency: Optional[str] = Field(None, description="User preferred currency (e.g., USD, CZK)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "full_name": "John Doe",
+                "currency": "CZK"
+            }
+        }

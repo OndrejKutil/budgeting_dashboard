@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,9 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Settings, Bell } from 'lucide-react';
+import { LogOut, User, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MobileSidebarTrigger } from './AppSidebar';
+import { profileApi } from '@/lib/api/client';
+import { ProfileData } from '@/lib/api/types';
 
 interface TopbarProps {
   onMobileMenuClick: () => void;
@@ -19,11 +22,31 @@ interface TopbarProps {
 export function Topbar({ onMobileMenuClick }: TopbarProps) {
   const { logout, userId } = useAuth();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const response = await profileApi.getMe();
+        if (response.success) {
+          setProfile(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile in Topbar:', error);
+      }
+    }
+
+    if (userId) {
+      fetchProfile();
+    }
+  }, [userId]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  const displayName = profile?.user_metadata?.full_name || (userId ? `ID: ${userId.slice(0, 8)}...` : 'User');
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:px-6">
@@ -58,7 +81,7 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">My Account</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {userId ? `ID: ${userId.slice(0, 8)}...` : 'User'}
+                  {displayName}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -66,10 +89,6 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
             <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
               <User className="mr-2 h-4 w-4" />
               Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">

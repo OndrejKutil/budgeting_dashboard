@@ -68,21 +68,21 @@ function AccountSkeleton() {
 }
 
 const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash'];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'PLN', 'CAD', 'AUD'];
+const CURRENCIES = ['USD', 'EUR', 'CZK', 'GBP', 'PLN', 'CAD', 'AUD'];
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     account_name: '',
     type: '',
-    currency: 'USD',
+    currency: 'CZK',
   });
 
   useEffect(() => {
@@ -140,9 +140,9 @@ export default function AccountsPage() {
     try {
       if (selectedAccount) {
         await accountsApi.update(selectedAccount.accounts_id_pk, formData);
-        setAccounts(accounts.map(a => 
-          a.accounts_id_pk === selectedAccount.accounts_id_pk 
-            ? { ...a, ...formData } 
+        setAccounts(accounts.map(a =>
+          a.accounts_id_pk === selectedAccount.accounts_id_pk
+            ? { ...a, ...formData }
             : a
         ));
         toast({ title: 'Account updated successfully' });
@@ -172,7 +172,7 @@ export default function AccountsPage() {
     setFormData({
       account_name: account.account_name,
       type: account.type,
-      currency: account.currency || 'USD',
+      currency: account.currency || 'CZK',
     });
     setIsModalOpen(true);
   };
@@ -183,7 +183,7 @@ export default function AccountsPage() {
     setFormData({
       account_name: '',
       type: '',
-      currency: 'USD',
+      currency: 'CZK',
     });
   };
 
@@ -229,9 +229,9 @@ export default function AccountsPage() {
         className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
       >
         <p className="text-sm text-muted-foreground">Total Accounts</p>
-        <p className="mt-1 text-3xl font-bold font-display">
+        <div className="mt-1 text-3xl font-bold font-display">
           {isLoading ? <Skeleton className="h-9 w-16 inline-block" /> : accounts.length}
-        </p>
+        </div>
         <p className="mt-2 text-sm text-muted-foreground">
           Manage your financial accounts
         </p>
@@ -284,7 +284,7 @@ export default function AccountsPage() {
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => handleDelete(account.accounts_id_pk)}
                       >
@@ -294,8 +294,32 @@ export default function AccountsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="mt-4">
-                  <p className="text-xs text-muted-foreground">{account.currency || 'USD'}</p>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Current Balance</p>
+                    <p className="text-2xl font-bold font-display">
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: account.currency || 'CZK',
+                      }).format(account.current_balance || 0)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">30d Net Flow</span>
+                    <span
+                      className={`font-medium ${(account.net_flow_30d || 0) >= 0
+                        ? 'text-emerald-500'
+                        : 'text-destructive'
+                        }`}
+                    >
+                      {(account.net_flow_30d || 0) > 0 ? '+' : ''}
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: account.currency || 'CZK',
+                      }).format(account.net_flow_30d || 0)}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             );
@@ -323,8 +347,8 @@ export default function AccountsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="type">Account Type</Label>
-              <Select 
-                value={formData.type} 
+              <Select
+                value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
               >
                 <SelectTrigger>
@@ -341,8 +365,8 @@ export default function AccountsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
-              <Select 
-                value={formData.currency} 
+              <Select
+                value={formData.currency}
                 onValueChange={(value) => setFormData({ ...formData, currency: value })}
               >
                 <SelectTrigger>
@@ -362,7 +386,7 @@ export default function AccountsPage() {
             <Button variant="outline" onClick={closeModal}>
               Cancel
             </Button>
-            <Button 
+            <Button
               className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
               disabled={isSubmitting}

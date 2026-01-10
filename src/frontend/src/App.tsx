@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
+import { UserProvider } from "@/contexts/UserContext";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -27,13 +28,11 @@ import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
+const AppContent = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <UserProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
@@ -65,8 +64,18 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+        </UserProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AppContent />
     </TooltipProvider>
   </QueryClientProvider>
 );

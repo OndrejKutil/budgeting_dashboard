@@ -11,6 +11,7 @@ interface KPICardProps {
   icon?: ReactNode;
   variant?: 'default' | 'income' | 'expense' | 'savings' | 'investment';
   className?: string;
+  formatter?: (value: number) => string;
 }
 
 const variantStyles = {
@@ -37,10 +38,15 @@ export function KPICard({
   icon,
   variant = 'default',
   className,
+  formatter,
 }: KPICardProps) {
   const isPositive = change !== undefined && change > 0;
   const isNegative = change !== undefined && change < 0;
   const isNeutral = change === 0;
+
+  const formattedValue = typeof value === 'number'
+    ? (formatter ? formatter(value) : value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }))
+    : value;
 
   return (
     <motion.div
@@ -57,7 +63,7 @@ export function KPICard({
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-2xl font-bold font-display tracking-tight text-foreground">
-            {typeof value === 'number' ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : value}
+            {formattedValue}
           </p>
         </div>
         {icon && (

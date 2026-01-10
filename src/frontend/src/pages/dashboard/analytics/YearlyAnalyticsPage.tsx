@@ -28,6 +28,7 @@ import {
   Bar,
 } from 'recharts';
 import { useState } from 'react';
+import { useUser } from '@/contexts/UserContext';
 
 const monthlyTrends = [
   { month: 'Jan', income: 7500, expenses: 3100, savings: 1800 },
@@ -52,6 +53,7 @@ const quarterlyData = [
 ];
 
 export default function YearlyAnalyticsPage() {
+  const { formatCurrency } = useUser();
   const [selectedYear, setSelectedYear] = useState('2025');
 
   const totalIncome = monthlyTrends.reduce((sum, m) => sum + m.income, 0);
@@ -83,11 +85,11 @@ export default function YearlyAnalyticsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
       >
-        <KPICard title="Total Income" value={totalIncome} icon={<TrendingUp className="h-5 w-5" />} variant="income" />
-        <KPICard title="Total Expenses" value={totalExpenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" />
-        <KPICard title="Total Savings" value={totalSavings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" />
-        <KPICard title="Investments" value={18000} icon={<Briefcase className="h-5 w-5" />} variant="investment" />
-        <KPICard title="Annual Profit" value={totalIncome - totalExpenses} icon={<DollarSign className="h-5 w-5" />} />
+        <KPICard title="Total Income" value={totalIncome} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} />
+        <KPICard title="Total Expenses" value={totalExpenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} />
+        <KPICard title="Total Savings" value={totalSavings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} />
+        <KPICard title="Investments" value={18000} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} />
+        <KPICard title="Annual Profit" value={totalIncome - totalExpenses} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} />
         <KPICard title="Savings Rate" value="26%" icon={<Wallet className="h-5 w-5" />} />
       </motion.div>
 
@@ -111,7 +113,7 @@ export default function YearlyAnalyticsPage() {
                   borderRadius: '8px',
                   color: 'hsl(210, 40%, 98%)',
                 }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                formatter={(value: number) => [formatCurrency(value), '']}
               />
               <Legend />
               <Line type="monotone" dataKey="income" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={false} name="Income" />
@@ -142,7 +144,7 @@ export default function YearlyAnalyticsPage() {
                   borderRadius: '8px',
                   color: 'hsl(210, 40%, 98%)',
                 }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                formatter={(value: number) => [formatCurrency(value), '']}
               />
               <Legend />
               <Bar dataKey="income" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} name="Income" />

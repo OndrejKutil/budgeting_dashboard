@@ -1,8 +1,9 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Target, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Target, MoreHorizontal, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -10,13 +11,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-const mockFunds = [
-  { id: '1', name: 'Emergency Fund', target: 15000, current: 8500, description: '6-month expenses buffer' },
-  { id: '2', name: 'Vacation', target: 3000, current: 1250, description: 'Summer trip to Europe' },
-  { id: '3', name: 'New Car', target: 25000, current: 12000, description: 'Down payment for new vehicle' },
-  { id: '4', name: 'Home Renovation', target: 10000, current: 10000, description: 'Kitchen remodel' },
-];
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { fundsApi, tokenManager, ApiError } from '@/lib/api/client';
+import { SavingsFund } from '@/lib/api/types';
+import { toast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/contexts/UserContext';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -29,8 +37,173 @@ const fadeIn = {
 };
 
 export default function FundsPage() {
-  const totalTarget = mockFunds.reduce((sum, f) => sum + f.target, 0);
-  const totalCurrent = mockFunds.reduce((sum, f) => sum + f.current, 0);
+  const { formatCurrency } = useUser();
+  const [funds, setFunds] = useState<SavingsFund[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFund, setSelectedFund] = useState<SavingsFund | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    fund_name: '',
+    target_amount: '',
+  });
+
+  const totalTarget = funds.reduce((sum, f) => sum + f.target_amount, 0);
+  const totalCurrent = funds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
+
+  useEffect(() => {
+    fetchFunds();
+  }, []);
+
+  const fetchFunds = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fundsApi.getAll();
+      setFunds(response.data);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to load savings funds';
+      setError(message || 'Failed to load savings funds');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenModal = (fund?: SavingsFund) => {
+    if (fund) {
+      setSelectedFund(fund);
+      setFormData({
+        fund_name: fund.fund_name,
+        target_amount: fund.target_amount.toString(),
+      });
+    } else {
+      setSelectedFund(null);
+      setFormData({
+        fund_name: '',
+        target_amount: '',
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedFund(null);
+    setFormData({
+      fund_name: '',
+      target_amount: '',
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.fund_name || !formData.target_amount) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const userId = tokenManager.getUserId();
+    if (!userId) {
+      toast({
+        title: 'Authentication Error',
+        description: 'User ID not found. Please log in again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        user_id_fk: userId,
+        fund_name: formData.fund_name,
+        target_amount: parseInt(formData.target_amount),
+      };
+
+      if (selectedFund) {
+        const result = await fundsApi.update(selectedFund.savings_funds_id_pk, payload);
+        if (result.success && result.data) {
+          const updatedFund = result.data[0];
+          if (updatedFund) {
+            setFunds(funds.map(f => f.savings_funds_id_pk === updatedFund.savings_funds_id_pk ? updatedFund : f));
+          } else {
+            await fetchFunds();
+          }
+          toast({ title: 'Fund updated successfully' });
+        }
+      } else {
+        const result = await fundsApi.create(payload);
+        if (result.success && result.data) {
+          const newFund = result.data[0];
+          if (newFund) {
+            setFunds([...funds, newFund]);
+          } else {
+            await fetchFunds();
+          }
+          toast({ title: 'Fund created successfully' });
+        }
+      }
+      handleCloseModal();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to save fund';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (fundId: string) => {
+    try {
+      await fundsApi.delete(fundId);
+      setFunds(funds.filter(f => f.savings_funds_id_pk !== fundId));
+      toast({
+        title: 'Fund deleted',
+        description: 'The savings fund has been removed.',
+      });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Failed to delete fund';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (error && !isLoading && funds.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Savings Funds"
+          description="Track your savings goals and progress"
+          actions={
+            <Button onClick={() => handleOpenModal()} className="bg-gradient-blurple hover:opacity-90">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Fund
+            </Button>
+          }
+        />
+        <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
+          <h3 className="text-lg font-semibold">Failed to load funds</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" className="mt-4" onClick={fetchFunds}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -38,7 +211,7 @@ export default function FundsPage() {
         title="Savings Funds"
         description="Track your savings goals and progress"
         actions={
-          <Button className="bg-gradient-blurple hover:opacity-90">
+          <Button onClick={() => handleOpenModal()} className="bg-gradient-blurple hover:opacity-90">
             <Plus className="mr-2 h-4 w-4" />
             Create Fund
           </Button>
@@ -51,111 +224,203 @@ export default function FundsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Total Saved</p>
-            <p className="text-3xl font-bold font-display">
-              ${totalCurrent.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              of ${totalTarget.toLocaleString('en-US')} target
-            </p>
+        {isLoading ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="w-full sm:w-48 space-y-2">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
           </div>
-          <div className="w-full sm:w-48">
-            <Progress
-              value={(totalCurrent / totalTarget) * 100}
-              className="h-3"
-            />
-            <p className="mt-1 text-right text-sm text-muted-foreground">
-              {((totalCurrent / totalTarget) * 100).toFixed(0)}% complete
-            </p>
+        ) : (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total Saved</p>
+              <p className="text-3xl font-bold font-display">
+                {formatCurrency(totalCurrent)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                of {formatCurrency(totalTarget)} target
+              </p>
+            </div>
+            <div className="w-full sm:w-48">
+              <Progress
+                value={totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0}
+                className="h-3"
+              />
+              <p className="mt-1 text-right text-sm text-muted-foreground">
+                {totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}% complete
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
       {/* Funds Grid */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="grid gap-4 sm:grid-cols-2"
-      >
-        {mockFunds.map((fund) => {
-          const progress = (fund.current / fund.target) * 100;
-          const isComplete = progress >= 100;
-
-          return (
-            <motion.div
-              key={fund.id}
-              variants={fadeIn}
-              className={cn(
-                'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
-                isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
-              )}
-            >
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-xl border bg-card p-5 shadow-card">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'rounded-lg p-2.5',
-                      isComplete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
-                    )}
-                  >
-                    <Target className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{fund.name}</h3>
-                    <p className="text-sm text-muted-foreground">{fund.description}</p>
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-24" />
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
+              <div className="mt-6 space-y-3">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="grid gap-4 sm:grid-cols-2"
+        >
+          <AnimatePresence mode='popLayout'>
+            {funds.map((fund) => {
+              const current = fund.current_amount || 0;
+              const progress = fund.target_amount > 0 ? (current / fund.target_amount) * 100 : 0;
+              const isComplete = progress >= 100;
 
-              <div className="mt-4">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <span className="text-2xl font-bold font-display">
-                      ${fund.current.toLocaleString('en-US')}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {' '}/ ${fund.target.toLocaleString('en-US')}
-                    </span>
-                  </div>
-                  {isComplete && (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                      Complete!
-                    </span>
+              return (
+                <motion.div
+                  key={fund.savings_funds_id_pk}
+                  variants={fadeIn}
+                  layout
+                  className={cn(
+                    'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
+                    isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
                   )}
-                </div>
-                <Progress
-                  value={Math.min(progress, 100)}
-                  className={cn('mt-3 h-2', isComplete && '[&>div]:bg-success')}
-                />
-              </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'rounded-lg p-2.5',
+                          isComplete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
+                        )}
+                      >
+                        <Target className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{fund.fund_name}</h3>
+                        {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
+                          <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
+                            {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} this month
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenModal(fund)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDelete(fund.savings_funds_id_pk)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <span className="text-2xl font-bold font-display">
+                          {formatCurrency(current)}
+                        </span>
+                        <span className="text-muted-foreground ml-1 text-sm">
+                          / {formatCurrency(fund.target_amount)}
+                        </span>
+                      </div>
+                      {isComplete && (
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                          Goal Reached!
+                        </span>
+                      )}
+                    </div>
+                    <Progress
+                      value={Math.min(progress, 100)}
+                      className={cn('mt-3 h-2', isComplete && '[&>div]:bg-success')}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Create/Edit Modal */}
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {selectedFund ? 'Edit Savings Fund' : 'Create Savings Fund'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Fund Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Vacation, Emergency Fund"
+                value={formData.fund_name}
+                onChange={(e) => setFormData({ ...formData, fund_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target">Target Amount</Label>
+              <Input
+                id="target"
+                type="number"
+                placeholder="5000"
+                value={formData.target_amount}
+                onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseModal}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-gradient-blurple hover:opacity-90"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {selectedFund ? 'Save Changes' : 'Create Fund'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

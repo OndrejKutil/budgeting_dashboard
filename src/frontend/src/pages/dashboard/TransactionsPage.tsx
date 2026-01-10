@@ -48,9 +48,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { transactionsApi, categoriesApi, accountsApi, ApiError } from '@/lib/api/client';
-import { Transaction, Category, Account } from '@/lib/api/types';
+import { transactionsApi, categoriesApi, accountsApi, fundsApi, ApiError } from '@/lib/api/client';
+import { Transaction, Category, Account, SavingsFund } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
+import { useUser } from '@/contexts/UserContext';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -68,21 +69,23 @@ function TableRowSkeleton() {
 }
 
 export default function TransactionsPage() {
+  const { formatCurrency } = useUser();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [funds, setFunds] = useState<SavingsFund[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     amount: '',
@@ -90,6 +93,7 @@ export default function TransactionsPage() {
     notes: '',
     category_id_fk: '',
     account_id_fk: '',
+    savings_fund_id_fk: '',
   });
 
   // Create lookup maps for categories and accounts
@@ -107,23 +111,32 @@ export default function TransactionsPage() {
     }, {} as Record<string, Account>);
   }, [accounts]);
 
+  const fundMap = useMemo(() => {
+    return funds.reduce((acc, fund) => {
+      acc[fund.savings_funds_id_pk] = fund;
+      return acc;
+    }, {} as Record<string, SavingsFund>);
+  }, [funds]);
+
   // Fetch data
   useEffect(() => {
     async function fetchData() {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const [transactionsRes, categoriesRes, accountsRes] = await Promise.all([
+
+        const [transactionsRes, categoriesRes, accountsRes, fundsRes] = await Promise.all([
           transactionsApi.getAll({ limit: ITEMS_PER_PAGE, offset: currentPage * ITEMS_PER_PAGE }),
           categoriesApi.getAll(),
           accountsApi.getAll(),
+          fundsApi.getAll(),
         ]);
-        
+
         setTransactions(transactionsRes.data);
         setTotalCount(transactionsRes.count);
         setCategories(categoriesRes.data);
         setAccounts(accountsRes.data);
+        setFunds(fundsRes.data);
       } catch (err) {
         const message = err instanceof ApiError ? err.detail : 'Failed to load transactions';
         setError(message || 'Failed to load transactions');
@@ -144,8 +157,8 @@ export default function TransactionsPage() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const category = categoryMap[t.category_id_fk];
-      const matchesSearch = t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           category?.category_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        category?.category_name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || t.category_id_fk.toString() === categoryFilter;
       return matchesSearch && matchesCategory;
     });
@@ -187,12 +200,13 @@ export default function TransactionsPage() {
         amount: parseFloat(formData.amount),
         date: formData.date,
         notes: formData.notes || null,
+        savings_fund_id_fk: formData.savings_fund_id_fk || null,
       };
 
       if (selectedTransaction) {
         const result = await transactionsApi.update(selectedTransaction.id_pk, payload);
         if (result.data && result.data[0]) {
-          setTransactions(transactions.map(t => 
+          setTransactions(transactions.map(t =>
             t.id_pk === selectedTransaction.id_pk ? result.data[0] : t
           ));
         }
@@ -213,6 +227,7 @@ export default function TransactionsPage() {
         notes: '',
         category_id_fk: '',
         account_id_fk: '',
+        savings_fund_id_fk: '',
       });
     } catch (err) {
       const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
@@ -234,6 +249,7 @@ export default function TransactionsPage() {
       notes: transaction.notes || '',
       category_id_fk: transaction.category_id_fk.toString(),
       account_id_fk: transaction.account_id_fk,
+      savings_fund_id_fk: transaction.savings_fund_id_fk || '',
     });
   };
 
@@ -246,6 +262,7 @@ export default function TransactionsPage() {
       notes: '',
       category_id_fk: '',
       account_id_fk: '',
+      savings_fund_id_fk: '',
     });
   };
 
@@ -332,6 +349,7 @@ export default function TransactionsPage() {
                 <TableHead>Notes</TableHead>
                 <TableHead className="hidden sm:table-cell">Category</TableHead>
                 <TableHead className="hidden md:table-cell">Account</TableHead>
+                <TableHead className="hidden lg:table-cell">Fund</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
@@ -362,6 +380,7 @@ export default function TransactionsPage() {
                   <TableHead>Notes</TableHead>
                   <TableHead className="hidden sm:table-cell">Category</TableHead>
                   <TableHead className="hidden md:table-cell">Account</TableHead>
+                  <TableHead className="hidden lg:table-cell">Fund</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -370,6 +389,7 @@ export default function TransactionsPage() {
                 {filteredTransactions.map((transaction) => {
                   const category = categoryMap[transaction.category_id_fk];
                   const account = accountMap[transaction.account_id_fk];
+                  const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
                   return (
                     <TableRow key={transaction.id_pk} className="group">
                       <TableCell className="font-mono text-sm text-muted-foreground">
@@ -387,6 +407,15 @@ export default function TransactionsPage() {
                       <TableCell className="hidden text-muted-foreground md:table-cell">
                         {account?.account_name || 'Unknown'}
                       </TableCell>
+                      <TableCell className="hidden text-muted-foreground lg:table-cell">
+                        {fund ? (
+                          <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs">
+                            {fund.fund_name}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/30 text-xs">-</span>
+                        )}
+                      </TableCell>
                       <TableCell
                         className={cn(
                           'text-right font-medium font-mono',
@@ -394,7 +423,7 @@ export default function TransactionsPage() {
                         )}
                       >
                         {transaction.amount > 0 ? '+' : ''}
-                        ${Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {formatCurrency(Math.abs(transaction.amount))}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -412,7 +441,7 @@ export default function TransactionsPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => handleDelete(transaction.id_pk)}
                             >
@@ -434,18 +463,18 @@ export default function TransactionsPage() {
                 Showing {filteredTransactions.length} of {totalCount} transactions
               </p>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage === 0}
                   onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                 >
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Previous
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setCurrentPage(p => p + 1)}
                 >
@@ -469,6 +498,9 @@ export default function TransactionsPage() {
             <DialogTitle className="font-display">
               {selectedTransaction ? 'Edit Transaction' : 'Add Transaction'}
             </DialogTitle>
+            <div className="text-sm text-muted-foreground">
+              {selectedTransaction ? 'Make changes to your transaction details below.' : 'Add a new transaction to your records.'}
+            </div>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -504,8 +536,8 @@ export default function TransactionsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select 
-                value={formData.category_id_fk} 
+              <Select
+                value={formData.category_id_fk}
                 onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
               >
                 <SelectTrigger>
@@ -522,8 +554,8 @@ export default function TransactionsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="account">Account</Label>
-              <Select 
-                value={formData.account_id_fk} 
+              <Select
+                value={formData.account_id_fk}
                 onValueChange={(value) => setFormData({ ...formData, account_id_fk: value })}
               >
                 <SelectTrigger>
@@ -538,12 +570,32 @@ export default function TransactionsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fund">Savings Fund (Optional)</Label>
+              <Select
+                value={formData.savings_fund_id_fk || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fund" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {funds.map((fund) => (
+                    <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
+                      {fund.fund_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
               Cancel
             </Button>
-            <Button 
+            <Button
               className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
               disabled={isSubmitting}

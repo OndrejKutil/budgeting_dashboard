@@ -36,7 +36,7 @@ def calculate_fund_metrics(transactions_df: pl.DataFrame) -> Dict[str, FundMetri
     balance_df = (
         funds_df
         .group_by(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value)
-        .agg(pl.col(TRANSACTIONS_COLUMNS.AMOUNT.value).sum().alias("current_amount"))
+        .agg(pl.col(TRANSACTIONS_COLUMNS.AMOUNT.value).sum().alias("current_amount").abs())
     )
 
     # 2. Calculate 30-Day Net Flow
@@ -46,7 +46,7 @@ def calculate_fund_metrics(transactions_df: pl.DataFrame) -> Dict[str, FundMetri
         funds_df
         .filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= cutoff_date)
         .group_by(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value)
-        .agg(pl.col(TRANSACTIONS_COLUMNS.AMOUNT.value).sum().alias("net_flow_30d"))
+        .agg(pl.col(TRANSACTIONS_COLUMNS.AMOUNT.value).sum().alias("net_flow_30d").abs())
     )
 
     # 3. Join and format results

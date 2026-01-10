@@ -13,6 +13,7 @@ import {
   Cell,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/contexts/UserContext';
 
 const coreExpenses = [
   { name: 'Housing', amount: 1800 },
@@ -28,6 +29,7 @@ const target6Month = totalCore * 6;
 const currentSaved = 8500;
 
 export default function EmergencyFundPage() {
+  const { formatCurrency } = useUser();
   const progress3 = (currentSaved / target3Month) * 100;
   const progress6 = (currentSaved / target6Month) * 100;
 
@@ -49,18 +51,21 @@ export default function EmergencyFundPage() {
           value={totalCore}
           icon={<AlertTriangle className="h-5 w-5" />}
           variant="expense"
+          formatter={formatCurrency}
         />
         <KPICard
           title="3-Month Target"
           value={target3Month}
           icon={<Shield className="h-5 w-5" />}
           variant="savings"
+          formatter={formatCurrency}
         />
         <KPICard
           title="6-Month Target"
           value={target6Month}
           icon={<Shield className="h-5 w-5" />}
           variant="investment"
+          formatter={formatCurrency}
         />
       </motion.div>
 
@@ -87,9 +92,9 @@ export default function EmergencyFundPage() {
             <div className="flex items-end justify-between">
               <div>
                 <span className="text-3xl font-bold font-display">
-                  ${currentSaved.toLocaleString()}
+                  {formatCurrency(currentSaved)}
                 </span>
-                <span className="text-muted-foreground"> / ${target3Month.toLocaleString()}</span>
+                <span className="text-muted-foreground"> / {formatCurrency(target3Month)}</span>
               </div>
               <span className={cn(
                 'text-lg font-semibold',
@@ -104,7 +109,7 @@ export default function EmergencyFundPage() {
             />
             {progress3 < 100 && (
               <p className="mt-3 text-sm text-muted-foreground">
-                ${(target3Month - currentSaved).toLocaleString()} more needed to reach this goal
+                {formatCurrency(target3Month - currentSaved)} more needed to reach this goal
               </p>
             )}
           </div>
@@ -131,9 +136,9 @@ export default function EmergencyFundPage() {
             <div className="flex items-end justify-between">
               <div>
                 <span className="text-3xl font-bold font-display">
-                  ${currentSaved.toLocaleString()}
+                  {formatCurrency(currentSaved)}
                 </span>
-                <span className="text-muted-foreground"> / ${target6Month.toLocaleString()}</span>
+                <span className="text-muted-foreground"> / {formatCurrency(target6Month)}</span>
               </div>
               <span className={cn(
                 'text-lg font-semibold',
@@ -148,7 +153,7 @@ export default function EmergencyFundPage() {
             />
             {progress6 < 100 && (
               <p className="mt-3 text-sm text-muted-foreground">
-                ${(target6Month - currentSaved).toLocaleString()} more needed to reach this goal
+                {formatCurrency(target6Month - currentSaved)} more needed to reach this goal
               </p>
             )}
           </div>
@@ -178,7 +183,7 @@ export default function EmergencyFundPage() {
                   borderRadius: '8px',
                   color: 'hsl(210, 40%, 98%)',
                 }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']}
+                formatter={(value: number) => [formatCurrency(value), 'Amount']}
               />
               <Bar dataKey="amount" radius={[0, 6, 6, 0]}>
                 {coreExpenses.map((_, index) => (
