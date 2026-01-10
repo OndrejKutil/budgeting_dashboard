@@ -1,6 +1,6 @@
 from ...auth.auth import api_key_auth, get_current_user
 from ...helper import environment as env
-from ...schemas.endpoint_schemas import (
+from ...schemas.base import (
     IdentityData,
     ProfileData
 )

@@ -15,13 +15,11 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # schemas
-from ..schemas.endpoint_schemas import (
-    ProfileResponse,
-    ProfileData
-)
+from ..schemas.base import ProfileData
+from ..schemas.responses import ProfileResponse
 
 # helper
 from ..helper.calculations.profile_page_calc import _build_profile_data
@@ -31,8 +29,6 @@ from ..helper.calculations.profile_page_calc import _build_profile_data
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -57,8 +53,7 @@ async def get_my_profile(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
         
         # Get user information from the JWT token and Supabase auth
         user_profile = user_supabase_client.auth.get_user(user["access_token"])

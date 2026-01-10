@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Depends, status
 from fastapi.security import APIKeyHeader
 
-from ..schemas.endpoint_schemas import UserData
+from ..schemas.base import UserData
 
 from typing import Dict
 

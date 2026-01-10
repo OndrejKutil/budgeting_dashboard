@@ -15,18 +15,17 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # schemas
-from ..helper.columns import SAVINGS_FUNDS_COLUMNS
-from ..schemas.endpoint_schemas import (
-    SavingsFundsData,
-    SavingsFundsRequest,
-    SavingsFundsResponse,
-    SavingsFundSuccessResponse
-)
+from ..helper.columns import SAVINGS_FUNDS_COLUMNS, TRANSACTIONS_COLUMNS
+from ..schemas.base import SavingsFundsData
+from ..schemas.requests import SavingsFundsRequest
+from ..schemas.responses import SavingsFundsResponse, SavingsFundSuccessResponse
+from ..helper.calculations import savings_funds_calc
 
 # other
+import polars as pl
 from typing import Optional
 
 
@@ -35,8 +34,6 @@ from typing import Optional
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -64,8 +61,7 @@ async def get_savings_funds(
     """
     
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         query = user_supabase_client.table("dim_savings_funds").select("*")
 
@@ -77,8 +73,32 @@ async def get_savings_funds(
 
         response = query.execute()
 
+        # Fetch transactions for metrics
+        # Filter for transactions that have a savings_fund_id_fk
+        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}").not_.is_(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
+        transactions_response = transactions_query.execute()
+        
+        metrics = {}
+        if transactions_response.data:
+            funds_df = pl.from_dicts(transactions_response.data)
+            metrics = savings_funds_calc.calculate_fund_metrics(funds_df)
+
+        # Merge metrics
+        data = []
+        for item in response.data:
+            fund_id = item.get(SAVINGS_FUNDS_COLUMNS.ID.value)
+            # Find metrics for this fund
+            if fund_id in metrics:
+                fund_metrics = metrics[fund_id]
+                item['current_amount'] = fund_metrics["current_amount"]
+                item['net_flow_30d'] = fund_metrics["net_flow_30d"]
+            else:
+                item['current_amount'] = 0.0
+                item['net_flow_30d'] = 0.0
+            data.append(SavingsFundsData(**item))
+
         return SavingsFundsResponse(
-            data=[SavingsFundsData(**item) for item in response.data],
+            data=data,
             count=len(response.data),
             success=True,
             message="Savings funds retrieved successfully"
@@ -107,14 +127,13 @@ async def create_savings_fund(
     """
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = fund.model_dump()
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
+            data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_savings_funds").insert(data).execute()
 
@@ -147,14 +166,13 @@ async def update_savings_fund(
     Update an existing savings fund by its ID.
     """
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = fund.model_dump()
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
+            data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_savings_funds").update(data).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 
@@ -186,8 +204,7 @@ async def delete_savings_fund(
     Delete a savings fund by its ID.
     """
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         response = user_supabase_client.table("dim_savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 

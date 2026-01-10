@@ -50,6 +50,7 @@ class SAVINGS_FUNDS_COLUMNS(Enum):
     USER_ID = "user_id_fk"
     TARGET_AMOUNT = "target_amount"
     NAME = "fund_name"
+    CREATED_AT = "created_at"
 
     def __str__(self):
         return self.value

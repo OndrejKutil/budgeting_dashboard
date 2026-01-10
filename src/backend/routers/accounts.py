@@ -15,13 +15,17 @@ from ..helper import environment as env
 import logging
 
 # supabase client
-from supabase.client import create_client, Client
+from ..data.database import get_db_client
 
 # helper
-from ..helper.columns import ACCOUNTS_COLUMNS
-from ..schemas.endpoint_schemas import AccountsResponse, AccountRequest, AccountData, AccountSuccessResponse
+from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
+from ..schemas.base import AccountData
+from ..schemas.requests import AccountRequest
+from ..schemas.responses import AccountsResponse, AccountSuccessResponse
+from ..helper.calculations import accounts_calc
 
 # other
+import polars as pl
 from typing import Optional, Dict, List
 
 # ================================================================================================
@@ -29,8 +33,6 @@ from typing import Optional, Dict, List
 # ================================================================================================
 
 # Load environment variables
-PROJECT_URL: str = env.PROJECT_URL
-ANON_KEY: str = env.ANON_KEY
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -54,9 +56,7 @@ async def get_all_accounts(
 ) -> AccountsResponse:
     
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         query = user_supabase_client.table("dim_accounts").select("*")
 
@@ -67,8 +67,31 @@ async def get_all_accounts(
         
         response = query.execute()
 
+        # Fetch transactions for metrics calculation
+        transactions_query = user_supabase_client.table("fct_transactions").select(f"{TRANSACTIONS_COLUMNS.ACCOUNT_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},{TRANSACTIONS_COLUMNS.DATE.value}")
+        transactions_response = transactions_query.execute()
+        
+        metrics = {}
+        if transactions_response.data:
+            transactions_df = pl.from_dicts(transactions_response.data)
+            metrics = accounts_calc.calculate_account_metrics(transactions_df)
+
+        # Merge metrics
+        data = []
+        for item in response.data:
+            account_id = item.get(ACCOUNTS_COLUMNS.ID.value)
+            if account_id in metrics:
+                acc_metrics = metrics[account_id]
+                item['current_balance'] = acc_metrics["current_balance"]
+                item['net_flow_30d'] = acc_metrics["net_flow_30d"]
+            else:
+                # Default values if no transactions
+                item['current_balance'] = 0.0
+                item['net_flow_30d'] = 0.0
+            data.append(AccountData(**item))
+
         return AccountsResponse(
-            data=[AccountData(**item) for item in response.data],
+            data=data,
             count=len(response.data),
             success=True,
             message="Accounts fetched successfully"
@@ -95,23 +118,18 @@ async def create_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data : Dict = account_data.model_dump()
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
-            data["user_id"] = user["user_id"]
+            data[ACCOUNTS_COLUMNS.USER_ID.value] = user["user_id"]
 
-        # Convert Decimal to float for JSON serialization
-        if data.get("starting_balance") is not None:
-            data["starting_balance"] = float(data["starting_balance"])
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
+        if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
+            data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
 
         response = user_supabase_client.table("dim_accounts").insert(data).execute()
 
@@ -142,24 +160,18 @@ async def update_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         data = account_data.model_dump()
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
-        if not data.get("user_id"):
-            data["user_id"] = user["user_id"]
-
-        # Convert Decimal to float for JSON serialization
-        if data.get("starting_balance") is not None:
-            data["starting_balance"] = float(data["starting_balance"])
+        if not data.get(ACCOUNTS_COLUMNS.USER_ID.value):
+            data[ACCOUNTS_COLUMNS.USER_ID.value] = user["user_id"]
         
         # Convert datetime to ISO string for JSON serialization
-        if data.get("created_at") is not None:
-            data["created_at"] = data["created_at"].isoformat()
-
+        if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
+            data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
+            
         response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
         return AccountSuccessResponse(
@@ -188,9 +200,7 @@ async def delete_account(
 ) -> AccountSuccessResponse:
 
     try:
-        user_supabase_client: Client = create_client(PROJECT_URL, ANON_KEY)
-        
-        user_supabase_client.postgrest.auth(user["access_token"])
+        user_supabase_client = get_db_client(user["access_token"])
 
         response = user_supabase_client.table("dim_accounts").delete().eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
