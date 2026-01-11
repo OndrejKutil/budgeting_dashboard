@@ -59,6 +59,7 @@ import { transactionsApi, categoriesApi, accountsApi, fundsApi, ApiError } from 
 import { Transaction, Category, Account, SavingsFund } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -126,6 +127,13 @@ export default function TransactionsPage() {
     }, {} as Record<string, SavingsFund>);
   }, [funds]);
 
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [debouncedSearch, categoryFilter]);
+
   // Fetch data
   useEffect(() => {
     async function fetchData() {
@@ -134,7 +142,12 @@ export default function TransactionsPage() {
         setError(null);
 
         const [transactionsRes, categoriesRes, accountsRes, fundsRes] = await Promise.all([
-          transactionsApi.getAll({ limit: ITEMS_PER_PAGE, offset: currentPage * ITEMS_PER_PAGE }),
+          transactionsApi.getAll({
+            limit: ITEMS_PER_PAGE,
+            offset: currentPage * ITEMS_PER_PAGE,
+            search: debouncedSearch || undefined,
+            category_id: categoryFilter === 'all' ? undefined : categoryFilter
+          }),
           categoriesApi.getAll(),
           accountsApi.getAll(),
           fundsApi.getAll(),
@@ -147,7 +160,10 @@ export default function TransactionsPage() {
         setFunds(fundsRes.data);
       } catch (err) {
         const message = err instanceof ApiError ? err.detail : 'Failed to load transactions';
-        setError(message || 'Failed to load transactions');
+        // Only show error if we don't have existing transactions content or if it's not a cancellation
+        if (transactions.length === 0) {
+          setError(message || 'Failed to load transactions');
+        }
         toast({
           title: 'Error',
           description: message,
@@ -159,18 +175,9 @@ export default function TransactionsPage() {
     }
 
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, debouncedSearch, categoryFilter]);
 
-  // Filter transactions locally
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      const category = categoryMap[t.category_id_fk];
-      const matchesSearch = t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        category?.category_name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || t.category_id_fk.toString() === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [transactions, searchQuery, categoryFilter, categoryMap]);
+
 
   const handleDelete = async (transactionId: string) => {
     try {
@@ -375,7 +382,7 @@ export default function TransactionsPage() {
               ))}
             </TableBody>
           </Table>
-        ) : filteredTransactions.length === 0 ? (
+        ) : transactions.length === 0 ? (
           <EmptyState
             icon={<Receipt className="h-8 w-8 text-muted-foreground" />}
             title="No transactions found"
@@ -401,7 +408,7 @@ export default function TransactionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => {
+                {transactions.map((transaction) => {
                   const category = categoryMap[transaction.category_id_fk];
                   const account = accountMap[transaction.account_id_fk];
                   const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
@@ -434,7 +441,7 @@ export default function TransactionsPage() {
                       <TableCell
                         className={cn(
                           'text-right font-medium font-mono',
-                          transaction.amount > 0 ? 'text-success' : 'text-foreground'
+                          transaction.amount > 0 ? 'text-success' : 'text-destructive'
                         )}
                       >
                         {transaction.amount > 0 ? '+' : ''}
@@ -475,27 +482,40 @@ export default function TransactionsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                Showing {filteredTransactions.length} of {totalCount} transactions
+                Showing <span className="font-medium">{currentPage * ITEMS_PER_PAGE + 1}</span>-
+                <span className="font-medium">{Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)}</span> of{' '}
+                <span className="font-medium">{totalCount}</span> transactions
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage === 0}
-                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                  onClick={() => setCurrentPage(0)}
+                  className="hidden sm:flex"
                 >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Previous
+                  Newest
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages - 1}
-                  onClick={() => setCurrentPage(p => p + 1)}
-                >
-                  Next
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 0}
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >
+                    Next
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </>

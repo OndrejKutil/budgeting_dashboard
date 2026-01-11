@@ -330,6 +330,7 @@ export const transactionsApi = {
     category_id?: string;
     account_id?: string;
     transaction_id?: string;
+    search?: string;
     limit?: number;
     offset?: number;
   }) => {

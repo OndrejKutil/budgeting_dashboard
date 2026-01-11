@@ -55,6 +55,7 @@ async def get_all_data(
     category_id: Optional[str] = Query(None, description="Category for filtering transactions"),
     account_id: Optional[str] = Query(None, description="Account for filtering transactions"),
     transaction_id: Optional[str] = Query(None, description="Transaction ID for filtering transactions"),
+    search: Optional[str] = Query(None, description="Search term for filtering transactions by notes"),
     limit: Optional[int] = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
     offset: Optional[int] = Query(0, ge=0, description="Number of items to skip")
 ) -> TransactionsResponse:
@@ -67,7 +68,7 @@ async def get_all_data(
     try:
         user_supabase_client = get_db_client(user["access_token"])
         
-        query = user_supabase_client.table("fct_transactions").select("*")
+        query = user_supabase_client.table("fct_transactions").select("*", count="exact")
         
         if start_date:
             query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
@@ -79,19 +80,21 @@ async def get_all_data(
             query = query.eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
         if transaction_id:
             query = query.eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id)
+        if search:
+            query = query.ilike(TRANSACTIONS_COLUMNS.NOTES.value, f"%{search}%")
             
         # Reverse the order: most recent transactions first
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=True)
         
         # Apply pagination
         if limit is not None and offset is not None:
-            query = query.range(offset, offset + limit - 1)
+            query = query.range(offset, offset + limit)
         
         response = query.execute()
         
         return TransactionsResponse(
             data=[TransactionData(**item) for item in response.data],
-            count=len(response.data),
+            count=response.count,
             success=True,
             message="Transactions retrieved successfully"
         )
