@@ -203,7 +203,7 @@ def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: Dict[str, Mo
           .group_by('month_name')
           .agg([
               (pl.col('amount').sum() - 
-               pl.col('amount').filter(pl.col('savings_funds').is_not_null()).sum().fill_null(0.0)
+               pl.col('amount').filter(pl.col('category_name') == 'Savings Funds Withdrawal').sum().fill_null(0.0)
               ).alias('income_wo_savings_funds')
           ])
     )
@@ -225,7 +225,7 @@ def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: Dict[str, Mo
             
     # 5. Withdrawals
     savings_withdrawals = (
-        df.filter((pl.col('category_type') == 'income') & (pl.col('savings_funds').is_not_null()))
+        df.filter((pl.col('category_type') == 'income') & (pl.col('category_name') == 'Savings Funds Withdrawal'))
           .group_by('month_name')
           .agg(pl.col('amount').sum().alias('amount'))
     )
@@ -276,7 +276,7 @@ def _calculate_yearly_totals(df: pl.DataFrame) -> YearlyTotals:
         return res if res else 0.0
 
     total_income = get_sum(pl.col('category_type') == 'income', 'abs_amount') # Using abs since income is positive
-    savings_fund_income = get_sum((pl.col('category_type') == 'income') & pl.col('savings_funds').is_not_null(), 'abs_amount')
+    savings_fund_income = get_sum((pl.col('category_type') == 'income') & (pl.col('category_name') == 'Savings Funds Withdrawal'), 'abs_amount')
     total_income_wo_savings_funds = total_income - savings_fund_income
     
     total_expense = get_sum(pl.col('category_type') == 'expense')
@@ -290,8 +290,8 @@ def _calculate_yearly_totals(df: pl.DataFrame) -> YearlyTotals:
 
     profit = total_income_wo_savings_funds - total_expense - total_investment
     
-    # Net cash flow = sum of amount (signed)
-    net_cash_flow = df.select(pl.col('amount').sum()).item() or 0.0
+    # Net Cash Flow = Clean Income - Expenses - Investments - Net Savings
+    net_cash_flow = total_income_wo_savings_funds - total_expense - total_investment - total_savings_w_withdrawals
     
     if total_income_wo_savings_funds > 0:
         savings_rate = (total_savings_w_withdrawals / total_income_wo_savings_funds * 100)

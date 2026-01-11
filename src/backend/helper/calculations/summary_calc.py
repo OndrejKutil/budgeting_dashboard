@@ -217,7 +217,7 @@ def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:
     income_df = df.filter(pl.col('category_type') == 'income')
     total_income = income_df.select(pl.col('amount').sum()).item() or 0.0
     
-    savings_fund_income = income_df.filter(pl.col('savings_funds').is_not_null()).select(pl.col('amount').sum()).item() or 0.0
+    savings_fund_income = income_df.filter(pl.col('category_name') == 'Savings Funds Withdrawal').select(pl.col('amount').sum()).item() or 0.0
     total_income_wo_savings_funds = total_income - savings_fund_income
 
     # Expenses, savings, investments (absolute)
@@ -228,7 +228,9 @@ def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:
     
     # Calculate profit and cashflow
     profit = total_income_wo_savings_funds - total_expense - total_investment
-    net_cash_flow = total_income - total_expense - total_investment - total_saving
+    
+    # Net Cash Flow = Clean Income - Expenses - Investments - Net Savings
+    net_cash_flow = total_income_wo_savings_funds - total_expense - total_investment - total_saving_w_withdrawals
 
     return SummaryTotals(
         income=round(total_income_wo_savings_funds, 2),
@@ -373,35 +375,15 @@ def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> List[Transact
         return []
         
     # Filter out income? Typically largest transactions of interest are expenses.
-    # But request says "Largest transactions list", amount.
-    # Usually people want to see big expenses. Let's filter for expenses only.
-    expenses = df.filter(pl.col('category_type') == 'expense')
+    outgoing = df.filter(pl.col('category_type').is_in(['expense', 'saving', 'investment']))
     
-    if expenses.is_empty():
+    if outgoing.is_empty():
         return []
         
-    top_tx = expenses.sort(pl.col('abs_amount'), descending=True).head(limit)
+    top_tx = outgoing.sort(pl.col('abs_amount'), descending=True).head(limit)
     
     results = []
     for row in top_tx.iter_rows(named=True):
-        # Map back to TransactionData schema
-        # Note: df has flattened/renamed columns. We need to reconstruct or just use what we have.
-        # TransactionData requires fields like id, etc.
-        # _prepare_transactions_dataframe keeps original fields if they were in input dicts?
-        # It unnests struct_col but might lose some if not careful.
-        # Let's check _prepare... it safely adds missing columns but doesn't drop others unless strict.
-        # It does `df.select`? No, it uses `with_columns` and `rename`. So all original cols should be there.
-        
-        # We need to ensure we populate fields required by TransactionData
-        # id_pk, user_id_fk, account_id_fk, category_id_fk, amount, date, notes, etc.
-        
-        # In prepared DF, we might have renamed things.
-        # We need to map them back.
-        
-        # Assuming we can just pull them.
-        # We need to be careful about strict schema validation.
-        # Let's do best effort mapping.
-        
         tx_data = TransactionData(
             id_pk=str(row.get('id_pk', '')) if row.get('id_pk') else None,
             user_id_fk=str(row.get('user_id_fk', '')) if row.get('user_id_fk') else None,

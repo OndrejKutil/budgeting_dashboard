@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -12,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -40,6 +46,7 @@ import {
   ChevronRight,
   AlertCircle,
   Loader2,
+  Info,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -85,6 +92,7 @@ export default function TransactionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWithdrawal, setIsWithdrawal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -243,6 +251,12 @@ export default function TransactionsPage() {
 
   const openEditModal = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
+
+    // Check if this is a withdrawal transaction
+    const category = categoryMap[transaction.category_id_fk];
+    const isWithdrawalTx = category?.category_name === 'Savings Funds Withdrawal';
+    setIsWithdrawal(isWithdrawalTx);
+
     setFormData({
       amount: Math.abs(transaction.amount).toString(),
       date: transaction.date,
@@ -256,6 +270,7 @@ export default function TransactionsPage() {
   const closeModal = () => {
     setIsCreateModalOpen(false);
     setSelectedTransaction(null);
+    setIsWithdrawal(false);
     setFormData({
       amount: '',
       date: new Date().toISOString().split('T')[0],
@@ -534,24 +549,62 @@ export default function TransactionsPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.category_id_fk}
-                onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
-                      {cat.category_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox
+                id="withdrawal"
+                checked={isWithdrawal}
+                onCheckedChange={(checked) => {
+                  setIsWithdrawal(checked === true);
+                  if (checked === true) {
+                    const withdrawalCat = categories.find(c => c.category_name === 'Savings Funds Withdrawal');
+                    if (withdrawalCat) {
+                      setFormData(prev => ({ ...prev, category_id_fk: withdrawalCat.categories_id_pk.toString() }));
+                    } else {
+                      console.warn('Savings Funds Withdrawal category not found');
+                    }
+                  } else {
+                    setFormData(prev => ({ ...prev, category_id_fk: '' }));
+                  }
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="withdrawal"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Withdrawal from Fund
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Check this when you are taking money OUT of a savings fund. It will be recorded as income.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
+
+            {!isWithdrawal && (
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category_id_fk}
+                  onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
+                        {cat.category_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="account">Account</Label>
               <Select
@@ -572,7 +625,17 @@ export default function TransactionsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fund">Savings Fund (Optional)</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="fund">Savings Fund {isWithdrawal ? '' : '(Optional)'}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">To allocate money to a fund: Select a 'Saving' category (e.g., 'Emergency Fund') and then select the corresponding Fund here.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Select
                 value={formData.savings_fund_id_fk || 'none'}
                 onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
@@ -606,6 +669,6 @@ export default function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

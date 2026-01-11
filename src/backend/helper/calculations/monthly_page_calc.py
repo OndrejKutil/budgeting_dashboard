@@ -168,18 +168,20 @@ def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
     income_df = df.filter(pl.col('category_type') == 'income')
     total_income = income_df.select(pl.col('amount').sum()).item() or 0.0
     
-    savings_fund_income = income_df.filter(pl.col('savings_funds').is_not_null()).select(pl.col('amount').sum()).item() or 0.0
+    savings_fund_income = income_df.filter(pl.col('category_name') == 'Savings Funds Withdrawal').select(pl.col('amount').sum()).item() or 0.0
     total_income_wo_savings_funds = total_income - savings_fund_income
 
     # Expenses, savings, investments (absolute)
     total_expenses = df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
     total_savings = df.filter(pl.col('category_type') == 'saving').select(pl.col('abs_amount').sum()).item() or 0.0
+    # Net savings = (Total Savings (abs)) - (Withdrawals (positive))
     total_savings_w_withdrawals = total_savings - savings_fund_income
     total_investments = df.filter(pl.col('category_type') == 'investment').select(pl.col('abs_amount').sum()).item() or 0.0
     
     # Profit and Cashflow
+    # Profit = Clean Income - Expenses - Investments
     profit = total_income_wo_savings_funds - total_expenses - total_investments
-    cashflow = total_income - total_expenses - total_investments - total_savings
+    cashflow = total_income_wo_savings_funds - total_expenses - total_investments - total_savings_w_withdrawals
 
     return MonthlyTotals(
         income=round(total_income_wo_savings_funds, 2),

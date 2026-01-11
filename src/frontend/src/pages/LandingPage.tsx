@@ -347,6 +347,12 @@ export default function LandingPage() {
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row">
           <span className="text-xs sm:text-sm">Built by Ondřej Kutil</span>
           <div className="flex items-center gap-6">
+            <Link to="/how-it-works" className="text-xs sm:text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline transition-colors">
+              How it works
+            </Link>
+            <Link to="/faq" className="text-xs sm:text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline transition-colors">
+              FAQs
+            </Link>
             <a
               href="https://github.com/OndrejKutil"
               target="_blank"

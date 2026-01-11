@@ -13,6 +13,8 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
+import FaqPage from "./pages/FaqPage";
+import HowItWorksPage from "./pages/HowItWorksPage";
 
 // Dashboard
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -40,6 +42,8 @@ const AppContent = () => {
             <Route path="/auth/register" element={<RegisterPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
 
             {/* Protected dashboard routes */}
             <Route
