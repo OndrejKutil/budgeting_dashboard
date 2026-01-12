@@ -16,6 +16,8 @@ import {
   Calendar,
   ShieldCheck,
   Menu,
+  Landmark,
+  ListChecks,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,6 +33,11 @@ const analyticsItems = [
   { name: 'Monthly', href: '/dashboard/analytics/monthly', icon: Calendar },
   { name: 'Yearly', href: '/dashboard/analytics/yearly', icon: TrendingUp },
   { name: 'Emergency Fund', href: '/dashboard/analytics/emergency-fund', icon: ShieldCheck },
+];
+
+const toolsItems = [
+  { name: 'Investing Calculator', href: '/dashboard/investing-calculator', icon: Landmark },
+  { name: 'Budget Maker', href: '/dashboard/budget-maker', icon: ListChecks },
 ];
 
 interface SidebarProps {
@@ -189,6 +196,43 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+
+        {/* Tools section */}
+        <div className="space-y-1 pt-4">
+          <div className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
+            {!collapsed && "Tools"}
+          </div>
+          {toolsItems.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              end={item.href === '/dashboard'}
+              onClick={handleNavClick}
+              className={({ isActive: active }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  active || isActive(item.href)
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                )
+              }
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence mode="wait">
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="overflow-hidden whitespace-nowrap"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </NavLink>
+          ))}
         </div>
       </nav>
 

@@ -27,6 +27,8 @@ import ProfilePage from "./pages/dashboard/ProfilePage";
 import MonthlyAnalyticsPage from "./pages/dashboard/analytics/MonthlyAnalyticsPage";
 import YearlyAnalyticsPage from "./pages/dashboard/analytics/YearlyAnalyticsPage";
 import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
+import BudgetMaker from "./pages/dashboard/BudgetMaker";
+import InvestingCalculator from "./pages/dashboard/InvestingCalculator";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,8 @@ const AppContent = () => {
               <Route path="analytics/monthly" element={<MonthlyAnalyticsPage />} />
               <Route path="analytics/yearly" element={<YearlyAnalyticsPage />} />
               <Route path="analytics/emergency-fund" element={<EmergencyFundPage />} />
+              <Route path="budget-maker" element={<BudgetMaker />} />
+              <Route path="investing-calculator" element={<InvestingCalculator />} />
             </Route>
 
             {/* Catch-all */}
