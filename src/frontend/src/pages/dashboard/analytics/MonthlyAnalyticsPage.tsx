@@ -47,16 +47,36 @@ const COLORS = [
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency } = useUser();
-  const [selectedMonth, setSelectedMonth] = useState('2026-01');
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString().padStart(2, '0'));
   const [data, setData] = useState<MonthlyAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const years = Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString());
+  const months = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       setIsLoading(true);
       try {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const result = await analyticsApi.getMonthly({ year, month });
+        const result = await analyticsApi.getMonthly({
+          year: parseInt(selectedYear),
+          month: parseInt(selectedMonth)
+        });
         if (result.success) {
           setData(result.data);
         } else {
@@ -70,7 +90,7 @@ export default function MonthlyAnalyticsPage() {
     };
 
     fetchAnalytics();
-  }, [selectedMonth]);
+  }, [selectedYear, selectedMonth]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-8">Loading analytics...</div>;
@@ -113,17 +133,33 @@ export default function MonthlyAnalyticsPage() {
         title="Monthly Analytics"
         description="Detailed breakdown of your monthly finances"
         actions={
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2026-02">February 2026</SelectItem>
-              <SelectItem value="2026-01">January 2026</SelectItem>
-              <SelectItem value="2025-12">December 2025</SelectItem>
-              <SelectItem value="2025-11">November 2025</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
