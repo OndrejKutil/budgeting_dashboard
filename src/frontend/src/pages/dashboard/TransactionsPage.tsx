@@ -265,7 +265,7 @@ export default function TransactionsPage() {
     setIsWithdrawal(isWithdrawalTx);
 
     setFormData({
-      amount: Math.abs(transaction.amount).toString(),
+      amount: transaction.amount.toString(),
       date: transaction.date,
       notes: transaction.notes || '',
       category_id_fk: transaction.category_id_fk.toString(),
@@ -444,7 +444,7 @@ export default function TransactionsPage() {
                           transaction.amount > 0 ? 'text-success' : 'text-destructive'
                         )}
                       >
-                        {transaction.amount > 0 ? '+' : ''}
+                        {transaction.amount > 0 ? '+' : '-'}
                         {formatCurrency(Math.abs(transaction.amount))}
                       </TableCell>
                       <TableCell>
@@ -553,7 +553,7 @@ export default function TransactionsPage() {
                 <Input
                   id="amount"
                   type="number"
-                  step="0.01"
+                  step="10.00"
                   placeholder="0.00"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
