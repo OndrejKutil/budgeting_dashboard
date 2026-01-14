@@ -29,10 +29,14 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useUrlState } from '@/hooks/use-url-state';
 import { useUser } from '@/contexts/UserContext';
 import { analyticsApi } from '@/lib/api/client';
 import { MonthlyAnalytics } from '@/lib/api/types';
+
+
 
 const COLORS = [
   'hsl(239, 84%, 67%)',
@@ -47,30 +51,44 @@ const COLORS = [
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency } = useUser();
-  const [selectedMonth, setSelectedMonth] = useState('2026-01');
-  const [data, setData] = useState<MonthlyAnalytics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const currentDate = new Date();
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      setIsLoading(true);
-      try {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const result = await analyticsApi.getMonthly({ year, month });
-        if (result.success) {
-          setData(result.data);
-        } else {
-          console.error('Failed to fetch monthly analytics:', result.message);
-        }
-      } catch (error) {
-        console.error('Failed to fetch monthly analytics:', error);
-      } finally {
-        setIsLoading(false);
+  const [selectedYear, setSelectedYear] = useUrlState('year', currentDate.getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useUrlState('month', (currentDate.getMonth() + 1).toString().padStart(2, '0'));
+
+
+  // Generate years for filter (current year + 4 years)
+  // TODO: Get years from API
+  const years = Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString());
+
+  const months = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['monthly-analytics', { year: selectedYear, month: selectedMonth }],
+    queryFn: async () => {
+      const result = await analyticsApi.getMonthly({
+        year: parseInt(selectedYear),
+        month: parseInt(selectedMonth)
+      });
+      if (result.success) {
+        return result.data;
       }
-    };
-
-    fetchAnalytics();
-  }, [selectedMonth]);
+      throw new Error(result.message || 'Failed to fetch analytics');
+    },
+  });
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-8">Loading analytics...</div>;
@@ -111,19 +129,35 @@ export default function MonthlyAnalyticsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Monthly Analytics"
-        description="Detailed breakdown of your monthly finances"
+        description={`Detailed breakdown of your monthly finances for ${selectedMonth}/${selectedYear}`}
         actions={
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2026-02">February 2026</SelectItem>
-              <SelectItem value="2026-01">January 2026</SelectItem>
-              <SelectItem value="2025-12">December 2025</SelectItem>
-              <SelectItem value="2025-11">November 2025</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 

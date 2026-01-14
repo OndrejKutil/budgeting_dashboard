@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -71,13 +72,22 @@ const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash'];
 const CURRENCIES = ['USD', 'EUR', 'CZK', 'GBP', 'PLN', 'CAD', 'AUD'];
 
 export default function AccountsPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // const [accounts, setAccounts] = useState<Account[]>([]);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
+
+  const { data: accounts = [], isLoading, error } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const response = await accountsApi.getAll();
+      return response.data;
+    },
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     account_name: '',
@@ -85,46 +95,64 @@ export default function AccountsPage() {
     currency: 'CZK',
   });
 
-  useEffect(() => {
-    async function fetchAccounts() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await accountsApi.getAll();
-        setAccounts(response.data);
-      } catch (err) {
-        const message = err instanceof ApiError ? err.detail : 'Failed to load accounts';
-        setError(message || 'Failed to load accounts');
-        toast({
-          title: 'Error',
-          description: message,
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
 
-    fetchAccounts();
-  }, []);
 
-  const handleDelete = async (accountId: string) => {
-    try {
-      await accountsApi.delete(accountId);
-      setAccounts(accounts.filter(a => a.accounts_id_pk !== accountId));
+  const deleteMutation = useMutation({
+    mutationFn: accountsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({
         title: 'Account deleted',
         description: 'The account has been removed successfully.',
       });
-    } catch (err) {
+    },
+    onError: (err) => {
       const message = err instanceof ApiError ? err.detail : 'Failed to delete account';
       toast({
         title: 'Error',
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+  });
+
+  const handleDelete = (accountId: string) => {
+    deleteMutation.mutate(accountId);
   };
+
+  const createMutation = useMutation({
+    mutationFn: accountsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Account created successfully' });
+      closeModal();
+    },
+    onError: (err) => {
+      const message = err instanceof ApiError ? err.detail : 'Failed to create account';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; data: typeof formData }) => accountsApi.update(data.id, data.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Account updated successfully' });
+      closeModal();
+    },
+    onError: (err) => {
+      const message = err instanceof ApiError ? err.detail : 'Failed to update account';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
 
   const handleSubmit = async () => {
     if (!formData.account_name || !formData.type) {
@@ -136,34 +164,10 @@ export default function AccountsPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      if (selectedAccount) {
-        await accountsApi.update(selectedAccount.accounts_id_pk, formData);
-        setAccounts(accounts.map(a =>
-          a.accounts_id_pk === selectedAccount.accounts_id_pk
-            ? { ...a, ...formData }
-            : a
-        ));
-        toast({ title: 'Account updated successfully' });
-      } else {
-        await accountsApi.create(formData);
-        // Refetch accounts to get the new one with its ID
-        const response = await accountsApi.getAll();
-        setAccounts(response.data);
-        toast({ title: 'Account created successfully' });
-      }
-
-      closeModal();
-    } catch (err) {
-      const message = err instanceof ApiError ? err.detail : 'Failed to save account';
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (selectedAccount) {
+      updateMutation.mutate({ id: selectedAccount.accounts_id_pk, data: formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
@@ -203,7 +207,7 @@ export default function AccountsPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h3 className="text-lg font-semibold">Failed to load accounts</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
         </div>
       </div>
     );
@@ -389,9 +393,9 @@ export default function AccountsPage() {
             <Button
               className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={createMutation.isPending || updateMutation.isPending}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedAccount ? 'Save Changes' : 'Add Account'}
             </Button>
           </DialogFooter>

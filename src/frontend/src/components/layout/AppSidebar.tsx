@@ -78,17 +78,12 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               exit={{ opacity: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blurple">
-                <Wallet className="h-4 w-4 text-white" />
-              </div>
               <span className="text-lg font-bold font-display text-foreground">Budgeting Dashboard</span>
             </motion.div>
           )}
         </AnimatePresence>
         {collapsed && !isMobile && (
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-blurple">
-            <Wallet className="h-4 w-4 text-white" />
-          </div>
+          null
         )}
         {!isMobile && (
           <Button
@@ -124,7 +119,8 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               onClick={handleNavClick}
               className={({ isActive: active }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
+                  collapsed ? 'justify-center px-2' : 'px-3',
                   active || isActive(item.href)
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -150,52 +146,69 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
 
         {/* Analytics section */}
         <div className="pt-4">
-          <button
-            onClick={() => setAnalyticsOpen(!analyticsOpen)}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent',
-              collapsed && 'justify-center'
-            )}
-          >
-            <BarChart3 className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && (
-              <>
+          {!collapsed ? (
+            <>
+              <button
+                onClick={() => setAnalyticsOpen(!analyticsOpen)}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                <BarChart3 className="h-5 w-5 flex-shrink-0" />
                 <span className="flex-1 text-left">Analytics</span>
                 <ChevronDown
                   className={cn('h-4 w-4 transition-transform', analyticsOpen && 'rotate-180')}
                 />
-              </>
-            )}
-          </button>
-          <AnimatePresence>
-            {analyticsOpen && !collapsed && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="mt-1 space-y-1 overflow-hidden pl-4"
-              >
-                {analyticsItems.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    to={item.href}
-                    onClick={handleNavClick}
-                    className={({ isActive: active }) =>
-                      cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
-                        active
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                      )
-                    }
+              </button>
+              <AnimatePresence>
+                {analyticsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="mt-1 space-y-1 overflow-hidden pl-4"
                   >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.name}</span>
-                  </NavLink>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    {analyticsItems.map((item) => (
+                      <NavLink
+                        key={item.href}
+                        to={item.href}
+                        onClick={handleNavClick}
+                        className={({ isActive: active }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                            active
+                              ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          )
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          ) : (
+            <div className="space-y-1">
+              {analyticsItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  onClick={handleNavClick}
+                  className={({ isActive: active }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-lg justify-center px-2 py-2.5 text-sm font-medium transition-all',
+                      active
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                </NavLink>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tools section */}
@@ -211,7 +224,8 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               onClick={handleNavClick}
               className={({ isActive: active }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
+                  collapsed ? 'justify-center px-2' : 'px-3',
                   active || isActive(item.href)
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -243,7 +257,8 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
           onClick={handleNavClick}
           className={({ isActive: active }) =>
             cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+              'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
+              collapsed ? 'justify-center px-2' : 'px-3',
               active
                 ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
                 : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -38,13 +39,21 @@ const fadeIn = {
 
 export default function FundsPage() {
   const { formatCurrency } = useUser();
-  const [funds, setFunds] = useState<SavingsFund[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // const [funds, setFunds] = useState<SavingsFund[]>([]);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
+
+  const { data: funds = [], isLoading, error } = useQuery({
+    queryKey: ['funds'],
+    queryFn: async () => {
+      const response = await fundsApi.getAll();
+      return response.data;
+    },
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFund, setSelectedFund] = useState<SavingsFund | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     fund_name: '',
@@ -53,24 +62,6 @@ export default function FundsPage() {
 
   const totalTarget = funds.reduce((sum, f) => sum + f.target_amount, 0);
   const totalCurrent = funds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
-
-  useEffect(() => {
-    fetchFunds();
-  }, []);
-
-  const fetchFunds = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fundsApi.getAll();
-      setFunds(response.data);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.detail : 'Failed to load savings funds';
-      setError(message || 'Failed to load savings funds');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleOpenModal = (fund?: SavingsFund) => {
     if (fund) {
@@ -98,6 +89,58 @@ export default function FundsPage() {
     });
   };
 
+  const createMutation = useMutation({
+    mutationFn: fundsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funds'] });
+      toast({ title: 'Fund created successfully' });
+      handleCloseModal();
+    },
+    onError: (err) => {
+      let message = 'Failed to create fund';
+      if (err instanceof ApiError) {
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          message = err.detail.map((e: any) => e.msg).join(', ');
+        } else if (typeof err.detail === 'object' && err.detail !== null) {
+          message = JSON.stringify(err.detail);
+        }
+      }
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; data: any }) => fundsApi.update(data.id, data.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funds'] });
+      toast({ title: 'Fund updated successfully' });
+      handleCloseModal();
+    },
+    onError: (err) => {
+      let message = 'Failed to update fund';
+      if (err instanceof ApiError) {
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          message = err.detail.map((e: any) => e.msg).join(', ');
+        } else if (typeof err.detail === 'object' && err.detail !== null) {
+          message = JSON.stringify(err.detail);
+        }
+      }
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
+
   const handleSubmit = async () => {
     if (!formData.fund_name || !formData.target_amount) {
       toast({
@@ -118,69 +161,29 @@ export default function FundsPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        user_id_fk: userId,
-        fund_name: formData.fund_name,
-        target_amount: parseInt(formData.target_amount),
-      };
+    const payload = {
+      user_id_fk: userId,
+      fund_name: formData.fund_name,
+      target_amount: parseInt(formData.target_amount),
+    };
 
-      if (selectedFund) {
-        const result = await fundsApi.update(selectedFund.savings_funds_id_pk, payload);
-        if (result.success && result.data) {
-          const updatedFund = result.data[0];
-          if (updatedFund) {
-            setFunds(funds.map(f => f.savings_funds_id_pk === updatedFund.savings_funds_id_pk ? updatedFund : f));
-          } else {
-            await fetchFunds();
-          }
-          toast({ title: 'Fund updated successfully' });
-        }
-      } else {
-        const result = await fundsApi.create(payload);
-        if (result.success && result.data) {
-          const newFund = result.data[0];
-          if (newFund) {
-            setFunds([...funds, newFund]);
-          } else {
-            await fetchFunds();
-          }
-          toast({ title: 'Fund created successfully' });
-        }
-      }
-      handleCloseModal();
-    } catch (err) {
-      let message = 'Failed to save fund';
-      if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          // Handle Pydantic validation errors (array of objects)
-          message = err.detail.map((e: any) => e.msg).join(', ');
-        } else if (typeof err.detail === 'object' && err.detail !== null) {
-          message = JSON.stringify(err.detail);
-        }
-      }
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (selectedFund) {
+      updateMutation.mutate({ id: selectedFund.savings_funds_id_pk, data: payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
-  const handleDelete = async (fundId: string) => {
-    try {
-      await fundsApi.delete(fundId);
-      setFunds(funds.filter(f => f.savings_funds_id_pk !== fundId));
+  const deleteMutation = useMutation({
+    mutationFn: fundsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funds'] });
       toast({
         title: 'Fund deleted',
         description: 'The savings fund has been removed.',
       });
-    } catch (err) {
+    },
+    onError: (err) => {
       const message = err instanceof ApiError ? err.detail : 'Failed to delete fund';
       toast({
         title: 'Error',
@@ -188,6 +191,10 @@ export default function FundsPage() {
         variant: 'destructive',
       });
     }
+  });
+
+  const handleDelete = (fundId: string) => {
+    deleteMutation.mutate(fundId);
   };
 
   if (error && !isLoading && funds.length === 0) {
@@ -206,8 +213,8 @@ export default function FundsPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h3 className="text-lg font-semibold">Failed to load funds</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          <Button variant="outline" className="mt-4" onClick={fetchFunds}>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['funds'] })}>
             Retry
           </Button>
         </div>
@@ -423,9 +430,9 @@ export default function FundsPage() {
             <Button
               className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={createMutation.isPending || updateMutation.isPending}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedFund ? 'Save Changes' : 'Create Fund'}
             </Button>
           </DialogFooter>

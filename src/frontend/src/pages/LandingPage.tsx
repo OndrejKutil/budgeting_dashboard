@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { healthApi } from '@/lib/api/client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserNav } from '@/components/layout/UserNav';
 import {
   TrendingUp,
   PieChart,
@@ -70,6 +72,8 @@ const fadeInUp = {
 };
 
 export default function LandingPage() {
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
     // Warm up backend
     healthApi.check().catch(() => {
@@ -89,15 +93,21 @@ export default function LandingPage() {
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" asChild>
-              <Link to="/auth/login">Log in</Link>
-            </Button>
-            <Button asChild className="bg-gradient-blurple transition-all duration-300 ease-out hover:opacity-90">
-              <Link to="/auth/register">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {isAuthenticated ? (
+              <UserNav />
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/auth/login">Log in</Link>
+                </Button>
+                <Button asChild className="bg-gradient-blurple transition-all duration-300 ease-out hover:opacity-90">
+                  <Link to="/auth/register">
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -119,30 +129,41 @@ export default function LandingPage() {
             variants={fadeInUp}
             className="mb-6 text-4xl font-bold tracking-tight font-display sm:text-5xl lg:text-6xl"
           >
-            Take Control of Your{' '}
-            <span className="text-gradient-blurple">Financial Future</span>
+            Personal Finance,{' '}
+            <span className="text-gradient-blurple">Quantified</span>
           </motion.h1>
 
           <motion.p
             variants={fadeInUp}
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground"
           >
-            Know exactly where your money goes. Every month.
-            No more guessing, no unnecessary stress.
+            A budgeting app made for those who want to take future
+            into their own hands. No more guessing where your money goes.
           </motion.p>
 
           <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
-              <Link to="/auth/register">
-                Start Free Today
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="transition-all duration-300 ease-out">
-              <Link to="/auth/login">
-                Log in to Dashboard
-              </Link>
-            </Button>
+            {isAuthenticated ? (
+              <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
+                <Link to="/dashboard">
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
+                  <Link to="/auth/register">
+                    Start Building Today
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="transition-all duration-300 ease-out">
+                  <Link to="/auth/login">
+                    Log in to Dashboard
+                  </Link>
+                </Button>
+              </>
+            )}
           </motion.div>
         </motion.div>
 
