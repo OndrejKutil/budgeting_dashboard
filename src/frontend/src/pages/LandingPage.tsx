@@ -129,16 +129,16 @@ export default function LandingPage() {
             variants={fadeInUp}
             className="mb-6 text-4xl font-bold tracking-tight font-display sm:text-5xl lg:text-6xl"
           >
-            Take Control of Your{' '}
-            <span className="text-gradient-blurple">Financial Future</span>
+            Personal Finance,{' '}
+            <span className="text-gradient-blurple">Quantified</span>
           </motion.h1>
 
           <motion.p
             variants={fadeInUp}
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground"
           >
-            Know exactly where your money goes. Every month.
-            No more guessing, no unnecessary stress.
+            A budgeting app made for those who want to take future
+            into their own hands. No more guessing where your money goes.
           </motion.p>
 
           <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -153,7 +153,7 @@ export default function LandingPage() {
               <>
                 <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
                   <Link to="/auth/register">
-                    Start Free Today
+                    Start Building Today
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
