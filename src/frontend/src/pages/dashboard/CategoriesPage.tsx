@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { cn } from '@/lib/utils';
@@ -77,32 +78,17 @@ function CategorySkeleton() {
 }
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [categories, setCategories] = useState<Category[]>([]);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await categoriesApi.getAll();
-        setCategories(response.data);
-      } catch (err) {
-        const message = err instanceof ApiError ? err.detail : 'Failed to load categories';
-        setError(message || 'Failed to load categories');
-        toast({
-          title: 'Error',
-          description: message,
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchCategories();
-  }, []);
+  const { data: categories = [], isLoading, error } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await categoriesApi.getAll();
+      return response.data;
+    },
+  });
 
   const groupedCategories = categories.reduce((acc, cat) => {
     const type = cat.type;
@@ -121,7 +107,7 @@ export default function CategoriesPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h3 className="text-lg font-semibold">Failed to load categories</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
         </div>
       </div>
     );

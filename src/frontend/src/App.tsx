@@ -30,7 +30,16 @@ import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
 import BudgetMaker from "./pages/dashboard/BudgetMaker";
 import InvestingCalculator from "./pages/dashboard/InvestingCalculator";
 
-const queryClient = new QueryClient();
+const STALE_TIME: number = 1000 * 60 * 5;
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: STALE_TIME,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const AppContent = () => {
   return (

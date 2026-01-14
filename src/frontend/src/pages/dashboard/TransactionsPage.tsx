@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useUrlState } from '@/hooks/use-url-state';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -61,7 +63,9 @@ import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { useDebounce } from '@/hooks/use-debounce';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE: number = 20;
+
+
 
 function TableRowSkeleton() {
   return (
@@ -78,17 +82,65 @@ function TableRowSkeleton() {
 
 export default function TransactionsPage() {
   const { formatCurrency } = useUser();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [funds, setFunds] = useState<SavingsFund[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  // URL State Management
+  const [page, setPage] = useUrlState<number>('page', 1);
+  const [searchQuery, setSearchQuery] = useUrlState<string>('q', '');
+  const [categoryFilter, setCategoryFilter] = useUrlState<string>('category', 'all');
+  const [yearFilter, setYearFilter] = useUrlState<string>('year', new Date().getFullYear().toString());
+
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  // Derived state
+  const offset = (page - 1) * ITEMS_PER_PAGE;
+
+  // Queries
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await categoriesApi.getAll();
+      return res.data || [];
+    },
+  });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => {
+      const res = await accountsApi.getAll();
+      return res.data || [];
+    },
+  });
+
+  const { data: funds = [] } = useQuery({
+    queryKey: ['funds'],
+    queryFn: async () => {
+      const res = await fundsApi.getAll();
+      return res.data || [];
+    },
+  });
+
+  const {
+    data: transactionsData,
+    isLoading: isTransactionsLoading,
+    error: transactionsError
+  } = useQuery({
+    queryKey: ['transactions', { page, search: debouncedSearch, category: categoryFilter, year: yearFilter }],
+    queryFn: () => transactionsApi.getAll({
+      limit: ITEMS_PER_PAGE,
+      offset,
+      search: debouncedSearch || undefined,
+      category_id: categoryFilter === 'all' ? undefined : categoryFilter,
+      start_date: `${yearFilter}-01-01`,
+      end_date: `${yearFilter}-12-31`,
+    }),
+    placeholderData: keepPreviousData,
+  });
+
+  const transactions = transactionsData?.data || [];
+  const totalCount = transactionsData?.count || 0;
+  const isLoading = isTransactionsLoading;
+  const error = transactionsError ? (transactionsError as Error).message : null;
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -127,67 +179,36 @@ export default function TransactionsPage() {
     }, {} as Record<string, SavingsFund>);
   }, [funds]);
 
-  const debouncedSearch = useDebounce(searchQuery, 500);
+
+
+  // Generate years for filter (current year + 3 years)
+  // TODO: Get years from API
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 4 }, (_, i) => (currentYear - i + 2).toString());
+  }, []);
+
+
 
   // Reset page when filters change
   useEffect(() => {
-    setCurrentPage(0);
-  }, [debouncedSearch, categoryFilter]);
-
-  // Fetch data
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const [transactionsRes, categoriesRes, accountsRes, fundsRes] = await Promise.all([
-          transactionsApi.getAll({
-            limit: ITEMS_PER_PAGE,
-            offset: currentPage * ITEMS_PER_PAGE,
-            search: debouncedSearch || undefined,
-            category_id: categoryFilter === 'all' ? undefined : categoryFilter
-          }),
-          categoriesApi.getAll(),
-          accountsApi.getAll(),
-          fundsApi.getAll(),
-        ]);
-
-        setTransactions(transactionsRes.data);
-        setTotalCount(transactionsRes.count);
-        setCategories(categoriesRes.data);
-        setAccounts(accountsRes.data);
-        setFunds(fundsRes.data);
-      } catch (err) {
-        const message = err instanceof ApiError ? err.detail : 'Failed to load transactions';
-        // Only show error if we don't have existing transactions content or if it's not a cancellation
-        if (transactions.length === 0) {
-          setError(message || 'Failed to load transactions');
-        }
-        toast({
-          title: 'Error',
-          description: message,
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    if (page !== 1) {
+      setPage(1);
     }
+  }, [categoryFilter, yearFilter, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    fetchData();
-  }, [currentPage, debouncedSearch, categoryFilter]);
-
-
-
-  const handleDelete = async (transactionId: string) => {
-    try {
-      await transactionsApi.delete(transactionId);
-      setTransactions(transactions.filter(t => t.id_pk !== transactionId));
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => transactionsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      // Also invalidate summary/analytics if needed
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({
         title: 'Transaction deleted',
         description: 'The transaction has been removed successfully.',
       });
-    } catch (err) {
+    },
+    onError: (err: any) => {
       const message = err instanceof ApiError ? err.detail : 'Failed to delete transaction';
       toast({
         title: 'Error',
@@ -195,7 +216,47 @@ export default function TransactionsPage() {
         variant: 'destructive',
       });
     }
+  });
+
+  const handleDelete = (transactionId: string) => {
+    deleteMutation.mutate(transactionId);
   };
+
+  const createMutation = useMutation({
+    mutationFn: (payload: any) => transactionsApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      toast({ title: 'Transaction created successfully' });
+      closeModal();
+    },
+    onError: (err: any) => {
+      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => transactionsApi.update(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      toast({ title: 'Transaction updated successfully' });
+      closeModal();
+    },
+    onError: (err: any) => {
+      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  });
 
   const handleSubmit = async () => {
     if (!formData.account_id_fk || !formData.category_id_fk || !formData.amount) {
@@ -207,52 +268,19 @@ export default function TransactionsPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        account_id_fk: formData.account_id_fk,
-        category_id_fk: parseInt(formData.category_id_fk),
-        amount: parseFloat(formData.amount),
-        date: formData.date,
-        notes: formData.notes || null,
-        savings_fund_id_fk: formData.savings_fund_id_fk || null,
-      };
+    const payload = {
+      account_id_fk: formData.account_id_fk,
+      category_id_fk: parseInt(formData.category_id_fk),
+      amount: parseFloat(formData.amount),
+      date: formData.date,
+      notes: formData.notes || null,
+      savings_fund_id_fk: formData.savings_fund_id_fk || null,
+    };
 
-      if (selectedTransaction) {
-        const result = await transactionsApi.update(selectedTransaction.id_pk, payload);
-        if (result.data && result.data[0]) {
-          setTransactions(transactions.map(t =>
-            t.id_pk === selectedTransaction.id_pk ? result.data[0] : t
-          ));
-        }
-        toast({ title: 'Transaction updated successfully' });
-      } else {
-        const result = await transactionsApi.create(payload);
-        if (result.data && result.data[0]) {
-          setTransactions([result.data[0], ...transactions]);
-        }
-        toast({ title: 'Transaction created successfully' });
-      }
-
-      setIsCreateModalOpen(false);
-      setSelectedTransaction(null);
-      setFormData({
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        notes: '',
-        category_id_fk: '',
-        account_id_fk: '',
-        savings_fund_id_fk: '',
-      });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (selectedTransaction) {
+      updateMutation.mutate({ id: selectedTransaction.id_pk, payload });
+    } else {
+      createMutation.mutate(payload);
     }
   };
 
@@ -336,11 +364,35 @@ export default function TransactionsPage() {
           <Input
             placeholder="Search transactions..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
             className="pl-10"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+
+        <Select
+          value={yearFilter}
+          onValueChange={(val) => {
+            setYearFilter(val);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-32">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((y) => (
+              <SelectItem key={y} value={y}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={categoryFilter}
+          onValueChange={(val) => {
+            setCategoryFilter(val);
+          }}
+        >
           <SelectTrigger className="w-full sm:w-48">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="All Categories" />
@@ -482,16 +534,16 @@ export default function TransactionsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{currentPage * ITEMS_PER_PAGE + 1}</span>-
-                <span className="font-medium">{Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)}</span> of{' '}
+                Showing <span className="font-medium">{offset + 1}</span>-
+                <span className="font-medium">{Math.min(offset + ITEMS_PER_PAGE, totalCount)}</span> of{' '}
                 <span className="font-medium">{totalCount}</span> transactions
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage === 0}
-                  onClick={() => setCurrentPage(0)}
+                  disabled={page === 1}
+                  onClick={() => setPage(1)}
                   className="hidden sm:flex"
                 >
                   Newest
@@ -500,8 +552,8 @@ export default function TransactionsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === 0}
-                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={page === 1}
+                    onClick={() => setPage(Math.max(1, page - 1))}
                   >
                     <ChevronLeft className="mr-1 h-4 w-4" />
                     Previous
@@ -509,8 +561,8 @@ export default function TransactionsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage >= totalPages - 1}
-                    onClick={() => setCurrentPage(p => p + 1)}
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(page + 1)}
                   >
                     Next
                     <ChevronRight className="ml-1 h-4 w-4" />
@@ -683,7 +735,7 @@ export default function TransactionsPage() {
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createMutation.isPending || updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {selectedTransaction ? 'Save Changes' : 'Add Transaction'}
             </Button>
           </DialogFooter>

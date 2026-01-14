@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Calculator, TrendingUp } from "lucide-react"
+import { Calculator, TrendingUp, RotateCcw } from "lucide-react"
+import { useSearchParams, useLocation } from "react-router-dom"
+import { useUrlState } from "@/hooks/use-url-state"
+import { Button } from "@/components/ui/button"
 
 import {
     Card,
@@ -14,14 +14,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
+import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import {
     Select,
@@ -59,23 +52,6 @@ const PERIODS_PER_YEAR: Record<Frequency, number> = {
     [FREQUENCIES.YEARLY]: 1,
 }
 
-const formSchema = z.object({
-    startingAmount: z.coerce.number().min(0, "Must be positive"),
-    addedAmount: z.coerce.number().min(0, "Must be positive"),
-    frequency: z.enum([
-        FREQUENCIES.DAILY,
-        FREQUENCIES.WEEKLY,
-        FREQUENCIES.MONTHLY,
-        FREQUENCIES.QUARTERLY,
-        FREQUENCIES.YEARLY,
-    ]),
-    interestRate: z.coerce.number().min(0, "Must be positive"),
-    years: z.coerce.number().min(1, "Must be at least 1 year").max(50, "Max 50 years"),
-    inflation: z.coerce.number().min(0).default(0),
-})
-
-type FormValues = z.infer<typeof formSchema>
-
 // Chart configuration for shadcn/ui chart component
 const chartConfig = {
     invested: {
@@ -86,48 +62,58 @@ const chartConfig = {
         label: "Total Balance",
         color: "hsl(var(--primary))",
     },
-} satisfies ChartConfig
+}
 
 export default function InvestingCalculator() {
 
     // --- State & Form ---
     const { formatCurrency } = useUser()
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            startingAmount: 10000,
-            addedAmount: 500,
-            frequency: FREQUENCIES.MONTHLY,
-            interestRate: 7,
-            years: 10,
-            inflation: 0,
-        },
-    })
+    // URL State management
+    const [startingAmount, setStartingAmount] = useUrlState<number>('start', 10000)
+    const [addedAmount, setAddedAmount] = useUrlState<number>('added', 500)
+    const [frequency, setFrequency] = useUrlState<Frequency>('freq', FREQUENCIES.MONTHLY)
+    const [interestRate, setInterestRate] = useUrlState<number>('rate', 7)
+    const [years, setYears] = useUrlState<number>('years', 10)
+    const [inflation, setInflation] = useUrlState<number>('inflation', 0)
 
-    // Watch all form values to trigger real-time recalculation
-    const values = form.watch()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const location = useLocation()
+
+    const handleReset = () => {
+        const newParams = new URLSearchParams(searchParams)
+        const keys = ['start', 'added', 'freq', 'rate', 'years', 'inflation']
+
+        keys.forEach(key => {
+            newParams.delete(key)
+            const storageKey = `budget-dashboard:${location.pathname}:${key}`
+            sessionStorage.removeItem(storageKey)
+        })
+
+        setSearchParams(newParams)
+    }
 
     // --- Calculation Logic ---
 
     const results = useMemo(() => {
         // Cast values to Number to ensure they are treated as numbers, not strings.
         // This prevents string concatenation bugs when inputs are being typed.
-        const startingAmount = Number(values.startingAmount)
-        const addedAmount = Number(values.addedAmount)
-        const interestRate = Number(values.interestRate)
-        const years = Number(values.years)
-        const inflation = Number(values.inflation)
-        const frequency = values.frequency
+        // Cast values to Number to ensure they are treated as numbers
+        const pStartingAmount = Number(startingAmount)
+        const pAddedAmount = Number(addedAmount)
+        const pInterestRate = Number(interestRate)
+        const pYears = Number(years)
+        const pInflation = Number(inflation)
+        const pFrequency = frequency
 
         // 1. Determine the effective annual interest rate.
         //    If inflation is > 0, we subtract it from the nominal interest rate to get the "real" return.
         //    This helps users see the purchasing power of their money in the future.
-        const nominalRate = interestRate / 100
-        const inflationRate = inflation / 100
+        const nominalRate = pInterestRate / 100
+        const inflationRate = pInflation / 100
         const effectiveRate = nominalRate - inflationRate
 
-        const periodsPerYear = PERIODS_PER_YEAR[frequency as Frequency]
+        const periodsPerYear = PERIODS_PER_YEAR[pFrequency as Frequency]
 
         // Calculate rate per period (e.g., monthly rate)
         // If effective rate is negative (inflation > interest), we still calculate mathematically
@@ -135,22 +121,22 @@ export default function InvestingCalculator() {
 
         const dataPoints = []
 
-        let currentBalance = startingAmount
-        let totalInvested = startingAmount
+        let currentBalance = pStartingAmount
+        let totalInvested = pStartingAmount
 
         // Add initial point (Year 0)
         dataPoints.push({
             year: 0,
-            invested: Math.round(startingAmount),
-            balance: Math.round(startingAmount),
+            invested: Math.round(pStartingAmount),
+            balance: Math.round(pStartingAmount),
         })
 
-        for (let year = 1; year <= years; year++) {
+        for (let year = 1; year <= pYears; year++) {
             // Simulate the compounding for all periods in this year
             for (let p = 0; p < periodsPerYear; p++) {
                 // 1. Add contribution
-                currentBalance += addedAmount
-                totalInvested += addedAmount
+                currentBalance += pAddedAmount
+                totalInvested += pAddedAmount
 
                 // 2. Apply interest for this period
                 // Formula: Balance = Balance * (1 + ratePerPeriod)
@@ -165,7 +151,7 @@ export default function InvestingCalculator() {
         }
 
         return { data: dataPoints, finalBalance: currentBalance, totalInvested }
-    }, [values])
+    }, [startingAmount, addedAmount, frequency, interestRate, years, inflation])
 
     // --- Render ---
 
@@ -190,106 +176,80 @@ export default function InvestingCalculator() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Form {...form}>
-                            <form className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="startingAmount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Starting Amount</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Starting Amount</Label>
+                                <Input
+                                    type="number"
+                                    value={startingAmount}
+                                    onChange={(e) => setStartingAmount(Number(e.target.value))}
                                 />
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="addedAmount"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Contribution</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="frequency"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Frequency</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select frequency" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value={FREQUENCIES.DAILY}>Daily</SelectItem>
-                                                        <SelectItem value={FREQUENCIES.WEEKLY}>Weekly</SelectItem>
-                                                        <SelectItem value={FREQUENCIES.MONTHLY}>Monthly</SelectItem>
-                                                        <SelectItem value={FREQUENCIES.QUARTERLY}>Quarterly</SelectItem>
-                                                        <SelectItem value={FREQUENCIES.YEARLY}>Yearly</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Contribution</Label>
+                                    <Input
+                                        type="number"
+                                        value={addedAmount}
+                                        onChange={(e) => setAddedAmount(Number(e.target.value))}
                                     />
                                 </div>
+                                <div className="space-y-2">
+                                    <Label>Frequency</Label>
+                                    <Select value={frequency} onValueChange={(v) => setFrequency(v as any)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={FREQUENCIES.DAILY}>Daily</SelectItem>
+                                            <SelectItem value={FREQUENCIES.WEEKLY}>Weekly</SelectItem>
+                                            <SelectItem value={FREQUENCIES.MONTHLY}>Monthly</SelectItem>
+                                            <SelectItem value={FREQUENCIES.QUARTERLY}>Quarterly</SelectItem>
+                                            <SelectItem value={FREQUENCIES.YEARLY}>Yearly</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="interestRate"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Interest Rate (%)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="inflation"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Inflation (%)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" step="0.1" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Interest Rate (%)</Label>
+                                    <Input
+                                        type="number"
+                                        value={interestRate}
+                                        onChange={(e) => setInterestRate(Number(e.target.value))}
                                     />
                                 </div>
+                                <div className="space-y-2">
+                                    <Label>Inflation (%)</Label>
+                                    <Input
+                                        type="number"
+                                        step="0.1"
+                                        value={inflation}
+                                        onChange={(e) => setInflation(Number(e.target.value))}
+                                    />
+                                </div>
+                            </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="years"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Time Period (Years)</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
+                            <div className="space-y-2">
+                                <Label>Time Period (Years)</Label>
+                                <Input
+                                    type="number"
+                                    value={years}
+                                    onChange={(e) => setYears(Number(e.target.value))}
                                 />
-                            </form>
-                        </Form>
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={handleReset}
+                            >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Reset to Defaults
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -307,7 +267,7 @@ export default function InvestingCalculator() {
                                     {formatCurrency(results.finalBalance)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    After {values.years} years {values.inflation > 0 && `(adjusting for ${values.inflation}% inflation)`}
+                                    After {years} years {inflation > 0 && `(adjusting for ${inflation}% inflation)`}
                                 </p>
                             </CardContent>
                         </Card>
@@ -321,7 +281,7 @@ export default function InvestingCalculator() {
                                     {formatCurrency(results.totalInvested)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Principal + {values.years} years of contributions
+                                    Principal + {years} years of contributions
                                 </p>
                             </CardContent>
                         </Card>

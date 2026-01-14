@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useUrlState } from '@/hooks/use-url-state';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
@@ -41,6 +43,8 @@ import { useUser } from '@/contexts/UserContext';
 import { analyticsApi } from '@/lib/api/client';
 import type { YearlyAnalyticsData } from '@/lib/api/types';
 
+
+
 // Constants for charts
 const COLORS = [
   'hsl(239, 84%, 67%)', // Primary Blurple
@@ -75,34 +79,21 @@ const itemVariants = {
 
 export default function YearlyAnalyticsPage() {
   const { formatCurrency } = useUser();
-  const [data, setData] = useState<YearlyAnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
 
-  // Determine available years (mock for now, or could come from API if available)
-  const years = [2026, 2025, 2024, 2023];
+  // TODO: Get years from API
+  const years = [2028, 2027, 2026, 2025];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await analyticsApi.getYearly({ year: parseInt(selectedYear) });
-        if (response.success && response.data) {
-          setData(response.data);
-        } else {
-          setError(response.message || 'Failed to load yearly analytics');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching yearly analytics');
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['yearly-analytics', selectedYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getYearly({ year: parseInt(selectedYear) });
+      if (response.success && response.data) {
+        return response.data;
       }
-    };
-
-    fetchData();
-  }, [selectedYear]);
+      throw new Error(response.message || 'Failed to load yearly analytics');
+    },
+  });
 
   if (loading) {
     return (
@@ -115,7 +106,7 @@ export default function YearlyAnalyticsPage() {
   if (error || !data) {
     return (
       <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error || 'No data available'}</p>
+        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
