@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
@@ -13,40 +14,35 @@ import {
   Tooltip,
   Cell,
 } from 'recharts';
+import { useUrlState } from '@/hooks/use-url-state';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/UserContext';
 import { analyticsApi } from '@/lib/api/client';
-import { EmergencyFundData } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function EmergencyFundPage() {
   const { formatCurrency } = useUser();
-  const [data, setData] = useState<EmergencyFundData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const selectedYear = new Date().getFullYear(); // Default to current year for now
+  const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i + 2);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await analyticsApi.getEmergencyFund({ year: selectedYear });
-        if (response.success && response.data) {
-          setData(response.data);
-        } else {
-          setError(response.message || 'Failed to load emergency fund data');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching emergency fund data');
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['emergency-fund', selectedYear],
+    queryFn: async () => {
+      const response = await analyticsApi.getEmergencyFund({ year: parseInt(selectedYear) });
+      if (response.success && response.data) {
+        return response.data;
       }
-    };
-
-    fetchData();
-  }, [selectedYear]);
+      throw new Error(response.message || 'Failed to load emergency fund data');
+    },
+  });
 
   if (loading) {
     return (
@@ -59,7 +55,7 @@ export default function EmergencyFundPage() {
   if (error || !data) {
     return (
       <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error || 'No data available'}</p>
+        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
@@ -257,11 +253,26 @@ export default function EmergencyFundPage() {
       </div>
 
       <Tabs defaultValue="core" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-          <TabsTrigger value="core">Core Only</TabsTrigger>
-          <TabsTrigger value="necessary">Core + Necessary</TabsTrigger>
-          <TabsTrigger value="all">All Expenses</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <TabsList className="grid w-full sm:w-[400px] grid-cols-3">
+            <TabsTrigger value="core">Core Only</TabsTrigger>
+            <TabsTrigger value="necessary">Core + Necessary</TabsTrigger>
+            <TabsTrigger value="all">All Expenses</TabsTrigger>
+          </TabsList>
+
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={y.toString()}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <TabsContent value="core">
           {renderContent(
             data.average_monthly_core_expenses,
