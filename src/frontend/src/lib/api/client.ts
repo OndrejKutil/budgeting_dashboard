@@ -2,6 +2,9 @@
  * API Client with automatic token refresh and error handling
  */
 
+import type { RefreshResponse, ApiResponse, TransactionsResponse, SummaryResponse, ProfileResponse, MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse } from './types/responses';
+import type { Category, Account, Transaction, SavingsFund } from './types/base';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
@@ -31,7 +34,9 @@ export const tokenManager = {
   isAuthenticated: () => !!localStorage.getItem(ACCESS_TOKEN_KEY),
 };
 
+// ============================================
 // Error types
+// ============================================
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -50,30 +55,9 @@ export class TokenExpiredError extends ApiError {
   }
 }
 
-// Response types
-interface ApiResponse<T> {
-  data: T;
-  status: number;
-}
-
-interface RefreshResponse {
-  data: {
-    access_token: string;
-    refresh_token: string;
-    id: string;
-  };
-  user: {
-    id: string;
-  };
-  session: {
-    access_token: string;
-    refresh_token: string;
-  };
-  success: boolean;
-  message: string;
-}
-
-// Refresh token mutex - ensures only one refresh happens at a time
+// ============================================
+// Refresh token
+// ============================================
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
@@ -133,7 +117,9 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+// ============================================
 // Main request function
+// ============================================
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -178,7 +164,9 @@ async function request<T>(
   return { data, status: response.status };
 }
 
+// ============================================
 // API client methods
+// ============================================
 export const apiClient = {
   get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) => {
     const searchParams = new URLSearchParams();
@@ -256,7 +244,6 @@ export const authApi = {
 };
 
 // Categories API
-import type { Category, Account, Transaction, TransactionsResponse, SavingsFund } from './types';
 
 interface CategoriesResponse {
   data: Category[];
@@ -405,10 +392,8 @@ export const transactionsApi = {
 };
 
 // Summary API
-import type { SummaryResponse } from './types';
 
 // Profile API
-import type { ProfileResponse } from './types';
 
 export const profileApi = {
   getMe: async () => {
@@ -433,7 +418,6 @@ export const summaryApi = {
 };
 
 // Analytics API
-import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse } from './types';
 
 export const analyticsApi = {
   getMonthly: async (params?: { year?: number; month?: number }) => {
