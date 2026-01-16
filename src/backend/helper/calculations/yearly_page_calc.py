@@ -2,7 +2,7 @@
 # imports
 import calendar
 from datetime import date
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, cast
 from pydantic import BaseModel, Field
 import statistics
 
@@ -84,7 +84,7 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         response = query.execute()
-        return response.data
+        return cast(List[dict[Any, Any]], response.data)
     except Exception as e:
         logger.error(f'Database query failed for yearly transactions: {str(e)}')
         logger.info(f'Query parameters - start_date: {start_date}, end_date: {end_date}')
@@ -142,7 +142,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
     
     rename_map = {}
-    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'type' in df.columns and 'category_type' not in df.columns:
+        rename_map['type'] = 'category_type'
     if 'savings_fund_id_fk' in df.columns: rename_map['savings_fund_id_fk'] = 'savings_funds'
     elif 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
     
@@ -165,7 +166,7 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         pl.col('date_parsed').dt.strftime('%b').alias('month_name')
     ])
 
-    return df
+    return cast(pl.DataFrame, df)
 
 
 def _initialize_monthly_data() -> Dict[str, MonthlyDataPoint]:
@@ -501,7 +502,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         response = query.execute()
-        return response.data
+        return cast(List[dict[Any, Any]], response.data)
     except Exception as e:
         logger.error(f'Database query failed for emergency fund analysis: {str(e)}')
         logger.info(f'Query parameters - start_date: {start_date}, end_date: {end_date}')
@@ -569,7 +570,8 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
     
     rename_map = {}
-    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'type' in df.columns and 'category_type' not in df.columns:
+        rename_map['type'] = 'category_type'
     if 'fund_name' in df.columns: rename_map['fund_name'] = 'savings_funds'
     
     df = df.rename(rename_map)
@@ -591,7 +593,7 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
         pl.col('date_parsed').dt.strftime('%Y-%m').alias('month_key')
     ])
 
-    return df
+    return cast(pl.DataFrame, df)
 
 
 def _calculate_core_expenses(df: pl.DataFrame) -> tuple[Dict[str, float], Dict[str, float]]:
@@ -659,7 +661,7 @@ def _fetch_savings_funds_balance(access_token: str) -> float:
             
         # Savings are stored as negative values (money leaving account to fund)
         total_balance = abs(sum(item.get('amount', 0.0) for item in response.data))
-        return total_balance
+        return float(total_balance)
     except Exception as e:
         logger.error(f'Database query failed for emergency funds filters: {str(e)}')
         return 0.0

@@ -2,17 +2,17 @@
 # imports
 import logging
 from datetime import date, timedelta
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any, cast
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
-from ..columns import TRANSACTIONS_COLUMNS
-from ...data.database import get_db_client
+from helper.columns import TRANSACTIONS_COLUMNS
+# from data.database import get_db_client # Moved inside function
 import polars as pl
 from dateutil.relativedelta import relativedelta
 
 # schemas
-from ...schemas.base import (
+from schemas.base import (
     SummaryData, 
     PeriodComparison, 
     CategoryInsight, 
@@ -100,6 +100,7 @@ def _fetch_summary_transactions(
     """
     Fetch transactions from the database with optional date filtering.
     """
+    from data.database import get_db_client
     try:
         user_supabase_client = get_db_client(access_token)
         
@@ -118,7 +119,7 @@ def _fetch_summary_transactions(
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         response = query.execute()
-        return response.data
+        return cast(List[dict[Any, Any]], response.data)
 
     except Exception as e:
         logger.error(f'Database query failed for summary transactions: {str(e)}')
@@ -184,7 +185,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'account_id_fk', '', pl.Utf8)
     
     rename_map = {}
-    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'type' in df.columns and 'category_type' not in df.columns:
+        rename_map['type'] = 'category_type'
     if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
     
     df = df.rename(rename_map)
@@ -200,10 +202,11 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     
     # Derived column
     df = df.with_columns([
-        pl.col('amount').abs().alias('abs_amount')
+        pl.col('amount').abs().alias('abs_amount'),
+        pl.col('date').str.to_date().alias('date_parsed')
     ])
 
-    return df
+    return cast(pl.DataFrame, df)
 
 
 def _calculate_summary_totals(df: pl.DataFrame) -> SummaryTotals:

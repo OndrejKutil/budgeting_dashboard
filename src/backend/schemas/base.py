@@ -129,7 +129,7 @@ class SummaryData(BaseModel):
     biggest_mover: Optional[CategoryInsight] = Field(None, description="Category with largest absolute spending change vs previous period")
     largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
     
-    largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
+
     
     # by_category removed as requested
 

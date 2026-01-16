@@ -3,16 +3,16 @@
 import calendar
 import logging
 from datetime import date, timedelta
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any, cast
 from pydantic import BaseModel, Field
 
-from ..columns import TRANSACTIONS_COLUMNS
-from ...data.database import get_db_client
+from helper.columns import TRANSACTIONS_COLUMNS
+# from data.database import get_db_client # Moved inside function
 import polars as pl
 from dateutil.relativedelta import relativedelta
 
 # schemas
-from ...schemas.base import (
+from schemas.base import (
     MonthlyAnalyticsData,
     DailySpendingData,
     CategoryBreakdownData,
@@ -60,6 +60,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
     """
     Fetch transactions from the database for a specific date range.
     """
+    from data.database import get_db_client
     try:
         user_supabase_client = get_db_client(access_token)
         
@@ -72,7 +73,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         response = query.execute()
-        return response.data
+        return cast(List[dict[Any, Any]], response.data)
 
     except Exception as e:
         logger.error(f'Database query failed for monthly transactions: {str(e)}')
@@ -135,7 +136,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8)
     
     rename_map = {}
-    if 'type' in df.columns: rename_map['type'] = 'category_type'
+    if 'type' in df.columns and 'category_type' not in df.columns:
+        rename_map['type'] = 'category_type'
     if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
     
     df = df.rename(rename_map)
@@ -154,7 +156,7 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
         pl.col('amount').abs().alias('abs_amount')
     ])
     
-    return df
+    return cast(pl.DataFrame, df)
 
 
 def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
