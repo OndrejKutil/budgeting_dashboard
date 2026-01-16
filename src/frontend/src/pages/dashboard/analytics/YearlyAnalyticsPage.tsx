@@ -39,7 +39,7 @@ import {
   Cell,
   ComposedChart,
 } from 'recharts';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/client';
 import type { YearlyAnalyticsData } from '@/lib/api/types';
 

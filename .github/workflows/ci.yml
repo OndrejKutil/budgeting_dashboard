@@ -17,10 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: "pip"
 
       - name: Install dependencies
@@ -65,6 +65,7 @@ jobs:
   deploy-render:
     name: Deploy (Render)
     runs-on: ubuntu-latest
+    # Only runs after both backend and frontend CI jobs complete successfully.
     needs: [backend-ci, frontend-ci]
     # Only deploy from direct pushes to main (including merges).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

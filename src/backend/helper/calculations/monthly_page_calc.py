@@ -61,7 +61,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
     """
     Fetch transactions from the database for a specific date range.
     """
-    from data.database import get_db_client
+    from ...data.database import get_db_client
     try:
         user_supabase_client = get_db_client(access_token)
         

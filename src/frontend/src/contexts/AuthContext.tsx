@@ -1,18 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AuthContext } from './auth-context';
 import { tokenManager, authApi, ApiError } from '@/lib/api/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
-interface AuthContextType {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  userId: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName?: string) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// AuthContext imported from ./auth-context
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: 'You have successfully logged in.',
       });
     } catch (error) {
-      const message = error instanceof ApiError ? error.detail : 'Login failed';
+      const message = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : 'Login failed';
       toast({
         title: 'Login failed',
         description: message,
@@ -57,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: 'Welcome to your personal finance dashboard.',
       });
     } catch (error) {
-      const message = error instanceof ApiError ? error.detail : 'Registration failed';
+      const message = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : 'Registration failed';
       toast({
         title: 'Registration failed',
         description: message,
@@ -93,13 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+import { useAuth } from './auth-context';
 
 // Protected route wrapper
 export function RequireAuth({ children }: { children: React.ReactNode }) {

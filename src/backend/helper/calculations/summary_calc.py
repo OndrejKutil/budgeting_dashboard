@@ -100,7 +100,7 @@ def _fetch_summary_transactions(
     """
     Fetch transactions from the database with optional date filtering.
     """
-    from data.database import get_db_client
+    from ...data.database import get_db_client
     try:
         user_supabase_client = get_db_client(access_token)
         

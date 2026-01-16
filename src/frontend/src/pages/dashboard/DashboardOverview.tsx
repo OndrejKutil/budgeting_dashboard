@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import { summaryApi } from '@/lib/api/client';
 import type { SummaryData } from '@/lib/api/types';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user-context';
 
 // Constants for charts
 const COLORS = [

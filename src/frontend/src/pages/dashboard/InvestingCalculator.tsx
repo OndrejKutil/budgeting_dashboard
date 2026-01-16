@@ -29,7 +29,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart"
-import { useUser } from "@/contexts/UserContext"
+import { useUser } from '@/contexts/user-context';
 
 // --- Constants & Types ---
 
@@ -197,7 +197,7 @@ export default function InvestingCalculator() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Frequency</Label>
-                                    <Select value={frequency} onValueChange={(v) => setFrequency(v as any)}>
+                                    <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>

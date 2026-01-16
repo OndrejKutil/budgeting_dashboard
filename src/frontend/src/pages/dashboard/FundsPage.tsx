@@ -22,10 +22,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { fundsApi, tokenManager, ApiError } from '@/lib/api/client';
-import { SavingsFund } from '@/lib/api/types';
+import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user-context';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -96,13 +96,13 @@ export default function FundsPage() {
       toast({ title: 'Fund created successfully' });
       handleCloseModal();
     },
-    onError: (err) => {
+    onError: (err: Error | ApiError) => {
       let message = 'Failed to create fund';
       if (err instanceof ApiError) {
         if (typeof err.detail === 'string') {
           message = err.detail;
         } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: any) => e.msg).join(', ');
+          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
         } else if (typeof err.detail === 'object' && err.detail !== null) {
           message = JSON.stringify(err.detail);
         }
@@ -116,19 +116,19 @@ export default function FundsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; data: any }) => fundsApi.update(data.id, data.data),
+    mutationFn: (data: { id: string; data: UpdateSavingsFundRequest }) => fundsApi.update(data.id, data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funds'] });
       toast({ title: 'Fund updated successfully' });
       handleCloseModal();
     },
-    onError: (err) => {
+    onError: (err: Error | ApiError) => {
       let message = 'Failed to update fund';
       if (err instanceof ApiError) {
         if (typeof err.detail === 'string') {
           message = err.detail;
         } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: any) => e.msg).join(', ');
+          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
         } else if (typeof err.detail === 'object' && err.detail !== null) {
           message = JSON.stringify(err.detail);
         }
@@ -183,8 +183,8 @@ export default function FundsPage() {
         description: 'The savings fund has been removed.',
       });
     },
-    onError: (err) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to delete fund';
+    onError: (err: Error | ApiError) => {
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to delete fund';
       toast({
         title: 'Error',
         description: message,

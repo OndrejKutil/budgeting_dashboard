@@ -7,14 +7,7 @@ import { apiClient } from '../client';
 import type { Transaction } from '../types/base';
 import type { TransactionsResponse } from '../types/responses';
 
-interface TransactionCreateUpdate {
-    account_id_fk: string;
-    category_id_fk: number;
-    amount: number;
-    date: string;
-    notes?: string | null;
-    savings_fund_id_fk?: string | null;
-}
+import type { CreateTransactionRequest, UpdateTransactionRequest } from '../types/requests';
 
 export const transactionsApi = {
     getAll: async (params?: {
@@ -34,7 +27,7 @@ export const transactionsApi = {
         return response.data;
     },
 
-    create: async (transaction: TransactionCreateUpdate) => {
+    create: async (transaction: CreateTransactionRequest) => {
         const response = await apiClient.post<{ success: boolean; message: string; data: Transaction[] }>(
             '/transactions/',
             transaction
@@ -42,7 +35,7 @@ export const transactionsApi = {
         return response.data;
     },
 
-    update: async (transactionId: string, transaction: TransactionCreateUpdate) => {
+    update: async (transactionId: string, transaction: UpdateTransactionRequest) => {
         const response = await apiClient.put<{ success: boolean; message: string; data: Transaction[] }>(
             `/transactions/${transactionId}`,
             transaction

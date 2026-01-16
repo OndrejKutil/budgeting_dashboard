@@ -59,15 +59,15 @@ export function KPICard({
         className
       )}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold font-display tracking-tight text-foreground">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1 min-w-0">
+          <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className="text-2xl font-bold font-display tracking-tight text-foreground truncate">
             {formattedValue}
           </p>
         </div>
         {icon && (
-          <div className={cn('rounded-lg p-2.5', iconBgStyles[variant])}>
+          <div className={cn('rounded-lg p-2.5 flex items-center justify-center shrink-0', iconBgStyles[variant])}>
             {icon}
           </div>
         )}

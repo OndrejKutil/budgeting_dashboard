@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { healthApi } from '@/lib/api/client';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth-context';
 import { UserNav } from '@/components/layout/UserNav';
 import {
   TrendingUp,

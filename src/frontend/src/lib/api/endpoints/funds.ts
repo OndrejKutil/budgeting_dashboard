@@ -5,6 +5,7 @@
 
 import { apiClient } from '../client';
 import type { SavingsFund } from '../types/base';
+import type { CreateSavingsFundRequest, UpdateSavingsFundRequest } from '../types/requests';
 
 interface FundsResponse {
     data: SavingsFund[];
@@ -19,7 +20,7 @@ export const fundsApi = {
         return response.data;
     },
 
-    create: async (fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
+    create: async (fund: CreateSavingsFundRequest & { user_id_fk: string }) => {
         const response = await apiClient.post<{ success: boolean; message: string; data: SavingsFund[] }>(
             '/funds/',
             fund
@@ -27,7 +28,7 @@ export const fundsApi = {
         return response.data;
     },
 
-    update: async (fundId: string, fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
+    update: async (fundId: string, fund: UpdateSavingsFundRequest) => {
         const response = await apiClient.put<{ success: boolean; message: string; data: SavingsFund[] }>(
             `/funds/${fundId}`,
             fund

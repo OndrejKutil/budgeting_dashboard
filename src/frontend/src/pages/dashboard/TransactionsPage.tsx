@@ -58,9 +58,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { transactionsApi, categoriesApi, accountsApi, fundsApi, ApiError } from '@/lib/api/client';
-import { Transaction, Category, Account, SavingsFund } from '@/lib/api/types';
+import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user-context';
 import { useDebounce } from '@/hooks/use-debounce';
 
 const ITEMS_PER_PAGE: number = 20;
@@ -208,8 +208,8 @@ export default function TransactionsPage() {
         description: 'The transaction has been removed successfully.',
       });
     },
-    onError: (err: any) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to delete transaction';
+    onError: (err: Error | ApiError) => {
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to delete transaction';
       toast({
         title: 'Error',
         description: message,
@@ -223,15 +223,15 @@ export default function TransactionsPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => transactionsApi.create(payload),
+    mutationFn: (payload: CreateTransactionRequest) => transactionsApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({ title: 'Transaction created successfully' });
       closeModal();
     },
-    onError: (err: any) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
+    onError: (err: Error | ApiError) => {
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to save transaction';
       toast({
         title: 'Error',
         description: message,
@@ -241,15 +241,15 @@ export default function TransactionsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: any }) => transactionsApi.update(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateTransactionRequest }) => transactionsApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({ title: 'Transaction updated successfully' });
       closeModal();
     },
-    onError: (err: any) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to save transaction';
+    onError: (err: Error | ApiError) => {
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to save transaction';
       toast({
         title: 'Error',
         description: message,

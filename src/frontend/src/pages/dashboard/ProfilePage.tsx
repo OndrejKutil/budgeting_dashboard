@@ -4,8 +4,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/auth-context';
+import { useUser } from '@/contexts/user-context';
 import {
   Select,
   SelectContent,

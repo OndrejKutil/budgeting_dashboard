@@ -32,7 +32,7 @@ import {
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/client';
 import { MonthlyAnalytics } from '@/lib/api/types';
 
@@ -165,7 +165,7 @@ export default function MonthlyAnalyticsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
       >
         <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} />
         <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} />

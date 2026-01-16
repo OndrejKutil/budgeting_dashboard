@@ -1,5 +1,5 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/auth-context';
+import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,

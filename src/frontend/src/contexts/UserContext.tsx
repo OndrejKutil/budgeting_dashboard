@@ -1,19 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserContext } from './user-context';
+import { useAuth } from './auth-context';
 import { profileApi } from '@/lib/api/client';
 import { ProfileData } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
-interface UserContextType {
-    profile: ProfileData | null;
-    currency: string;
-    isLoading: boolean;
-    refreshProfile: () => Promise<void>;
-    updateProfile: (data: { full_name?: string; currency?: string }) => Promise<void>;
-    formatCurrency: (amount: number) => string;
-}
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
+// UserContext imported from ./user-context
 
 const DEFAULT_CURRENCY = 'CZK'; // Setting default to CZK
 
@@ -97,10 +89,4 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-export function useUser() {
-    const context = useContext(UserContext);
-    if (context === undefined) {
-        throw new Error('useUser must be used within a UserProvider');
-    }
-    return context;
-}
+import { useUser } from './user-context';
