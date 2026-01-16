@@ -15,7 +15,7 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const DEFAULT_CURRENCY = 'CZK'; // Setting default to CZK as requested
+const DEFAULT_CURRENCY = 'CZK'; // Setting default to CZK
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
     const { userId, isAuthenticated } = useAuth();
@@ -76,8 +76,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return new Intl.NumberFormat(currency === 'CZK' ? 'cs-CZ' : 'en-US', {
             style: 'currency',
             currency: currency,
-            minimumFractionDigits: currency === 'CZK' ? 0 : 2,
-            maximumFractionDigits: currency === 'CZK' ? 0 : 2,
+            minimumFractionDigits: currency === 'CZK' ? 2 : 2,
+            maximumFractionDigits: currency === 'CZK' ? 2 : 2,
         }).format(amount);
     };
 
