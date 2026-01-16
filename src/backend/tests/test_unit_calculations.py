@@ -8,17 +8,26 @@ import pytest
 from datetime import date
 from decimal import Decimal
 import polars as pl
+import sys
+import os
 
-# Import calculation modules
-# Note: We import the internal functions (_) to test them directly
-from helper.calculations.summary_calc import (
+# Add 'src' to sys.path to allow importing 'backend' as a package
+# This assumes the file structure: src/backend/tests/test_unit_calculations.py
+# We want to add 'src' to path.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.abspath(os.path.join(current_dir, "../../"))
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+# Import calculation modules using the full package path
+from backend.helper.calculations.summary_calc import (
     _prepare_transactions_dataframe as summary_prepare_df,
     _calculate_summary_totals,
     _calculate_period_comparison,
     SummaryTotals
 )
 
-from helper.calculations.monthly_page_calc import (
+from backend.helper.calculations.monthly_page_calc import (
     _calculate_monthly_totals,
     _calculate_run_rate,
     _calculate_day_split,

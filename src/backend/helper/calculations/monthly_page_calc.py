@@ -6,13 +6,14 @@ from datetime import date, timedelta
 from typing import List, Tuple, Dict, Any, cast
 from pydantic import BaseModel, Field
 
-from helper.columns import TRANSACTIONS_COLUMNS
+from ..columns import TRANSACTIONS_COLUMNS
 # from data.database import get_db_client # Moved inside function
 import polars as pl
 from dateutil.relativedelta import relativedelta
 
 # schemas
-from schemas.base import (
+from ...schemas.base import (
+    TransactionData,
     MonthlyAnalyticsData,
     DailySpendingData,
     CategoryBreakdownData,
