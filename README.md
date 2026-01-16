@@ -33,6 +33,15 @@
 
 - **Supabase** - PostgreSQL database with auth handling
 
+## CI/CD Pipeline
+
+This project uses a CI/CD workflow built with **GitHub Actions** and **Render**:
+
+- **CI (GitHub Actions):** on every push/PR to `main`, the pipeline runs backend type-checking + tests and frontend lint/type-check/build.
+- **CD (Render):** deployments are triggered **only after CI passes**, ensuring the live services update from verified builds.
+
+---
+
 ### **Development Process**
 
 To accelerate development, the first version of the UI was scaffolded using Lovable.

@@ -1,5 +1,6 @@
 name: CI Pipeline
 
+# Specify the events that trigger the workflow
 on:
   push:
     branches: [ "main" ]
@@ -9,12 +10,15 @@ on:
 jobs:
   backend-ci:
     name: Backend (Python)
+
+    # Runs on the latest Ubuntu environment
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: src/backend
 
     steps:
+      # Checkout the repository
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.13
