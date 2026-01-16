@@ -1,6 +1,10 @@
 /**
- * API Client with automatic token refresh and error handling
+ * API Client Core
+ * Contains the base HTTP client, token management, and error handling.
+ * API endpoint functions have been moved to ./endpoints/
  */
+
+import type { RefreshResponse, ApiResponse } from './types/responses';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
@@ -10,7 +14,9 @@ const ACCESS_TOKEN_KEY = 'finance_access_token';
 const REFRESH_TOKEN_KEY = 'finance_refresh_token';
 const USER_ID_KEY = 'finance_user_id';
 
-// Token management
+// ============================================
+// Token Management
+// ============================================
 export const tokenManager = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
   getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
@@ -31,7 +37,9 @@ export const tokenManager = {
   isAuthenticated: () => !!localStorage.getItem(ACCESS_TOKEN_KEY),
 };
 
-// Error types
+// ============================================
+// Error Types
+// ============================================
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -50,30 +58,9 @@ export class TokenExpiredError extends ApiError {
   }
 }
 
-// Response types
-interface ApiResponse<T> {
-  data: T;
-  status: number;
-}
-
-interface RefreshResponse {
-  data: {
-    access_token: string;
-    refresh_token: string;
-    id: string;
-  };
-  user: {
-    id: string;
-  };
-  session: {
-    access_token: string;
-    refresh_token: string;
-  };
-  success: boolean;
-  message: string;
-}
-
-// Refresh token mutex - ensures only one refresh happens at a time
+// ============================================
+// Token Refresh
+// ============================================
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
@@ -133,7 +120,9 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshPromise;
 }
 
-// Main request function
+// ============================================
+// Main Request Function
+// ============================================
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -178,7 +167,9 @@ async function request<T>(
   return { data, status: response.status };
 }
 
-// API client methods
+// ============================================
+// API Client Methods
+// ============================================
 export const apiClient = {
   get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) => {
     const searchParams = new URLSearchParams();
@@ -208,261 +199,9 @@ export const apiClient = {
     request<T>(endpoint, { method: 'DELETE' }),
 };
 
-// Auth-specific functions (no bearer token needed)
-export const authApi = {
-  login: async (email: string, password: string) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Login failed' }));
-      throw new ApiError(errorData.detail || 'Login failed', response.status, errorData.detail);
-    }
-
-    const data = await response.json();
-    tokenManager.setTokens(data.access_token, data.refresh_token, data.user_id);
-    return data;
-  },
-
-  register: async (email: string, password: string, fullName?: string) => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password, full_name: fullName }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Registration failed' }));
-      throw new ApiError(errorData.detail || 'Registration failed', response.status, errorData.detail);
-    }
-
-    const data = await response.json();
-    tokenManager.setTokens(data.access_token, data.refresh_token, data.user_id);
-    return data;
-  },
-
-  logout: () => {
-    tokenManager.clearTokens();
-  },
-};
-
-// Categories API
-import type { Category, Account, Transaction, TransactionsResponse, SavingsFund } from './types';
-
-interface CategoriesResponse {
-  data: Category[];
-  count: number;
-}
-
-export const categoriesApi = {
-  getAll: async (params?: { category_id?: number; category_name?: string }) => {
-    const response = await apiClient.get<CategoriesResponse>(
-      '/categories/',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-};
-
-// Savings Funds API
-interface FundsResponse {
-  data: SavingsFund[];
-  count: number;
-  success: boolean;
-  message: string;
-}
-
-export const fundsApi = {
-  getAll: async (params?: { fund_id?: string; fund_name?: string }) => {
-    const response = await apiClient.get<FundsResponse>('/funds/', params);
-    return response.data;
-  },
-
-  create: async (fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
-    const response = await apiClient.post<{ success: boolean; message: string; data: SavingsFund[] }>(
-      '/funds/',
-      fund
-    );
-    return response.data;
-  },
-
-  update: async (fundId: string, fund: { user_id_fk: string; fund_name: string; target_amount: number }) => {
-    const response = await apiClient.put<{ success: boolean; message: string; data: SavingsFund[] }>(
-      `/funds/${fundId}`,
-      fund
-    );
-    return response.data;
-  },
-
-  delete: async (fundId: string) => {
-    const response = await apiClient.delete<{ success: boolean; message: string }>(
-      `/funds/${fundId}`
-    );
-    return response.data;
-  },
-};
-
-// Accounts API
-interface AccountsResponse {
-  data: Account[];
-  count: number;
-  success: boolean;
-  message: string;
-}
-
-export const accountsApi = {
-  getAll: async (params?: { account_id?: string; account_name?: string }) => {
-    const response = await apiClient.get<AccountsResponse>(
-      '/accounts/',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-
-  create: async (account: { account_name: string; type: string; currency: string }) => {
-    const response = await apiClient.post<{ success: boolean; message: string }>(
-      '/accounts/',
-      account
-    );
-    return response.data;
-  },
-
-  update: async (accountId: string, account: { account_name: string; type: string; currency: string }) => {
-    const response = await apiClient.put<{ success: boolean; message: string }>(
-      `/accounts/${accountId}`,
-      account
-    );
-    return response.data;
-  },
-
-  delete: async (accountId: string) => {
-    const response = await apiClient.delete<{ success: boolean; message: string }>(
-      `/accounts/${accountId}`
-    );
-    return response.data;
-  },
-};
-
-// Transactions API
-interface TransactionCreateUpdate {
-  account_id_fk: string;
-  category_id_fk: number;
-  amount: number;
-  date: string;
-  notes?: string | null;
-  savings_fund_id_fk?: string | null;
-}
-
-export const transactionsApi = {
-  getAll: async (params?: {
-    start_date?: string;
-    end_date?: string;
-    category_id?: string;
-    account_id?: string;
-    transaction_id?: string;
-    search?: string;
-    limit?: number;
-    offset?: number;
-  }) => {
-    const response = await apiClient.get<TransactionsResponse>(
-      '/transactions/',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-
-  create: async (transaction: TransactionCreateUpdate) => {
-    const response = await apiClient.post<{ success: boolean; message: string; data: Transaction[] }>(
-      '/transactions/',
-      transaction
-    );
-    return response.data;
-  },
-
-  update: async (transactionId: string, transaction: TransactionCreateUpdate) => {
-    const response = await apiClient.put<{ success: boolean; message: string; data: Transaction[] }>(
-      `/transactions/${transactionId}`,
-      transaction
-    );
-    return response.data;
-  },
-
-  delete: async (transactionId: string) => {
-    const response = await apiClient.delete<{ success: boolean; message: string }>(
-      `/transactions/${transactionId}`
-    );
-    return response.data;
-  },
-};
-
-// Summary API
-import type { SummaryResponse } from './types';
-
-// Profile API
-import type { ProfileResponse } from './types';
-
-export const profileApi = {
-  getMe: async () => {
-    const response = await apiClient.get<ProfileResponse>('/profile/me');
-    return response.data;
-  },
-
-  updateProfile: async (data: { full_name?: string; currency?: string }) => {
-    const response = await apiClient.put<ProfileResponse>('/profile/me', data);
-    return response.data;
-  },
-};
-
-export const summaryApi = {
-  get: async (params?: { start_date?: string; end_date?: string }) => {
-    const response = await apiClient.get<SummaryResponse>(
-      '/summary/',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-};
-
-// Analytics API
-import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse } from './types';
-
-export const analyticsApi = {
-  getMonthly: async (params?: { year?: number; month?: number }) => {
-    const response = await apiClient.get<MonthlyAnalyticsResponse>(
-      '/monthly/analytics',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-
-  getYearly: async (params?: { year?: number }) => {
-    const response = await apiClient.get<YearlyAnalyticsResponse>(
-      '/yearly/analytics',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-
-  getEmergencyFund: async (params?: { year?: number }) => {
-    const response = await apiClient.get<EmergencyFundResponse>(
-      '/yearly/emergency-fund',
-      params as Record<string, string | number | undefined>
-    );
-    return response.data;
-  },
-};
-
-export const healthApi = {
-  check: () => {
-    return apiClient.get<{ status: string }>('/health');
-  },
-};
+// Re-export all endpoint APIs for convenience
+// Yes it would be cleaner to update all imports ('@/lib/api/client') to use the endpoints directly
+// But I don't want to do that now
+// TODO: Update all imports to use the endpoints directly
+// then remove this line
+export * from './endpoints';

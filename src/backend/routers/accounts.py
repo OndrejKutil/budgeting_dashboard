@@ -79,9 +79,9 @@ async def get_all_accounts(
         # Merge metrics
         data = []
         for item in response.data:
-            account_id = item.get(ACCOUNTS_COLUMNS.ID.value)
-            if account_id in metrics:
-                acc_metrics = metrics[account_id]
+            acc_id = str(item.get(ACCOUNTS_COLUMNS.ID.value))
+            if acc_id in metrics:
+                acc_metrics = metrics[acc_id]
                 item['current_balance'] = acc_metrics["current_balance"]
                 item['net_flow_30d'] = acc_metrics["net_flow_30d"]
             else:

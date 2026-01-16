@@ -30,7 +30,7 @@ import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
 import BudgetMaker from "./pages/dashboard/BudgetMaker";
 import InvestingCalculator from "./pages/dashboard/InvestingCalculator";
 
-const STALE_TIME: number = 1000 * 60 * 5;
+const STALE_TIME: number = 1000 * 60 * 5; // 5 minutes
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,8 +44,8 @@ const queryClient = new QueryClient({
 const AppContent = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <UserProvider>
+      <AuthProvider> {/* AuthProvider is used to provide authentication context to the app (access and refresh tokens, user id...) */}
+        <UserProvider> {/* UserProvider is used to provide user context to the app (user data, profile initials, currency...) */}
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
@@ -65,6 +65,7 @@ const AppContent = () => {
                 </RequireAuth>
               }
             >
+              {/* Routes living under the /dashboard/{...} */}
               <Route index element={<DashboardOverview />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="accounts" element={<AccountsPage />} />

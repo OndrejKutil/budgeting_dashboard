@@ -68,6 +68,13 @@ async def refresh_access_token(
             user_dict = response.user.model_dump() if response.user else None
             session_dict = response.session.model_dump() if response.session else None
             
+            if not session_dict or not user_dict:
+                logger.warning("Refreshed session or user is missing")
+                raise fastapi.HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to retrieve session details."
+                )
+
             # Create TokenData object
             token_data = TokenData(
                 access_token=session_dict["access_token"],
@@ -78,8 +85,8 @@ async def refresh_access_token(
             return RefreshTokenResponse(
                 data=token_data,
                 user=user_dict,
-                session=session_dict,
-                success=True,
+                session=session_dict, 
+                success=True, 
                 message="Token refresh successful"
             )
 
