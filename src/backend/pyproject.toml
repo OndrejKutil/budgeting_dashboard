@@ -47,6 +47,9 @@ dependencies = [
     
     # Data manipulation
     "polars>=0.20.0",
+
+    # Fix the missing type hints in some dependencies
+    "types-python-dateutil"
 ]
 
 [project.optional-dependencies]
