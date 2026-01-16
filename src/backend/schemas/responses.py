@@ -15,6 +15,7 @@ from .base import (
     SummaryData,
     TransactionData,
     YearlyAnalyticsData,
+    TokenData,
 )
 
 
@@ -60,8 +61,11 @@ class AllDataResponse(BaseModel):
 
 class RefreshTokenResponse(BaseModel):
     """Response schema for token refresh endpoint"""
+    data: TokenData = Field(..., description="Token data after refresh")
     user: Optional[dict] = Field(None, description="User information after refresh")
     session: Optional[dict] = Field(None, description="Session information after refresh")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
 
 class CategoriesResponse(BaseModel):

@@ -82,6 +82,17 @@ async def get_my_profile(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
+        error_str = str(e).lower()
+        
+        # Check if this is a token expiration/invalidation error from Supabase
+        if "token is expired" in error_str or "invalid jwt" in error_str or "jwt expired" in error_str:
+            logger.warning(f"Token expired/invalid for user_id: {user['user_id']}")
+            raise fastapi.HTTPException(
+                status_code=498,  # Token Expired - triggers frontend refresh
+                detail="Token expired",
+                headers={"WWW-Authenticate": "Bearer", "X-Token-Status": "expired"}
+            )
+        
         logger.info(f"Profile fetch failed for user_id: {user['user_id']}")
         logger.info(f"Full error details: {str(e)}")
         logger.error("Failed to fetch user profile")
@@ -151,6 +162,17 @@ async def update_profile(
     except fastapi.HTTPException:
         raise
     except Exception as e:
+        error_str = str(e).lower()
+        
+        # Check if this is a token expiration/invalidation error from Supabase
+        if "token is expired" in error_str or "invalid jwt" in error_str or "jwt expired" in error_str:
+            logger.warning(f"Token expired/invalid for user_id: {user['user_id']}")
+            raise fastapi.HTTPException(
+                status_code=498,  # Token Expired - triggers frontend refresh
+                detail="Token expired",
+                headers={"WWW-Authenticate": "Bearer", "X-Token-Status": "expired"}
+            )
+        
         logger.error(f"Profile update failed for user_id: {user['user_id']}")
         logger.error(f"Full error details: {str(e)}")
         raise fastapi.HTTPException(

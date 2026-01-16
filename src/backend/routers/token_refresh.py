@@ -19,6 +19,7 @@ from ..data.database import get_db_client, Client
 
 # schemas
 from ..schemas.responses import RefreshTokenResponse
+from ..schemas.base import TokenData
 
 
 # ================================================================================================
@@ -67,10 +68,21 @@ async def refresh_access_token(
             user_dict = response.user.model_dump() if response.user else None
             session_dict = response.session.model_dump() if response.session else None
             
-            return RefreshTokenResponse(
-                user=user_dict,
-                session=session_dict
+            # Create TokenData object
+            token_data = TokenData(
+                access_token=session_dict["access_token"],
+                refresh_token=session_dict["refresh_token"],
+                user_id=user_dict["id"]
             )
+
+            return RefreshTokenResponse(
+                data=token_data,
+                user=user_dict,
+                session=session_dict,
+                success=True,
+                message="Token refresh successful"
+            )
+
         else:
             logger.warning("Failed to refresh session - no session returned")
             raise fastapi.HTTPException(
@@ -99,8 +111,6 @@ async def refresh_access_token(
         )
     
     finally:
-        # Clean up the refresh client
-        try:
-            refresh_supabase_client.auth.sign_out()
-        except:
-            pass
+        # Client cleanup is handled by Python garbage collection
+        # Do NOT call sign_out() here as it invalidates the session we just created
+        pass

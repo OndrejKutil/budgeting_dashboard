@@ -309,11 +309,9 @@ export interface PeriodComparison {
   income_delta_pct: number;
   expense_delta: number;
   expense_delta_pct: number;
-  saving_delta: number;
-  investment_delta: number;
-  profit_delta: number;
+  saving_delta_pct: number;
+  investment_delta_pct: number;
   profit_delta_pct: number;
-  cashflow_delta: number;
   cashflow_delta_pct: number;
 }
 

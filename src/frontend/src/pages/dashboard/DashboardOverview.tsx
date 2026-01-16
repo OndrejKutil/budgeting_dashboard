@@ -154,7 +154,7 @@ export default function DashboardOverview() {
           <KPICard
             title="Savings"
             value={data.total_saving}
-            change={data.comparison.saving_delta}
+            change={data.comparison.saving_delta_pct}
             changeLabel="vs last month"
             icon={<PiggyBank className="h-5 w-5" />}
             variant="savings"
@@ -192,7 +192,7 @@ export default function DashboardOverview() {
           <KPICard
             title="Investments"
             value={data.total_investment}
-            change={data.comparison.investment_delta}
+            change={data.comparison.investment_delta_pct}
             changeLabel="vs last month"
             icon={<Briefcase className="h-5 w-5" />}
             variant="investment"

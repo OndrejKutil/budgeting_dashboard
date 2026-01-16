@@ -106,10 +106,10 @@ class PeriodComparison(BaseModel):
     income_delta_pct: float = Field(..., description="Percentage change in income vs previous period")
     expense_delta: float = Field(..., description="Absolute change in expenses vs previous period")
     expense_delta_pct: float = Field(..., description="Percentage change in expenses vs previous period")
-    saving_delta: float = Field(..., description="Absolute change in savings vs previous period")
-    investment_delta: float = Field(..., description="Absolute change in investments vs previous period")
-    profit_delta: float = Field(..., description="Absolute change in profit vs previous period")
-    cashflow_delta: float = Field(..., description="Absolute change in cashflow vs previous period")
+    saving_delta_pct: float = Field(..., description="Percentage change in savings vs previous period")
+    investment_delta_pct: float = Field(..., description="Percentage change in investments vs previous period")
+    profit_delta_pct: float = Field(..., description="Percentage change in profit vs previous period")
+    cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous period")
 
 
 class SummaryData(BaseModel):
@@ -189,6 +189,11 @@ class SavingsFundsData(BaseModel):
                 "created_at": "2025-01-15T10:30:00Z"
             }
         }
+
+class TokenData(BaseModel):
+    access_token: str = Field(..., description="Access token")
+    refresh_token: str = Field(..., description="Refresh token")
+    user_id: str = Field(..., description="User ID")
 
 # ================================================================================================
 #                                Monthly Analytics Schemas

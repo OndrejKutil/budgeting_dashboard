@@ -122,7 +122,7 @@ async def get_current_user(
             access_token, 
             SUPABASE_JWT_SECRET, 
             algorithms=["HS256"],
-            leeway=30,
+            leeway=5,
             options={"verify_aud": False}
         )
 

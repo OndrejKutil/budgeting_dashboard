@@ -1,6 +1,5 @@
-
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -12,30 +11,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LogOut, User, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { profileApi } from '@/lib/api/client';
-import { ProfileData } from '@/lib/api/types';
 
 export function UserNav() {
     const { logout, userId } = useAuth();
+    const { profile } = useUser();
     const navigate = useNavigate();
-    const [profile, setProfile] = useState<ProfileData | null>(null);
-
-    useEffect(() => {
-        async function fetchProfile() {
-            try {
-                const response = await profileApi.getMe();
-                if (response.success) {
-                    setProfile(response.data);
-                }
-            } catch (error) {
-                console.error('Failed to fetch profile in UserNav:', error);
-            }
-        }
-
-        if (userId) {
-            fetchProfile();
-        }
-    }, [userId]);
 
     const handleLogout = () => {
         logout();

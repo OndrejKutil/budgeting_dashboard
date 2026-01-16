@@ -57,41 +57,80 @@ interface ApiResponse<T> {
 }
 
 interface RefreshResponse {
+  data: {
+    access_token: string;
+    refresh_token: string;
+    id: string;
+  };
+  user: {
+    id: string;
+  };
   session: {
     access_token: string;
     refresh_token: string;
   };
+  success: boolean;
+  message: string;
 }
 
-// Refresh token
+// Refresh token mutex - ensures only one refresh happens at a time
+let refreshPromise: Promise<boolean> | null = null;
+
 async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = tokenManager.getRefreshToken();
   if (!refreshToken) return false;
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/refresh/`, {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': API_KEY,
-        'X-Refresh-Token': refreshToken,
-      },
-    });
+  // If a refresh is already in progress, return the existing promise
+  if (refreshPromise) {
+    return refreshPromise;
+  }
 
-    if (!response.ok) {
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/refresh/`, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': API_KEY,
+          'X-Refresh-Token': refreshToken,
+        },
+      });
+
+      if (!response.ok) {
+        // Multi-tab resilience:
+        // If the request failed (e.g., 500 "Already Used"), check if another tab has already refreshed it.
+        const cloneRefreshToken = tokenManager.getRefreshToken();
+        if (cloneRefreshToken && cloneRefreshToken !== refreshToken) {
+          // Token changed while we were waiting? Success!
+          return true;
+        }
+
+        tokenManager.clearTokens();
+        return false;
+      }
+
+      const data: RefreshResponse = await response.json();
+      tokenManager.setTokens(
+        data.data.access_token,
+        data.data.refresh_token,
+        data.data.id
+      );
+      return true;
+    } catch (error) {
+      // Network error or other crash
+      // Check if token changed anyway (race condition success)
+      const cloneRefreshToken = tokenManager.getRefreshToken();
+      if (cloneRefreshToken && cloneRefreshToken !== refreshToken) {
+        return true;
+      }
+
       tokenManager.clearTokens();
       return false;
+    } finally {
+      refreshPromise = null;
     }
+  })();
 
-    const data: RefreshResponse = await response.json();
-    tokenManager.setTokens(
-      data.session.access_token,
-      data.session.refresh_token
-    );
-    return true;
-  } catch {
-    tokenManager.clearTokens();
-    return false;
-  }
+  return refreshPromise;
 }
 
 // Main request function
@@ -119,7 +158,7 @@ async function request<T>(
 
   // Handle token expiration
   if (response.status === 498 && retryOnExpired) {
-    const refreshed = await refreshAccessToken();
+    const refreshed: boolean = await refreshAccessToken();
     if (refreshed) {
       return request<T>(endpoint, options, false);
     }

@@ -258,10 +258,10 @@ def _calculate_period_comparison(current: SummaryTotals, previous: SummaryTotals
         income_delta_pct=calc_pct(current.income, previous.income),
         expense_delta=calc_delta(current.expense, previous.expense),
         expense_delta_pct=calc_pct(current.expense, previous.expense),
-        saving_delta=calc_delta(current.saving, previous.saving),
-        investment_delta=calc_delta(current.investment, previous.investment),
-        profit_delta=calc_delta(current.profit, previous.profit),
-        cashflow_delta=calc_delta(current.net_cash_flow, previous.net_cash_flow)
+        saving_delta_pct=calc_pct(current.saving, previous.saving),
+        investment_delta_pct=calc_pct(current.investment, previous.investment),
+        profit_delta_pct=calc_pct(current.profit, previous.profit),
+        cashflow_delta_pct=calc_pct(current.net_cash_flow, previous.net_cash_flow)
     )
 
 def _get_top_expenses(df: pl.DataFrame) -> List[CategoryInsight]:
