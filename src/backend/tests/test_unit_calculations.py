@@ -217,3 +217,103 @@ def test_calculate_day_split(sample_dataframe):
     
     assert split.average_weekday_spend == 1000.0
     assert split.average_weekend_spend == 200.0
+
+
+# ================================================================================================
+#                                   Budget Calculation Tests
+# ================================================================================================
+
+from backend.schemas.base import BudgetPlanRow
+from backend.helper.calculations.budgets_calc import _calculate_budget_view
+
+@pytest.fixture
+def sample_budget_plan_rows():
+    """
+    Returns a list of BudgetPlanRow objects for testing.
+    """
+    return [
+        BudgetPlanRow(category_id=1, group="Income", name="Salary", amount=Decimal("5000.0"), include_in_total=True),
+        BudgetPlanRow(category_id=2, group="Expense", name="Rent", amount=Decimal("1000.0"), include_in_total=True),
+        BudgetPlanRow(category_id=3, group="Savings", name="Emergency Fund", amount=Decimal("500.0"), include_in_total=True),
+        BudgetPlanRow(category_id=4, group="Investments", name="Stocks", amount=Decimal("300.0"), include_in_total=True),
+        BudgetPlanRow(category_id=5, group="Expense", name="Groceries", amount=Decimal("0.0"), include_in_total=True), # Zero planned
+        BudgetPlanRow(category_id=6, group="Expense", name="Unused", amount=Decimal("100.0"), include_in_total=True), # No actuals
+    ]
+
+@pytest.fixture
+def sample_budget_actuals():
+    """
+    Returns a map of category_id -> total_amount (actuals).
+    """
+    return {
+        1: Decimal("5000.0"),  # Income matched
+        2: Decimal("-1200.0"), # Rent overspent (stored as negative in DB for expenses usually, or positive? 
+                               # Note: logic in calc expects actuals from DB. In DB expenses are usually negative?
+                               # Let's check logic: "if group_key != 'income': actual_val = -actual_val"
+                               # This implies expenses come in as Negative values from DB aggregation if they are debits.
+                               # Let's assume standard behavior: Income +, Expense -.
+        3: Decimal("-500.0"),  # Savings matched
+        4: Decimal("-330.0"),  # Investments over contributed
+        5: Decimal("-50.0"),   # Groceries spent but 0 planned
+    }
+
+def test_calculate_budget_view(sample_budget_plan_rows, sample_budget_actuals):
+    """Test full budget view calculation"""
+    
+    # We pass the sample data
+    # Note: month/year arguments are just for the message in response, not logic
+    resp = _calculate_budget_view(
+        plan_rows=sample_budget_plan_rows,
+        actuals_map=sample_budget_actuals,
+        month=1,
+        year=2026
+    )
+    
+    assert resp.success is True
+    
+    # Check Summary
+    # Income: 5000
+    # Expense: 1000 + 0 + 100 = 1100
+    # Savings: 500
+    # Investment: 300
+    # Remaining: 5000 - 1100 - 500 - 300 = 3100
+    assert resp.summary.total_income == 5000.0
+    assert resp.summary.total_expense == 1100.0
+    assert resp.summary.total_savings == 500.0
+    assert resp.summary.total_investments == 300.0
+    assert resp.summary.remaining_budget == 3100.0
+    
+    # Check Rows Logic
+    
+    # Income (Salary)
+    # Planned 5000, Actual 5000 -> Diff 0%
+    salary = next(r for r in resp.income_rows if r.name == "Salary")
+    assert salary.amount == 5000.0
+    assert salary.actual_amount == 5000.0
+    assert salary.difference_pct == 0.0
+    
+    # Expense (Rent)
+    # Planned 1000, Actual -1200 -> Inverted to 1200 for view
+    # Diff: (1200 - 1000) / 1000 = 0.2 -> 20%
+    rent = next(r for r in resp.expense_rows if r.name == "Rent")
+    assert rent.amount == 1000.0
+    assert rent.actual_amount == 1200.0
+    assert rent.difference_pct == 20.0
+    
+    # Expense (Groceries)
+    # Planned 0, Actual -50 -> Inverted 50
+    # Diff: (50 - 0) / 0 -> Correctly handled as 0 in code to avoid ZeroDivision
+    groceries = next(r for r in resp.expense_rows if r.name == "Groceries")
+    assert groceries.amount == 0.0
+    assert groceries.actual_amount == 50.0
+    assert groceries.difference_pct == 0.0
+    
+    # Expense (Unused)
+    # Planned 100, Actual None (0 default) -> Inverted 0
+    # Diff: (0 - 100) / 100 = -1.0 -> -100%
+    unused = next(r for r in resp.expense_rows if r.name == "Unused")
+    assert unused.amount == 100.0
+    assert unused.actual_amount == 0.0
+    assert unused.difference_pct == -100.0
+
+

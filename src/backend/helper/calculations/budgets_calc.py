@@ -1,10 +1,8 @@
-import polars as pl
 from decimal import Decimal
 from typing import List, Optional
 import datetime
 import logging
 
-from ...data.database import get_db_client
 from ...schemas.base import BudgetPlan, BudgetPlanRow
 from ...schemas.responses import (
     BudgetResponse, 
@@ -27,6 +25,8 @@ def get_month_budget_view(
     Fetch the budget plan for the given month/year, merge with actuals,
     and return the structured response.
     """
+    from ...data.database import get_db_client
+
     try:
         supabase = get_db_client(access_token)
 
@@ -97,121 +97,135 @@ def get_month_budget_view(
                         current = actuals_map.get(c_id, Decimal(0))
                         actuals_map[c_id] = current + Decimal(str(amt))
 
-        # 4. Enrich Plan Rows & Split by Group
-        income_rows: List[IncomeRowResponse] = []
-        expense_rows: List[ExpenseRowResponse] = []
-        savings_rows: List[SavingsRowResponse] = []
-        investment_rows: List[InvestmentRowResponse] = []
-
-        total_income_planned = Decimal(0)
-        total_expense_planned = Decimal(0)
-        total_savings_planned = Decimal(0)
-        total_investments_planned = Decimal(0)
-
-        for row in plan_rows:
-            # Calculate actuals
-            # If category_id is None, actuals are None (not 0) and diff is None
-            actual: Optional[Decimal] = None
-            diff_pct: Optional[Decimal] = None
-            
-            group_key = row.group.lower().strip() # Define group_key here as it's always needed
-
-            if row.category_id is not None:
-                actual_val = actuals_map.get(row.category_id, Decimal(0))
-                
-                # Handle signs for comparison
-                # We invert actuals for non-income groups so we can compare positive vs positive.
-                if group_key != "income":
-                    actual_val = -actual_val
-                
-                actual = actual_val
-
-                # Calculate metrics
-                # Avoid division by zero if amount is 0
-                if row.amount != 0:
-                    diff_pct = ((actual - row.amount) / row.amount) * 100
-                else:
-                    # If planned amount is 0, and actual is also 0, diff is 0.
-                    # If planned amount is 0, and actual is non-zero, diff is infinite (or undefined).
-                    # For display purposes, we'll set it to 0 if planned is 0.
-                    diff_pct = Decimal(0) 
-            
-            # Accumulate totals (Planned only)
-            if row.include_in_total:
-                if group_key == "income":
-                    total_income_planned += row.amount
-                elif group_key == "expense":
-                    total_expense_planned += row.amount
-                elif group_key == "saving": # handling 'saving' vs 'savings'
-                    total_savings_planned += row.amount
-                elif group_key == "savings":
-                    total_savings_planned += row.amount
-                elif group_key == "investment": # handling 'investment' vs 'investments'
-                    total_investments_planned += row.amount
-                elif group_key == "investments":
-                    total_investments_planned += row.amount
-
-            # Construct display objects
-            # Use explicit arguments to avoid Mypy errors with unpacking
-            
-            if group_key == "income":
-                income_rows.append(IncomeRowResponse(
-                    name=row.name,
-                    amount=row.amount,
-                    actual_amount=actual,
-                    difference_pct=diff_pct,
-                    category_id=row.category_id,
-                    include_in_total=row.include_in_total
-                ))
-            elif group_key == "expense":
-                expense_rows.append(ExpenseRowResponse(
-                    name=row.name,
-                    amount=row.amount,
-                    actual_amount=actual,
-                    difference_pct=diff_pct,
-                    category_id=row.category_id,
-                    include_in_total=row.include_in_total
-                ))
-            elif group_key in ["saving", "savings"]:
-                savings_rows.append(SavingsRowResponse(
-                    name=row.name,
-                    amount=row.amount,
-                    actual_amount=actual,
-                    difference_pct=diff_pct,
-                    category_id=row.category_id,
-                    include_in_total=row.include_in_total
-                ))
-            elif group_key in ["investment", "investments"]:
-                investment_rows.append(InvestmentRowResponse(
-                    name=row.name,
-                    amount=row.amount,
-                    actual_amount=actual,
-                    difference_pct=diff_pct,
-                    category_id=row.category_id,
-                    include_in_total=row.include_in_total
-                ))
-
-        # 5. Summary Calculation
-        remaining = total_income_planned - total_expense_planned - total_savings_planned - total_investments_planned
+        # 4. Enrich Plan Rows & Split by Group -> Extracted to helper
+        # 5. Summary Calculation -> Extracted to helper
         
-        summary = BudgetSummaryResponse(
-            total_income=total_income_planned,
-            total_expense=total_expense_planned,
-            total_savings=total_savings_planned,
-            total_investments=total_investments_planned,
-            remaining_budget=remaining
-        )
-
-        return BudgetResponse(
-            summary=summary,
-            income_rows=income_rows,
-            expense_rows=expense_rows,
-            savings_rows=savings_rows,
-            investment_rows=investment_rows,
-            success=True,
-            message=f"Budget for {month}/{year} retrieved successfully"
-        )
+        return _calculate_budget_view(plan_rows, actuals_map, month, year)
 
     except Exception as e:
         logger.error(f"Error formulating budget view: {str(e)}")
         raise e
+
+
+def _calculate_budget_view(
+    plan_rows: List[BudgetPlanRow],
+    actuals_map: dict[int, Decimal],
+    month: int,
+    year: int
+) -> BudgetResponse:
+    """
+    Pure calculation function for budget view.
+    """
+    income_rows: List[IncomeRowResponse] = []
+    expense_rows: List[ExpenseRowResponse] = []
+    savings_rows: List[SavingsRowResponse] = []
+    investment_rows: List[InvestmentRowResponse] = []
+
+    total_income_planned = Decimal(0)
+    total_expense_planned = Decimal(0)
+    total_savings_planned = Decimal(0)
+    total_investments_planned = Decimal(0)
+
+    for row in plan_rows:
+        # Calculate actuals
+        # If category_id is None, actuals are None (not 0) and diff is None
+        actual: Optional[Decimal] = None
+        diff_pct: Optional[Decimal] = None
+        
+        group_key = row.group.lower().strip() # Define group_key here as it's always needed
+
+        if row.category_id is not None:
+            actual_val = actuals_map.get(row.category_id, Decimal(0))
+            
+            # Handle signs for comparison
+            # We invert actuals for non-income groups so we can compare positive vs positive.
+            if group_key != "income":
+                actual_val = -actual_val
+            
+            actual = actual_val
+
+            # Calculate metrics
+            # Avoid division by zero if amount is 0
+            if row.amount != 0:
+                diff_pct = ((actual - row.amount) / row.amount) * 100
+            else:
+                # If planned amount is 0, and actual is also 0, diff is 0.
+                # If planned amount is 0, and actual is non-zero, diff is infinite (or undefined).
+                # For display purposes, we'll set it to 0 if planned is 0.
+                diff_pct = Decimal(0) 
+        
+        # Accumulate totals (Planned only)
+        if row.include_in_total:
+            if group_key == "income":
+                total_income_planned += row.amount
+            elif group_key == "expense":
+                total_expense_planned += row.amount
+            elif group_key == "saving": # handling 'saving' vs 'savings'
+                total_savings_planned += row.amount
+            elif group_key == "savings":
+                total_savings_planned += row.amount
+            elif group_key == "investment": # handling 'investment' vs 'investments'
+                total_investments_planned += row.amount
+            elif group_key == "investments":
+                total_investments_planned += row.amount
+
+        # Construct display objects
+        # Use explicit arguments to avoid Mypy errors with unpacking
+        
+        if group_key == "income":
+            income_rows.append(IncomeRowResponse(
+                name=row.name,
+                amount=row.amount,
+                actual_amount=actual,
+                difference_pct=diff_pct,
+                category_id=row.category_id,
+                include_in_total=row.include_in_total
+            ))
+        elif group_key == "expense":
+            expense_rows.append(ExpenseRowResponse(
+                name=row.name,
+                amount=row.amount,
+                actual_amount=actual,
+                difference_pct=diff_pct,
+                category_id=row.category_id,
+                include_in_total=row.include_in_total
+            ))
+        elif group_key in ["saving", "savings"]:
+            savings_rows.append(SavingsRowResponse(
+                name=row.name,
+                amount=row.amount,
+                actual_amount=actual,
+                difference_pct=diff_pct,
+                category_id=row.category_id,
+                include_in_total=row.include_in_total
+            ))
+        elif group_key in ["investment", "investments"]:
+            investment_rows.append(InvestmentRowResponse(
+                name=row.name,
+                amount=row.amount,
+                actual_amount=actual,
+                difference_pct=diff_pct,
+                category_id=row.category_id,
+                include_in_total=row.include_in_total
+            ))
+
+    # 5. Summary Calculation
+    remaining = total_income_planned - total_expense_planned - total_savings_planned - total_investments_planned
+    
+    summary = BudgetSummaryResponse(
+        total_income=total_income_planned,
+        total_expense=total_expense_planned,
+        total_savings=total_savings_planned,
+        total_investments=total_investments_planned,
+        remaining_budget=remaining
+    )
+
+    return BudgetResponse(
+        summary=summary,
+        income_rows=income_rows,
+        expense_rows=expense_rows,
+        savings_rows=savings_rows,
+        investment_rows=investment_rows,
+        success=True,
+        message=f"Budget for {month}/{year} retrieved successfully"
+    )

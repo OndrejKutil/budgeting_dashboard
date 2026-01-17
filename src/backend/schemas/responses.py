@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from .base import (
     AccountData,
@@ -32,8 +32,8 @@ class AllDataResponse(BaseModel):
     data: List[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": [
                     {
@@ -62,6 +62,7 @@ class AllDataResponse(BaseModel):
                 "count": 2,
             }
         }
+    )
 
 
 class RefreshTokenResponse(BaseModel):
@@ -77,8 +78,8 @@ class CategoriesResponse(BaseModel):
     data: List[CategoryData] = Field(..., description="List of category records")
     count: int = Field(..., description="Total number of records returned")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": [
                     {
@@ -98,6 +99,7 @@ class CategoriesResponse(BaseModel):
                 ],
                 "count": 2,
         }}
+    )
 
 
 class AccountsResponse(BaseModel):
@@ -107,11 +109,9 @@ class AccountsResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        json_encoders = {
-            Decimal: float
-        }
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_encoders={Decimal: float},
+        json_schema_extra={
             "example": {
                 "data": [
                     {
@@ -134,6 +134,7 @@ class AccountsResponse(BaseModel):
                 "count": 2,
             }
         }
+    )
 
 
 class SummaryResponse(BaseModel):
@@ -142,8 +143,8 @@ class SummaryResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": {
                     "total_income": 5000.00,
@@ -162,6 +163,7 @@ class SummaryResponse(BaseModel):
                 "message": "Financial summary retrieved successfully"
             }
         }
+    )
 
 
 class MonthlyAnalyticsResponse(BaseModel):
@@ -170,8 +172,8 @@ class MonthlyAnalyticsResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Success message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": {
                     "year": 2025,
@@ -197,6 +199,7 @@ class MonthlyAnalyticsResponse(BaseModel):
                 "message": "Monthly analytics for January 2025 retrieved successfully"
             }
         }
+    )
 
 
 class YearlyAnalyticsResponse(BaseModel):
@@ -218,13 +221,14 @@ class AccountSuccessResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the account creation was successful")
     message: str = Field(..., description="Success message for account creation")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Account created successfully"
             }
         }
+    )
 
 class LoginResponse(BaseModel):
     """Response schema for login endpoint"""
@@ -233,8 +237,8 @@ class LoginResponse(BaseModel):
     user_id: str = Field(..., description="ID of the authenticated user")
     data: dict[Any, Any] = Field(..., description="Login response data containing user and session info")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_token": "access_token_value",
                 "refresh_token": "refresh_token_value",
@@ -251,6 +255,7 @@ class LoginResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 class TransactionsResponse(BaseModel):
@@ -260,8 +265,8 @@ class TransactionsResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": [
                     {
@@ -281,6 +286,7 @@ class TransactionsResponse(BaseModel):
                 "message": "Transactions retrieved successfully"
             }
         }
+    )
 
 
 class TransactionSuccessResponse(BaseModel):
@@ -289,8 +295,8 @@ class TransactionSuccessResponse(BaseModel):
     message: str = Field(..., description="Success/error message")
     data: Optional[List[TransactionData]] = Field(None, description="Transaction data if applicable")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Transaction created successfully",
@@ -309,6 +315,7 @@ class TransactionSuccessResponse(BaseModel):
                 ]
             }
         }
+    )
 
 
 class SavingsFundsResponse(BaseModel):
@@ -318,8 +325,8 @@ class SavingsFundsResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": [
                     {
@@ -335,6 +342,7 @@ class SavingsFundsResponse(BaseModel):
                 "message": "Savings funds retrieved successfully"
             }
         }
+    )
 
 
 class SavingsFundSuccessResponse(BaseModel):
@@ -343,8 +351,8 @@ class SavingsFundSuccessResponse(BaseModel):
     message: str = Field(..., description="Success/error message")
     data: Optional[List[SavingsFundsData]] = Field(None, description="Savings fund data if applicable")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Savings fund created successfully",
@@ -359,6 +367,7 @@ class SavingsFundSuccessResponse(BaseModel):
                 ]
             }
         }
+    )
 
 
 class ProfileResponse(BaseModel):
@@ -367,8 +376,8 @@ class ProfileResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "data": {
                     "id": "user123",
@@ -379,6 +388,7 @@ class ProfileResponse(BaseModel):
                 "message": "Profile retrieved successfully"
             }
         }
+    )
 
 # ================================================================================================
 #                                      Budget Schemas
@@ -393,19 +403,20 @@ class BudgetResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
-    class Config:
-        ...
+    model_config = ConfigDict(
         # TODO: Add example if needed
+    )
 
 class BudgetSuccessResponse(BaseModel):
     """Response schema for budget create/update/delete operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Budget created successfully"
             }
         }
+    )

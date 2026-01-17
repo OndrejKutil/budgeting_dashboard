@@ -42,6 +42,8 @@ async def get_budget(
 ) -> BudgetResponse:
     return get_month_budget_view(month, year, user["access_token"])
 
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=BudgetSuccessResponse)
 @limiter.limit(RATE_LIMITS["write"])
 async def create_budget(
@@ -86,6 +88,10 @@ async def create_budget(
     
     try:
         supabase.table("fct_budgets").insert(data).execute()
+
+    except fastapi.HTTPException:
+        raise  # re-raise HTTP exceptions as is
+
     except Exception as e:
         # Catch unique violation if race condition occurred or other DB errors
         raise fastapi.HTTPException(
@@ -142,6 +148,10 @@ async def update_budget(
             .eq(BUDGET_COLUMNS.ID_PK.value, budget_id)
             .execute()
         )
+
+    except fastapi.HTTPException:
+        raise  # re-raise HTTP exceptions as is
+
     except Exception as e:
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

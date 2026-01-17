@@ -26,7 +26,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Plus, Trash2, Save, Loader2, AlertCircle, Pencil, X, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { categoriesApi, budgetApi, ApiError } from '@/lib/api/client';
 import { BudgetPlan, BudgetPlanRow } from '@/lib/api/types/requests';
@@ -34,7 +34,7 @@ import { BudgetRowResponse } from '@/lib/api/types/responses';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -322,7 +322,7 @@ export default function BudgetMaker() {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 cursor-pointer" onClick={() => toggleSection(group)}>
                                 <div className={cn("p-1 rounded-md transition-colors", isOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50")}>
-                                    {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                                    {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
                                     <span className="text-xl font-display font-semibold">{title}</span>
