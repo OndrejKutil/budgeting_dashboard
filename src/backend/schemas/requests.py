@@ -2,7 +2,7 @@ from datetime import date as Date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # ================================================================================================
 #                                   Insert Schemas
@@ -17,13 +17,11 @@ class TransactionRequest(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
 
-    class Config:
+    model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
-        json_encoders = {
-            Decimal: float
-        }
+        json_encoders={Decimal: float},
         # Example for documentation
-        json_schema_extra = {
+        json_schema_extra={
             "example": {
                 "account_id_fk": "",
                 "category_id_fk": 2,
@@ -34,6 +32,7 @@ class TransactionRequest(BaseModel):
                 "savings_fund_id_fk": None
             }
         }
+    )
 
 
 class AccountRequest(BaseModel):
@@ -43,13 +42,11 @@ class AccountRequest(BaseModel):
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
-    class Config:
+    model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
-        json_encoders = {
-            Decimal: float
-        }
+        json_encoders={Decimal: float},
         # Example for documentation
-        json_schema_extra = {
+        json_schema_extra={
             "example": {
                 "account_name": "",
                 "type": "",
@@ -57,6 +54,7 @@ class AccountRequest(BaseModel):
                 "created_at": "2025-01-15T10:30:00Z"
             }
         }
+    )
 
 class LoginRequest(BaseModel):
     """Schema for user login credentials"""
@@ -71,14 +69,15 @@ class SavingsFundsRequest(BaseModel):
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(None, description="Creation timestamp of the savings fund")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": "456user",
                 "fund_name": "Emergency Fund",
                 "target_amount": 5000
             }
         }
+    )
 
 
 class UpdateProfileRequest(BaseModel):
@@ -86,10 +85,11 @@ class UpdateProfileRequest(BaseModel):
     full_name: Optional[str] = Field(None, description="User full name")
     currency: Optional[str] = Field(None, description="User preferred currency (e.g., USD, CZK)")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "full_name": "John Doe",
                 "currency": "CZK"
             }
         }
+    )

@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # ================================================================================================
 #                                   Data Schemas
@@ -21,13 +21,11 @@ class TransactionData(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
 
-    class Config:
+    model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
-        json_encoders = {
-            Decimal: float
-        }
+        json_encoders={Decimal: float},
         # Example for documentation
-        json_schema_extra = {
+        json_schema_extra={
             "example": {
                 "id_pk": "",
                 "user_id_fk": "",
@@ -40,6 +38,7 @@ class TransactionData(BaseModel):
                 "savings_fund_id_fk": None
             }
         }
+    )
 
 class CategoryType(str, Enum):
     """Enum for category types"""
@@ -133,8 +132,8 @@ class SummaryData(BaseModel):
     
     # by_category removed as requested
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "total_income": 5000.00,
                 "total_expense": 3500.00,
@@ -168,6 +167,7 @@ class SummaryData(BaseModel):
                 }
             }
         }
+    )
 
 
 class SavingsFundsData(BaseModel):
@@ -179,8 +179,8 @@ class SavingsFundsData(BaseModel):
     net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the savings fund in the last 30 days")
     created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "savings_funds_id_pk": "123aaa",
                 "user_id_fk": "456user",
@@ -189,6 +189,7 @@ class SavingsFundsData(BaseModel):
                 "created_at": "2025-01-15T10:30:00Z"
             }
         }
+    )
 
 class TokenData(BaseModel):
     access_token: str = Field(..., description="Access token")
@@ -204,13 +205,14 @@ class DailySpendingData(BaseModel):
     day: str = Field(..., description="Date in YYYY-MM-DD format")
     amount: float = Field(..., description="Total spending amount for the day")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "day": "2025-01-15",
                 "amount": 125.50
             }
         }
+    )
 
 
 class CategoryBreakdownData(BaseModel):
@@ -218,13 +220,14 @@ class CategoryBreakdownData(BaseModel):
     category: str = Field(..., description="Category name")
     total: float = Field(..., description="Total amount for the category")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "category": "Groceries",
                 "total": 450.75
             }
         }
+    )
 
 
 class SpendingTypeBreakdownData(BaseModel):
@@ -232,13 +235,14 @@ class SpendingTypeBreakdownData(BaseModel):
     type: str = Field(..., description="Spending type (Core, Fun, or Future)")
     amount: float = Field(..., description="Total amount for the spending type")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "type": "Core",
                 "amount": 1250.00
             }
         }
+    )
 
 
 
@@ -302,8 +306,8 @@ class MonthlyAnalyticsData(BaseModel):
     expenses_breakdown: List[CategoryBreakdownData] = Field(..., description="Expenses breakdown by category")
     spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "year": 2025,
                 "month": 1,
@@ -328,6 +332,7 @@ class MonthlyAnalyticsData(BaseModel):
                 ]
             }
         }
+    )
 
 
 # ================================================================================================
@@ -392,8 +397,8 @@ class YearlyAnalyticsData(BaseModel):
     income_by_category: dict[str, float] = Field(..., description="Income breakdown by category")
     expense_by_category: dict[str, float] = Field(..., description="Expense breakdown by category")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "year": 2024,
                 "total_income": 60000.00,
@@ -435,6 +440,7 @@ class YearlyAnalyticsData(BaseModel):
                 }
             }
         }
+    )
 
 
 class EmergencyFundData(BaseModel):
@@ -464,8 +470,8 @@ class EmergencyFundData(BaseModel):
     current_savings_amount: float = Field(..., description="Current total amount in savings funds")
     months_analyzed: int = Field(..., description="Number of months with data")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "year": 2024,
                 "average_monthly_core_expenses": 2500.00,
@@ -480,6 +486,7 @@ class EmergencyFundData(BaseModel):
                 "months_analyzed": 12
             }
         }
+    )
 
 
 # ================================================================================================
@@ -535,8 +542,8 @@ class ProfileData(BaseModel):
     factors: Optional[List[dict]] = Field(None, description="MFA factors")
     action_link: Optional[str] = Field(None, description="Pending action link")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "user123",
                 "aud": "authenticated",
@@ -550,3 +557,64 @@ class ProfileData(BaseModel):
                 "user_metadata": {"full_name": "John Doe"}
             }
         }
+    )
+
+# ================================================================================================
+#                                      Budget Schemas
+# ================================================================================================
+
+
+class IncomeRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the income source")
+    amount: Decimal = Field(..., description="Amount allocated for this income source")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount received for this income source")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+
+class ExpenseRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the expense category")
+    amount: Decimal = Field(..., description="Amount allocated for this expense category")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount spent for this expense category")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+
+class SavingsRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the savings goal")
+    amount: Decimal = Field(..., description="Amount allocated for this savings goal")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount saved for this savings goal")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+
+class InvestmentRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the investment")
+    amount: Decimal = Field(..., description="Amount allocated for this investment")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount invested")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+
+class BudgetSummaryResponse(BaseModel):
+    total_income: Decimal = Field(..., description="Total budgeted income")
+    total_expense: Decimal = Field(..., description="Total budgeted expenses")
+    total_savings: Decimal = Field(..., description="Total budgeted savings")
+    total_investments: Decimal = Field(..., description="Total budgeted investments")
+    remaining_budget: Decimal = Field(..., description="Remaining budget after expenses, savings, and investments")
+
+# ================================================================================================
+#                                   Internal Json Schemas
+# ================================================================================================
+
+class BudgetPlanRow(BaseModel):
+    """Schema for a single row in the budget plan JSON"""
+    group: str = Field(..., description="Group name (income, expense, saving, investment)")
+    name: str = Field(..., min_length=1, max_length=255, description="Name of the budget item")
+    amount: Decimal = Field(..., ge=0, description="Planned amount")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+    category_id: Optional[int] = Field(None, description="Linked category ID (if any)")
+
+class BudgetPlan(BaseModel):
+    """Schema for the entire budget plan JSON structure"""
+    rows: List[BudgetPlanRow] = Field(..., description="List of budget plan rows")

@@ -108,3 +108,25 @@ export interface UpdateSavingsFundRequest {
     fund_name?: string;
     target_amount?: number;
 }
+
+// ================================================================================================
+//                                   Budget Requests
+// ================================================================================================
+
+/**
+ * Schema for a single row in the budget plan JSON
+ */
+export interface BudgetPlanRow {
+    group: string;
+    name: string;
+    amount: number;
+    include_in_total: boolean;
+    category_id: number | null;
+}
+
+/**
+ * Schema for the entire budget plan JSON structure
+ */
+export interface BudgetPlan {
+    rows: BudgetPlanRow[];
+}

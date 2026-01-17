@@ -12,3 +12,4 @@ export { profileApi } from './profile';
 export { summaryApi } from './summary';
 export { analyticsApi } from './analytics';
 export { healthApi } from './health';
+export { budgetApi } from './budgets';
