@@ -199,6 +199,49 @@ export interface EmergencyFundResponse {
 }
 
 // ================================================================================================
+//                                   Budget Responses
+// ================================================================================================
+
+export interface BudgetRowResponse {
+    name: string;
+    amount: number;
+    actual_amount: number | null;
+    difference_pct: number | null;
+    category_id: number | null;
+    include_in_total: boolean;
+}
+
+export type IncomeRowResponse = BudgetRowResponse;
+export type ExpenseRowResponse = BudgetRowResponse;
+export type SavingsRowResponse = BudgetRowResponse;
+export type InvestmentRowResponse = BudgetRowResponse;
+
+export interface BudgetSummaryResponse {
+    total_income: number;
+    total_expense: number;
+    total_savings: number;
+    total_investments: number;
+    remaining_budget: number;
+}
+
+export interface BudgetResponse {
+    summary: BudgetSummaryResponse;
+    income_rows: IncomeRowResponse[];
+    expense_rows: ExpenseRowResponse[];
+    savings_rows: SavingsRowResponse[];
+    investment_rows: InvestmentRowResponse[];
+    success: boolean;
+    message: string;
+}
+/**
+ * Budget success response (create/update/delete)
+ */
+export interface BudgetSuccessResponse {
+    success: boolean;
+    message: string;
+}
+
+// ================================================================================================
 //                                   Health Check Response
 // ================================================================================================
 

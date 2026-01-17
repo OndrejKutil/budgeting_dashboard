@@ -37,15 +37,15 @@ def get_month_budget_view(
             .select(BUDGET_COLUMNS.PLAN_JSON.value)
             .eq(BUDGET_COLUMNS.MONTH.value, month)
             .eq(BUDGET_COLUMNS.YEAR.value, year)
-            .maybe_single()
+            .limit(1)
             .execute()
         )
 
         plan_rows: List[BudgetPlanRow] = []
-        if plan_response.data:
+        if plan_response.data and len(plan_response.data) > 0:
             # Parse and validate the plan
             # The database column is 'plan_json', which should match BudgetPlan structure
-            raw_plan = plan_response.data.get(BUDGET_COLUMNS.PLAN_JSON.value)
+            raw_plan = plan_response.data[0].get(BUDGET_COLUMNS.PLAN_JSON.value)
             if raw_plan:
                 plan_model = BudgetPlan(**raw_plan)
                 plan_rows = plan_model.rows
@@ -159,28 +159,36 @@ def get_month_budget_view(
                     name=row.name,
                     amount=row.amount,
                     actual_amount=actual,
-                    difference_pct=diff_pct
+                    difference_pct=diff_pct,
+                    category_id=row.category_id,
+                    include_in_total=row.include_in_total
                 ))
             elif group_key == "expense":
                 expense_rows.append(ExpenseRowResponse(
                     name=row.name,
                     amount=row.amount,
                     actual_amount=actual,
-                    difference_pct=diff_pct
+                    difference_pct=diff_pct,
+                    category_id=row.category_id,
+                    include_in_total=row.include_in_total
                 ))
             elif group_key in ["saving", "savings"]:
                 savings_rows.append(SavingsRowResponse(
                     name=row.name,
                     amount=row.amount,
                     actual_amount=actual,
-                    difference_pct=diff_pct
+                    difference_pct=diff_pct,
+                    category_id=row.category_id,
+                    include_in_total=row.include_in_total
                 ))
             elif group_key in ["investment", "investments"]:
                 investment_rows.append(InvestmentRowResponse(
                     name=row.name,
                     amount=row.amount,
                     actual_amount=actual,
-                    difference_pct=diff_pct
+                    difference_pct=diff_pct,
+                    category_id=row.category_id,
+                    include_in_total=row.include_in_total
                 ))
 
         # 5. Summary Calculation

@@ -561,24 +561,32 @@ class IncomeRowResponse(BaseModel):
     amount: Decimal = Field(..., description="Amount allocated for this income source")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount received for this income source")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class ExpenseRowResponse(BaseModel):
     name: str = Field(..., description="Name of the expense category")
     amount: Decimal = Field(..., description="Amount allocated for this expense category")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount spent for this expense category")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class SavingsRowResponse(BaseModel):
     name: str = Field(..., description="Name of the savings goal")
     amount: Decimal = Field(..., description="Amount allocated for this savings goal")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount saved for this savings goal")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class InvestmentRowResponse(BaseModel):
     name: str = Field(..., description="Name of the investment")
     amount: Decimal = Field(..., description="Amount allocated for this investment")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount invested")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class BudgetSummaryResponse(BaseModel):
     total_income: Decimal = Field(..., description="Total budgeted income")
