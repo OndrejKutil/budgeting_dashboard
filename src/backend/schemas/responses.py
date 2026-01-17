@@ -396,3 +396,16 @@ class BudgetResponse(BaseModel):
     class Config:
         ...
         # TODO: Add example if needed
+
+class BudgetSuccessResponse(BaseModel):
+    """Response schema for budget create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Budget created successfully"
+            }
+        }
