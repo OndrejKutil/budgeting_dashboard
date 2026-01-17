@@ -54,3 +54,15 @@ class SAVINGS_FUNDS_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+    
+class BUDGET_COLUMNS(Enum):
+    ID_PK = "id_pk"
+    USER_ID_FK = "user_id_fk"
+    MONTH = "month"
+    YEAR = "year"
+    PLAN_JSON = "plan_json"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+
+    def __str__(self):
+        return self.value

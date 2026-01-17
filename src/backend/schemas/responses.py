@@ -16,6 +16,11 @@ from .base import (
     TransactionData,
     YearlyAnalyticsData,
     TokenData,
+    IncomeRowResponse,
+    ExpenseRowResponse,
+    SavingsRowResponse,
+    InvestmentRowResponse,
+    BudgetSummaryResponse
 )
 
 
@@ -374,3 +379,20 @@ class ProfileResponse(BaseModel):
                 "message": "Profile retrieved successfully"
             }
         }
+
+# ================================================================================================
+#                                      Budget Schemas
+# ================================================================================================
+
+class BudgetResponse(BaseModel):
+    summary: BudgetSummaryResponse = Field(..., description="Summary of the budget")
+    income_rows: List[IncomeRowResponse] = Field(..., description="List of income budget rows")
+    expense_rows: List[ExpenseRowResponse] = Field(..., description="List of expense budget rows")
+    savings_rows: List[SavingsRowResponse] = Field(..., description="List of savings budget rows")
+    investment_rows: List[InvestmentRowResponse] = Field(..., description="List of investment budget rows")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    class Config:
+        ...
+        # TODO: Add example if needed

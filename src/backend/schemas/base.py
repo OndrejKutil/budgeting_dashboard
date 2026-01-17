@@ -550,3 +550,55 @@ class ProfileData(BaseModel):
                 "user_metadata": {"full_name": "John Doe"}
             }
         }
+
+# ================================================================================================
+#                                      Budget Schemas
+# ================================================================================================
+
+
+class IncomeRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the income source")
+    amount: Decimal = Field(..., description="Amount allocated for this income source")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount received for this income source")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+
+class ExpenseRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the expense category")
+    amount: Decimal = Field(..., description="Amount allocated for this expense category")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount spent for this expense category")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+
+class SavingsRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the savings goal")
+    amount: Decimal = Field(..., description="Amount allocated for this savings goal")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount saved for this savings goal")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+
+class InvestmentRowResponse(BaseModel):
+    name: str = Field(..., description="Name of the investment")
+    amount: Decimal = Field(..., description="Amount allocated for this investment")
+    actual_amount: Optional[Decimal] = Field(None, description="Actual amount invested")
+    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
+
+class BudgetSummaryResponse(BaseModel):
+    total_income: Decimal = Field(..., description="Total budgeted income")
+    total_expense: Decimal = Field(..., description="Total budgeted expenses")
+    total_savings: Decimal = Field(..., description="Total budgeted savings")
+    total_investments: Decimal = Field(..., description="Total budgeted investments")
+    remaining_budget: Decimal = Field(..., description="Remaining budget after expenses, savings, and investments")
+
+# ================================================================================================
+#                                   Internal Json Schemas
+# ================================================================================================
+
+class BudgetPlanRow(BaseModel):
+    """Schema for a single row in the budget plan JSON"""
+    group: str = Field(..., description="Group name (income, expense, saving, investment)")
+    name: str = Field(..., description="Name of the budget item")
+    amount: Decimal = Field(..., description="Planned amount")
+    include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
+    category_id: Optional[int] = Field(None, description="Linked category ID (if any)")
+
+class BudgetPlan(BaseModel):
+    """Schema for the entire budget plan JSON structure"""
+    rows: List[BudgetPlanRow] = Field(..., description="List of budget plan rows")
