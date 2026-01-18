@@ -64,6 +64,39 @@ const PIE_COLORS = [
   'hsl(199, 89%, 48%)',
 ];
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    payload?: unknown;
+  }>;
+  formatCurrency: (value: number) => string;
+}
+
+const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div style={{
+        backgroundColor: 'hsl(222, 47%, 9%)',
+        border: '1px solid hsl(217, 19%, 20%)',
+        borderRadius: '8px',
+        padding: '8px',
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+      }}>
+        <p style={{ color: 'hsl(210, 40%, 98%)', fontSize: '12px', marginBottom: '2px' }}>
+          {data.name}
+        </p>
+        <p style={{ color: 'hsl(239, 84%, 67%)', fontSize: '14px', fontWeight: 'bold' }}>
+          {formatCurrency(data.value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -378,7 +411,7 @@ export default function YearlyAnalyticsPage() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
                     width={60}
                   />
                   <Tooltip
@@ -429,7 +462,7 @@ export default function YearlyAnalyticsPage() {
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <ComposedChart data={monthlyTrendsData} stackOffset="sign" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <XAxis
                     dataKey="month"
                     axisLine={false}
@@ -442,7 +475,7 @@ export default function YearlyAnalyticsPage() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
                     width={60}
                   />
                   <YAxis
@@ -522,13 +555,7 @@ export default function YearlyAnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
-                      borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)'
-                    }}
+                    content={<CustomTooltip formatCurrency={formatCurrency} />}
                   />
                   <Legend />
                 </PieChart>

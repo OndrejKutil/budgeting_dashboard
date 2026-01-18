@@ -47,7 +47,41 @@ const COLORS = [
   'hsl(215, 14%, 64%)',
   'hsl(0, 84%, 60%)',
   'hsl(142, 71%, 45%)',
+  'hsl(142, 71%, 45%)',
 ];
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    payload?: unknown;
+  }>;
+  formatCurrency: (value: number) => string;
+}
+
+const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div style={{
+        backgroundColor: 'hsl(222, 47%, 9%)',
+        border: '1px solid hsl(217, 19%, 20%)',
+        borderRadius: '8px',
+        padding: '8px',
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+      }}>
+        <p style={{ color: 'hsl(210, 40%, 98%)', fontSize: '12px', marginBottom: '2px' }}>
+          {data.name}
+        </p>
+        <p style={{ color: 'hsl(239, 84%, 67%)', fontSize: '14px', fontWeight: 'bold' }}>
+          {formatCurrency(data.value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency } = useUser();
@@ -100,11 +134,13 @@ export default function MonthlyAnalyticsPage() {
 
 
   // Transform data for charts
-  const expensePieData = data.expenses_breakdown.map((item, index) => ({
-    name: item.category,
-    value: item.total,
-    color: COLORS[index % COLORS.length],
-  }));
+  const expensePieData = data.expenses_breakdown
+    .map((item, index) => ({
+      name: item.category,
+      value: item.total,
+      color: COLORS[index % COLORS.length],
+    }))
+    .sort((a, b) => b.value - a.value);
 
   const incomeBarData = data.income_breakdown
     .map((item) => ({ name: item.category, value: item.total }))
@@ -260,13 +296,7 @@ export default function MonthlyAnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
-                      borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
-                    }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
+                    content={<CustomTooltip formatCurrency={formatCurrency} />}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -305,6 +335,7 @@ export default function MonthlyAnalyticsPage() {
                     borderRadius: '8px',
                     color: 'hsl(210, 40%, 98%)',
                   }}
+                  itemStyle={{ color: 'hsl(239, 84%, 67%)' }}
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
                 />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>

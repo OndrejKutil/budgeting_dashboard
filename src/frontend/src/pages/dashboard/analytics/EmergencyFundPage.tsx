@@ -218,6 +218,7 @@ export default function EmergencyFundPage() {
                       borderRadius: '8px',
                       color: 'hsl(210, 40%, 98%)',
                     }}
+                    itemStyle={{ color: 'hsl(239, 84%, 67%)' }}
                     formatter={(value: number) => [formatCurrency(value), 'Amount']}
                   />
                   <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
