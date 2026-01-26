@@ -55,7 +55,11 @@ async def get_all_data(
     category_id: Optional[str] = Query(None, description="Category for filtering transactions"),
     account_id: Optional[str] = Query(None, description="Account for filtering transactions"),
     transaction_id: Optional[str] = Query(None, description="Transaction ID for filtering transactions"),
+    savings_fund_id: Optional[str] = Query(None, description="Savings Fund ID for filtering transactions"),
     search: Optional[str] = Query(None, description="Search term for filtering transactions by notes"),
+    category_type: Optional[str] = Query(None, description="Filter by category type (income, expense, etc)"),
+    min_amount: Optional[float] = Query(None, description="Filter by minimum amount value"),
+    max_amount: Optional[float] = Query(None, description="Filter by maximum amount value"),
     limit: Optional[int] = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
     offset: Optional[int] = Query(0, ge=0, description="Number of items to skip")
 ) -> TransactionsResponse:
@@ -68,7 +72,11 @@ async def get_all_data(
     try:
         user_supabase_client = get_db_client(user["access_token"])
         
-        query = user_supabase_client.table("fct_transactions").select("*", count="exact")
+        # Select with potential join for category filtering
+        if category_type:
+             query = user_supabase_client.table("fct_transactions").select("*, dim_categories!inner(type)", count="exact")
+        else:
+             query = user_supabase_client.table("fct_transactions").select("*", count="exact")
         
         if start_date:
             query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
@@ -80,6 +88,18 @@ async def get_all_data(
             query = query.eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
         if transaction_id:
             query = query.eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id)
+        if savings_fund_id:
+             if savings_fund_id.lower() == 'none':
+                  query = query.is_(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
+             else:
+                  query = query.eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, savings_fund_id)
+        if category_type:
+            query = query.eq("dim_categories.type", category_type)
+        if min_amount is not None:
+             query = query.gte(TRANSACTIONS_COLUMNS.AMOUNT.value, min_amount)
+        if max_amount is not None:
+             query = query.lte(TRANSACTIONS_COLUMNS.AMOUNT.value, max_amount)
+
         if search:
             query = query.ilike(TRANSACTIONS_COLUMNS.NOTES.value, f"%{search}%")
             
