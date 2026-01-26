@@ -47,7 +47,6 @@ const COLORS = [
   'hsl(215, 14%, 64%)',
   'hsl(0, 84%, 60%)',
   'hsl(142, 71%, 45%)',
-  'hsl(142, 71%, 45%)',
 ];
 
 interface CustomTooltipProps {

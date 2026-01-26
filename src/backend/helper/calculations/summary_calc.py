@@ -415,11 +415,11 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
     # Rates
     savings_rate = 0.0
     if current_totals.income > 0:
-        savings_rate = round((current_totals.saving / current_totals.income) * 100, 1)
+        savings_rate = round((current_totals.saving / current_totals.income), 4)
         
     investment_rate = 0.0
     if current_totals.income > 0:
-        investment_rate = round((current_totals.investment / current_totals.income) * 100, 1)
+        investment_rate = round((current_totals.investment / current_totals.income), 4)
         
     top_expenses = _get_top_expenses(current_df)
     biggest_mover = _get_biggest_mover(current_df, previous_df)

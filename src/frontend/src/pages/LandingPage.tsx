@@ -85,7 +85,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}
       <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex h-16 w-full items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-blurple">
               <Wallet className="h-5 w-5 text-white" />
@@ -113,157 +113,195 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 pb-20 pt-32">
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={staggerContainer}
-          className="mx-auto max-w-4xl text-center"
-        >
-          <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/50 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Your personal finance companion
-          </motion.div>
-
-          <motion.h1
-            variants={fadeInUp}
-            className="mb-6 text-4xl font-bold tracking-tight font-display sm:text-5xl lg:text-6xl"
+      <section className="container mx-auto px-4 pt-20 pb-20 lg:pt-32 lg:pb-32">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          {/* Content - Left Aligned */}
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={staggerContainer}
+            className="flex-1 text-left max-w-2xl"
           >
-            Personal Finance,{' '}
-            <span className="text-gradient-blurple">Quantified</span>
-          </motion.h1>
+            <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/50 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Your personal finance companion
+            </motion.div>
 
-          <motion.p
-            variants={fadeInUp}
-            className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground"
-          >
-            A budgeting app made for those who want to take future
-            into their own hands. No more guessing where your money goes.
-          </motion.p>
+            <motion.h1
+              variants={fadeInUp}
+              className="mb-8 text-4xl font-bold tracking-tighter font-display sm:text-5xl lg:text-7xl leading-[1.1]"
+            >
+              Personal Finance,{' '}
+              <br />
+              <span className="text-gradient-blurple">Quantified</span>
+            </motion.h1>
 
-          <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            {isAuthenticated ? (
-              <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
-                <Link to="/dashboard">
-                  Go to Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <>
+            <motion.p
+              variants={fadeInUp}
+              className="mb-10 max-w-lg text-lg text-muted-foreground leading-relaxed"
+            >
+              A budgeting app made for those who want to take the future
+              into their own hands. No more guessing where your money goes.
+            </motion.p>
+
+            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-start gap-4">
+              {isAuthenticated ? (
                 <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
-                  <Link to="/auth/register">
-                    Start Building Today
+                  <Link to="/dashboard">
+                    Go to Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="transition-all duration-300 ease-out">
-                  <Link to="/auth/login">
-                    Log in to Dashboard
-                  </Link>
-                </Button>
-              </>
-            )}
-          </motion.div>
-        </motion.div>
+              ) : (
+                <>
+                  <Button size="lg" asChild className="bg-gradient-blurple px-8 transition-all duration-300 ease-out hover:opacity-90 glow-blurple">
+                    <Link to="/auth/register">
+                      Start Building Today
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" asChild className="transition-all duration-300 ease-out">
+                    <Link to="/auth/login">
+                      Log in
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </motion.div>
 
-        {/* Dashboard Preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="relative mx-auto mt-20 max-w-5xl"
-        >
-          <div className="absolute -inset-4 rounded-2xl bg-gradient-blurple opacity-20 blur-3xl" />
-          <div className="relative rounded-xl border border-border/50 bg-card p-2 shadow-2xl">
-            <div className="rounded-lg bg-background-secondary p-6">
-              {/* Mock dashboard */}
-              <div className="mb-6 flex items-center gap-4">
-                <div className="h-3 w-3 rounded-full bg-destructive" />
-                <div className="h-3 w-3 rounded-full bg-warning" />
-                <div className="h-3 w-3 rounded-full bg-success" />
-                <div className="ml-4 h-4 w-48 rounded bg-muted" />
-              </div>
-              <div className="grid gap-4 md:grid-cols-4">
-                {[
-                  { label: 'Income', value: '$8,450', color: 'success' },
-                  { label: 'Expenses', value: '$3,240', color: 'destructive' },
-                  { label: 'Savings', value: '$2,100', color: 'info' },
-                  { label: 'Net Flow', value: '+$3,110', color: 'primary' },
-                ].map((item, i) => (
-                  <div key={i} className="rounded-lg border border-border bg-card p-4">
-                    <div className="text-xs text-muted-foreground">{item.label}</div>
-                    <div className={`mt-1 text-xl font-bold font-display text-${item.color}`}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div className="h-48 rounded-lg border border-border bg-card p-4">
-                  <div className="mb-4 flex items-center gap-2 text-sm font-medium">
-                    <BarChart3 className="h-4 w-4 text-primary" />
-                    Spending by Category
-                  </div>
-                  <div className="flex h-32 items-end gap-2">
-                    {[60, 80, 45, 90, 55, 70, 40].map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-t bg-gradient-to-t from-primary/60 to-primary"
-                        style={{ height: `${h}%` }}
+            <motion.div variants={fadeInUp} className="mt-12 flex items-center gap-4 text-xs font-mono text-muted-foreground/60">
+              <span className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                Built for my own use first
+              </span>
+            </motion.div>
+          </motion.div>
+
+          {/* Living Graph - Option B (Refined: No Glow, Updated Labels) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+            className="flex-1 relative w-full lg:w-auto min-h-[400px] flex items-center justify-center p-8"
+          >
+            <div className="relative z-10 w-full max-w-[500px] aspect-square">
+              {/* Abstract Flow Visualization */}
+              <svg viewBox="0 0 400 400" className="w-full h-full drop-shadow-2xl">
+                <defs>
+                  <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity="0.5" />
+                    <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="hsl(var(--info))" stopOpacity="0.5" />
+                  </linearGradient>
+                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* Central "System" Node */}
+                <circle cx="200" cy="200" r="45" fill="hsl(var(--card))" stroke="hsl(var(--primary))" strokeWidth="2" className="drop-shadow-lg" />
+                <foreignObject x="155" y="180" width="90" height="40">
+                  <div className="flex items-center justify-center h-full text-xs font-mono text-primary font-bold tracking-tight">SYSTEM</div>
+                </foreignObject>
+
+                {/* Left Nodes (Income) */}
+                <g>
+                  {[
+                    { y: 140, label: "Salary" },
+                    { y: 200, label: "Family" },
+                    { y: 260, label: "Yield" }
+                  ].map((item, i) => (
+                    <g key={`in-${i}`}>
+                      {/* Label */}
+                      <text x="40" y={item.y + 4} textAnchor="end" className="text-[10px] font-medium fill-muted-foreground/80 font-mono tracking-wide">{item.label}</text>
+
+                      {/* Node */}
+                      <circle cx="55" cy={item.y} r="6" fill="hsl(var(--success))" className="animate-pulse" style={{ animationDelay: `${i * 0.5}s` }} />
+
+                      {/* Paths to Center */}
+                      <motion.path
+                        d={`M 65 ${item.y} C 120 ${item.y}, 120 200, 155 200`}
+                        fill="none"
+                        stroke="url(#flowGradient)"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 0.6 }}
+                        transition={{ duration: 2, delay: i * 0.3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
                       />
-                    ))}
-                  </div>
-                </div>
-                <div className="h-48 rounded-lg border border-border bg-card p-4">
-                  <div className="mb-4 flex items-center gap-2 text-sm font-medium">
-                    <PieChart className="h-4 w-4 text-primary" />
-                    Expense Breakdown
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <div className="relative h-28 w-28">
-                      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                        <circle cx="50" cy="50" r="40" className="fill-none stroke-primary/20" strokeWidth="16" />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="40"
-                          className="fill-none stroke-primary"
-                          strokeWidth="16"
-                          strokeDasharray="251.2"
-                          strokeDashoffset="75"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="40"
-                          className="fill-none stroke-chart-teal"
-                          strokeWidth="16"
-                          strokeDasharray="251.2"
-                          strokeDashoffset="175"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </g>
+                  ))}
+                </g>
+
+                {/* Right Nodes (Distribution) */}
+                <g>
+                  {[
+                    { y: 120, label: "Needs", color: "hsl(var(--muted-foreground))" },
+                    { y: 170, label: "Safety", color: "hsl(var(--info))" },
+                    { y: 230, label: "Invest", color: "hsl(var(--primary))" },
+                    { y: 280, label: "Fun", color: "hsl(var(--muted-foreground))" }
+                  ].map((item, i) => (
+                    <g key={`out-${i}`}>
+                      {/* Paths from Center */}
+                      <motion.path
+                        d={`M 245 200 C 280 200, 280 ${item.y}, 335 ${item.y}`}
+                        fill="none"
+                        stroke={item.color}
+                        strokeWidth={i === 1 || i === 2 ? 2 : 1}
+                        strokeLinecap="round"
+                        opacity={0.4}
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 0.5 }}
+                        transition={{ duration: 2.5, delay: 1 + (i * 0.2), repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                      />
+
+                      {/* Node */}
+                      <circle cx="345" cy={item.y} r={i === 1 || i === 2 ? 8 : 4} fill={item.color} />
+
+                      {/* Label */}
+                      <text x="360" y={item.y + 3} textAnchor="start" className="text-[10px] font-medium fill-muted-foreground/80 font-mono tracking-wide">{item.label}</text>
+                    </g>
+                  ))}
+                </g>
+
+                {/* Orbiting Particles around system */}
+                <motion.circle
+                  cx="200" cy="200" r="60"
+                  fill="none"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="1"
+                  strokeDasharray="4 6"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  style={{ opacity: 0.2 }}
+                />
+              </svg>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </section>
 
       {/* Features Section */}
-      <section className="border-t border-border/50 bg-background-secondary/50 py-24">
-        <div className="container mx-auto px-4">
+      <section className="relative py-24 overflow-hidden">
+        {/* Subtle Grid Background to break scroll monotony */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mx-auto mb-16 max-w-2xl text-center"
+            className="mb-16 max-w-2xl"
           >
-            <h2 className="mb-4 text-3xl font-bold font-display sm:text-4xl">
-              Everything you need to manage your money
+            <h2 className="mb-4 text-3xl font-bold font-display sm:text-4xl tracking-tight">
+              A system for <span className="text-primary">deliberate</span> spending.
             </h2>
-            <p className="text-muted-foreground">
-              Powerful features designed to give you complete visibility and control over your finances.
+            <p className="text-muted-foreground text-lg">
+              No AI magic. No automatic categorization that gets it wrong. Just you and your numbers.
             </p>
           </motion.div>
 
@@ -272,93 +310,92 @@ export default function LandingPage() {
             whileInView="show"
             viewport={{ once: true }}
             variants={staggerContainer}
-            className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
+            className="grid gap-12 md:grid-cols-2 lg:grid-cols-4"
           >
             {features.map((feature, index) => (
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-glow-sm hover:-translate-y-1"
+                className="group relative"
               >
-                <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary">
-                  <feature.icon className="h-6 w-6" />
+                {/* Horizontal Divider with Tick - Non-Card Visual System */}
+                <div className="absolute -top-6 left-0 right-0 h-px bg-border/40 group-hover:bg-primary/30 transition-colors duration-500">
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[1px] h-3 bg-primary/40 group-hover:bg-primary transition-colors duration-500" />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[1px] h-3 bg-primary/40 group-hover:bg-primary transition-colors duration-500" />
                 </div>
-                <h3 className="mb-2 text-lg font-semibold font-display">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+
+                <div className="pt-2">
+                  <div className="mb-4 inline-flex items-center justify-center rounded-lg bg-background-secondary p-2 text-primary ring-1 ring-white/5">
+                    <feature.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mb-3 text-lg font-semibold font-display tracking-tight">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Is This For Me Section */}
-      <section className="py-24">
+      {/* Is This For Me Section - Asymmetric & Opinionated */}
+      <section className="py-32 bg-background-secondary/20 border-y border-white/5">
         <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mx-auto mb-16 max-w-2xl text-center"
-          >
-            <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary">
-              <HelpCircle className="h-8 w-8" />
-            </div>
-            <h2 className="mb-4 text-3xl font-bold font-display sm:text-4xl">
-              Is this app for you?
-            </h2>
-            <p className="text-muted-foreground">
-              This is a personal project built for simple tracking and insights
-            </p>
-          </motion.div>
-
           <motion.div
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            variants={staggerContainer}
-            className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2"
+            variants={fadeInUp}
+            className="grid lg:grid-cols-[1.4fr_1fr] gap-0 border border-border/40 rounded-3xl overflow-hidden shadow-2xl"
           >
-            {/* For You */}
-            <motion.div
-              variants={fadeInUp}
-              className="rounded-xl border border-success/30 bg-success/5 p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-success/10"
-            >
-              <div className="mb-4 flex items-center gap-3">
-                <div className="inline-flex rounded-lg bg-success/10 p-2 text-success">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <h3 className="text-xl font-semibold font-display">This app is for you if...</h3>
-              </div>
-              <ul className="space-y-3">
-                {forYouPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
-                    <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-success" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+            {/* For You - Wider, Elevated, Editorial */}
+            <div className="p-10 lg:p-16 bg-card relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
 
-            {/* Not For You */}
-            <motion.div
-              variants={fadeInUp}
-              className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-destructive/10"
-            >
-              <div className="mb-4 flex items-center gap-3">
-                <div className="inline-flex rounded-lg bg-destructive/10 p-2 text-destructive">
-                  <XCircle className="h-6 w-6" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 rounded-full bg-success/10 text-success">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-2xl font-bold font-display tracking-tight text-foreground">Ideally, you are...</h3>
                 </div>
-                <h3 className="text-xl font-semibold font-display">This app is not for you if...</h3>
+
+                <ul className="space-y-6">
+                  {forYouPoints.map((point, index) => (
+                    <li key={index} className="flex items-start gap-4 group">
+                      <CheckCircle className="mt-1.5 h-4 w-4 flex-shrink-0 text-success/70 group-hover:text-success transition-colors" />
+                      <span className="text-lg text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed font-medium">
+                        {point}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-3">
-                {notForYouPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-3 text-muted-foreground">
-                    <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+            </div>
+
+            {/* Not For You - Narrower, flatter, muted */}
+            <div className="p-10 lg:p-16 bg-background/50 border-t lg:border-t-0 lg:border-l border-border/40 relative">
+              <div className="absolute inset-0 bg-dotted-pattern opacity-30 pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-8 opacity-80">
+                  <div className="p-2 rounded-full bg-destructive/10 text-destructive">
+                    <XCircle className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-bold font-display tracking-tight text-muted-foreground">This is NOT for you if...</h3>
+                </div>
+
+                <ul className="space-y-6">
+                  {notForYouPoints.map((point, index) => (
+                    <li key={index} className="flex items-start gap-4 text-muted-foreground/60">
+                      <XCircle className="mt-1 h-4 w-4 flex-shrink-0 text-destructive/50" />
+                      <span className="text-base leading-relaxed">
+                        {point}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
