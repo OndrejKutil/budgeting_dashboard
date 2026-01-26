@@ -367,24 +367,24 @@ export default function FundsPage() {
                   </div>
 
                   <div className="mt-4">
-                    <div className="flex items-end justify-between">
+                    <div className="flex items-end justify-between mb-2">
                       <div>
                         <span className="text-2xl font-bold font-display">
                           {formatCurrency(current)}
                         </span>
-                        <span className="text-muted-foreground ml-1 text-sm">
-                          / {formatCurrency(fund.target_amount)}
+                        <span className="text-muted-foreground/70 ml-1 text-xs">
+                          of {formatCurrency(fund.target_amount)}
                         </span>
                       </div>
                       {isComplete && (
-                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                          Goal Reached!
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
+                          Goal Reached
                         </span>
                       )}
                     </div>
                     <Progress
                       value={Math.min(progress, 100)}
-                      className={cn('mt-3 h-2', isComplete && '[&>div]:bg-success')}
+                      className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
                     />
                   </div>
                 </motion.div>

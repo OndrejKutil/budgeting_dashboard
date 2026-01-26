@@ -317,73 +317,71 @@ export default function BudgetMaker() {
 
         return (
             <Collapsible open={isOpen} onOpenChange={() => toggleSection(group)} className="mb-6">
-                <Card className="border-border/50 shadow-sm transition-all duration-200">
-                    <CardHeader className="py-4 px-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 cursor-pointer" onClick={() => toggleSection(group)}>
-                                <div className={cn("p-1 rounded-md transition-colors", isOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50")}>
-                                    {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                                </div>
-                                <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-                                    <span className="text-xl font-display font-semibold">{title}</span>
-                                    <span className="text-lg font-bold font-mono tracking-tight">
-                                        {formatCurrency(total)}
-                                        <span className="text-sm font-normal text-muted-foreground ml-2">
-                                            ({pctOfIncome.toFixed(1)}%)
-                                        </span>
-                                    </span>
-                                </div>
+                <Card className="border-none shadow-none bg-transparent">
+                    <div className="flex items-center justify-between mb-2 px-2">
+                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleSection(group)}>
+                            <div className={cn("p-1 rounded-md transition-colors text-muted-foreground/50 group-hover:text-primary", isOpen ? "rotate-90" : "")}>
+                                <ChevronRight className="h-5 w-5 transition-transform" />
                             </div>
-
-                            {isEditing && (
-                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); addRow(group); }} className="text-primary hover:text-primary/90 hover:bg-primary/10">
-                                    <Plus className="h-4 w-4 mr-1" /> Add Row
-                                </Button>
-                            )}
+                            <div className="flex items-baseline gap-4">
+                                <h2 className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</h2>
+                                <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
+                                    {formatCurrency(total)}
+                                    <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
+                                        ({pctOfIncome.toFixed(1)}%)
+                                    </span>
+                                </span>
+                            </div>
                         </div>
-                    </CardHeader>
+
+                        {isEditing && (
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); addRow(group); }} className="text-primary hover:text-primary/90 hover:bg-primary/10">
+                                <Plus className="h-4 w-4 mr-1" /> Add Row
+                            </Button>
+                        )}
+                    </div>
 
                     <CollapsibleContent>
-                        <CardContent className="px-0 pb-2">
+                        <CardContent className="px-0 py-2">
                             {rows.length === 0 ? (
-                                <div className="px-6 py-8 text-center text-muted-foreground text-sm italic">
+                                <div className="px-6 py-8 text-center text-muted-foreground text-sm italic bg-muted/30 rounded-xl border border-dashed border-border/50">
                                     No items in this section. {isEditing && "Click 'Add Row' to start."}
                                 </div>
                             ) : (
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="hover:bg-transparent border-b-border/40">
-                                            <TableHead className="w-[30%] pl-6">Name</TableHead>
-                                            <TableHead className="w-[20%]">Category</TableHead>
-                                            <TableHead className="w-[15%] text-right">Planned</TableHead>
-                                            <TableHead className="w-[15%] text-right font-semibold">Actual</TableHead>
-                                            <TableHead className="w-[10%] text-right font-semibold">Diff</TableHead>
-                                            <TableHead className="w-[5%] text-center" title="Include in Total">Inc.</TableHead>
-                                            {isEditing && <TableHead className="w-[5%] pr-6"></TableHead>}
+                                        <TableRow className="hover:bg-transparent border-b border-border/50">
+                                            <TableHead className="w-[30%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Name</TableHead>
+                                            <TableHead className="w-[20%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Category</TableHead>
+                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Planned</TableHead>
+                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Actual</TableHead>
+                                            <TableHead className="w-[10%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Diff</TableHead>
+                                            <TableHead className="w-[5%] text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground/40" title="Include in Total">Inc.</TableHead>
+                                            {isEditing && <TableHead className="w-[5%] pr-4"></TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {rows.map((row) => (
-                                            <TableRow key={row.id} className="hover:bg-muted/10 border-b-border/40 transition-colors">
-                                                <TableCell className="pl-6 py-3 font-medium">
+                                            <TableRow key={row.id} className="hover:bg-muted/40 border-b border-border/30 transition-colors group/row">
+                                                <TableCell className="pl-4 py-2 font-medium">
                                                     {isEditing ? (
                                                         <Input
                                                             value={row.name}
                                                             onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
                                                             placeholder="Item name"
-                                                            className="h-9 bg-background"
+                                                            className="h-9 bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
-                                                        <span className="text-foreground">{row.name}</span>
+                                                        <span className="text-foreground text-base">{row.name}</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="py-3">
+                                                <TableCell className="py-2">
                                                     {isEditing ? (
                                                         <Select
                                                             value={row.category_id !== null ? row.category_id.toString() : "none"}
                                                             onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
                                                         >
-                                                            <SelectTrigger className="h-9 bg-background">
+                                                            <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
                                                                 <SelectValue placeholder="Select..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -407,33 +405,36 @@ export default function BudgetMaker() {
                                                         </span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-right py-3 font-mono">
+                                                <TableCell className="text-right py-2 font-mono">
                                                     {isEditing ? (
                                                         <Input
                                                             type="number"
                                                             value={row.amount}
                                                             onChange={(e) => updateRow(group, row.id, 'amount', parseFloat(e.target.value) || 0)}
-                                                            className="h-9 text-right font-mono bg-background"
+                                                            className="h-9 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
-                                                        <span className="text-foreground">{formatCurrency(row.amount)}</span>
+                                                        <span className="text-foreground font-medium">{formatCurrency(row.amount)}</span>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-right py-3 font-mono font-medium">
+                                                <TableCell className="text-right py-2 font-mono font-medium">
                                                     {row.actual != null ? (
-                                                        <span className="text-foreground">
+                                                        <span className="text-muted-foreground">
                                                             {formatCurrency(row.actual)}
                                                         </span>
                                                     ) : '-'}
                                                 </TableCell>
-                                                <TableCell className="text-right py-3 font-mono text-sm">
+                                                <TableCell className="text-right py-2 font-mono text-sm">
                                                     {row.diff != null ? (
-                                                        <span className="text-foreground">
-                                                            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(1)}%
+                                                        <span className={cn(
+                                                            "opacity-80",
+                                                            row.diff > 0 ? "text-success" : row.diff < 0 ? "text-destructive" : "text-muted-foreground"
+                                                        )}>
+                                                            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
                                                         </span>
                                                     ) : '-'}
                                                 </TableCell>
-                                                <TableCell className="text-center py-3">
+                                                <TableCell className="text-center py-2">
                                                     {isEditing ? (
                                                         <div className="flex justify-center">
                                                             <Checkbox
@@ -442,14 +443,16 @@ export default function BudgetMaker() {
                                                             />
                                                         </div>
                                                     ) : (
-                                                        <span className={cn("text-xs px-2 py-0.5 rounded-full border", row.include_in_total ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted text-muted-foreground")}>
-                                                            {row.include_in_total ? "Yes" : "No"}
-                                                        </span>
+                                                        <div className="flex justify-center">
+                                                            {row.include_in_total && (
+                                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                                 {isEditing && (
-                                                    <TableCell className="pr-6 py-3">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors" onClick={() => removeRow(group, row.id)}>
+                                                    <TableCell className="pr-4 py-2">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 hover:text-destructive transition-colors" onClick={() => removeRow(group, row.id)}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </TableCell>

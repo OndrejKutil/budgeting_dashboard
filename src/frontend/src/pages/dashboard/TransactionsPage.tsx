@@ -414,7 +414,7 @@ export default function TransactionsPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3">
           <Select value={yearFilter} onValueChange={setYearFilter}>
             <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Year" /></SelectTrigger>
             <SelectContent>
