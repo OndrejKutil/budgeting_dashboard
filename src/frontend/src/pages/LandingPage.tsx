@@ -177,110 +177,141 @@ export default function LandingPage() {
             </motion.div>
           </motion.div>
 
-          {/* Living Graph - Option B (Refined: No Glow, Updated Labels) */}
+          {/* Dashboard Mockup - Stylized */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
-            className="flex-1 relative w-full lg:w-auto min-h-[400px] flex items-center justify-center p-8"
+            initial={{ opacity: 0, scale: 0.95, rotateY: 10, y: 70 }}
+            animate={{ opacity: 1, scale: 1, rotateY: 0, y: 50 }}
+            transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
+            className="flex-1 relative w-full lg:w-auto min-h-[400px] flex items-center justify-center lg:justify-end perspective-1000"
           >
-            <div className="relative z-10 w-full max-w-[500px] aspect-square">
-              {/* Abstract Flow Visualization */}
-              <svg viewBox="0 0 400 400" className="w-full h-full drop-shadow-2xl">
-                <defs>
-                  <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity="0.5" />
-                    <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="hsl(var(--info))" stopOpacity="0.5" />
-                  </linearGradient>
-                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="4" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
+            {/* Dashboard Mockup Container */}
+            <div className="relative z-10 w-full max-w-[600px] bg-card/95 backdrop-blur rounded-xl border border-border/50 shadow-2xl overflow-hidden">
+              {/* Fake Window Header */}
+              <div className="h-8 bg-muted/30 border-b border-border/50 flex items-center px-4 gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
+                </div>
+              </div>
 
-                {/* Central "System" Node */}
-                <circle cx="200" cy="200" r="45" fill="hsl(var(--card))" stroke="hsl(var(--primary))" strokeWidth="2" className="drop-shadow-lg" />
-                <foreignObject x="155" y="180" width="90" height="40">
-                  <div className="flex items-center justify-center h-full text-xs font-mono text-primary font-bold tracking-tight">SYSTEM</div>
-                </foreignObject>
-
-                {/* Left Nodes (Income) */}
-                <g>
-                  {[
-                    { y: 140, label: "Salary" },
-                    { y: 200, label: "Family" },
-                    { y: 260, label: "Yield" }
-                  ].map((item, i) => (
-                    <g key={`in-${i}`}>
-                      {/* Label */}
-                      <text x="40" y={item.y + 4} textAnchor="end" className="text-[10px] font-medium fill-muted-foreground/80 font-mono tracking-wide">{item.label}</text>
-
-                      {/* Node */}
-                      <circle cx="55" cy={item.y} r="6" fill="hsl(var(--success))" className="animate-pulse" style={{ animationDelay: `${i * 0.5}s` }} />
-
-                      {/* Paths to Center */}
-                      <motion.path
-                        d={`M 65 ${item.y} C 120 ${item.y}, 120 200, 155 200`}
-                        fill="none"
-                        stroke="url(#flowGradient)"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 0.6 }}
-                        transition={{ duration: 2, delay: i * 0.3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-                      />
-                    </g>
+              {/* Dashboard Content */}
+              <div className="p-6 grid gap-6">
+                {/* Top Row: Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 rounded-lg bg-muted/10 border border-border/50 p-3 flex flex-col justify-between">
+                      <div className="w-8 h-8 rounded bg-primary/10 mb-2" />
+                      <div className="w-16 h-2 rounded bg-muted-foreground/20" />
+                      <div className="w-24 h-4 rounded bg-foreground/10" />
+                    </div>
                   ))}
-                </g>
+                </div>
 
-                {/* Right Nodes (Distribution) */}
-                <g>
-                  {[
-                    { y: 120, label: "Needs", color: "hsl(var(--muted-foreground))" },
-                    { y: 170, label: "Safety", color: "hsl(var(--info))" },
-                    { y: 230, label: "Invest", color: "hsl(var(--primary))" },
-                    { y: 280, label: "Fun", color: "hsl(var(--muted-foreground))" }
-                  ].map((item, i) => (
-                    <g key={`out-${i}`}>
-                      {/* Paths from Center */}
-                      <motion.path
-                        d={`M 245 200 C 280 200, 280 ${item.y}, 335 ${item.y}`}
-                        fill="none"
-                        stroke={item.color}
-                        strokeWidth={i === 1 || i === 2 ? 2 : 1}
-                        strokeLinecap="round"
-                        opacity={0.4}
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 0.5 }}
-                        transition={{ duration: 2.5, delay: 1 + (i * 0.2), repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-                      />
+                {/* Middle: Main Chart */}
+                <div className="h-48 rounded-lg bg-muted/5 border border-border/50 p-4 relative overflow-hidden">
+                  {/* Grid Lines */}
+                  <div className="absolute inset-4 flex flex-col justify-between opacity-10">
+                    <div className="w-full h-px bg-foreground" />
+                    <div className="w-full h-px bg-foreground" />
+                    <div className="w-full h-px bg-foreground" />
+                    <div className="w-full h-px bg-foreground" />
+                  </div>
 
-                      {/* Node */}
-                      <circle cx="345" cy={item.y} r={i === 1 || i === 2 ? 8 : 4} fill={item.color} />
+                  {/* Area Chart Path */}
+                  <svg className="w-full h-full absolute inset-0 pt-8 px-4 pb-4 overflow-visible" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="mockGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <motion.path
+                      d="M 0 150 C 50 140, 80 100, 120 110 C 160 120, 190 60, 240 70 C 290 80, 320 40, 380 50 L 380 200 L 0 200 Z"
+                      fill="url(#mockGradient)"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 1.5, delay: 0.5 }}
+                    />
+                    <motion.path
+                      d="M 0 150 C 50 140, 80 100, 120 110 C 160 120, 190 60, 240 70 C 290 80, 320 40, 380 50"
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1.5, delay: 0.5 }}
+                    />
+                  </svg>
+                </div>
 
-                      {/* Label */}
-                      <text x="360" y={item.y + 3} textAnchor="start" className="text-[10px] font-medium fill-muted-foreground/80 font-mono tracking-wide">{item.label}</text>
-                    </g>
-                  ))}
-                </g>
-
-                {/* Orbiting Particles around system */}
-                <motion.circle
-                  cx="200" cy="200" r="60"
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="1"
-                  strokeDasharray="4 6"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  style={{ opacity: 0.2 }}
-                />
-              </svg>
+                {/* Bottom: Recent Trans & Categories */}
+                <div className="grid grid-cols-2 gap-4 h-32">
+                  <div className="rounded-lg bg-muted/10 border border-border/50 p-3 space-y-2">
+                    <div className="w-full h-8 rounded bg-card/50" />
+                    <div className="w-full h-8 rounded bg-card/50 opacity-60" />
+                    <div className="w-full h-8 rounded bg-card/50 opacity-30" />
+                  </div>
+                  <div className="rounded-lg bg-muted/10 border border-border/50 p-3 relative">
+                    {/* Donut Chart Mock */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg viewBox="0 0 100 100" className="w-20 h-20 rotate-[-90deg]">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="12" opacity="0.2" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--success))" strokeWidth="12" strokeDasharray="180 250" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="12" strokeDasharray="60 250" strokeDashoffset="-180" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* EXTERNAL FLOATING TOOLTIPS */}
+
+            {/* 1. KPI Callout (Top Left) */}
+            <motion.div
+              initial={{ opacity: 0, x: -20, y: 20 }}
+              animate={{ opacity: 1, x: 0, y: 20 }}
+              transition={{ delay: 1.2 }}
+              className="absolute -left-24 top-24 flex items-center gap-3 z-30"
+            >
+              <div className="flex flex-col items-end">
+                <span className="text-xs font-bold text-foreground font-display">KPIs</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Track important metrics</span>
+              </div>
+              {/* Connector */}
+              <div className="w-12 h-px bg-border/100" />
+            </motion.div>
+
+            {/* 2. Chart Callout (Top Right) */}
+            <motion.div
+              initial={{ opacity: 0, x: 100, y: -10 }}
+              animate={{ opacity: 1, x: 80, y: -10 }}
+              transition={{ delay: 1.4 }}
+              className="absolute -right-8 top-40 flex items-center gap-3 z-30"
+            >
+              <div className="w-12 h-px bg-border/100" />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground font-display">Charts</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Real-time Tracking</span>
+              </div>
+            </motion.div>
+
+            {/* 3. Donut Callout (Bottom Right) */}
+            <motion.div
+              initial={{ opacity: 0, x: 80, y: -30 }}
+              animate={{ opacity: 1, x: 80, y: -30 }}
+              transition={{ delay: 1.6 }}
+              className="absolute -right-4 bottom-20 flex items-center gap-3 z-30"
+            >
+              <div className="w-12 h-px bg-border/100" />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground font-display">Spending</span>
+                <span className="text-[10px] text-muted-foreground font-mono">Track categories</span>
+              </div>
+            </motion.div>
+
           </motion.div>
         </div>
       </section>

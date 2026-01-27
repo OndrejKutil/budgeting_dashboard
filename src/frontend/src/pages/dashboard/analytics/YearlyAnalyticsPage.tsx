@@ -200,8 +200,10 @@ export default function YearlyAnalyticsPage() {
     const rangeRight = maxRight - minRight;
 
     // Default to strict [min, max] first
-    let lMin = minLeft, lMax = maxLeft;
-    let rMin = minRight, rMax = maxRight;
+    let lMin = minLeft;
+    const lMax = maxLeft;
+    let rMin = minRight;
+    const rMax = maxRight;
 
     if (rangeLeft > 0 && rangeRight > 0) {
       // Calculate the "zero line position" from bottom (0.0 to 1.0)
