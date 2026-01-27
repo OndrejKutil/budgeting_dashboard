@@ -82,29 +82,27 @@ export default function EmergencyFundPage() {
           <KPICard
             title="Monthly Average"
             value={averageMonthly}
-            icon={<AlertTriangle className="h-5 w-5" />}
-            variant="expense"
+            icon={<Info className="h-5 w-5" />}
+            className="border-primary/10 bg-primary/5"
             formatter={formatCurrency}
           />
           <KPICard
             title="Annual Total"
             value={totalAnnual}
-            icon={<AlertTriangle className="h-5 w-5" />}
-            variant="expense"
+            icon={<Info className="h-5 w-5" />}
+            className="border-primary/10 bg-primary/5"
             formatter={formatCurrency}
           />
           <KPICard
             title="3-Month Target"
             value={target3}
             icon={<Shield className="h-5 w-5" />}
-            variant="savings"
             formatter={formatCurrency}
           />
           <KPICard
             title="6-Month Target"
             value={target6}
             icon={<Shield className="h-5 w-5" />}
-            variant="investment"
             formatter={formatCurrency}
           />
         </div>
@@ -113,39 +111,39 @@ export default function EmergencyFundPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* 3 Months */}
           <div className={cn(
-            'rounded-xl border bg-card p-6 shadow-card',
-            progress3 >= 100 ? 'border-success/30' : 'border-border'
+            'rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md',
+            progress3 >= 100 ? 'border-primary/30 bg-primary/5' : 'border-border'
           )}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold font-display">3-Month Emergency Fund</h3>
+              <h3 className="text-lg font-semibold font-display text-foreground">3-Month Resilience</h3>
               {progress3 >= 100 ? (
-                <CheckCircle className="h-5 w-5 text-success" />
+                <Shield className="h-5 w-5 text-primary" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-warning" />
+                <Shield className="h-5 w-5 text-muted-foreground/50" />
               )}
             </div>
             <div className="mt-6">
-              <div className="flex items-end justify-between">
+              <div className="flex items-end justify-between mb-2">
                 <div>
-                  <span className="text-3xl font-bold font-display">
+                  <span className="text-3xl font-bold font-display tracking-tight">
                     {formatCurrency(data.current_savings_amount)}
                   </span>
-                  <span className="text-muted-foreground"> / {formatCurrency(target3)}</span>
+                  <span className="text-muted-foreground text-sm ml-1"> / {formatCurrency(target3)}</span>
                 </div>
                 <span className={cn(
-                  'text-lg font-semibold',
-                  progress3 >= 100 ? 'text-success' : 'text-foreground'
+                  'text-lg font-medium',
+                  progress3 >= 100 ? 'text-primary' : 'text-muted-foreground'
                 )}>
                   {Math.min(progress3, 100).toFixed(0)}%
                 </span>
               </div>
               <Progress
                 value={Math.min(progress3, 100)}
-                className={cn('mt-4 h-3', progress3 >= 100 && '[&>div]:bg-success')}
+                className={cn('h-2', progress3 >= 100 && '[&>div]:bg-primary')}
               />
               {progress3 < 100 && (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {formatCurrency(target3 - data.current_savings_amount)} more needed to reach this goal
+                <p className="mt-3 text-xs text-muted-foreground font-medium">
+                  {formatCurrency(target3 - data.current_savings_amount)} to reach buffer
                 </p>
               )}
             </div>
@@ -153,39 +151,39 @@ export default function EmergencyFundPage() {
 
           {/* 6 Months */}
           <div className={cn(
-            'rounded-xl border bg-card p-6 shadow-card',
-            progress6 >= 100 ? 'border-success/30' : 'border-border'
+            'rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md',
+            progress6 >= 100 ? 'border-primary/30 bg-primary/5' : 'border-border'
           )}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold font-display">6-Month Emergency Fund</h3>
+              <h3 className="text-lg font-semibold font-display text-foreground">6-Month Resilience</h3>
               {progress6 >= 100 ? (
-                <CheckCircle className="h-5 w-5 text-success" />
+                <Shield className="h-5 w-5 text-primary" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-warning" />
+                <Shield className="h-5 w-5 text-muted-foreground/50" />
               )}
             </div>
             <div className="mt-6">
-              <div className="flex items-end justify-between">
+              <div className="flex items-end justify-between mb-2">
                 <div>
-                  <span className="text-3xl font-bold font-display">
+                  <span className="text-3xl font-bold font-display tracking-tight">
                     {formatCurrency(data.current_savings_amount)}
                   </span>
-                  <span className="text-muted-foreground"> / {formatCurrency(target6)}</span>
+                  <span className="text-muted-foreground text-sm ml-1"> / {formatCurrency(target6)}</span>
                 </div>
                 <span className={cn(
-                  'text-lg font-semibold',
-                  progress6 >= 100 ? 'text-success' : 'text-foreground'
+                  'text-lg font-medium',
+                  progress6 >= 100 ? 'text-primary' : 'text-muted-foreground'
                 )}>
                   {Math.min(progress6, 100).toFixed(0)}%
                 </span>
               </div>
               <Progress
                 value={Math.min(progress6, 100)}
-                className={cn('mt-4 h-3', progress6 >= 100 && '[&>div]:bg-success')}
+                className={cn('h-2', progress6 >= 100 && '[&>div]:bg-primary')}
               />
               {progress6 < 100 && (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {formatCurrency(target6 - data.current_savings_amount)} more needed to reach this goal
+                <p className="mt-3 text-xs text-muted-foreground font-medium">
+                  {formatCurrency(target6 - data.current_savings_amount)} to reach buffer
                 </p>
               )}
             </div>

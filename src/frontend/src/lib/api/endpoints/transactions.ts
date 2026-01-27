@@ -15,8 +15,12 @@ export const transactionsApi = {
         end_date?: string;
         category_id?: string;
         account_id?: string;
+        savings_fund_id?: string;
         transaction_id?: string;
         search?: string;
+        category_type?: string;
+        min_amount?: number;
+        max_amount?: number;
         limit?: number;
         offset?: number;
     }) => {

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
 import { motion } from 'framer-motion';
@@ -83,14 +84,31 @@ function TableRowSkeleton() {
 export default function TransactionsPage() {
   const { formatCurrency } = useUser();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const [, setSearchParams] = useSearchParams();
 
   // URL State Management
   const [page, setPage] = useUrlState<number>('page', 1);
   const [searchQuery, setSearchQuery] = useUrlState<string>('q', '');
   const [categoryFilter, setCategoryFilter] = useUrlState<string>('category', 'all');
+  const [accountFilter, setAccountFilter] = useUrlState<string>('account', 'all');
+  const [fundFilter, setFundFilter] = useUrlState<string>('fund', 'all');
+  const [typeFilter, setTypeFilter] = useUrlState<string>('type', 'all');
+  const [minAmount, setMinAmount] = useUrlState<string>('min', '');
+  const [maxAmount, setMaxAmount] = useUrlState<string>('max', '');
   const [yearFilter, setYearFilter] = useUrlState<string>('year', new Date().getFullYear().toString());
+  const [monthFilter, setMonthFilter] = useUrlState<string>('month', 'all');
 
   const debouncedSearch = useDebounce(searchQuery, 500);
+  const debouncedMin = useDebounce(minAmount, 500);
+  const debouncedMax = useDebounce(maxAmount, 500);
+
+  const clearFilters = () => {
+    const prefix = `budget-dashboard:${location.pathname}`;
+    const keys = ['q', 'category', 'account', 'fund', 'type', 'min', 'max', 'year', 'month'];
+    keys.forEach(k => sessionStorage.removeItem(`${prefix}:${k}`));
+    setSearchParams(new URLSearchParams());
+  };
 
   // Derived state
   const offset = (page - 1) * ITEMS_PER_PAGE;
@@ -125,14 +143,34 @@ export default function TransactionsPage() {
     isLoading: isTransactionsLoading,
     error: transactionsError
   } = useQuery({
-    queryKey: ['transactions', { page, search: debouncedSearch, category: categoryFilter, year: yearFilter }],
+    queryKey: ['transactions', {
+      page,
+      search: debouncedSearch,
+      category: categoryFilter,
+      account: accountFilter,
+      fund: fundFilter,
+      type: typeFilter,
+      min: debouncedMin,
+      max: debouncedMax,
+      year: yearFilter,
+      month: monthFilter
+    }],
     queryFn: () => transactionsApi.getAll({
       limit: ITEMS_PER_PAGE,
       offset,
       search: debouncedSearch || undefined,
       category_id: categoryFilter === 'all' ? undefined : categoryFilter,
-      start_date: `${yearFilter}-01-01`,
-      end_date: `${yearFilter}-12-31`,
+      account_id: accountFilter === 'all' ? undefined : accountFilter,
+      savings_fund_id: fundFilter === 'all' ? undefined : fundFilter,
+      category_type: typeFilter === 'all' ? undefined : typeFilter,
+      min_amount: debouncedMin ? parseFloat(debouncedMin) : undefined,
+      max_amount: debouncedMax ? parseFloat(debouncedMax) : undefined,
+      start_date: monthFilter === 'all'
+        ? `${yearFilter}-01-01`
+        : `${yearFilter}-${monthFilter.padStart(2, '0')}-01`,
+      end_date: monthFilter === 'all'
+        ? `${yearFilter}-12-31`
+        : `${yearFilter}-${monthFilter.padStart(2, '0')}-${new Date(parseInt(yearFilter), parseInt(monthFilter), 0).getDate()}`,
     }),
     placeholderData: keepPreviousData,
   });
@@ -353,78 +391,120 @@ export default function TransactionsPage() {
         }
       />
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4 sm:flex-row"
-      >
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search transactions..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-            }}
-            className="pl-10"
-          />
+      {/* Filters Control Bar */}
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background/50 border-input/50 focus:bg-background transition-colors"
+            />
+          </div>
+          {(categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery) && (
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              Reset Filters
+            </Button>
+          )}
         </div>
 
-        <Select
-          value={yearFilter}
-          onValueChange={(val) => {
-            setYearFilter(val);
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-32">
-            <SelectValue placeholder="Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map((y) => (
-              <SelectItem key={y} value={y}>{y}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3">
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Year" /></SelectTrigger>
+            <SelectContent>
+              {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={categoryFilter}
-          onValueChange={(val) => {
-            setCategoryFilter(val);
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
-                {cat.category_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </motion.div>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Month" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Months</SelectItem>
+              {[...Array(12)].map((_, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expense</SelectItem>
+              <SelectItem value="saving">Saving</SelectItem>
+              <SelectItem value="investment">Investment</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(c => <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>{c.category_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={accountFilter} onValueChange={setAccountFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Account" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              {accounts.map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{a.account_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={fundFilter} onValueChange={setFundFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Savings Fund" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Funds</SelectItem>
+              <SelectItem value="none">Not Assigned</SelectItem>
+              {funds.map(f => <SelectItem key={f.savings_funds_id_pk} value={f.savings_funds_id_pk}>{f.fund_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Input
+            placeholder="Min Amount"
+            type="number"
+            value={minAmount}
+            onChange={e => setMinAmount(e.target.value)}
+            className="bg-background/50 border-input/50"
+          />
+
+          <Input
+            placeholder="Max Amount"
+            type="number"
+            value={maxAmount}
+            onChange={e => setMaxAmount(e.target.value)}
+            className="bg-background/50 border-input/50"
+          />
+        </div>
+      </div>
 
       {/* Transactions Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-xl border border-border bg-card shadow-card"
+        className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
       >
         {isLoading ? (
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-28">Date</TableHead>
+                <TableHead className="w-32 pl-6">Date</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead className="hidden sm:table-cell">Category</TableHead>
                 <TableHead className="hidden md:table-cell">Account</TableHead>
                 <TableHead className="hidden lg:table-cell">Fund</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right pr-6">Amount</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -448,14 +528,14 @@ export default function TransactionsPage() {
         ) : (
           <>
             <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-28">Date</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead className="hidden sm:table-cell">Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Account</TableHead>
-                  <TableHead className="hidden lg:table-cell">Fund</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="hover:bg-transparent border-b border-border/50">
+                  <TableHead className="w-32 pl-6 font-semibold">Date</TableHead>
+                  <TableHead className="font-semibold">Notes</TableHead>
+                  <TableHead className="hidden sm:table-cell font-semibold">Category</TableHead>
+                  <TableHead className="hidden md:table-cell font-semibold">Account</TableHead>
+                  <TableHead className="hidden lg:table-cell font-semibold">Fund</TableHead>
+                  <TableHead className="text-right pr-6 font-semibold">Amount</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
@@ -465,39 +545,50 @@ export default function TransactionsPage() {
                   const account = accountMap[transaction.account_id_fk];
                   const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
                   return (
-                    <TableRow key={transaction.id_pk} className="group">
-                      <TableCell className="font-mono text-sm text-muted-foreground">
+                    <TableRow key={transaction.id_pk} className="group hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors">
+                      <TableCell className="font-mono text-xs text-muted-foreground pl-6">
                         {new Date(transaction.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
+                          year: 'numeric'
                         })}
                       </TableCell>
-                      <TableCell className="font-medium">{transaction.notes || '-'}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                          {category?.category_name || 'Unknown'}
-                        </span>
+                      <TableCell>
+                        <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
                       </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success/50" : "bg-primary/30")} />
+                          <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                            {category?.category_name || 'Unknown'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                         {account?.account_name || 'Unknown'}
                       </TableCell>
-                      <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                         {fund ? (
-                          <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs">
-                            {fund.fund_name}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-chart-investment/50" />
+                            <span>{fund.fund_name}</span>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground/30 text-xs">-</span>
                         )}
                       </TableCell>
-                      <TableCell
-                        className={cn(
-                          'text-right font-medium font-mono',
-                          transaction.amount > 0 ? 'text-success' : 'text-destructive'
-                        )}
-                      >
-                        {transaction.amount > 0 ? '+' : '-'}
-                        {formatCurrency(Math.abs(transaction.amount))}
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Indicator Dot */}
+                          <div className={cn(
+                            "h-1.5 w-1.5 rounded-full shrink-0",
+                            transaction.amount > 0 ? "bg-emerald-500" : "bg-rose-500"
+                          )} />
+                          {/* Neutral Text */}
+                          <span className="font-mono font-medium text-foreground">
+                            {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -505,9 +596,9 @@ export default function TransactionsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
+                              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -532,11 +623,11 @@ export default function TransactionsPage() {
             </Table>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t border-border px-4 py-3">
-              <p className="text-sm text-muted-foreground">
-                Showing <span className="font-medium">{offset + 1}</span>-
-                <span className="font-medium">{Math.min(offset + ITEMS_PER_PAGE, totalCount)}</span> of{' '}
-                <span className="font-medium">{totalCount}</span> transactions
+            <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Showing <span className="font-medium text-foreground">{offset + 1}</span>-
+                <span className="font-medium text-foreground">{Math.min(offset + ITEMS_PER_PAGE, totalCount)}</span> of{' '}
+                <span className="font-medium text-foreground">{totalCount}</span> transactions
               </p>
               <div className="flex gap-2">
                 <Button
@@ -544,7 +635,7 @@ export default function TransactionsPage() {
                   size="sm"
                   disabled={page === 1}
                   onClick={() => setPage(1)}
-                  className="hidden sm:flex"
+                  className="hidden sm:flex h-8 bg-background/50"
                 >
                   Newest
                 </Button>
@@ -554,8 +645,9 @@ export default function TransactionsPage() {
                     size="sm"
                     disabled={page === 1}
                     onClick={() => setPage(Math.max(1, page - 1))}
+                    className="h-8 bg-background/50"
                   >
-                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    <ChevronLeft className="mr-1 h-3 w-3" />
                     Previous
                   </Button>
                   <Button
@@ -563,9 +655,10 @@ export default function TransactionsPage() {
                     size="sm"
                     disabled={page >= totalPages}
                     onClick={() => setPage(page + 1)}
+                    className="h-8 bg-background/50"
                   >
                     Next
-                    <ChevronRight className="ml-1 h-4 w-4" />
+                    <ChevronRight className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
               </div>

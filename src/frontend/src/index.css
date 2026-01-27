@@ -187,6 +187,12 @@
   .chart-grid {
     stroke: hsl(var(--border) / 0.3);
   }
+
+  /* Dot pattern */
+  .bg-dotted-pattern {
+    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
 }
 
 /* Custom scrollbar */

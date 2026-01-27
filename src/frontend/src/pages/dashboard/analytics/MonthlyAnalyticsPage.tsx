@@ -47,7 +47,6 @@ const COLORS = [
   'hsl(215, 14%, 64%)',
   'hsl(0, 84%, 60%)',
   'hsl(142, 71%, 45%)',
-  'hsl(142, 71%, 45%)',
 ];
 
 interface CustomTooltipProps {
@@ -211,20 +210,32 @@ export default function MonthlyAnalyticsPage() {
         <KPICard title="Net Cash Flow" value={data.cashflow} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} />
       </motion.div>
 
+      {/* Entry Ramp / Rhythm Breaker */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="flex items-center gap-4 py-8 max-w-lg mx-auto"
+      >
+        <div className="h-px flex-1 bg-border/30" />
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Spending Dynamics</span>
+        <div className="h-px flex-1 bg-border/30" />
+      </motion.div>
+
       {/* Daily Spending Chart */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-xl border border-border bg-card p-6 shadow-card"
+        className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
       >
-        <h3 className="mb-4 text-lg font-semibold font-display">Daily Spending</h3>
-        <div className="h-64">
+        <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Daily Spending</h3>
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyData}>
+            <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.2} />
                   <stop offset="100%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -232,25 +243,29 @@ export default function MonthlyAnalyticsPage() {
                 dataKey="day"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 11 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
+                dy={10}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 11 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
                 tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
+                dx={-10}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(217, 19%, 20%)',
+                  backgroundColor: 'hsl(var(--popover))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  color: 'hsl(210, 40%, 98%)',
+                  color: 'hsl(var(--popover-foreground))',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
                 formatter={(value: number) => [formatCurrency(value), 'Spending']}
+                labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0]) {
-                    return payload[0].payload.fullDate;
+                    return new Date(payload[0].payload.fullDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
                   }
                   return `Day ${label}`;
                 }}
@@ -259,8 +274,9 @@ export default function MonthlyAnalyticsPage() {
                 type="monotone"
                 dataKey="amount"
                 stroke="hsl(239, 84%, 67%)"
-                strokeWidth={2}
+                strokeWidth={3}
                 fill="url(#spendingGradient)"
+                activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -268,49 +284,57 @@ export default function MonthlyAnalyticsPage() {
       </motion.div>
 
 
-      {/* Pie Chart & Spending Type Row (Moved up) */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Asymmetric Grid: Pie (1/3) + Bar (2/3) */}
+      <div className="grid gap-6 lg:grid-cols-12">
         {/* Category Breakdown (Pie) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
+          className="lg:col-span-5 rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-4 text-lg font-semibold font-display">Expense Distribution</h3>
-          <div className="flex items-center gap-6">
-            <div className="h-48 w-48 flex-shrink-0">
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Distribution</h3>
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="h-48 w-48 flex-shrink-0 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={expensePieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
+                    innerRadius={60}
                     outerRadius={80}
-                    paddingAngle={2}
+                    paddingAngle={3}
                     dataKey="value"
+                    strokeWidth={0}
                   >
                     {expensePieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    content={<CustomTooltip formatCurrency={formatCurrency} />}
-                  />
+                  <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
                 </PieChart>
               </ResponsiveContainer>
+              {/* Center Label */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-xs font-medium text-muted-foreground/50">BY CATEGORY</span>
+              </div>
             </div>
-            <div className="flex-1 space-y-2 max-h-48 overflow-y-auto">
-              {expensePieData.map((cat, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                    <span className="text-sm truncate max-w-[120px]" title={cat.name}>{cat.name}</span>
+            <div className="flex-1 w-full space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+              {expensePieData.slice(0, 6).map((cat, i) => (
+                <div key={i} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors truncate" title={cat.name}>{cat.name}</span>
                   </div>
-                  <span className="text-sm font-medium">{formatCurrency(cat.value)}</span>
+                  <span className="text-xs font-mono font-medium">{formatCurrency(cat.value)}</span>
                 </div>
               ))}
+              {expensePieData.length > 6 && (
+                <div className="pt-2 text-[10px] text-center text-muted-foreground italic">
+                  + {expensePieData.length - 6} more categories
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -320,27 +344,41 @@ export default function MonthlyAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
+          className="lg:col-span-7 rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-4 text-lg font-semibold font-display">Spending Type Breakdown</h3>
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Spending Type Breakdown</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={spendingTypeData} layout="vertical" barCategoryGap={16}>
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')} />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} width={80} />
+              <BarChart data={spendingTypeData} layout="vertical" barCategoryGap={12} margin={{ left: 0, right: 30 }}>
+                <XAxis
+                  type="number"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
+                  tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--foreground))', fontSize: 11, fontWeight: 500 }}
+                  width={80}
+                />
                 <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                   contentStyle={{
-                    backgroundColor: 'hsl(222, 47%, 9%)',
-                    border: '1px solid hsl(217, 19%, 20%)',
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
-                    color: 'hsl(210, 40%, 98%)',
+                    color: 'hsl(var(--popover-foreground))',
                   }}
                   itemStyle={{ color: 'hsl(239, 84%, 67%)' }}
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
                 />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={32}>
                   {spendingTypeData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(239, 84%, ${67 - index * 8}%)`} />
+                    <Cell key={`cell-${index}`} fill={`hsl(239, 84%, ${67 - index * 6}%)`} opacity={0.9} />
                   ))}
                 </Bar>
               </BarChart>
@@ -349,47 +387,50 @@ export default function MonthlyAnalyticsPage() {
         </motion.div>
       </div>
 
-      {/* Income/Expense Breakdown Rows (Moved down & Vertical) */}
+      {/* Income/Expense Breakdown Rows */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Income Breakdown Bar Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
+          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-4 text-lg font-semibold font-display">Income Breakdown</h3>
-          <div className="h-[400px]">
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Income Sources</h3>
+          <div className="h-[300px]">
             {incomeBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={incomeBarData}
-                  margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  barCategoryGap={30}
                 >
                   <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
+                    dy={10}
+                    interval={0}
                   />
                   <YAxis
-                    hide={true} // Hide Y axis for cleaner look as bars are labeled or clear enough
+                    hide={true}
                   />
                   <Tooltip
-                    cursor={{ fill: 'hsl(217, 19%, 20%)', opacity: 0.5 }}
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
                     contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
+                      color: 'hsl(var(--popover-foreground))',
                     }}
                     formatter={(value: number) => [formatCurrency(value), '']}
                   />
-                  <Bar dataKey="value" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="hsl(142, 71%, 45%)" radius={[6, 6, 0, 0]} opacity={0.8} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No income data</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No income data recorded</div>
             )}
           </div>
         </motion.div>
@@ -399,40 +440,43 @@ export default function MonthlyAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
+          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-4 text-lg font-semibold font-display">Expenses Breakdown</h3>
-          <div className="h-[400px]">
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Categories</h3>
+          <div className="h-[300px]">
             {expenseBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={expenseBarData}
-                  margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
+                  data={expenseBarData.slice(0, 8)} // Limit to top 8 to reduce clutter
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  barCategoryGap={20}
                 >
                   <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
+                    dy={10}
+                    interval={0}
                   />
                   <YAxis
                     hide={true}
                   />
                   <Tooltip
-                    cursor={{ fill: 'hsl(217, 19%, 20%)', opacity: 0.5 }}
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
                     contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
+                      color: 'hsl(var(--popover-foreground))',
                     }}
                     formatter={(value: number) => [formatCurrency(value), '']}
                   />
-                  <Bar dataKey="value" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="hsl(0, 84%, 60%)" radius={[6, 6, 0, 0]} opacity={0.8} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">No expense data</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No expense data recorded</div>
             )}
           </div>
         </motion.div>

@@ -14,6 +14,7 @@ import {
   Wallet,
   Calendar,
   Briefcase,
+  DollarSign,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -94,9 +95,8 @@ export default function DashboardOverview() {
     );
   }
 
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-[1600px] mx-auto">
       <PageHeader
         title="Monthly Overview"
         description={`Financial summary for ${currentMonth}`}
@@ -118,177 +118,217 @@ export default function DashboardOverview() {
         }
       />
 
-      {/* KPI Cards */}
+      {/* Primary KPI Section (Hero) */}
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
       >
-        {/* Row 1 */}
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Income"
-            value={data.total_income}
-            change={data.comparison.income_delta_pct}
-            changeLabel="vs last month"
-            icon={<TrendingUp className="h-5 w-5" />}
-            variant="income"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Expenses"
-            value={data.total_expense}
-            change={data.comparison.expense_delta_pct}
-            changeLabel="vs last month"
-            icon={<TrendingDown className="h-5 w-5" />}
-            variant="expense"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Savings"
-            value={data.total_saving}
-            change={data.comparison.saving_delta_pct}
-            changeLabel="vs last month"
-            icon={<PiggyBank className="h-5 w-5" />}
-            variant="savings"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
+        {/* HERO CARD: Net Cash Flow */}
+        <div className="col-span-2 row-span-1 rounded-2xl border border-border/50 bg-gradient-to-br from-card to-card/50 p-8 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Wallet className="w-32 h-32" />
+          </div>
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Cash Flow</h3>
+              <div className="flex items-baseline gap-4">
+                <span className={`text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  {formatCurrency(data.net_cash_flow)}
+                </span>
+                <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
+                  {data.comparison.cashflow_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.cashflow_delta_pct).toFixed(1)}%
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground/60">
+                {data.net_cash_flow >= 0 ? "Positive cash flow. You are building alignment." : "Negative cash flow. Outflows exceed inflows."}
+              </p>
+            </div>
+          </div>
+        </div>
 
-        {/* Row 2 */}
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Profit"
-            value={data.profit}
-            change={data.comparison.profit_delta_pct}
-            changeLabel="vs last month"
-            icon={<PiggyBank className="h-5 w-5" />}
-            variant="savings"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Cashflow"
-            value={data.net_cash_flow}
-            change={data.comparison.cashflow_delta_pct}
-            changeLabel="vs last month"
-            icon={<Wallet className="h-5 w-5" />}
-            variant="investment"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
-        <motion.div variants={fadeIn}>
-          <KPICard
-            title="Investments"
-            value={data.total_investment}
-            change={data.comparison.investment_delta_pct}
-            changeLabel="vs last month"
-            icon={<Briefcase className="h-5 w-5" />}
-            variant="investment"
-            className="h-full"
-            formatter={formatCurrency}
-          />
-        </motion.div>
+        {/* SECONDARY CARD: Savings */}
+        <div className="col-span-1 rounded-2xl border border-border/50 bg-card p-6 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Savings</h3>
+            <PiggyBank className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="text-3xl font-bold font-display">{formatCurrency(data.total_saving)}</div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="font-medium flex items-center gap-1.5 text-foreground">
+                <div className={`w-1.5 h-1.5 rounded-full ${data.savings_rate >= 0 ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+                {(data.savings_rate * 100).toFixed(1)}% Rate
+              </span>
+              <span className="text-muted-foreground/60 flex items-center">
+                {data.comparison.saving_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.saving_delta_pct).toFixed(0)}%
+              </span>
+            </div>
+          </div>
+          <div className="w-full bg-secondary h-1.5 rounded-full mt-auto overflow-hidden">
+            <div
+              className="bg-emerald-500 h-full rounded-full"
+              style={{ width: `${Math.min(Math.max(data.savings_rate * 100, 0), 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* SECONDARY CARD: Investments */}
+        <div className="col-span-1 rounded-2xl border border-border/50 bg-card p-6 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Investments</h3>
+            <TrendingUp className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="text-3xl font-bold font-display">{formatCurrency(data.total_investment)}</div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="font-medium flex items-center gap-1.5 text-foreground">
+                <div className={`w-1.5 h-1.5 rounded-full ${data.investment_rate >= 0 ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                {(data.investment_rate * 100).toFixed(1)}% Rate
+              </span>
+              <span className="text-muted-foreground/60 flex items-center">
+                {data.comparison.investment_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.investment_delta_pct).toFixed(0)}%
+              </span>
+            </div>
+          </div>
+          <div className="w-full bg-secondary h-1.5 rounded-full mt-auto overflow-hidden">
+            <div
+              className="bg-primary h-full rounded-full"
+              style={{ width: `${Math.min(Math.max(data.investment_rate * 100, 0), 100)}%` }}
+            />
+          </div>
+        </div>
       </motion.div>
 
-      {/* Charts Moved to Monthly Analytics Page */}
+      {/* Tertiary Metrics (Collapsed/Muted) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total Income", value: data.total_income, icon: TrendingUp, delta: data.comparison.income_delta_pct },
+          { label: "Total Expenses", value: data.total_expense, icon: TrendingDown, delta: data.comparison.expense_delta_pct },
+          { label: "Net Profit", value: data.profit, icon: DollarSign, delta: data.comparison.profit_delta_pct },
+          { label: "Total Investments", value: data.total_investment, icon: Briefcase, delta: data.comparison.investment_delta_pct },
+        ].map((metric, i) => (
+          <div key={i} className="flex flex-col justify-center p-4 rounded-xl border border-border/30 bg-card/30 hover:bg-card/50 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-md bg-background-secondary text-muted-foreground">
+                <metric.icon className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{metric.label}</span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-semibold font-display tracking-tight">{formatCurrency(metric.value)}</span>
+              <span className={`text-xs ${metric.delta >= 0 ? 'text-success/70' : 'text-destructive/70'} font-medium`}>
+                {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {/* Insights Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Largest Transactions */}
+      {/* Featured Insights */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Largest Transactions - Revised */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
+          className="lg:col-span-2 rounded-2xl border border-border bg-card p-0 shadow-sm overflow-hidden"
         >
-          <div className="mb-6 flex items-center justify-between">
+          <div className="p-6 border-b border-border/50 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold font-display">Largest Transactions</h3>
-              <p className="text-sm text-muted-foreground">Top 5 biggest spendings</p>
+              <p className="text-sm text-muted-foreground">Where the money went</p>
             </div>
+            <Button variant="ghost" size="sm" asChild className="text-xs">
+              <Link to="/dashboard/transactions">View All</Link>
+            </Button>
           </div>
-          <div className="space-y-4">
+          <div className="p-0">
             {data.largest_transactions.length > 0 ? (
-              data.largest_transactions.map((tx, i) => (
-                <div key={tx.id_pk || i} className="flex items-center justify-between border-b border-border/50 pb-3 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs">
-                      {i + 1}
+              <div className="divide-y divide-border/30">
+                {data.largest_transactions.map((tx, i) => (
+                  <div key={tx.id_pk || i} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
+                        {i + 1}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{tx.notes || 'Uncategorized'}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium truncate max-w-[150px]">{tx.notes || 'No description'}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</div>
+                    <div className="font-mono font-medium text-foreground">
+                      {formatCurrency(Math.abs(Number(tx.amount)))}
                     </div>
                   </div>
-                  <div className="font-semibold text-destructive">
-                    {formatCurrency(Math.abs(Number(tx.amount)))}
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="text-sm text-muted-foreground text-center py-4">No transactions found</div>
+              <div className="text-sm text-muted-foreground text-center py-8">No transactions found</div>
             )}
           </div>
         </motion.div>
 
-        {/* High Impact */}
+        {/* Insight Columns */}
         <div className="space-y-6">
-          {/* Biggest Mover */}
+          {/* Biggest Mover - Redesigned */}
           {data.biggest_mover && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-2xl border border-border bg-card p-6 shadow-sm group"
             >
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold font-display">Biggest Mover</h3>
-                <p className="text-sm text-muted-foreground">Largest spending change vs last month</p>
-              </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="text-xl font-bold">{data.biggest_mover.name}</div>
-                  <div className="text-sm text-muted-foreground">Total: {formatCurrency(data.biggest_mover.total)}</div>
+                  <div className="text-xs font-mono text-primary uppercase tracking-wider mb-1">Spotlight</div>
+                  <h3 className="text-lg font-bold font-display text-foreground">{data.biggest_mover.name}</h3>
                 </div>
-                <div className="rounded-lg bg-primary/10 p-3 text-primary">
-                  <TrendingUp className="h-6 w-6" />
+                <div className="p-2 bg-primary/10 rounded-full text-primary group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{formatCurrency(data.biggest_mover.total)}</span>
+                  <span className="text-xs text-muted-foreground">total spend</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Share of Wallet</span>
+                    <span className="font-medium">{(data.biggest_mover.share_of_total || 0).toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: `${Math.min((data.biggest_mover.share_of_total || 0), 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* Top Expenses (Compact) */}
+          {/* Top Expenses List Summary */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="rounded-xl border border-border bg-card p-6 shadow-card"
+            className="rounded-2xl border border-border bg-card p-6 shadow-sm"
           >
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold font-display">Top Expenses</h3>
-              <p className="text-sm text-muted-foreground">Most expensive categories</p>
-            </div>
-            <div className="space-y-3">
-              {data.top_expenses.map((category, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-destructive" />
-                    <span className="text-sm font-medium">{category.name}</span>
+            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-widest">Category Top 3</h3>
+            <div className="space-y-4">
+              {data.top_expenses.slice(0, 3).map((category, i) => (
+                <div key={i} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-1.5 w-1.5 rounded-full ${i === 0 ? 'bg-destructive' : 'bg-muted-foreground'}`} />
+                    <span className="text-sm font-medium group-hover:text-foreground transition-colors">{category.name}</span>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {formatCurrency(category.total)} ({category.share_of_total}%)
+                  <div className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+                    {formatCurrency(category.total)}
                   </div>
                 </div>
               ))}
@@ -296,54 +336,6 @@ export default function DashboardOverview() {
           </motion.div>
         </div>
       </div>
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="grid gap-4 sm:grid-cols-3"
-      >
-        <Link
-          to="/dashboard/transactions"
-          className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-glow-sm"
-        >
-          <div className="rounded-lg bg-primary/10 p-3 text-primary">
-            <Receipt className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <div className="font-medium">View Transactions</div>
-            <div className="text-sm text-muted-foreground">Manage all your transactions</div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </Link>
-        <Link
-          to="/dashboard/analytics/yearly"
-          className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-glow-sm"
-        >
-          <div className="rounded-lg bg-chart-teal/10 p-3 text-chart-teal">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <div className="font-medium">Yearly Analytics</div>
-            <div className="text-sm text-muted-foreground">Long-term trends & insights</div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </Link>
-        <Link
-          to="/dashboard/funds"
-          className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-glow-sm"
-        >
-          <div className="rounded-lg bg-chart-investment/10 p-3 text-chart-investment">
-            <PiggyBank className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <div className="font-medium">Savings Funds</div>
-            <div className="text-sm text-muted-foreground">Track your savings goals</div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </Link>
-      </motion.div>
     </div>
   );
 }
