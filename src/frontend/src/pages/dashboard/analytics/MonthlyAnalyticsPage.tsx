@@ -136,28 +136,28 @@ export default function MonthlyAnalyticsPage() {
   const expensePieData = data.expenses_breakdown
     .map((item, index) => ({
       name: item.category,
-      value: item.total,
+      value: Number(item.total),
       color: COLORS[index % COLORS.length],
     }))
     .sort((a, b) => b.value - a.value);
 
   const incomeBarData = data.income_breakdown
-    .map((item) => ({ name: item.category, value: item.total }))
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
     .sort((a, b) => b.value - a.value);
 
   const expenseBarData = data.expenses_breakdown
-    .map((item) => ({ name: item.category, value: item.total }))
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
     .sort((a, b) => b.value - a.value);
 
   const spendingTypeData = data.spending_type_breakdown.map((item) => ({
     name: item.type,
-    value: item.amount,
+    value: Number(item.amount),
   }));
 
   const dailyData = data.daily_spending_heatmap.map((item) => ({
     day: new Date(item.day).getDate(),
     fullDate: item.day,
-    amount: item.amount,
+    amount: Number(item.amount),
   }));
 
   return (
@@ -232,7 +232,7 @@ export default function MonthlyAnalyticsPage() {
         <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Daily Spending</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.2} />
@@ -250,7 +250,7 @@ export default function MonthlyAnalyticsPage() {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
-                tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
+                tickFormatter={(v) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
                 dx={-10}
               />
               <Tooltip
@@ -355,7 +355,7 @@ export default function MonthlyAnalyticsPage() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
-                  tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, '')}
+                  tickFormatter={(v) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
                 />
                 <YAxis
                   type="category"

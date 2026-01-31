@@ -184,6 +184,8 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWithdrawal, setIsWithdrawal] = useState(false);
+  const [isTransfer, setIsTransfer] = useState(false);
+  const [transferToAccountId, setTransferToAccountId] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -297,6 +299,71 @@ export default function TransactionsPage() {
   });
 
   const handleSubmit = async () => {
+    if (isTransfer) {
+      if (!formData.account_id_fk || !transferToAccountId || !formData.amount) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select both accounts and enter an amount.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Find 'Exclude' category
+      const excludeCategory = categories.find(c => c.category_name === 'Exclude');
+      if (!excludeCategory) {
+        toast({
+          title: 'Configuration Error',
+          description: 'The "Exclude" category is required for transfers but was not found.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const amount = parseFloat(formData.amount);
+      const categoryId = excludeCategory.categories_id_pk;
+
+      // 1. Outgoing Transaction (Negative)
+      const outgoingPayload = {
+        account_id_fk: formData.account_id_fk,
+        category_id_fk: categoryId,
+        amount: -Math.abs(amount),
+        date: formData.date,
+        notes: `Transfer to ${accountMap[transferToAccountId]?.account_name || 'Account'}: ${formData.notes || ''}`,
+        savings_fund_id_fk: null,
+      };
+
+      // 2. Incoming Transaction (Positive)
+      const incomingPayload = {
+        account_id_fk: transferToAccountId,
+        category_id_fk: categoryId,
+        amount: Math.abs(amount),
+        date: formData.date,
+        notes: `Transfer from ${accountMap[formData.account_id_fk]?.account_name || 'Account'}: ${formData.notes || ''}`,
+        savings_fund_id_fk: null,
+      };
+
+      try {
+        await transactionsApi.create(outgoingPayload);
+        await transactionsApi.create(incomingPayload);
+
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['summary'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Update account balances
+
+        toast({ title: 'Transfer completed successfully' });
+        closeModal();
+      } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to complete transfer';
+        toast({
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
     if (!formData.account_id_fk || !formData.category_id_fk || !formData.amount) {
       toast({
         title: 'Validation Error',
@@ -329,6 +396,8 @@ export default function TransactionsPage() {
     const category = categoryMap[transaction.category_id_fk];
     const isWithdrawalTx = category?.category_name === 'Savings Funds Withdrawal';
     setIsWithdrawal(isWithdrawalTx);
+    setIsTransfer(false); // Edit mode doesn't support converting to transfer easily yet
+    setTransferToAccountId('');
 
     setFormData({
       amount: transaction.amount.toString(),
@@ -343,7 +412,10 @@ export default function TransactionsPage() {
   const closeModal = () => {
     setIsCreateModalOpen(false);
     setSelectedTransaction(null);
+    setSelectedTransaction(null);
     setIsWithdrawal(false);
+    setIsTransfer(false);
+    setTransferToAccountId('');
     setFormData({
       amount: '',
       date: new Date().toISOString().split('T')[0],
@@ -750,7 +822,39 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {!isWithdrawal && (
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox
+                id="transfer"
+                checked={isTransfer}
+                disabled={!!selectedTransaction}
+                onCheckedChange={(checked) => {
+                  setIsTransfer(checked === true);
+                  if (checked === true) {
+                    setIsWithdrawal(false);
+                    // Clear category as it will be auto-set
+                    setFormData(prev => ({ ...prev, category_id_fk: '' }));
+                  }
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="transfer"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Transfer between Accounts
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Move money between accounts. This will create two transactions using the 'Exclude' category.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
+            {!isWithdrawal && !isTransfer && (
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
@@ -789,35 +893,60 @@ export default function TransactionsPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="fund">Savings Fund {isWithdrawal ? '' : '(Optional)'}</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">To allocate money to a fund: Select a 'Saving' category (e.g., 'Emergency Fund') and then select the corresponding Fund here.</p>
-                  </TooltipContent>
-                </Tooltip>
+            {isTransfer && (
+              <div className="space-y-2">
+                <Label htmlFor="to-account">To Account</Label>
+                <Select
+                  value={transferToAccountId}
+                  onValueChange={setTransferToAccountId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select destination account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts
+                      .filter(acc => acc.accounts_id_pk !== formData.account_id_fk)
+                      .map((acc) => (
+                        <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
+                          {acc.account_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select
-                value={formData.savings_fund_id_fk || 'none'}
-                onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select fund" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {funds.map((fund) => (
-                    <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
-                      {fund.fund_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
+
+            {!isTransfer && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="fund">Savings Fund {isWithdrawal ? '' : '(Optional)'}</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">To allocate money to a fund: Select a 'Saving' category (e.g., 'Emergency Fund') and then select the corresponding Fund here.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  value={formData.savings_fund_id_fk || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select fund" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {funds.map((fund) => (
+                      <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
+                        {fund.fund_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
