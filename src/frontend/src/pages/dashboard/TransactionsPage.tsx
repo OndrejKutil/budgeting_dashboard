@@ -953,7 +953,6 @@ export default function TransactionsPage() {
               Cancel
             </Button>
             <Button
-              className=""
               onClick={handleSubmit}
               disabled={isSubmitting}
             >

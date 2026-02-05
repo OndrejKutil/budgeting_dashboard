@@ -391,7 +391,6 @@ export default function AccountsPage() {
               Cancel
             </Button>
             <Button
-              className=""
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >

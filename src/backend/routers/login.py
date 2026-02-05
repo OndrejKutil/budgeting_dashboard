@@ -138,7 +138,7 @@ async def forgot_password(
         supabase_client: Client = get_db_client()
         
         # Get the redirect URL from environment or use default
-        redirect_url = env.FRONTEND_URL or "http://localhost:8081"
+        redirect_url = env.FRONTEND_URL or "http://localhost:8080"
         reset_redirect = f"{redirect_url}/auth/reset-password"
         
         # Request password reset email from Supabase
@@ -177,18 +177,12 @@ async def reset_password(
     try:
         supabase_client: Client = get_db_client()
         
-        # Set the session using the access token from the reset link
-        # This validates the token and sets up the session
-        session = supabase_client.auth.set_session(body.access_token, body.access_token)
-        
-        if not session or not session.user:
-            raise fastapi.HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired reset token"
-            )
-        
-        # Update the user's password
-        supabase_client.auth.update_user({"password": body.new_password})
+        # Update the user's password using the access token from the reset link.
+        # Supabase will validate the token; if it is invalid or expired, this call will fail.
+        supabase_client.auth.update_user(
+            {"password": body.new_password},
+            access_token=body.access_token,
+        )
         
         return MessageResponse(
             success=True,
@@ -266,7 +260,7 @@ async def link_github_account(
         # Set the session from the current user's token
         supabase_client.auth.set_session(
             current_user["access_token"],
-            current_user["access_token"]
+            current_user["refresh_token"]
         )
         
         # Get the redirect URL from environment or use default

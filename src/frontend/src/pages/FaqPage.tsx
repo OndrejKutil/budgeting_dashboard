@@ -38,7 +38,7 @@ export default function FaqPage() {
             </div>
 
             {/* Header */}
-            <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--akuna-bg))]/80 backdrop-blur-xl">
+            <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600">

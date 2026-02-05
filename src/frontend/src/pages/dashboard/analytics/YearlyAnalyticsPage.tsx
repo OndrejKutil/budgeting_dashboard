@@ -65,9 +65,7 @@ const PIE_COLORS = [
   'hsl(0, 84%, 60%)',
 ];
 
-const SECONDARY_COLORS = [
-  'hsl(185, 70%, 45%)',
-];
+
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -181,8 +179,8 @@ export default function YearlyAnalyticsPage() {
 
   const balanceData = [
     { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
-    { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(168, 84%, 42%)' },
-    { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(280, 67%, 60%)' },
+    { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(175, 70%, 42%)' },
+    { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
   ].filter(d => d.value > 0);
 
   // Synchronize zero lines for dual-axis chart
@@ -746,8 +744,8 @@ export default function YearlyAnalyticsPage() {
                       />
                       <Legend iconType="circle" />
                       <Bar dataKey="Core" stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
-                      <Bar dataKey="Fun" stackId="a" fill="hsl(168, 84%, 42%)" opacity={0.9} />
-                      <Bar dataKey="Future" stackId="a" fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Fun" stackId="a" fill="hsl(175, 70%, 42%)" opacity={0.9} />
+                      <Bar dataKey="Future" stackId="a" fill="hsl(38, 80%, 55%)" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

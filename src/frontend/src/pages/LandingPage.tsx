@@ -84,7 +84,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
       {/* Header */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--akuna-bg))]/80 backdrop-blur-xl">
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
         <div className="flex h-16 w-full items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600">
@@ -219,7 +219,7 @@ export default function LandingPage() {
       </section>
 
       {/* Is This For Me Section - Asymmetric & Opinionated */}
-      <section className="relative z-10 py-32 bg-[hsl(var(--akuna-bg))]/50 border-y border-white/5">
+      <section className="relative z-10 py-32 bg-white/5 border-y border-white/5">
         <div className="container mx-auto px-4">
           <motion.div
             initial="hidden"
@@ -254,7 +254,7 @@ export default function LandingPage() {
             </div>
 
             {/* Not For You - Narrower, flatter, muted */}
-            <div className="p-10 lg:p-16 bg-[hsl(var(--akuna-bg))]/80 border-t lg:border-t-0 lg:border-l border-white/10 relative">
+            <div className="p-10 lg:p-16 bg-[hsl(var(--background))]/80 border-t lg:border-t-0 lg:border-l border-white/10 relative">
               <div className="absolute inset-0 bg-dotted-pattern opacity-20 pointer-events-none" />
 
               <div className="relative z-10">
