@@ -84,7 +84,14 @@
     /* Gradients */
     --gradient-blurple: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 45%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(220 40% 11%) 0%, hsl(220 40% 9%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 5%) 0%, hsl(210 40% 12%) 50%, hsl(222 47% 5%) 100%);
+    /* Deep sea radial gradient - bright teal top-left, dark abyss bottom-right */
+    --gradient-hero: radial-gradient(ellipse at 15% 10%, hsl(185 75% 18%) 0%, hsl(195 60% 10%) 35%, hsl(210 50% 5%) 70%, hsl(220 40% 3%) 100%);
+
+    /* Akuna-style teal theme */
+    --akuna-bg: 210 50% 5%;
+    --akuna-bg-light: 195 60% 10%;
+    --akuna-accent: 38 80% 55%;
+    --akuna-teal: 180 70% 45%;
   }
 }
 
@@ -102,13 +109,19 @@
     font-family: 'Inter', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'DM Sans', sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer utilities {
+
   /* Glass morphism */
   .glass {
     @apply bg-[hsl(var(--glass-bg))] backdrop-blur-xl border border-[hsl(var(--glass-border))];
@@ -124,9 +137,28 @@
     background-image: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 70%) 100%);
   }
 
+  /* Teal gradient text */
+  .text-gradient-teal {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(180 70% 50%) 0%, hsl(195 100% 70%) 100%);
+  }
+
+  /* Hero typography - thin/bold contrast with premium letter-spacing */
+  .text-hero-thin {
+    font-weight: 200;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .text-hero-bold {
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   /* Blue glow effect */
   .glow-blurple {
-    box-shadow: 
+    box-shadow:
       0 0 20px hsl(210 100% 50% / 0.3),
       0 0 40px hsl(210 100% 50% / 0.2),
       0 0 60px hsl(210 100% 50% / 0.1);
@@ -138,7 +170,7 @@
 
   /* Subtle card shadow */
   .shadow-card {
-    box-shadow: 
+    box-shadow:
       0 4px 6px -1px hsl(0 0% 0% / 0.3),
       0 2px 4px -2px hsl(0 0% 0% / 0.2),
       inset 0 1px 0 0 hsl(217 19% 30% / 0.1);
@@ -153,25 +185,28 @@
   .border-gradient {
     position: relative;
     background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-                linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 70%) 100%) border-box;
+      linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(195 100% 70%) 100%) border-box;
     border: 1px solid transparent;
   }
 
   /* Skeleton animation */
   .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted-foreground) / 0.1) 50%,
-      hsl(var(--muted)) 100%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted-foreground) / 0.1) 50%,
+        hsl(var(--muted)) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
 
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* Smooth transitions */
