@@ -42,6 +42,21 @@ class MessageResponse(BaseModel):
         }
     )
 
+
+class OAuthUrlResponse(BaseModel):
+    """Response containing OAuth redirect URL"""
+    url: str = Field(..., description="OAuth provider authorization URL")
+    provider: str = Field(..., description="OAuth provider name")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "url": "https://github.com/login/oauth/authorize?...",
+                "provider": "github"
+            }
+        }
+    )
+
 class AllDataResponse(BaseModel):
     data: List[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")

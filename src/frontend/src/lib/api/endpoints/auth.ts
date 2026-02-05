@@ -88,4 +88,37 @@ export const authApi = {
 
         return await response.json();
     },
+
+    getGitHubOAuthUrl: async () => {
+        const response = await fetch(`${API_BASE_URL}/auth/oauth/github`, {
+            method: 'GET',
+            headers: {
+                'X-API-KEY': API_KEY,
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Failed to get OAuth URL' }));
+            throw new ApiError(errorData.detail || 'Failed to get OAuth URL', response.status, errorData.detail);
+        }
+
+        return await response.json();
+    },
+
+    linkGitHub: async (accessToken: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/oauth/link-github`, {
+            method: 'POST',
+            headers: {
+                'X-API-KEY': API_KEY,
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Failed to link GitHub' }));
+            throw new ApiError(errorData.detail || 'Failed to link GitHub', response.status, errorData.detail);
+        }
+
+        return await response.json();
+    },
 };

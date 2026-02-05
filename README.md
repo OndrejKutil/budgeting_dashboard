@@ -58,10 +58,10 @@ Crucially, the entire backend and database development was performed manually, e
 | ![Landing Page](screenshots/Landing_page.png) | ![Registration](screenshots/registration_page.png) |
 | Welcome screen and dashboard entry | Secure user registration |
 
-| Monthly Analytics | Yearly Analytics |
+| Monthly Analytics | Transactions |
 |:------------------:|:--------------------:|
-| ![Monthly Analytics](screenshots/monthly_analytics_page.png) | ![Yearly Analytics](screenshots/yearly_analytics_page.png) |
-| Detailed monthly breakdown | Long-term trend analysis |
+| ![Monthly Analytics](screenshots/monthly_analytics_page.png) | ![Transactions](screenshots/transactions_page.png) |
+| Detailed monthly breakdown | List of all transactions |
 
 | Accounts Overview | Emergency Fund |
 |:-----------------:|:-----------------:|
@@ -96,6 +96,8 @@ budgeting_dashboard/
 
 - **Problem Solving** - Addresses genuine personal finance management needs with intuitive design
 - **Production Ready** - Live deployed application with proper error handling and environment configuration
+- **CI/CD Pipeline** - Automated testing and deployment pipeline
+- **OAuth Authentication** - Secure user authentication with GitHub
 
 ### **Modern Development Practices**
 

@@ -68,9 +68,16 @@ export default function ResetPasswordPage() {
 
             // Clear the URL hash
             window.history.replaceState(null, '', window.location.pathname);
-        } catch (error: any) {
+        } catch (error: unknown) {
+            let message = 'Failed to reset password. The link may have expired.';
+            if (error instanceof Error) {
+                message = error.message;
+            } else if (typeof error === 'object' && error !== null && 'message' in error) {
+                message = String((error as { message: unknown }).message);
+            }
+
             setErrors({
-                general: error?.message || 'Failed to reset password. The link may have expired.'
+                general: message
             });
         } finally {
             setIsLoading(false);
