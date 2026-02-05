@@ -435,7 +435,7 @@ export default function TransactionsPage() {
           title="Transactions"
           description="View and manage all your financial transactions"
           actions={
-            <Button onClick={() => setIsCreateModalOpen(true)} className="bg-gradient-blurple hover:opacity-90">
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
@@ -456,7 +456,7 @@ export default function TransactionsPage() {
         title="Transactions"
         description="View and manage all your financial transactions"
         actions={
-          <Button onClick={() => setIsCreateModalOpen(true)} className="bg-gradient-blurple hover:opacity-90">
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Transaction
           </Button>
@@ -953,7 +953,6 @@ export default function TransactionsPage() {
               Cancel
             </Button>
             <Button
-              className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >

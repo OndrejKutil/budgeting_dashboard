@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
+import { authApi, tokenManager } from '@/lib/api/client';
 import {
   Select,
   SelectContent,
@@ -13,9 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard } from 'lucide-react';
+import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+
+// GitHub icon component
+const GitHubIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+  </svg>
+);
 
 const CURRENCIES = ['CZK', 'USD', 'EUR', 'GBP'];
 
@@ -24,6 +33,7 @@ export default function ProfilePage() {
   const { profile, currency, updateProfile, isLoading } = useUser();
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isGitHubLinking, setIsGitHubLinking] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -38,6 +48,30 @@ export default function ProfilePage() {
       setIsUpdating(false);
     }
   };
+
+  const handleLinkGitHub = async () => {
+    setIsGitHubLinking(true);
+    try {
+      const accessToken = tokenManager.getAccessToken();
+      if (!accessToken) throw new Error('Not authenticated');
+
+      const response = await authApi.linkGitHub(accessToken);
+      // Redirect to GitHub OAuth
+      window.location.href = response.url;
+    } catch (error) {
+      console.error('Failed to link GitHub:', error);
+      toast({
+        title: 'Linking failed',
+        description: 'Could not initiate GitHub linking. Please try again.',
+        variant: 'destructive',
+      });
+      setIsGitHubLinking(false);
+    }
+  };
+
+  const isGitHubConnected = profile?.identities?.some(
+    (identity) => identity.provider === 'github'
+  );
 
   const getInitials = () => {
     if (!profile) return 'U';
@@ -82,6 +116,7 @@ export default function ProfilePage() {
         className="flex flex-col md:flex-row items-center md:items-start gap-8 p-8 rounded-2xl border border-border bg-card shadow-sm"
       >
         <Avatar className="h-24 w-24 border-4 border-background shadow-sm ring-1 ring-border">
+          <AvatarImage src={profile?.user_metadata?.avatar_url} />
           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary">
             {getInitials()}
           </AvatarFallback>
@@ -98,6 +133,12 @@ export default function ProfilePage() {
               <Calendar className="mr-1.5 h-3.5 w-3.5" />
               Member since {getMemberSince()}
             </div>
+            {isGitHubConnected && (
+              <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary shadow-sm">
+                <GitHubIcon className="mr-1.5 h-3.5 w-3.5" />
+                GitHub Connected
+              </div>
+            )}
           </div>
         </div>
 
@@ -112,7 +153,7 @@ export default function ProfilePage() {
       </motion.div>
 
       <div className="grid gap-8 md:grid-cols-2">
-        {/* Account Details */}
+        {/* Connected Accounts - NEW SECTION */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -121,32 +162,45 @@ export default function ProfilePage() {
           <Card className="h-full border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Account Details
+                <LinkIcon className="h-5 w-5 text-primary" />
+                Connected Accounts
               </CardTitle>
-              <CardDescription>Your personal account information</CardDescription>
+              <CardDescription>Manage your linked social accounts</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
-                  <span className="font-medium text-foreground">{getDisplayName()}</span>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border">
+                    <GitHubIcon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium leading-none">GitHub</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isGitHubConnected
+                        ? 'Connected to your account'
+                        : 'Link your GitHub account'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Email Address</label>
-                <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
-                  <span className="font-medium text-foreground">{profile?.email}</span>
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System ID</label>
-                <div className="font-mono text-xs text-muted-foreground break-all bg-muted p-2 rounded border border-border/50 select-all">
-                  {profile?.id}
-                </div>
+                {isGitHubConnected ? (
+                  <div className="flex items-center text-success text-sm font-medium">
+                    <Check className="mr-2 h-4 w-4" />
+                    Connected
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLinkGitHub}
+                    disabled={isGitHubLinking}
+                  >
+                    {isGitHubLinking ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      'Connect'
+                    )}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -192,13 +246,48 @@ export default function ProfilePage() {
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-              <div className="rounded-xl border border-border p-5 space-y-4 opacity-70 pointer-events-none grayscale">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Dark Mode</span>
-                  <div className="h-5 w-9 rounded-full bg-primary/20" />
+        {/* Account Details */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="md:col-span-2"
+        >
+          <Card className="h-full border-border/60 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Account Details
+              </CardTitle>
+              <CardDescription>Your personal account information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">Full Name</label>
+                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                    <span className="font-medium text-foreground">{getDisplayName()}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Theme settings coming soon.</p>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                    <span className="font-medium text-foreground">{profile?.email}</span>
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System ID</label>
+                <div className="font-mono text-xs text-muted-foreground break-all bg-muted p-2 rounded border border-border/50 select-all">
+                  {profile?.id}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -204,7 +204,7 @@ export default function FundsPage() {
           title="Savings Funds"
           description="Track your savings goals and progress"
           actions={
-            <Button onClick={() => handleOpenModal()} className="bg-gradient-blurple hover:opacity-90">
+            <Button onClick={() => handleOpenModal()}>
               <Plus className="mr-2 h-4 w-4" />
               Create Fund
             </Button>
@@ -228,7 +228,7 @@ export default function FundsPage() {
         title="Savings Funds"
         description="Track your savings goals and progress"
         actions={
-          <Button onClick={() => handleOpenModal()} className="bg-gradient-blurple hover:opacity-90">
+          <Button onClick={() => handleOpenModal()}>
             <Plus className="mr-2 h-4 w-4" />
             Create Fund
           </Button>
@@ -428,7 +428,6 @@ export default function FundsPage() {
               Cancel
             </Button>
             <Button
-              className="bg-gradient-blurple hover:opacity-90"
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
