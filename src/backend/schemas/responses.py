@@ -28,6 +28,20 @@ from .base import (
 #                                        Get Schemas
 # ================================================================================================
 
+class MessageResponse(BaseModel):
+    """Simple response with success flag and message"""
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": "Operation completed successfully"
+            }
+        }
+    )
+
 class AllDataResponse(BaseModel):
     data: List[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")

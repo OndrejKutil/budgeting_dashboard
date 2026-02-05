@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, status, Request
 # auth dependencies
 from ..auth.auth import api_key_auth
 from ..schemas.base import UserData
-from ..schemas.requests import LoginRequest
-from ..schemas.responses import LoginResponse
+from ..schemas.requests import LoginRequest, ForgotPasswordRequest, ResetPasswordRequest
+from ..schemas.responses import LoginResponse, MessageResponse
 
 # rate limiting
 from ..helper.rate_limiter import limiter, RATE_LIMITS
@@ -120,4 +120,87 @@ async def register(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server error"
+        )
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    api_key: str = Depends(api_key_auth)
+) -> MessageResponse:
+    """
+    Send password reset email to user.
+    Uses Supabase Auth to send a magic link for password reset.
+    """
+    try:
+        supabase_client: Client = get_db_client()
+        
+        # Get the redirect URL from environment or use default
+        redirect_url = env.FRONTEND_URL or "http://localhost:8081"
+        reset_redirect = f"{redirect_url}/auth/reset-password"
+        
+        # Request password reset email from Supabase
+        supabase_client.auth.reset_password_email(
+            body.email,
+            options={"redirect_to": reset_redirect}
+        )
+        
+        # Always return success to prevent email enumeration attacks
+        return MessageResponse(
+            success=True,
+            message="If an account with that email exists, a password reset link has been sent."
+        )
+        
+    except Exception as e:
+        logger.error(f"Forgot password request failed")
+        logger.info(f"Forgot password failed with error: {str(e)}")
+        # Still return success to prevent email enumeration
+        return MessageResponse(
+            success=True,
+            message="If an account with that email exists, a password reset link has been sent."
+        )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    api_key: str = Depends(api_key_auth)
+) -> MessageResponse:
+    """
+    Reset user password using access token from the reset email link.
+    The access token is provided in the URL fragment when user clicks the reset link.
+    """
+    try:
+        supabase_client: Client = get_db_client()
+        
+        # Set the session using the access token from the reset link
+        # This validates the token and sets up the session
+        session = supabase_client.auth.set_session(body.access_token, body.access_token)
+        
+        if not session or not session.user:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired reset token"
+            )
+        
+        # Update the user's password
+        supabase_client.auth.update_user({"password": body.new_password})
+        
+        return MessageResponse(
+            success=True,
+            message="Password has been reset successfully. You can now log in with your new password."
+        )
+        
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password reset failed")
+        logger.info(f"Password reset failed with error: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to reset password. The reset link may have expired."
         )

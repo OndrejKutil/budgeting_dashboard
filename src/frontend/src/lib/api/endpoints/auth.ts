@@ -52,4 +52,40 @@ export const authApi = {
     logout: () => {
         tokenManager.clearTokens();
     },
+
+    forgotPassword: async (email: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: {
+                'X-API-KEY': API_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Request failed' }));
+            throw new ApiError(errorData.detail || 'Request failed', response.status, errorData.detail);
+        }
+
+        return await response.json();
+    },
+
+    resetPassword: async (accessToken: string, newPassword: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: {
+                'X-API-KEY': API_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ access_token: accessToken, new_password: newPassword }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Password reset failed' }));
+            throw new ApiError(errorData.detail || 'Password reset failed', response.status, errorData.detail);
+        }
+
+        return await response.json();
+    },
 };

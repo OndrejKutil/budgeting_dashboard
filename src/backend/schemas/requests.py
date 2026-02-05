@@ -93,3 +93,31 @@ class UpdateProfileRequest(BaseModel):
             }
         }
     )
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema for requesting password reset email"""
+    email: str = Field(..., description="User email address")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "user@example.com"
+            }
+        }
+    )
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for resetting password with access token"""
+    access_token: str = Field(..., description="Access token from password reset email link")
+    new_password: str = Field(..., min_length=6, description="New password (minimum 6 characters)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "new_password": "newSecurePassword123"
+            }
+        }
+    )
