@@ -57,12 +57,16 @@ const COLORS = [
 ];
 
 const PIE_COLORS = [
-  'hsl(239, 84%, 67%)',
-  'hsl(168, 84%, 42%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(280, 67%, 60%)',
+  'hsl(185, 70%, 45%)', // Primary teal
+  'hsl(175, 70%, 42%)',
+  'hsl(38, 80%, 55%)',
+  'hsl(142, 71%, 45%)',
+  'hsl(195, 20%, 60%)',
   'hsl(0, 84%, 60%)',
-  'hsl(199, 89%, 48%)',
+];
+
+const SECONDARY_COLORS = [
+  'hsl(185, 70%, 45%)',
 ];
 
 interface CustomTooltipProps {
@@ -86,10 +90,10 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         padding: '8px',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       }}>
-        <p style={{ color: 'hsl(210, 40%, 98%)', fontSize: '12px', marginBottom: '2px' }}>
+        <p style={{ color: 'hsl(195, 30%, 95%)', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(239, 84%, 67%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
           {formatCurrency(data.value)}
         </p>
       </div>
@@ -176,7 +180,7 @@ export default function YearlyAnalyticsPage() {
     .slice(0, 8); // Top 8 categories
 
   const balanceData = [
-    { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(239, 84%, 67%)' },
+    { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
     { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(168, 84%, 42%)' },
     { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(280, 67%, 60%)' },
   ].filter(d => d.value > 0);
@@ -741,7 +745,7 @@ export default function YearlyAnalyticsPage() {
                         formatter={(value: number) => [formatCurrency(value), '']}
                       />
                       <Legend iconType="circle" />
-                      <Bar dataKey="Core" stackId="a" fill="hsl(239, 84%, 67%)" radius={[0, 0, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Core" stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
                       <Bar dataKey="Fun" stackId="a" fill="hsl(168, 84%, 42%)" opacity={0.9} />
                       <Bar dataKey="Future" stackId="a" fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>

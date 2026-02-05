@@ -160,7 +160,7 @@ export default function RegisterPage() {
 
         <Button
           type="submit"
-          className="w-full bg-gradient-blurple hover:opacity-90"
+          className="w-full"
           disabled={isLoading}
         >
           {isLoading ? (

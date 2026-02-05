@@ -198,7 +198,7 @@ export default function AccountsPage() {
           title="Accounts"
           description="Manage your bank accounts and balances"
           actions={
-            <Button onClick={() => setIsModalOpen(true)} className="bg-gradient-blurple hover:opacity-90">
+            <Button onClick={() => setIsModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Account
             </Button>
@@ -219,7 +219,7 @@ export default function AccountsPage() {
         title="Accounts"
         description="Manage your bank accounts and balances"
         actions={
-          <Button onClick={() => setIsModalOpen(true)} className="bg-gradient-blurple hover:opacity-90">
+          <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Account
           </Button>
@@ -391,7 +391,7 @@ export default function AccountsPage() {
               Cancel
             </Button>
             <Button
-              className="bg-gradient-blurple hover:opacity-90"
+              className=""
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >

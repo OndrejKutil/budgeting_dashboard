@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { UserNav } from '@/components/layout/UserNav';
-import { ParticleWave } from '@/components/effects/ParticleWave';
 import {
   TrendingUp,
   PieChart,

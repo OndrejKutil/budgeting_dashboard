@@ -39,7 +39,7 @@ import { MonthlyAnalytics } from '@/lib/api/types';
 
 
 const COLORS = [
-  'hsl(239, 84%, 67%)',
+  'hsl(185, 70%, 45%)',
   'hsl(168, 84%, 42%)',
   'hsl(38, 92%, 50%)',
   'hsl(280, 67%, 60%)',
@@ -70,10 +70,10 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         padding: '8px',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       }}>
-        <p style={{ color: 'hsl(210, 40%, 98%)', fontSize: '12px', marginBottom: '2px' }}>
+        <p style={{ color: 'hsl(195, 30%, 95%)', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(239, 84%, 67%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
           {formatCurrency(data.value)}
         </p>
       </div>
@@ -235,8 +235,8 @@ export default function MonthlyAnalyticsPage() {
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="hsl(239, 84%, 67%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -273,7 +273,7 @@ export default function MonthlyAnalyticsPage() {
               <Area
                 type="monotone"
                 dataKey="amount"
-                stroke="hsl(239, 84%, 67%)"
+                stroke="hsl(185, 70%, 45%)"
                 strokeWidth={3}
                 fill="url(#spendingGradient)"
                 activeDot={{ r: 6, strokeWidth: 0 }}
@@ -373,12 +373,12 @@ export default function MonthlyAnalyticsPage() {
                     borderRadius: '8px',
                     color: 'hsl(var(--popover-foreground))',
                   }}
-                  itemStyle={{ color: 'hsl(239, 84%, 67%)' }}
+                  itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={32}>
                   {spendingTypeData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(239, 84%, ${67 - index * 6}%)`} opacity={0.9} />
+                    <Cell key={`cell-${index}`} fill={`hsl(185, 70%, ${45 - index * 5}%)`} opacity={0.9} />
                   ))}
                 </Bar>
               </BarChart>

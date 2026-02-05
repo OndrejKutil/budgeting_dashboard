@@ -577,7 +577,7 @@ export default function BudgetMaker() {
 
                                 <Button
                                     onClick={() => setIsEditing(true)}
-                                    className="bg-gradient-blurple hover:opacity-90 transition-all shadow-md"
+                                    className="transition-all shadow-md"
                                 >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Budget

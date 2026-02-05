@@ -28,14 +28,14 @@ import { summaryApi } from '@/lib/api/client';
 import type { SummaryData } from '@/lib/api/types';
 import { useUser } from '@/contexts/user-context';
 
-// Constants for charts
+// Constants for charts - Teal-based palette
 const COLORS = [
-  'hsl(239, 84%, 67%)',
-  'hsl(168, 84%, 42%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(280, 67%, 60%)',
-  'hsl(215, 14%, 64%)',
-  'hsl(0, 84%, 60%)',
+  'hsl(185, 70%, 45%)',   // Primary teal
+  'hsl(175, 70%, 42%)',   // Secondary teal
+  'hsl(38, 80%, 55%)',    // Accent gold
+  'hsl(142, 71%, 45%)',   // Success green
+  'hsl(195, 20%, 60%)',   // Muted
+  'hsl(0, 84%, 60%)',     // Destructive red
 ];
 
 const staggerContainer = {
@@ -108,7 +108,7 @@ export default function DashboardOverview() {
                 Transactions
               </Link>
             </Button>
-            <Button size="sm" asChild className="bg-gradient-blurple hover:opacity-90">
+            <Button size="sm" asChild>
               <Link to="/dashboard/analytics/monthly">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Full Analytics

@@ -214,14 +214,14 @@ export default function EmergencyFundPage() {
                       backgroundColor: 'hsl(222, 47%, 9%)',
                       border: '1px solid hsl(217, 19%, 20%)',
                       borderRadius: '8px',
-                      color: 'hsl(210, 40%, 98%)',
+                      color: 'hsl(195, 30%, 95%)',
                     }}
-                    itemStyle={{ color: 'hsl(239, 84%, 67%)' }}
+                    itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
                     formatter={(value: number) => [formatCurrency(value), 'Amount']}
                   />
                   <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                     {Object.entries(data.core_category_breakdown).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(239, 84%, ${67 - (index % 5) * 6}%)`} />
+                      <Cell key={`cell-${index}`} fill={`hsl(185, 70%, ${45 - (index % 5) * 5}%)`} />
                     ))}
                   </Bar>
                 </BarChart>
