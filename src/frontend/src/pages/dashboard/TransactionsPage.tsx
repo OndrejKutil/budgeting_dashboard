@@ -50,7 +50,6 @@ import {
   AlertCircle,
   Loader2,
   Info,
-  Calendar,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -59,6 +58,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { transactionsApi, categoriesApi, accountsApi, fundsApi, ApiError } from '@/lib/api/client';
 import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
@@ -530,7 +537,7 @@ export default function TransactionsPage() {
               className="h-7 text-xs bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
               onClick={preset.action}
             >
-              <Calendar className="mr-1.5 h-3 w-3" />
+              <CalendarIcon className="mr-1.5 h-3 w-3" />
               {preset.label}
             </Button>
           ))}
@@ -649,100 +656,172 @@ export default function TransactionsPage() {
           />
         ) : (
           <>
-            <Table>
-              <TableHeader className="bg-muted/40">
-                <TableRow className="hover:bg-transparent border-b border-border/50">
-                  <TableHead className="w-32 pl-6 font-semibold">Date</TableHead>
-                  <TableHead className="font-semibold">Notes</TableHead>
-                  <TableHead className="hidden sm:table-cell font-semibold">Category</TableHead>
-                  <TableHead className="hidden md:table-cell font-semibold">Account</TableHead>
-                  <TableHead className="hidden lg:table-cell font-semibold">Fund</TableHead>
-                  <TableHead className="text-right pr-6 font-semibold">Amount</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => {
-                  const category = categoryMap[transaction.category_id_fk];
-                  const account = accountMap[transaction.account_id_fk];
-                  const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
-                  return (
-                    <TableRow key={transaction.id_pk} className="group hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors">
-                      <TableCell className="font-mono text-xs text-muted-foreground pl-6">
-                        {new Date(transaction.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success/50" : "bg-primary/30")} />
-                          <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                            {category?.category_name || 'Unknown'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                        {account?.account_name || 'Unknown'}
-                      </TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                        {fund ? (
-                          <div className="flex items-center gap-1.5">
-                            <div className="h-1.5 w-1.5 rounded-full bg-chart-investment/50" />
-                            <span>{fund.fund_name}</span>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block rounded-md border">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow className="hover:bg-transparent border-b border-border/50">
+                    <TableHead className="w-32 pl-6 font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Notes</TableHead>
+                    <TableHead className="hidden sm:table-cell font-semibold">Category</TableHead>
+                    <TableHead className="hidden md:table-cell font-semibold">Account</TableHead>
+                    <TableHead className="hidden lg:table-cell font-semibold">Fund</TableHead>
+                    <TableHead className="text-right pr-6 font-semibold">Amount</TableHead>
+                    <TableHead className="w-12" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => {
+                    const category = categoryMap[transaction.category_id_fk];
+                    const account = accountMap[transaction.account_id_fk];
+                    const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
+                    return (
+                      <TableRow key={transaction.id_pk} className="group hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors">
+                        <TableCell className="font-mono text-xs text-muted-foreground pl-6">
+                          {new Date(transaction.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="flex items-center gap-2">
+                            <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success/50" : "bg-primary/30")} />
+                            <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                              {category?.category_name || 'Unknown'}
+                            </span>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground/30 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Indicator Dot */}
-                          <div className={cn(
-                            "h-1.5 w-1.5 rounded-full shrink-0",
-                            transaction.amount > 0 ? "bg-emerald-500" : "bg-rose-500"
-                          )} />
-                          {/* Neutral Text */}
-                          <span className="font-mono font-medium text-foreground">
-                            {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
-                          </span>
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
+                          {account?.account_name || 'Unknown'}
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
+                          {fund ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-1.5 w-1.5 rounded-full bg-chart-investment/50" />
+                              <span>{fund.fund_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/30 text-xs">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Indicator Dot */}
+                            <div className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              transaction.amount > 0 ? "bg-emerald-500" : "bg-rose-500"
+                            )} />
+                            {/* Neutral Text */}
+                            <span className="font-mono font-medium text-foreground">
+                              {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditModal(transaction)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDelete(transaction.id_pk)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {transactions.map((transaction) => {
+                const category = categoryMap[transaction.category_id_fk];
+                const account = accountMap[transaction.account_id_fk];
+                return (
+                  <div key={transaction.id_pk} className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{transaction.notes || 'No description'}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(transaction.date).toLocaleDateString()}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditModal(transaction)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDelete(transaction.id_pk)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </div>
+                      <div className={cn(
+                        "font-bold",
+                        transaction.amount > 0 ? "text-emerald-500" : "text-destructive"
+                      )}>
+                        {formatCurrency(transaction.amount)}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t text-sm">
+                      <div className="flex gap-2 items-center">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success" : "bg-primary")} />
+                          {category?.category_name || 'Unknown'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {account?.account_name || 'Unknown'}
+                        </span>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditModal(transaction)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(transaction.id_pk)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile FAB */}
+            <Button
+              className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg md:hidden z-50 flex items-center justify-center p-0"
+              size="icon"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              <Plus className="h-6 w-6" />
+            </Button>
+
 
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
@@ -828,12 +907,41 @@ export default function TransactionsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal bg-background/50 border-input/50",
+                        !formData.date && "text-muted-foreground"
+                      )}
+                    >
+                      {formData.date ? (
+                        format(new Date(formData.date), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.date ? new Date(formData.date) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          // Adjust for timezone offset to prevent date shifting when converting to string
+                          const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+                          setFormData({ ...formData, date: offsetDate.toISOString().split('T')[0] });
+                        }
+                      }}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="flex items-center space-x-2 py-2">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
@@ -318,6 +319,34 @@ export default function AccountsPage() {
                         currency: account.currency || 'CZK',
                       }).format(account.current_balance || 0)}
                     </p>
+                  </div>
+
+                  {/* Sparkline Chart */}
+                  <div className="h-[60px] w-full">
+                    {account.history_30d && account.history_30d.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={account.history_30d}>
+                          <defs>
+                            <linearGradient id={`gradient-${account.accounts_id_pk}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <Area
+                            type="monotone"
+                            dataKey="balance"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            fill={`url(#gradient-${account.accounts_id_pk})`}
+                            isAnimationActive={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground/50">
+                        No history
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
