@@ -26,6 +26,7 @@ import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from 
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/contexts/user-context';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -298,6 +299,16 @@ export default function FundsPage() {
             </div>
           ))}
         </div>
+      ) : funds.length === 0 ? (
+        <EmptyState
+          icon={<Target className="h-8 w-8 text-muted-foreground" />}
+          title="No savings funds yet"
+          description="Create savings funds to track progress towards your financial goals — vacations, emergency reserves, big purchases, and more."
+          action={{
+            label: 'Create Your First Fund',
+            onClick: () => handleOpenModal(),
+          }}
+        />
       ) : (
         <motion.div
           variants={stagger}
@@ -386,6 +397,18 @@ export default function FundsPage() {
                       value={Math.min(progress, 100)}
                       className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
                     />
+                    {/* Timeline Projection */}
+                    {!isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {fund.net_flow_30d > 0 ? (() => {
+                          const remaining = fund.target_amount - current;
+                          const monthsToGo = Math.ceil(remaining / fund.net_flow_30d);
+                          const projected = new Date();
+                          projected.setMonth(projected.getMonth() + monthsToGo);
+                          return `~${projected.toLocaleString('default', { month: 'short', year: 'numeric' })} at current pace`;
+                        })() : 'Net outflow — consider adding contributions'}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               );

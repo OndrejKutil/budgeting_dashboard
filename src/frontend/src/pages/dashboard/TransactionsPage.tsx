@@ -50,6 +50,7 @@ import {
   AlertCircle,
   Loader2,
   Info,
+  Calendar,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -484,6 +485,55 @@ export default function TransactionsPage() {
               Reset Filters
             </Button>
           )}
+        </div>
+
+        {/* Quick Date Presets */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            {
+              label: 'This Month',
+              action: () => {
+                const now = new Date();
+                setYearFilter(now.getFullYear().toString());
+                setMonthFilter((now.getMonth() + 1).toString());
+              },
+            },
+            {
+              label: 'Last Month',
+              action: () => {
+                const prev = new Date();
+                prev.setMonth(prev.getMonth() - 1);
+                setYearFilter(prev.getFullYear().toString());
+                setMonthFilter((prev.getMonth() + 1).toString());
+              },
+            },
+            {
+              label: 'Last 3 Months',
+              action: () => {
+                const now = new Date();
+                setYearFilter(now.getFullYear().toString());
+                setMonthFilter('all');
+              },
+            },
+            {
+              label: 'This Year',
+              action: () => {
+                setYearFilter(new Date().getFullYear().toString());
+                setMonthFilter('all');
+              },
+            },
+          ].map((preset) => (
+            <Button
+              key={preset.label}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+              onClick={preset.action}
+            >
+              <Calendar className="mr-1.5 h-3 w-3" />
+              {preset.label}
+            </Button>
+          ))}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3">

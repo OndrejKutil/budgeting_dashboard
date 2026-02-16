@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
 import { motion } from 'framer-motion';
@@ -83,13 +84,13 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
     const data = payload[0];
     return (
       <div style={{
-        backgroundColor: 'hsl(222, 47%, 9%)',
-        border: '1px solid hsl(217, 19%, 20%)',
+        backgroundColor: 'hsl(var(--popover))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: '8px',
         padding: '8px',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       }}>
-        <p style={{ color: 'hsl(195, 30%, 95%)', fontSize: '12px', marginBottom: '2px' }}>
+        <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
         <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
@@ -116,7 +117,20 @@ const itemVariants = {
 
 export default function YearlyAnalyticsPage() {
   const { formatCurrency } = useUser();
+  const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
+
+  const MONTH_MAP: Record<string, string> = {
+    Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+    Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+  };
+
+  const handleMonthClick = (monthAbbr: string) => {
+    const monthNum = MONTH_MAP[monthAbbr];
+    if (monthNum) {
+      navigate(`/dashboard/analytics/monthly?year=${selectedYear}&month=${monthNum}`);
+    }
+  };
 
   // TODO: Get years from API
   const years = [2028, 2027, 2026, 2025];
@@ -539,12 +553,12 @@ export default function YearlyAnalyticsPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-semibold font-display">Income vs Costs</h3>
-                <p className="text-sm text-muted-foreground">Monthly cash flow gap</p>
+                <p className="text-sm text-muted-foreground">Monthly cash flow gap · <span className="text-primary/70">Click a point to drill down</span></p>
               </div>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
                     dataKey="month"
                     axisLine={false}
@@ -598,12 +612,12 @@ export default function YearlyAnalyticsPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-semibold font-display">Wealth Generation</h3>
-                <p className="text-sm text-muted-foreground">Savings + Investments</p>
+                <p className="text-sm text-muted-foreground">Savings + Investments · <span className="text-primary/70">Click a bar to drill down</span></p>
               </div>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyTrendsData} barGap={4} barSize={18} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <ComposedChart data={monthlyTrendsData} barGap={4} barSize={18} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
                     dataKey="month"
                     axisLine={false}

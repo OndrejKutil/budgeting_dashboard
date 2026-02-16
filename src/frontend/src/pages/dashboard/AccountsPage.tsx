@@ -24,6 +24,7 @@ import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, Ale
 import { accountsApi, ApiError } from '@/lib/api/client';
 import { Account } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +108,7 @@ export default function AccountsPage() {
       });
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to delete account';
+      const message = err instanceof ApiError ? String(err.detail) : 'Failed to delete account';
       toast({
         title: 'Error',
         description: message,
@@ -128,7 +129,7 @@ export default function AccountsPage() {
       closeModal();
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to create account';
+      const message = err instanceof ApiError ? String(err.detail) : 'Failed to create account';
       toast({
         title: 'Error',
         description: message,
@@ -145,7 +146,7 @@ export default function AccountsPage() {
       closeModal();
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? err.detail : 'Failed to update account';
+      const message = err instanceof ApiError ? String(err.detail) : 'Failed to update account';
       toast({
         title: 'Error',
         description: message,
@@ -248,6 +249,16 @@ export default function AccountsPage() {
             <AccountSkeleton key={i} />
           ))}
         </div>
+      ) : accounts.length === 0 ? (
+        <EmptyState
+          icon={<Wallet className="h-8 w-8 text-muted-foreground" />}
+          title="No accounts yet"
+          description="Add your bank accounts to start tracking balances and transactions across all your finances."
+          action={{
+            label: 'Add Your First Account',
+            onClick: () => setIsModalOpen(true),
+          }}
+        />
       ) : (
         <motion.div
           variants={stagger}
