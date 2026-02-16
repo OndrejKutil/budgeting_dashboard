@@ -351,10 +351,17 @@ class YearlyHighlights(BaseModel):
     highest_expense_month: MonthMetric = Field(..., description="Month with highest expenses")
     highest_savings_rate_month: MonthMetric = Field(..., description="Month with highest savings rate")
 
-class VolatilityMetrics(BaseModel):
-    """Schema for volatility metrics (standard deviation)"""
-    expense_volatility: float = Field(..., description="Standard deviation of monthly expenses")
-    income_volatility: float = Field(..., description="Standard deviation of monthly income")
+class TrendDirectionItem(BaseModel):
+    """Schema for a single trend direction metric"""
+    direction: str = Field(..., description="Trend direction: 'growing', 'stable', or 'declining'")
+    avg_monthly_change_pct: float = Field(..., description="Average monthly change as percentage")
+
+class TrendDirectionMetrics(BaseModel):
+    """Schema for trend direction metrics replacing volatility"""
+    income_trend: TrendDirectionItem = Field(..., description="Income trend direction")
+    savings_rate_trend: TrendDirectionItem = Field(..., description="Savings rate trend direction")
+    core_expense_trend: TrendDirectionItem = Field(..., description="Core expense trend direction")
+
 
 class YearlySpendingBalance(BaseModel):
     """Schema for yearly spending balance"""
@@ -379,7 +386,7 @@ class YearlyAnalyticsData(BaseModel):
     
     # New fields
     highlights: YearlyHighlights = Field(..., description="Yearly highlights")
-    volatility: VolatilityMetrics = Field(..., description="Volatility metrics")
+    trend_directions: TrendDirectionMetrics = Field(..., description="Trend direction metrics")
     spending_balance: YearlySpendingBalance = Field(..., description="Spending balance summary")
     
     months: List[str] = Field(..., description="Month names")

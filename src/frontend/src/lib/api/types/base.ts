@@ -319,11 +319,20 @@ export interface YearlyHighlights {
 }
 
 /**
- * Volatility metrics (standard deviation)
+ * Single trend direction metric
  */
-export interface VolatilityMetrics {
-    expense_volatility: number;
-    income_volatility: number;
+export interface TrendDirectionItem {
+    direction: 'growing' | 'stable' | 'declining';
+    avg_monthly_change_pct: number;
+}
+
+/**
+ * Trend direction metrics
+ */
+export interface TrendDirectionMetrics {
+    income_trend: TrendDirectionItem;
+    savings_rate_trend: TrendDirectionItem;
+    core_expense_trend: TrendDirectionItem;
 }
 
 /**
@@ -353,7 +362,7 @@ export interface YearlyAnalyticsData {
     savings_rate: number;
     investment_rate: number;
     highlights: YearlyHighlights;
-    volatility: VolatilityMetrics;
+    trend_directions: TrendDirectionMetrics;
     spending_balance: YearlySpendingBalance;
     months: string[];
     monthly_income: number[];
