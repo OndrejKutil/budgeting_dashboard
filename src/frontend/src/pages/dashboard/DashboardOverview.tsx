@@ -23,9 +23,11 @@ import {
   Bar,
   XAxis,
   YAxis,
+  LineChart,
+  Line,
 } from 'recharts';
-import { summaryApi } from '@/lib/api/client';
-import type { SummaryData } from '@/lib/api/types';
+import { summaryApi, analyticsApi } from '@/lib/api/client';
+import type { SummaryData, YearlyAnalyticsData } from '@/lib/api/types';
 import { useUser } from '@/contexts/user-context';
 
 // Constants for charts - Teal-based palette
@@ -54,9 +56,11 @@ const fadeIn = {
 export default function DashboardOverview() {
   const { formatCurrency } = useUser();
   const [data, setData] = useState<SummaryData | null>(null);
+  const [yearlyData, setYearlyData] = useState<YearlyAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const prevMonthName = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleString('default', { month: 'short' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,6 +80,21 @@ export default function DashboardOverview() {
     };
 
     fetchData();
+  }, []);
+
+  // Secondary fetch for sparkline data
+  useEffect(() => {
+    const fetchYearly = async () => {
+      try {
+        const response = await analyticsApi.getYearly({ year: new Date().getFullYear() });
+        if (response.success && response.data) {
+          setYearlyData(response.data);
+        }
+      } catch (err) {
+        // Sparklines are non-critical, silently ignore
+      }
+    };
+    fetchYearly();
   }, []);
 
   if (loading) {
@@ -139,6 +158,7 @@ export default function DashboardOverview() {
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
                   {data.comparison.cashflow_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.cashflow_delta_pct).toFixed(1)}%
+                  <span className="text-xs text-muted-foreground/40 ml-1">vs. {prevMonthName}</span>
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground/60">
@@ -162,7 +182,7 @@ export default function DashboardOverview() {
                 {(data.savings_rate * 100).toFixed(1)}% Rate
               </span>
               <span className="text-muted-foreground/60 flex items-center">
-                {data.comparison.saving_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.saving_delta_pct).toFixed(0)}%
+                {data.comparison.saving_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.saving_delta_pct).toFixed(0)}% vs. {prevMonthName}
               </span>
             </div>
           </div>
@@ -188,7 +208,7 @@ export default function DashboardOverview() {
                 {(data.investment_rate * 100).toFixed(1)}% Rate
               </span>
               <span className="text-muted-foreground/60 flex items-center">
-                {data.comparison.investment_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.investment_delta_pct).toFixed(0)}%
+                {data.comparison.investment_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.investment_delta_pct).toFixed(0)}% vs. {prevMonthName}
               </span>
             </div>
           </div>
@@ -204,10 +224,10 @@ export default function DashboardOverview() {
       {/* Tertiary Metrics (Collapsed/Muted) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Income", value: data.total_income, icon: TrendingUp, delta: data.comparison.income_delta_pct },
-          { label: "Total Expenses", value: data.total_expense, icon: TrendingDown, delta: data.comparison.expense_delta_pct },
-          { label: "Net Profit", value: data.profit, icon: DollarSign, delta: data.comparison.profit_delta_pct },
-          { label: "Total Investments", value: data.total_investment, icon: Briefcase, delta: data.comparison.investment_delta_pct },
+          { label: "Total Income", value: data.total_income, icon: TrendingUp, delta: data.comparison.income_delta_pct, sparkData: yearlyData?.monthly_income },
+          { label: "Total Expenses", value: data.total_expense, icon: TrendingDown, delta: data.comparison.expense_delta_pct, sparkData: yearlyData?.monthly_expense },
+          { label: "Net Profit", value: data.profit, icon: DollarSign, delta: data.comparison.profit_delta_pct, sparkData: yearlyData ? yearlyData.monthly_income.map((inc, i) => inc + (yearlyData.monthly_expense[i] || 0)) : undefined },
+          { label: "Total Investments", value: data.total_investment, icon: Briefcase, delta: data.comparison.investment_delta_pct, sparkData: yearlyData?.monthly_investment },
         ].map((metric, i) => (
           <div key={i} className="flex flex-col justify-center p-4 rounded-xl border border-border/30 bg-card/30 hover:bg-card/50 transition-colors">
             <div className="flex items-center gap-2 mb-2">
@@ -219,9 +239,25 @@ export default function DashboardOverview() {
             <div className="flex items-baseline justify-between">
               <span className="text-lg font-semibold font-display tracking-tight">{formatCurrency(metric.value)}</span>
               <span className={`text-xs ${metric.delta >= 0 ? 'text-success/70' : 'text-destructive/70'} font-medium`}>
-                {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}%
+                {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">vs. {prevMonthName}</span>
               </span>
             </div>
+            {metric.sparkData && metric.sparkData.length > 0 && (
+              <div className="mt-2 h-8 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={metric.sparkData.map((v, idx) => ({ v: Math.abs(v), idx }))}>
+                    <Line
+                      type="monotone"
+                      dataKey="v"
+                      stroke={metric.delta >= 0 ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'}
+                      strokeWidth={1.5}
+                      dot={false}
+                      strokeOpacity={0.6}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         ))}
       </div>

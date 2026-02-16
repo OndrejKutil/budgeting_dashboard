@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
 import { motion } from 'framer-motion';
@@ -23,6 +24,7 @@ import {
   Target,
   Zap,
   Info,
+  Minus,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -82,13 +84,13 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
     const data = payload[0];
     return (
       <div style={{
-        backgroundColor: 'hsl(222, 47%, 9%)',
-        border: '1px solid hsl(217, 19%, 20%)',
+        backgroundColor: 'hsl(var(--popover))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: '8px',
         padding: '8px',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       }}>
-        <p style={{ color: 'hsl(195, 30%, 95%)', fontSize: '12px', marginBottom: '2px' }}>
+        <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
         <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
@@ -115,7 +117,20 @@ const itemVariants = {
 
 export default function YearlyAnalyticsPage() {
   const { formatCurrency } = useUser();
+  const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
+
+  const MONTH_MAP: Record<string, string> = {
+    Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+    Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+  };
+
+  const handleMonthClick = (monthAbbr: string) => {
+    const monthNum = MONTH_MAP[monthAbbr];
+    if (monthNum) {
+      navigate(`/dashboard/analytics/monthly?year=${selectedYear}&month=${monthNum}`);
+    }
+  };
 
   // TODO: Get years from API
   const years = [2028, 2027, 2026, 2025];
@@ -179,7 +194,7 @@ export default function YearlyAnalyticsPage() {
 
   const balanceData = [
     { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
-    { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(175, 70%, 42%)' },
+    { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
     { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
   ].filter(d => d.value > 0);
 
@@ -427,7 +442,7 @@ export default function YearlyAnalyticsPage() {
           </div>
         </div>
 
-        {/* Highlights & Volatility (Framed) */}
+        {/* Highlights & Trend Directions (Framed) */}
         <div className="grid gap-6 lg:grid-cols-3 pt-4">
           {/* Highlights */}
           {/* Highlights (Redesigned) */}
@@ -473,50 +488,51 @@ export default function YearlyAnalyticsPage() {
             </div>
           </motion.div>
 
-          {/* Volatility (Educational) */}
+          {/* Trend Directions */}
           <motion.div variants={itemVariants} className="rounded-xl border border-border/60 bg-card/50 p-6 shadow-sm">
             <h3 className="mb-2 text-lg font-semibold font-display flex items-center gap-2">
               <Activity className="h-5 w-5 text-muted-foreground" />
-              Stability Analysis
+              Trend Directions
             </h3>
             <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-              Volatility measures the "bumpiness" of your finances. Lower values indicate predictable patterns.
+              Shows whether each metric is rising, flat, or falling across the year. The %/mo value is the average monthly change relative to the mean — <span className="text-emerald-500">green</span> is a healthy direction, <span className="text-amber-500">amber</span> may need attention.
             </p>
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-foreground">Income Stream</div>
-                  <div className="text-xs text-muted-foreground">Std Dev: {formatCurrency(data.volatility.income_volatility)}</div>
-                </div>
-                <div className="text-right">
-                  {(() => {
-                    const avgIncome = data.total_income / Math.max(1, data.months.length);
-                    const cv = avgIncome > 0 ? (data.volatility.income_volatility / avgIncome) : 0;
-                    if (cv < 0.1) return <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-500">Very Stable</span>;
-                    if (cv < 0.3) return <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">Moderate</span>;
-                    return <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500">Variable</span>;
-                  })()}
-                </div>
-              </div>
+            <div className="space-y-5">
+              {[
+                { label: 'Income', trend: data.trend_directions.income_trend, goodDirection: 'growing' as const },
+                { label: 'Savings Rate', trend: data.trend_directions.savings_rate_trend, goodDirection: 'growing' as const },
+                { label: 'Core Expenses', trend: data.trend_directions.core_expense_trend, goodDirection: 'declining' as const },
+              ].map((item) => {
+                const isGood = item.trend.direction === item.goodDirection;
+                const isNeutral = item.trend.direction === 'stable';
+                const Icon = item.trend.direction === 'growing' ? TrendingUp : item.trend.direction === 'declining' ? TrendingDown : Minus;
+                const iconColor = isNeutral ? 'text-blue-400' : isGood ? 'text-emerald-500' : 'text-amber-500';
+                const badgeClasses = isNeutral
+                  ? 'bg-blue-500/10 text-blue-400'
+                  : isGood
+                    ? 'bg-emerald-500/10 text-emerald-500'
+                    : 'bg-amber-500/10 text-amber-500';
+                const directionLabel = item.trend.direction === 'growing' ? (item.label === 'Core Expenses' ? 'Creeping' : 'Growing')
+                  : item.trend.direction === 'declining' ? (item.label === 'Core Expenses' ? 'Declining' : 'Declining')
+                    : 'Stable';
+                const sign = item.trend.avg_monthly_change_pct > 0 ? '+' : '';
 
-              <div className="w-full h-px bg-border/50" />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-foreground">Expense Pattern</div>
-                  <div className="text-xs text-muted-foreground">Std Dev: {formatCurrency(data.volatility.expense_volatility)}</div>
-                </div>
-                <div className="text-right">
-                  {(() => {
-                    const avgExpense = data.total_expense / Math.max(1, data.months.length);
-                    const cv = avgExpense > 0 ? (data.volatility.expense_volatility / avgExpense) : 0;
-                    if (cv < 0.15) return <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-500">Predictable</span>;
-                    if (cv < 0.4) return <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">Dynamic</span>;
-                    return <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500">Volatile</span>;
-                  })()}
-                </div>
-              </div>
+                return (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{item.label}</div>
+                        <div className="text-xs text-muted-foreground">{sign}{item.trend.avg_monthly_change_pct}%/mo</div>
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClasses}`}>
+                      {directionLabel}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         </div>
@@ -537,12 +553,12 @@ export default function YearlyAnalyticsPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-semibold font-display">Income vs Costs</h3>
-                <p className="text-sm text-muted-foreground">Monthly cash flow gap</p>
+                <p className="text-sm text-muted-foreground">Monthly cash flow gap · <span className="text-primary/70">Click a point to drill down</span></p>
               </div>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
                     dataKey="month"
                     axisLine={false}
@@ -596,12 +612,12 @@ export default function YearlyAnalyticsPage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-semibold font-display">Wealth Generation</h3>
-                <p className="text-sm text-muted-foreground">Savings + Investments</p>
+                <p className="text-sm text-muted-foreground">Savings + Investments · <span className="text-primary/70">Click a bar to drill down</span></p>
               </div>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyTrendsData} stackOffset="sign" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <ComposedChart data={monthlyTrendsData} barGap={4} barSize={18} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
                     dataKey="month"
                     axisLine={false}
@@ -625,7 +641,7 @@ export default function YearlyAnalyticsPage() {
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                     tickFormatter={(v) => `${v.toFixed(0)}%`}
                     width={30}
-                    tickMargin={5} // Reduced from default to tighten spacing
+                    tickMargin={5}
                     domain={rightDomain}
                   />
                   <Tooltip
@@ -645,13 +661,11 @@ export default function YearlyAnalyticsPage() {
                   />
                   <Legend iconType="circle" />
                   <ReferenceLine y={0} yAxisId="left" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} />
-                  <Bar yAxisId="left" dataKey="savings" name="Savings" fill="hsl(199, 89%, 48%)" stackId="a" radius={[0, 0, 0, 0]} opacity={0.9} />
-                  <Bar yAxisId="left" dataKey="investments" name="Investments" fill="hsl(280, 67%, 60%)" stackId="a" radius={[4, 4, 0, 0]} opacity={0.9} />
-                  {/* Rate Lines with Halo Effect for Visibility */}
-                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" stroke="hsl(var(--card))" strokeWidth={5} dot={false} strokeDasharray="4 4" legendType="none" />
-                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name="Sav. Rate" stroke="hsl(199, 89%, 48%)" strokeWidth={3} dot={false} strokeDasharray="4 4" />
-                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" stroke="hsl(var(--card))" strokeWidth={5} dot={false} strokeDasharray="4 4" legendType="none" />
-                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name="Invest. Rate" stroke="hsl(280, 67%, 60%)" strokeWidth={3} dot={false} strokeDasharray="4 4" />
+                  <Bar yAxisId="left" dataKey="savings" name="Savings" fill="hsl(199, 89%, 48%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                  <Bar yAxisId="left" dataKey="investments" name="Investments" fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                  {/* Rate Lines */}
+                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name="Sav. Rate" stroke="hsl(199, 70%, 68%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
+                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name="Invest. Rate" stroke="hsl(280, 50%, 75%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -744,7 +758,7 @@ export default function YearlyAnalyticsPage() {
                       />
                       <Legend iconType="circle" />
                       <Bar dataKey="Core" stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
-                      <Bar dataKey="Fun" stackId="a" fill="hsl(175, 70%, 42%)" opacity={0.9} />
+                      <Bar dataKey="Fun" stackId="a" fill="hsl(340, 65%, 55%)" opacity={0.9} />
                       <Bar dataKey="Future" stackId="a" fill="hsl(38, 80%, 55%)" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>

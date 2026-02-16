@@ -211,10 +211,10 @@ export default function EmergencyFundPage() {
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} width={100} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'hsl(222, 47%, 9%)',
-                      border: '1px solid hsl(217, 19%, 20%)',
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
-                      color: 'hsl(195, 30%, 95%)',
+                      color: 'hsl(var(--popover-foreground))',
                     }}
                     itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
                     formatter={(value: number) => [formatCurrency(value), 'Amount']}
@@ -252,7 +252,7 @@ export default function EmergencyFundPage() {
       </div>
 
       <Tabs defaultValue="core" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <TabsList className="grid w-full sm:w-[400px] grid-cols-3">
             <TabsTrigger value="core">Core Only</TabsTrigger>
             <TabsTrigger value="necessary">Core + Necessary</TabsTrigger>
@@ -272,6 +272,9 @@ export default function EmergencyFundPage() {
             </SelectContent>
           </Select>
         </div>
+        <p className="text-xs text-muted-foreground mb-6">
+          <strong>Core</strong> = survival essentials (rent, utilities, groceries) · <strong>Core + Necessary</strong> = adds important but non-critical costs (insurance, transport) · <strong>All</strong> = your complete monthly spending
+        </p>
         <TabsContent value="core">
           {renderContent(
             data.average_monthly_core_expenses,

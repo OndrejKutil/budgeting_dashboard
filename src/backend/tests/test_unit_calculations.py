@@ -47,31 +47,31 @@ def sample_transactions_data():
         {
             "amount": 5000.0,
             "date": "2026-01-01",
-            "dim_categories": {"category_type": "income", "category_name": "Salary", "spending_type": "Income"},
+            "dim_categories_users": {"category_type": "income", "category_name": "Salary", "spending_type": "Income"},
             "notes": "Paycheck"
         },
         {
             "amount": -1000.0,
             "date": "2026-01-05",
-            "dim_categories": {"category_type": "expense", "category_name": "Rent", "spending_type": "Core"},
+            "dim_categories_users": {"category_type": "expense", "category_name": "Rent", "spending_type": "Core"},
             "notes": "Rent"
         },
         {
             "amount": -200.0,
             "date": "2026-01-10",
-            "dim_categories": {"category_type": "expense", "category_name": "Groceries", "spending_type": "Necessary"},
+            "dim_categories_users": {"category_type": "expense", "category_name": "Groceries", "spending_type": "Necessary"},
             "notes": "Food"
         },
         {
             "amount": -500.0,
             "date": "2026-01-15",
-            "dim_categories": {"category_type": "saving", "category_name": "Emergency Fund", "spending_type": "Future"},
+            "dim_categories_users": {"category_type": "saving", "category_name": "Emergency Fund", "spending_type": "Future"},
             "notes": "Save"
         },
         {
             "amount": -300.0,
             "date": "2026-01-20",
-            "dim_categories": {"category_type": "investment", "category_name": "Stocks", "spending_type": "Future"},
+            "dim_categories_users": {"category_type": "investment", "category_name": "Stocks", "spending_type": "Future"},
             "notes": "Invest"
         }
     ]

@@ -4,7 +4,6 @@ import calendar
 from datetime import date
 from typing import List, Dict, Optional, Any, cast
 from pydantic import BaseModel, Field
-import statistics
 
 from ..columns import TRANSACTIONS_COLUMNS
 from ...data.database import get_db_client
@@ -16,7 +15,8 @@ from ...schemas.base import (
     YearlyAnalyticsData, 
     EmergencyFundData,
     YearlyHighlights,
-    VolatilityMetrics,
+    TrendDirectionMetrics,
+    TrendDirectionItem,
     YearlySpendingBalance,
     MonthMetric
 )
@@ -79,7 +79,7 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
     """Fetch transactions from the database for a specific date range."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -109,7 +109,9 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = pl.from_dicts(transactions)
     
     struct_col = None
-    if 'dim_categories' in df.columns:
+    if 'dim_categories_users' in df.columns:
+        struct_col = 'dim_categories_users'
+    elif 'dim_categories' in df.columns:
         struct_col = 'dim_categories'
     elif 'categories' in df.columns:
         struct_col = 'categories'
@@ -398,23 +400,58 @@ def _calculate_highlights(monthly_data: Dict[str, MonthlyDataPoint]) -> YearlyHi
         highest_savings_rate_month=best_savings_rate
     )
 
-def _calculate_volatility(monthly_metrics: dict) -> VolatilityMetrics:
-    """Calculate standard deviation for consistency metrics."""
-    # monthly_metrics comes from _prepare_monthly_arrays output keys
-    expenses = monthly_metrics['monthly_expense']
-    incomes = monthly_metrics['monthly_income']
+def _calculate_trend_directions(monthly_metrics: dict) -> TrendDirectionMetrics:
+    """Calculate trend direction for income, savings rate, and core expenses.
     
-    def calc_std(data):
-        if len(data) < 2: return 0.0
-        # Filter out zero months if we only want active months? 
-        # Usually variability includes zeros if the year isn't full, but standard deviation over 12 months 
-        # where some are 0 is technically correct for "yearly variability".
-        # Let's keep it simple: stdev of the array.
-        return round(statistics.stdev(data), 2)
+    Uses linear regression slope over active months to determine if each metric
+    is growing, stable, or declining.
+    """
+    
+    def compute_trend(data: list[float]) -> TrendDirectionItem:
+        """Compute trend for a single metric array."""
+        # Filter to only active months (non-zero values)
+        active = [(i, v) for i, v in enumerate(data) if v != 0]
         
-    return VolatilityMetrics(
-        expense_volatility=calc_std(expenses),
-        income_volatility=calc_std(incomes)
+        if len(active) < 3:
+            return TrendDirectionItem(direction='stable', avg_monthly_change_pct=0.0)
+        
+        xs = [p[0] for p in active]
+        ys = [p[1] for p in active]
+        n = len(xs)
+        
+        # Simple linear regression: slope = (n*Σxy - Σx*Σy) / (n*Σx² - (Σx)²)
+        sum_x = sum(xs)
+        sum_y = sum(ys)
+        sum_xy = sum(x * y for x, y in zip(xs, ys))
+        sum_x2 = sum(x * x for x in xs)
+        
+        denom = n * sum_x2 - sum_x * sum_x
+        if denom == 0:
+            return TrendDirectionItem(direction='stable', avg_monthly_change_pct=0.0)
+        
+        slope = (n * sum_xy - sum_x * sum_y) / denom
+        
+        # Normalize slope as % of mean
+        mean_val = sum_y / n
+        if mean_val == 0:
+            return TrendDirectionItem(direction='stable', avg_monthly_change_pct=0.0)
+        
+        pct_change = round((slope / abs(mean_val)) * 100, 1)
+        
+        # Classify: ±2% threshold
+        if pct_change > 2.0:
+            direction = 'growing'
+        elif pct_change < -2.0:
+            direction = 'declining'
+        else:
+            direction = 'stable'
+        
+        return TrendDirectionItem(direction=direction, avg_monthly_change_pct=pct_change)
+    
+    return TrendDirectionMetrics(
+        income_trend=compute_trend(monthly_metrics['monthly_income']),
+        savings_rate_trend=compute_trend(monthly_metrics['monthly_savings_rate']),
+        core_expense_trend=compute_trend(monthly_metrics['monthly_core_expense'])
     )
 
 def _calculate_spending_balance(totals: YearlyTotals) -> YearlySpendingBalance:
@@ -450,7 +487,7 @@ def _yearly_analytics(access_token: str, year: int) -> YearlyAnalyticsData:
     
     # New Calculations
     highlights = _calculate_highlights(monthly_data)
-    volatility = _calculate_volatility(monthly_arrays)
+    trend_directions = _calculate_trend_directions(monthly_arrays)
     balance = _calculate_spending_balance(totals)
 
     return YearlyAnalyticsData(
@@ -469,7 +506,7 @@ def _yearly_analytics(access_token: str, year: int) -> YearlyAnalyticsData:
         
         # New Fields
         highlights=highlights,
-        volatility=volatility,
+        trend_directions=trend_directions,
         spending_balance=balance,
         
         months=monthly_arrays['months'],
@@ -497,7 +534,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
     """Fetch transactions for emergency fund analysis."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*), dim_savings_funds(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*), dim_savings_funds(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -526,9 +563,10 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
 
     df = pl.from_dicts(transactions)
     
-    if 'dim_categories' in df.columns:
+    cat_struct_col = 'dim_categories_users' if 'dim_categories_users' in df.columns else ('dim_categories' if 'dim_categories' in df.columns else None)
+    if cat_struct_col:
         existing_cols = set(df.columns)
-        struct_dtype = df.schema['dim_categories']
+        struct_dtype = df.schema[cat_struct_col]
         field_names = []
         if hasattr(struct_dtype, 'fields'):
              field_names = [f.name for f in struct_dtype.fields]
@@ -536,11 +574,11 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
              field_names = list(struct_dtype.to_schema().keys())
              
         if field_names:
-            new_names = [f"dim_categories_{x}" if x in existing_cols else x for x in field_names]
+            new_names = [f"{cat_struct_col}_{x}" if x in existing_cols else x for x in field_names]
             df = df.with_columns(
-                pl.col('dim_categories').struct.rename_fields(new_names)
+                pl.col(cat_struct_col).struct.rename_fields(new_names)
             )
-        df = df.unnest('dim_categories')
+        df = df.unnest(cat_struct_col)
     
     if 'dim_savings_funds' in df.columns:
         existing_cols = set(df.columns)

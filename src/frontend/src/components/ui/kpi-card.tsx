@@ -74,22 +74,17 @@ export function KPICard({
       </div>
 
       {change !== undefined && (
-        <div className="mt-4 flex items-center gap-2">
-          <div
-            className={cn(
-              'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-              isPositive && 'bg-success/10 text-success',
-              isNegative && 'bg-destructive/10 text-destructive',
-              isNeutral && 'bg-muted text-muted-foreground'
-            )}
-          >
-            {isPositive && <TrendingUp className="h-3 w-3" />}
-            {isNegative && <TrendingDown className="h-3 w-3" />}
-            {isNeutral && <Minus className="h-3 w-3" />}
-            <span>{isPositive ? '+' : ''}{change.toFixed(1)}%</span>
-          </div>
+        <div className="mt-3 flex items-center gap-1.5 text-xs">
+          <span className={cn(
+            'font-medium',
+            isPositive && 'text-success/70',
+            isNegative && 'text-destructive/70',
+            isNeutral && 'text-muted-foreground/60'
+          )}>
+            {isPositive ? '↑' : isNegative ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
+          </span>
           {changeLabel && (
-            <span className="text-xs text-muted-foreground">{changeLabel}</span>
+            <span className="text-muted-foreground/40">{changeLabel}</span>
           )}
         </div>
       )}

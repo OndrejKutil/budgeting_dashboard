@@ -106,6 +106,8 @@ class RefreshTokenResponse(BaseModel):
 class CategoriesResponse(BaseModel):
     data: List[CategoryData] = Field(..., description="List of category records")
     count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -118,16 +120,38 @@ class CategoriesResponse(BaseModel):
                         "spending_type": SpendingType.CORE,
                         "is_active": True,
                         "created_at": "2025-01-15T10:30:00Z",
-                    },
-                    {
-                        "categories_id_pk": "2",
-                        "notes": "Coffee with friends",
-                        "created_at": "2025-01-16T11:00:00Z",
-                        "updated_at": "2025-01-16T11:00:00Z"
                     }
                 ],
-                "count": 2,
+                "count": 1,
+                "success": True,
+                "message": "Categories retrieved successfully"
         }}
+    )
+
+
+class CategorySuccessResponse(BaseModel):
+    """Response schema for category create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: Optional[List[CategoryData]] = Field(None, description="Category data if applicable")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": "Category created successfully",
+                "data": [
+                    {
+                        "categories_id_pk": "1",
+                        "category_name": "Groceries",
+                        "type": "expense",
+                        "spending_type": "Necessary",
+                        "is_active": True,
+                        "created_at": "2025-01-15T10:30:00Z"
+                    }
+                ]
+            }
+        }
     )
 
 

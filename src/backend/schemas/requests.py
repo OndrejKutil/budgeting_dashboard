@@ -121,3 +121,41 @@ class ResetPasswordRequest(BaseModel):
             }
         }
     )
+
+
+class CategoryRequest(BaseModel):
+    """Schema for creating a new category"""
+    category_name: str = Field(..., min_length=1, max_length=100, description="Name of the category")
+    type: str = Field(..., description="Category type (expense, income, saving, investment, exclude)")
+    spending_type: str = Field(..., description="Spending type (Core, Necessary, Fun, Future, Income)")
+    is_active: Optional[bool] = Field(True, description="Whether the category is active")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "category_name": "Groceries",
+                "type": "expense",
+                "spending_type": "Necessary",
+                "is_active": True
+            }
+        }
+    )
+
+
+class CategoryUpdateRequest(BaseModel):
+    """Schema for updating an existing category"""
+    category_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Name of the category")
+    type: Optional[str] = Field(None, description="Category type (expense, income, saving, investment, exclude)")
+    spending_type: Optional[str] = Field(None, description="Spending type (Core, Necessary, Fun, Future, Income)")
+    is_active: Optional[bool] = Field(None, description="Whether the category is active")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "category_name": "Housing",
+                "type": "expense",
+                "spending_type": "Core",
+                "is_active": True
+            }
+        }
+    )

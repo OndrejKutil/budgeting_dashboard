@@ -64,13 +64,13 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
     const data = payload[0];
     return (
       <div style={{
-        backgroundColor: 'hsl(222, 47%, 9%)',
-        border: '1px solid hsl(217, 19%, 20%)',
+        backgroundColor: 'hsl(var(--popover))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: '8px',
         padding: '8px',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       }}>
-        <p style={{ color: 'hsl(195, 30%, 95%)', fontSize: '12px', marginBottom: '2px' }}>
+        <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
         <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
@@ -197,18 +197,24 @@ export default function MonthlyAnalyticsPage() {
       />
 
       {/* KPIs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
-      >
-        <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} />
-        <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} />
-        <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} />
-        <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} />
-        <KPICard title="Profit" value={data.profit} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} />
-        <KPICard title="Net Cash Flow" value={data.cashflow} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} />
-      </motion.div>
+      {(() => {
+        const prevDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 2, 1);
+        const prevLabel = `vs. ${prevDate.toLocaleString('default', { month: 'short' })}`;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+          >
+            <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} change={data.comparison.income_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} change={data.comparison.expenses_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} change={data.comparison.savings_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} change={data.comparison.investments_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Profit" value={data.profit} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.profit_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Net Cash Flow" value={data.cashflow} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.cashflow_delta_pct} changeLabel={prevLabel} />
+          </motion.div>
+        );
+      })()}
 
       {/* Entry Ramp / Rhythm Breaker */}
       <motion.div

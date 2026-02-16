@@ -74,7 +74,7 @@ async def get_all_data(
         
         # Select with potential join for category filtering
         if category_type:
-             query = user_supabase_client.table("fct_transactions").select("*, dim_categories!inner(type)", count="exact")
+             query = user_supabase_client.table("fct_transactions").select("*, dim_categories_users!inner(type)", count="exact")
         else:
              query = user_supabase_client.table("fct_transactions").select("*", count="exact")
         
@@ -94,7 +94,7 @@ async def get_all_data(
              else:
                   query = query.eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, savings_fund_id)
         if category_type:
-            query = query.eq("dim_categories.type", category_type)
+            query = query.eq("dim_categories_users.type", category_type)
         if min_amount is not None:
              query = query.gte(TRANSACTIONS_COLUMNS.AMOUNT.value, min_amount)
         if max_amount is not None:

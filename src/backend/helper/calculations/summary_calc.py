@@ -106,7 +106,7 @@ def _fetch_summary_transactions(
         
         query = user_supabase_client.table("fct_transactions").select(
             '*',
-            'dim_categories(*)'
+            'dim_categories_users(*)'
         )
 
         # Apply date filters if provided
@@ -148,7 +148,9 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = pl.from_dicts(transactions)
     
     struct_col = None
-    if 'dim_categories' in df.columns:
+    if 'dim_categories_users' in df.columns:
+        struct_col = 'dim_categories_users'
+    elif 'dim_categories' in df.columns:
         struct_col = 'dim_categories'
     elif 'categories' in df.columns:
         struct_col = 'categories'

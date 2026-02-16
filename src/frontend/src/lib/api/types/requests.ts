@@ -90,6 +90,30 @@ export interface UpdateAccountRequest {
 }
 
 // ================================================================================================
+//                                   Category Requests
+// ================================================================================================
+
+/**
+ * Create category request payload
+ */
+export interface CreateCategoryRequest {
+    category_name: string;
+    type: string;
+    spending_type: string;
+    is_active?: boolean;
+}
+
+/**
+ * Update category request payload
+ */
+export interface UpdateCategoryRequest {
+    category_name?: string;
+    type?: string;
+    spending_type?: string;
+    is_active?: boolean;
+}
+
+// ================================================================================================
 //                                   Savings Fund Requests
 // ================================================================================================
 
