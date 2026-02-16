@@ -67,7 +67,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         
         query = user_supabase_client.table('fct_transactions').select(
             '*',
-            'dim_categories(*)'
+            'dim_categories_users(*)'
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
@@ -102,7 +102,9 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = pl.from_dicts(transactions)
     
     struct_col = None
-    if 'dim_categories' in df.columns:
+    if 'dim_categories_users' in df.columns:
+        struct_col = 'dim_categories_users'
+    elif 'dim_categories' in df.columns:
         struct_col = 'dim_categories'
     elif 'categories' in df.columns:
         struct_col = 'categories'

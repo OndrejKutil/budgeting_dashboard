@@ -79,7 +79,7 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
     """Fetch transactions from the database for a specific date range."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -109,7 +109,9 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = pl.from_dicts(transactions)
     
     struct_col = None
-    if 'dim_categories' in df.columns:
+    if 'dim_categories_users' in df.columns:
+        struct_col = 'dim_categories_users'
+    elif 'dim_categories' in df.columns:
         struct_col = 'dim_categories'
     elif 'categories' in df.columns:
         struct_col = 'categories'
@@ -532,7 +534,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
     """Fetch transactions for emergency fund analysis."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories(*), dim_savings_funds(*)')
+        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*), dim_savings_funds(*)')
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -561,9 +563,10 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
 
     df = pl.from_dicts(transactions)
     
-    if 'dim_categories' in df.columns:
+    cat_struct_col = 'dim_categories_users' if 'dim_categories_users' in df.columns else ('dim_categories' if 'dim_categories' in df.columns else None)
+    if cat_struct_col:
         existing_cols = set(df.columns)
-        struct_dtype = df.schema['dim_categories']
+        struct_dtype = df.schema[cat_struct_col]
         field_names = []
         if hasattr(struct_dtype, 'fields'):
              field_names = [f.name for f in struct_dtype.fields]
@@ -571,11 +574,11 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
              field_names = list(struct_dtype.to_schema().keys())
              
         if field_names:
-            new_names = [f"dim_categories_{x}" if x in existing_cols else x for x in field_names]
+            new_names = [f"{cat_struct_col}_{x}" if x in existing_cols else x for x in field_names]
             df = df.with_columns(
-                pl.col('dim_categories').struct.rename_fields(new_names)
+                pl.col(cat_struct_col).struct.rename_fields(new_names)
             )
-        df = df.unnest('dim_categories')
+        df = df.unnest(cat_struct_col)
     
     if 'dim_savings_funds' in df.columns:
         existing_cols = set(df.columns)
