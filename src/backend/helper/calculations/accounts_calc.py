@@ -67,7 +67,7 @@ def calculate_account_metrics(transactions_df: pl.DataFrame) -> Dict[str, Accoun
             
             # Calculate daily history
             # Start from current balance and work backwards
-            history = []
+            history: list[dict[str, object]] = []
             running_balance = current_balance
             
             # Sort transactions for this account by date descending

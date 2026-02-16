@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
-import { authApi, tokenManager } from '@/lib/api/client';
+import { authApi, tokenManager, exportApi } from '@/lib/api/client';
 import {
   Select,
   SelectContent,
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check } from 'lucide-react';
+import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check, Download, Upload, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGitHubLinking, setIsGitHubLinking] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -66,6 +67,26 @@ export default function ProfilePage() {
         variant: 'destructive',
       });
       setIsGitHubLinking(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportApi.downloadTransactionsCSV();
+      toast({
+        title: 'Export complete',
+        description: 'Your transactions have been exported as CSV.',
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast({
+        title: 'Export failed',
+        description: 'Could not export transactions. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -125,7 +146,6 @@ export default function ProfilePage() {
         <div className="flex-1 text-center md:text-left space-y-3">
           <div className="space-y-1">
             <h2 className="text-3xl font-bold tracking-tight font-display">{getDisplayName()}</h2>
-            <p className="text-muted-foreground">{profile?.email}</p>
           </div>
 
           <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
@@ -133,12 +153,7 @@ export default function ProfilePage() {
               <Calendar className="mr-1.5 h-3.5 w-3.5" />
               Member since {getMemberSince()}
             </div>
-            {isGitHubConnected && (
-              <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary shadow-sm">
-                <GitHubIcon className="mr-1.5 h-3.5 w-3.5" />
-                GitHub Connected
-              </div>
-            )}
+
           </div>
         </div>
 
@@ -245,6 +260,64 @@ export default function ProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Data Management */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="md:col-span-2"
+        >
+          <Card className="h-full border-border/60 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display">
+                <Database className="h-5 w-5 text-primary" />
+                Data Management
+              </CardTitle>
+              <CardDescription>Export or import your financial data</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-border p-5 space-y-3">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">Export Transactions</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Download all your data (transactions, categories, accounts and funds).
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="w-full"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {isExporting ? 'Exporting...' : 'Export CSV'}
+                  </Button>
+                </div>
+                <div className="rounded-xl border border-border p-5 space-y-3 opacity-50">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">Import Transactions</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Upload a CSV file to bulk-import data into your dashboard.
+                    </p>
+                  </div>
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Coming Soon
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
