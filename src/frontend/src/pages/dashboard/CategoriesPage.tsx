@@ -123,7 +123,7 @@ function CategorySkeleton() {
 const initialFormData = {
   category_name: '',
   type: 'expense',
-  spending_type: '',
+  spending_type: 'Core',
   is_active: true,
 };
 
@@ -150,7 +150,7 @@ export default function CategoriesPage() {
       setFormData({
         category_name: category.category_name,
         type: category.type,
-        spending_type: category.spending_type || '',
+        spending_type: category.spending_type || 'Core',
         is_active: category.is_active !== false,
       });
     } else {
@@ -222,7 +222,7 @@ export default function CategoriesPage() {
     const payload = {
       category_name: formData.category_name.trim(),
       type: formData.type,
-      spending_type: formData.spending_type || undefined,
+      spending_type: formData.spending_type,
       is_active: formData.is_active,
     };
 
@@ -445,16 +445,15 @@ export default function CategoriesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="spending-type">Spending Type <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Label htmlFor="spending-type">Spending Type</Label>
               <Select
-                value={formData.spending_type || 'none'}
-                onValueChange={(value) => setFormData({ ...formData, spending_type: value === 'none' ? '' : value })}
+                value={formData.spending_type}
+                onValueChange={(value) => setFormData({ ...formData, spending_type: value })}
               >
                 <SelectTrigger id="spending-type">
-                  <SelectValue placeholder="None" />
+                  <SelectValue placeholder="Select spending type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
                   {SPENDING_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
                       {t.label}

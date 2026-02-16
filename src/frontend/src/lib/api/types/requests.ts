@@ -99,7 +99,7 @@ export interface UpdateAccountRequest {
 export interface CreateCategoryRequest {
     category_name: string;
     type: string;
-    spending_type?: string;
+    spending_type: string;
     is_active?: boolean;
 }
 

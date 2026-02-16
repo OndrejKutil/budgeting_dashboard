@@ -127,7 +127,7 @@ class CategoryRequest(BaseModel):
     """Schema for creating a new category"""
     category_name: str = Field(..., min_length=1, max_length=100, description="Name of the category")
     type: str = Field(..., description="Category type (expense, income, saving, investment, exclude)")
-    spending_type: Optional[str] = Field(None, description="Spending type (Core, Necessary, Fun, Future, Income)")
+    spending_type: str = Field(..., description="Spending type (Core, Necessary, Fun, Future, Income)")
     is_active: Optional[bool] = Field(True, description="Whether the category is active")
 
     model_config = ConfigDict(
