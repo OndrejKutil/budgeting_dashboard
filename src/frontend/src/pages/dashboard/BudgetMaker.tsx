@@ -428,7 +428,11 @@ export default function BudgetMaker() {
                                                     {row.diff != null ? (
                                                         <span className={cn(
                                                             "opacity-80",
-                                                            row.diff > 0 ? "text-success" : row.diff < 0 ? "text-destructive" : "text-muted-foreground"
+                                                            row.diff > 0
+                                                                ? (group === 'expense' ? "text-destructive" : "text-success")
+                                                                : row.diff < 0
+                                                                    ? (group === 'expense' ? "text-success" : "text-destructive")
+                                                                    : "text-muted-foreground"
                                                         )}>
                                                             {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
                                                         </span>
