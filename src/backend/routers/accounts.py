@@ -84,10 +84,12 @@ async def get_all_accounts(
                 acc_metrics = metrics[acc_id]
                 item['current_balance'] = acc_metrics["current_balance"]
                 item['net_flow_30d'] = acc_metrics["net_flow_30d"]
+                item['history_30d'] = acc_metrics.get("history_30d", [])
             else:
                 # Default values if no transactions
                 item['current_balance'] = 0.0
                 item['net_flow_30d'] = 0.0
+                item['history_30d'] = []
             data.append(AccountData(**item))
 
         return AccountsResponse(

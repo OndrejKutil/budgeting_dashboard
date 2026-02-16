@@ -149,6 +149,7 @@ export interface Account {
     currency: string | null;
     current_balance: number | null;
     net_flow_30d: number | null;
+    history_30d?: { date: string; balance: number }[];
     created_at: string | null;
 }
 

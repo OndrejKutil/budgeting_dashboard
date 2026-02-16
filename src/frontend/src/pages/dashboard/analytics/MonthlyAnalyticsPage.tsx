@@ -207,7 +207,7 @@ export default function MonthlyAnalyticsPage() {
             className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
           >
             <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} change={data.comparison.income_delta_pct} changeLabel={prevLabel} />
-            <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} change={data.comparison.expenses_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} change={data.comparison.expenses_delta_pct} changeLabel={prevLabel} invert={true} />
             <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} change={data.comparison.savings_delta_pct} changeLabel={prevLabel} />
             <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} change={data.comparison.investments_delta_pct} changeLabel={prevLabel} />
             <KPICard title="Profit" value={data.profit} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.profit_delta_pct} changeLabel={prevLabel} />

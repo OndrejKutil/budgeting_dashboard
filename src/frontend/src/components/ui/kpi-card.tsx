@@ -12,6 +12,7 @@ interface KPICardProps {
   variant?: 'default' | 'income' | 'expense' | 'savings' | 'investment';
   className?: string;
   formatter?: (value: number) => string;
+  invert?: boolean;
 }
 
 const variantStyles = {
@@ -39,10 +40,17 @@ export function KPICard({
   variant = 'default',
   className,
   formatter,
+  invert = false,
 }: KPICardProps) {
-  const isPositive = change !== undefined && change > 0;
-  const isNegative = change !== undefined && change < 0;
+  const isPositiveChange = change !== undefined && change > 0;
+  const isNegativeChange = change !== undefined && change < 0;
   const isNeutral = change === 0;
+
+  // Determine if the change is "good" or "bad" based on invert prop
+  // Default: Increase is good (Green), Decrease is bad (Red)
+  // Invert: Increase is bad (Red), Decrease is good (Green)
+  const isGood = change !== undefined && (invert ? change < 0 : change > 0);
+  const isBad = change !== undefined && (invert ? change > 0 : change < 0);
 
   const formattedValue = typeof value === 'number'
     ? (formatter ? formatter(value) : value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }))
@@ -77,11 +85,11 @@ export function KPICard({
         <div className="mt-3 flex items-center gap-1.5 text-xs">
           <span className={cn(
             'font-medium',
-            isPositive && 'text-success/70',
-            isNegative && 'text-destructive/70',
+            isGood && 'text-success/70',
+            isBad && 'text-destructive/70',
             isNeutral && 'text-muted-foreground/60'
           )}>
-            {isPositive ? '↑' : isNegative ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
+            {isPositiveChange ? '↑' : isNegativeChange ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
           </span>
           {changeLabel && (
             <span className="text-muted-foreground/40">{changeLabel}</span>

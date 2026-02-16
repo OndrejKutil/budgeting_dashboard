@@ -25,6 +25,8 @@ import {
   YAxis,
   LineChart,
   Line,
+  AreaChart,
+  Area,
 } from 'recharts';
 import { summaryApi, analyticsApi } from '@/lib/api/client';
 import type { SummaryData, YearlyAnalyticsData } from '@/lib/api/types';
@@ -168,55 +170,28 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* SECONDARY CARD: Savings */}
-        <div className="col-span-1 rounded-2xl border border-border/50 bg-card p-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Savings</h3>
-            <PiggyBank className="w-4 h-4 text-emerald-500" />
+        {/* SECONDARY CARD: Net Profit */}
+        {/* SECONDARY CARD: Net Profit */}
+        <div className="col-span-2 row-span-1 rounded-2xl border border-border/50 bg-card/50 p-8 shadow-lg relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <DollarSign className="w-32 h-32" />
           </div>
-          <div className="flex flex-col gap-1 mb-3">
-            <div className="text-3xl font-bold font-display">{formatCurrency(data.total_saving)}</div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="font-medium flex items-center gap-1.5 text-foreground">
-                <div className={`w-1.5 h-1.5 rounded-full ${data.savings_rate >= 0 ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-                {(data.savings_rate * 100).toFixed(1)}% Rate
-              </span>
-              <span className="text-muted-foreground/60 flex items-center">
-                {data.comparison.saving_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.saving_delta_pct).toFixed(0)}% vs. {prevMonthName}
-              </span>
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Profit</h3>
+              <div className="flex items-baseline gap-4">
+                <span className={`text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  {formatCurrency(data.profit)}
+                </span>
+                <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
+                  {data.comparison.profit_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.profit_delta_pct).toFixed(1)}%
+                  <span className="text-xs text-muted-foreground/40 ml-1">vs. {prevMonthName}</span>
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground/60">
+                {data.profit >= 0 ? "You're net positive this month." : "Expenses exceeding income."}
+              </p>
             </div>
-          </div>
-          <div className="w-full bg-secondary h-1.5 rounded-full mt-auto overflow-hidden">
-            <div
-              className="bg-emerald-500 h-full rounded-full"
-              style={{ width: `${Math.min(Math.max(data.savings_rate * 100, 0), 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* SECONDARY CARD: Investments */}
-        <div className="col-span-1 rounded-2xl border border-border/50 bg-card p-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Investments</h3>
-            <TrendingUp className="w-4 h-4 text-primary" />
-          </div>
-          <div className="flex flex-col gap-1 mb-3">
-            <div className="text-3xl font-bold font-display">{formatCurrency(data.total_investment)}</div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="font-medium flex items-center gap-1.5 text-foreground">
-                <div className={`w-1.5 h-1.5 rounded-full ${data.investment_rate >= 0 ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                {(data.investment_rate * 100).toFixed(1)}% Rate
-              </span>
-              <span className="text-muted-foreground/60 flex items-center">
-                {data.comparison.investment_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.investment_delta_pct).toFixed(0)}% vs. {prevMonthName}
-              </span>
-            </div>
-          </div>
-          <div className="w-full bg-secondary h-1.5 rounded-full mt-auto overflow-hidden">
-            <div
-              className="bg-primary h-full rounded-full"
-              style={{ width: `${Math.min(Math.max(data.investment_rate * 100, 0), 100)}%` }}
-            />
           </div>
         </div>
       </motion.div>
@@ -224,42 +199,95 @@ export default function DashboardOverview() {
       {/* Tertiary Metrics (Collapsed/Muted) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Income", value: data.total_income, icon: TrendingUp, delta: data.comparison.income_delta_pct, sparkData: yearlyData?.monthly_income },
-          { label: "Total Expenses", value: data.total_expense, icon: TrendingDown, delta: data.comparison.expense_delta_pct, sparkData: yearlyData?.monthly_expense },
-          { label: "Net Profit", value: data.profit, icon: DollarSign, delta: data.comparison.profit_delta_pct, sparkData: yearlyData ? yearlyData.monthly_income.map((inc, i) => inc + (yearlyData.monthly_expense[i] || 0)) : undefined },
-          { label: "Total Investments", value: data.total_investment, icon: Briefcase, delta: data.comparison.investment_delta_pct, sparkData: yearlyData?.monthly_investment },
-        ].map((metric, i) => (
-          <div key={i} className="flex flex-col justify-center p-4 rounded-xl border border-border/30 bg-card/30 hover:bg-card/50 transition-colors">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-md bg-background-secondary text-muted-foreground">
-                <metric.icon className="w-3.5 h-3.5" />
+          {
+            label: "Total Income",
+            value: data.total_income,
+            icon: TrendingUp,
+            delta: data.comparison.income_delta_pct,
+            sparkData: yearlyData?.monthly_income.slice(0, new Date().getMonth() + 1),
+            color: 'text-emerald-500'
+          },
+          {
+            label: "Total Expenses",
+            value: data.total_expense,
+            icon: TrendingDown,
+            delta: data.comparison.expense_delta_pct,
+            sparkData: yearlyData?.monthly_expense.slice(0, new Date().getMonth() + 1),
+            color: 'text-rose-500',
+            invert: true
+          },
+          {
+            label: "Savings",
+            value: data.total_saving,
+            icon: PiggyBank,
+            delta: data.comparison.saving_delta_pct,
+            sparkData: yearlyData?.monthly_saving.slice(0, new Date().getMonth() + 1),
+            extra: `${(data.savings_rate * 100).toFixed(1)}% Rate`,
+            color: 'text-emerald-500'
+          },
+          {
+            label: "Investments",
+            value: data.total_investment,
+            icon: Briefcase,
+            delta: data.comparison.investment_delta_pct,
+            sparkData: yearlyData?.monthly_investment.slice(0, new Date().getMonth() + 1),
+            extra: `${(data.investment_rate * 100).toFixed(1)}% Rate`,
+            color: 'text-primary'
+          },
+        ].map((metric, i) => {
+          const isPositive = metric.invert ? metric.delta <= 0 : metric.delta >= 0;
+          return (
+            <div key={i} className="flex flex-col justify-between p-4 rounded-xl border border-border/30 bg-card/30 hover:bg-card/50 transition-colors min-h-[110px]">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-background-secondary text-muted-foreground">
+                      <metric.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{metric.label}</span>
+                  </div>
+                  {metric.extra && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 ${metric.color}`}>
+                      {metric.extra}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-lg font-semibold font-display tracking-tight">{formatCurrency(metric.value)}</span>
+                </div>
               </div>
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{metric.label}</span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-lg font-semibold font-display tracking-tight">{formatCurrency(metric.value)}</span>
-              <span className={`text-xs ${metric.delta >= 0 ? 'text-success/70' : 'text-destructive/70'} font-medium`}>
-                {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">vs. {prevMonthName}</span>
-              </span>
-            </div>
-            {metric.sparkData && metric.sparkData.length > 0 && (
-              <div className="mt-2 h-8 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={metric.sparkData.map((v, idx) => ({ v: Math.abs(v), idx }))}>
-                    <Line
-                      type="monotone"
-                      dataKey="v"
-                      stroke={metric.delta >= 0 ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'}
-                      strokeWidth={1.5}
-                      dot={false}
-                      strokeOpacity={0.6}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+
+              <div className="flex items-center justify-between mt-3">
+                <span className={`text-xs ${isPositive ? 'text-success/70' : 'text-destructive/70'} font-medium flex items-center gap-1`}>
+                  {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">vs. {prevMonthName}</span>
+                </span>
+
+                {metric.sparkData && metric.sparkData.length > 0 && (
+                  <div className="h-8 w-20 opacity-50">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={metric.sparkData.map((v, idx) => ({ v: v, idx }))}>
+                        <defs>
+                          <linearGradient id={`gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} stopOpacity={0.2} />
+                            <stop offset="100%" stopColor={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <Area
+                          type="monotone"
+                          dataKey="v"
+                          stroke={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'}
+                          strokeWidth={1.5}
+                          fill={`url(#gradient-${i})`}
+                          fillOpacity={1}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          )
+        })}
       </div>
 
       {/* Featured Insights */}

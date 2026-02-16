@@ -104,8 +104,9 @@ const NavigationMenuIndicator = React.forwardRef<
 ));
 NavigationMenuIndicator.displayName = NavigationMenuPrimitive.Indicator.displayName;
 
+
 export {
-  navigationMenuTriggerStyle,
+  navigationMenuTriggerStyle, // eslint-disable-line react-refresh/only-export-components
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,

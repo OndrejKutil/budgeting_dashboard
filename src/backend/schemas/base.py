@@ -84,6 +84,7 @@ class AccountData(BaseModel):
     currency: Optional[str] = Field(..., description="Currency of the account")
     current_balance: Optional[float] = Field(0.0, description="Current balance of the account")
     net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the account in the last 30 days")
+    history_30d: Optional[List[dict]] = Field(None, description="Daily balance history for the last 30 days")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
 class UserData(BaseModel):
