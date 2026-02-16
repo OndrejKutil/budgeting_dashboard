@@ -114,6 +114,15 @@ export interface CategoriesResponse {
     message: string;
 }
 
+/**
+ * Category success response (create/update/delete)
+ */
+export interface CategorySuccessResponse {
+    data: Category[] | null;
+    success: boolean;
+    message: string;
+}
+
 // ================================================================================================
 //                                   Account Responses
 // ================================================================================================

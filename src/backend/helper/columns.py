@@ -40,6 +40,7 @@ class CATEGORIES_COLUMNS(Enum):
     IS_ACTIVE = "is_active"
     CREATED_AT = "created_at"
     SPENDING_TYPE = "spending_type"
+    USER_ID = "user_id_fk"
 
     def __str__(self):
         return self.value
