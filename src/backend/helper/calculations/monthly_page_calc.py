@@ -457,6 +457,10 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
     
     spending_type_breakdown = _calculate_spending_type_breakdown(current_df)
 
+    # Calculate rates
+    savings_rate = round((totals.savings / totals.income * 100), 2) if totals.income > 0 else 0.0
+    investment_rate = round((totals.investments / totals.income * 100), 2) if totals.income > 0 else 0.0
+
     return MonthlyAnalyticsData(
         year=year,
         month=month,
@@ -467,6 +471,8 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
         investments=totals.investments,
         profit=totals.profit,
         cashflow=totals.cashflow,
+        savings_rate=savings_rate,
+        investment_rate=investment_rate,
         run_rate=run_rate,
         day_split=day_split,
         category_concentration=concentration,

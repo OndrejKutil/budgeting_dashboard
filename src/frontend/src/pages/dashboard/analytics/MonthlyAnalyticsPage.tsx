@@ -208,8 +208,8 @@ export default function MonthlyAnalyticsPage() {
           >
             <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} change={data.comparison.income_delta_pct} changeLabel={prevLabel} />
             <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} change={data.comparison.expenses_delta_pct} changeLabel={prevLabel} invert={true} />
-            <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} change={data.comparison.savings_delta_pct} changeLabel={prevLabel} />
-            <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} change={data.comparison.investments_delta_pct} changeLabel={prevLabel} />
+            <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} change={data.comparison.savings_delta_pct} changeLabel={prevLabel} extra={`${data.savings_rate.toFixed(1)}% Rate`} />
+            <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} change={data.comparison.investments_delta_pct} changeLabel={prevLabel} extra={`${data.investment_rate.toFixed(1)}% Rate`} />
             <KPICard title="Profit" value={data.profit} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.profit_delta_pct} changeLabel={prevLabel} />
             <KPICard title="Net Cash Flow" value={data.cashflow} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.cashflow_delta_pct} changeLabel={prevLabel} />
           </motion.div>

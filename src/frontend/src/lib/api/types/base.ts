@@ -288,6 +288,8 @@ export interface MonthlyAnalytics {
     investments: number;
     profit: number;
     cashflow: number;
+    savings_rate: number;
+    investment_rate: number;
     run_rate: RunRateForecast;
     day_split: DaySplit;
     category_concentration: CategoryConcentration;

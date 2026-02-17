@@ -13,6 +13,7 @@ interface KPICardProps {
   className?: string;
   formatter?: (value: number) => string;
   invert?: boolean;
+  extra?: string;
 }
 
 const variantStyles = {
@@ -41,6 +42,7 @@ export function KPICard({
   className,
   formatter,
   invert = false,
+  extra,
 }: KPICardProps) {
   const isPositiveChange = change !== undefined && change > 0;
   const isNegativeChange = change !== undefined && change < 0;
@@ -81,18 +83,25 @@ export function KPICard({
         )}
       </div>
 
-      {change !== undefined && (
-        <div className="mt-3 flex items-center gap-1.5 text-xs">
-          <span className={cn(
-            'font-medium',
-            isGood && 'text-success/70',
-            isBad && 'text-destructive/70',
-            isNeutral && 'text-muted-foreground/60'
-          )}>
-            {isPositiveChange ? '↑' : isNegativeChange ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
-          </span>
-          {changeLabel && (
-            <span className="text-muted-foreground/40">{changeLabel}</span>
+      {(change !== undefined || extra) && (
+        <div className="mt-3 flex items-center justify-between gap-1.5 text-xs">
+          {change !== undefined ? (
+            <span className={cn(
+              'font-medium flex items-center gap-1',
+              isGood && 'text-success/70',
+              isBad && 'text-destructive/70',
+              isNeutral && 'text-muted-foreground/60'
+            )}>
+              {isPositiveChange ? '↑' : isNegativeChange ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
+              {changeLabel && (
+                <span className="text-muted-foreground/40">{changeLabel}</span>
+              )}
+            </span>
+          ) : <span />}
+          {extra && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 text-emerald-500">
+              {extra}
+            </span>
           )}
         </div>
       )}
