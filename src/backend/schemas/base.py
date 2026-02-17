@@ -294,6 +294,8 @@ class MonthlyAnalyticsData(BaseModel):
     investments: float = Field(..., description="Total investments for the month (absolute value)")
     profit: float = Field(..., description="Calculated profit (income + expenses + investments)")
     cashflow: float = Field(..., description="Calculated cashflow (income + expenses + investments + savings)")
+    savings_rate: float = Field(..., description="Savings rate as percentage of income")
+    investment_rate: float = Field(..., description="Investment rate as percentage of income")
     
     # New fields
     run_rate: RunRateForecast = Field(..., description="Run-rate and forecast data")
