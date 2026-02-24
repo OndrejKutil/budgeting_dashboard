@@ -1,6 +1,6 @@
 # Budgeting Dashboard
 
-[![Live Demo](https://img.shields.io/badge/Live%20App-Click%20Here-brightgreen?style=for-the-badge)](https://budgeting-dashboard-site.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20App-Click%20Here-brightgreen?style=for-the-badge)](https://budget.ondrejkutil.com)
 
 ## Tech Stack
 
