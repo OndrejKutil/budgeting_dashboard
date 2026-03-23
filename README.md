@@ -98,6 +98,7 @@ budgeting_dashboard/
 - **Production Ready** - Live deployed application with proper error handling and environment configuration
 - **CI/CD Pipeline** - Automated testing and deployment pipeline
 - **OAuth Authentication** - Secure user authentication with GitHub
+- **AI Voice Transaction Ingestion** - An n8n workflow uses Groq for transcription and GPT-4o for transaction logic, fetches user context, and automatically categorizes and creates transactions in the database from phone/watch voice input
 
 ### **Modern Development Practices**
 
