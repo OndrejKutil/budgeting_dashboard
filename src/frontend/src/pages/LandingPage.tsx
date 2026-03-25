@@ -163,6 +163,16 @@ export default function LandingPage() {
               )}
             </motion.div>
 
+            {!isAuthenticated && (
+              <motion.div variants={fadeInUp} className="pt-4">
+                <Link to="/how-it-works" className="inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors group">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  See how it works
+                  <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
+            )}
+
           </motion.div>
         </div>
       </section>
