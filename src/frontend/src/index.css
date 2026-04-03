@@ -262,6 +262,17 @@
   background: hsl(var(--muted-foreground));
 }
 
+/* ---- Hide scrollbar in PWA standalone mode ---- */
+@media (display-mode: standalone) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  html {
+    scrollbar-width: none;
+  }
+}
+
 /* ---- Background Gradient Utility ---- */
 .bg-gradient-teal {
   background: var(--gradient-teal);
@@ -269,4 +280,17 @@
 
 .bg-gradient-hero {
   background: var(--gradient-hero);
+}
+
+/* ---- iOS Safe Areas ---- */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-left { padding-left: env(safe-area-inset-left); }
+.safe-right { padding-right: env(safe-area-inset-right); }
+
+/* ---- Prevent iOS zoom on input focus ---- */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }

@@ -348,6 +348,9 @@ export default function BudgetMaker() {
                                     No items in this section. {isEditing && "Click 'Add Row' to start."}
                                 </div>
                             ) : (
+                                <>
+                                {/* Desktop Table View */}
+                                <div className="hidden md:block">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="hover:bg-transparent border-b border-border/50">
@@ -465,6 +468,109 @@ export default function BudgetMaker() {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
+
+                                {/* Mobile Card View */}
+                                <div className="md:hidden space-y-3 px-2">
+                                    {rows.map((row) => (
+                                        <div key={row.id} className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={row.name}
+                                                            onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
+                                                            placeholder="Item name"
+                                                            className="h-9 bg-background/50 border-input/50 focus:bg-background"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-foreground font-medium text-sm">{row.name}</span>
+                                                    )}
+                                                </div>
+                                                {isEditing && (
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground/30 hover:text-destructive" onClick={() => removeRow(group, row.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+
+                                            {isEditing && (
+                                                <Select
+                                                    value={row.category_id !== null ? row.category_id.toString() : "none"}
+                                                    onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
+                                                >
+                                                    <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
+                                                        <SelectValue placeholder="Category..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">None</SelectItem>
+                                                        {categories.filter(c => {
+                                                            if (group === 'income') return c.type === 'income';
+                                                            if (group === 'expense') return c.type === 'expense';
+                                                            if (group === 'saving') return c.type === 'saving';
+                                                            if (group === 'investment') return c.type === 'investment';
+                                                            return true;
+                                                        }).map(c => (
+                                                            <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>
+                                                                {c.category_name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Planned</span>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            type="number"
+                                                            value={row.amount}
+                                                            onChange={(e) => updateRow(group, row.id, 'amount', parseFloat(e.target.value) || 0)}
+                                                            className="h-9 w-28 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
+                                                        />
+                                                    ) : (
+                                                        <span className="font-mono font-medium text-foreground">{formatCurrency(row.amount)}</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Actual</span>
+                                                    <span className="font-mono font-medium text-muted-foreground">
+                                                        {row.actual != null ? formatCurrency(row.actual) : '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Diff</span>
+                                                    {row.diff != null ? (
+                                                        <span className={cn(
+                                                            "font-mono text-sm font-medium",
+                                                            row.diff > 0
+                                                                ? (group === 'expense' ? "text-destructive" : "text-success")
+                                                                : row.diff < 0
+                                                                    ? (group === 'expense' ? "text-success" : "text-destructive")
+                                                                    : "text-muted-foreground"
+                                                        )}>
+                                                            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground/40 text-sm">-</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {isEditing && (
+                                                <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+                                                    <Checkbox
+                                                        checked={row.include_in_total}
+                                                        onCheckedChange={(checked) => updateRow(group, row.id, 'include_in_total', checked)}
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">Include in total</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                </>
                             )}
                         </CardContent>
                     </CollapsibleContent>
@@ -646,7 +752,7 @@ export default function BudgetMaker() {
                             initial={{ y: 100, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 100, opacity: 0 }}
-                            className="fixed bottom-6 right-6 z-50"
+                            className="fixed bottom-24 left-4 right-4 lg:bottom-6 lg:right-6 lg:left-auto z-50"
                         >
                             <Card className="shadow-2xl border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 dark:border-primary/40 dark:shadow-primary/5">
                                 <CardHeader className="py-4 px-6 flex flex-row items-center gap-6 space-y-0">

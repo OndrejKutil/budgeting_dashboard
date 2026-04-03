@@ -417,7 +417,7 @@ export default function YearlyAnalyticsPage() {
             {/* Outcomes */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 block pl-1">Net Outcomes</span>
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <motion.div variants={itemVariants}>
                   <KPICard title="Profit" value={data.profit} icon={<Wallet className="h-5 w-5" />} variant="default" formatter={formatCurrency} />
                 </motion.div>
@@ -430,7 +430,7 @@ export default function YearlyAnalyticsPage() {
             {/* Rates */}
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 block pl-1">Efficiency Rates</span>
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <motion.div variants={itemVariants}>
                   <KPICard title="Savings Rate" value={`${data.savings_rate.toFixed(1)}%`} icon={<Target className="h-5 w-5" />} variant="default" />
                 </motion.div>

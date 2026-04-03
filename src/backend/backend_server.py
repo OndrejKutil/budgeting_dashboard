@@ -61,7 +61,7 @@ from .helper.rate_limiter import limiter, RATE_LIMITS
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
 
-FRONTEND_URL: str = env.FRONTEND_URL
+FRONTEND_URLS: list[str] = env.FRONTEND_URL
 
 # Initialize FastAPI app
 app : FastAPI = FastAPI()
@@ -71,7 +71,7 @@ app : FastAPI = FastAPI()
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=FRONTEND_URLS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

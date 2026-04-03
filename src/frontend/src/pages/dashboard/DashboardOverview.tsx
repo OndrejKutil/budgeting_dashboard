@@ -155,7 +155,7 @@ export default function DashboardOverview() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Cash Flow</h3>
               <div className="flex items-baseline gap-4">
-                <span className={`text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   {formatCurrency(data.net_cash_flow)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
@@ -180,7 +180,7 @@ export default function DashboardOverview() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Profit</h3>
               <div className="flex items-baseline gap-4">
-                <span className={`text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   {formatCurrency(data.profit)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
@@ -196,8 +196,7 @@ export default function DashboardOverview() {
         </div>
       </motion.div>
 
-      {/* Tertiary Metrics (Collapsed/Muted) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
             label: "Total Income",
