@@ -71,8 +71,8 @@ export function KPICard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="text-2xl font-bold font-display tracking-tight text-foreground truncate">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground">
             {formattedValue}
           </p>
         </div>

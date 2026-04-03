@@ -388,7 +388,7 @@ export default function FundsPage() {
                         </span>
                       </div>
                       {isComplete && (
-                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
+                        <span className="whitespace-nowrap rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
                           Goal Reached
                         </span>
                       )}
