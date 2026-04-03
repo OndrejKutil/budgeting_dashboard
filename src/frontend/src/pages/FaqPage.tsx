@@ -29,8 +29,8 @@ export default function FaqPage() {
             answer: "Yes, this is a free personal finance tool."
         },
         {
-            question: "How do I get started?",
-            answer: "You can get started by creating an account and logging in. Then you can add your transactions and start tracking your budget."
+            question: "Do you have a mobile app?",
+            answer: "For the best mobile experience on iphone, put the website on your home screen and use it as a web app."
         },
         {
             question: "What if I need further assistance, have a wish, suggestion or found a bug?",
