@@ -443,7 +443,7 @@ export default function TransactionsPage() {
           title="Transactions"
           description="View and manage all your financial transactions"
           actions={
-            <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Button onClick={() => setIsCreateModalOpen(true)} className="hidden sm:inline-flex">
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
@@ -464,7 +464,7 @@ export default function TransactionsPage() {
         title="Transactions"
         description="View and manage all your financial transactions"
         actions={
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)} className="hidden sm:inline-flex">
             <Plus className="mr-2 h-4 w-4" />
             Add Transaction
           </Button>
@@ -813,14 +813,7 @@ export default function TransactionsPage() {
               })}
             </div>
 
-            {/* Mobile FAB */}
-            <Button
-              className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg md:hidden z-50 flex items-center justify-center p-0"
-              size="icon"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <Plus className="h-6 w-6" />
-            </Button>
+
 
 
             {/* Pagination */}
@@ -1120,6 +1113,15 @@ export default function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Floating Action Button */}
+      <Button
+        onClick={() => setIsCreateModalOpen(true)}
+        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-xl sm:hidden"
+        size="icon"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
     </div >
   );
 }

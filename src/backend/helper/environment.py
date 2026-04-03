@@ -3,7 +3,7 @@ import os
 
 load_dotenv()
 
-FRONTEND_URL : str = str(os.getenv("FRONTEND_URL")) if os.getenv("FRONTEND_URL") else ""
+FRONTEND_URL : list[str] = [url.strip() for url in os.getenv("FRONTEND_URL", "").split(",") if url.strip()]
 DEVELOPMENT_MODE : bool = bool(os.getenv("DEVELOPMENT_MODE")) if os.getenv("DEVELOPMENT_MODE") else False
 API_KEY : str = str(os.getenv("API_KEY")) if os.getenv("API_KEY") else ""
 ADMIN_KEY : str = str(os.getenv("ADMIN_KEY")) if os.getenv("ADMIN_KEY") else ""

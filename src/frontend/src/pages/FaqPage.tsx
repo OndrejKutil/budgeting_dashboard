@@ -22,11 +22,19 @@ export default function FaqPage() {
         },
         {
             question: "How do I reset my password?",
-            answer: "You can reset your password on the login page. If you need further account assistance, please contact the developer directly."
+            answer: "You can reset your password on the login page."
         },
         {
             question: "Is this free to use?",
             answer: "Yes, this is a free personal finance tool."
+        },
+        {
+            question: "How do I get started?",
+            answer: "You can get started by creating an account and logging in. Then you can add your transactions and start tracking your budget."
+        },
+        {
+            question: "What if I need further assistance, have a wish, suggestion or found a bug?",
+            answer: "Feel free to reach out to the developer directly at me@ondrejkutil.com"
         }
     ];
 
@@ -89,8 +97,8 @@ export default function FaqPage() {
                         </p>
                         <div className="flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-colors">
                             <Mail className="h-5 w-5" />
-                            <a href="mailto:kutil.ondrej@outlook.com" className="font-medium hover:underline">
-                                kutil.ondrej@outlook.com
+                            <a href="mailto:me@ondrejkutil.com" className="font-medium hover:underline">
+                                me@ondrejkutil.com
                             </a>
                         </div>
                     </div>

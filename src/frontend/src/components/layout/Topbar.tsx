@@ -12,7 +12,7 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
 
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:px-6 safe-top">
       <div className="flex items-center gap-4">
         <MobileSidebarTrigger onClick={onMobileMenuClick} />
         <Button variant="link" asChild className="hidden text-sm text-muted-foreground lg:block px-0 h-auto font-normal hover:no-underline hover:text-foreground transition-colors">

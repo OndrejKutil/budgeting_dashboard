@@ -279,7 +279,7 @@ export function MobileSidebarTrigger({ onClick }: { onClick: () => void }) {
       variant="ghost"
       size="icon"
       onClick={onClick}
-      className="lg:hidden"
+      className="lg:hidden min-h-[44px] min-w-[44px]"
     >
       <Menu className="h-5 w-5" />
     </Button>

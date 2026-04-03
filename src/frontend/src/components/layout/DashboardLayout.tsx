@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
+import { BottomNav } from './BottomNav';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -56,10 +57,13 @@ export function DashboardLayout() {
         )}
       >
         <Topbar onMobileMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="p-4 lg:p-6">
+        <main className="p-4 pb-24 lg:p-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav />
     </div>
   );
 }
