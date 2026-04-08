@@ -210,18 +210,65 @@ async def delete_savings_fund(
 ) -> SavingsFundSuccessResponse:
     """
     Delete a savings fund by its ID.
+    
+    If the fund has associated transactions, it will be soft-deleted
+    (fund_is_active set to false) instead of hard-deleted.
     """
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        response = user_supabase_client.table("dim_savings_funds").delete().eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
-
-        return SavingsFundSuccessResponse(
-            success=True,
-            message=f"Savings fund {fund_id} deleted successfully",
-            data=None
+        # Check if any transactions reference this fund
+        tx_check = (
+            user_supabase_client.table("fct_transactions")
+            .select("id_pk", count="exact")
+            .eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, fund_id)
+            .limit(1)
+            .execute()
         )
-    
+
+        has_transactions = tx_check.count and tx_check.count > 0
+
+        # Additionally check the balance
+        tx_amounts = (
+            user_supabase_client.table("fct_transactions")
+            .select("amount")
+            .eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, fund_id)
+            .execute()
+        )
+        current_amount = sum((abs(tx["amount"]) for tx in tx_amounts.data)) if tx_amounts.data else 0.0
+
+        if round(current_amount, 2) != 0:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete or deactivate a fund with a non-zero balance. Please transfer the funds out first."
+            )
+
+        if has_transactions:
+            # Soft delete: deactivate the fund
+            response = (
+                user_supabase_client.table("dim_savings_funds")
+                .update({SAVINGS_FUNDS_COLUMNS.IS_ACTIVE.value: False})
+                .eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id)
+                .execute()
+            )
+            return SavingsFundSuccessResponse(
+                success=True,
+                message=f"Fund {fund_id} has existing transactions and was deactivated instead of deleted",
+                data=[SavingsFundsData(**item) for item in response.data] if response.data else None,
+            )
+        else:
+            # Hard delete: no transactions reference this fund
+            response = (
+                user_supabase_client.table("dim_savings_funds")
+                .delete()
+                .eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id)
+                .execute()
+            )
+            return SavingsFundSuccessResponse(
+                success=True,
+                message=f"Fund {fund_id} deleted successfully",
+                data=None,
+            )
     except Exception as e:
         logger.error(f"Failed to delete savings fund {fund_id}: {str(e)}")
         

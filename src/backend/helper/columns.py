@@ -26,6 +26,7 @@ class ACCOUNTS_COLUMNS(Enum):
     NAME = "account_name"
     TYPE = "type"
     CURRENCY = "currency"
+    IS_ACTIVE = "account_is_active"
     CREATED_AT = "created_at"
 
     def __str__(self):
@@ -51,6 +52,7 @@ class SAVINGS_FUNDS_COLUMNS(Enum):
     USER_ID = "user_id_fk"
     TARGET_AMOUNT = "target_amount"
     NAME = "fund_name"
+    IS_ACTIVE = "fund_is_active"
     CREATED_AT = "created_at"
 
     def __str__(self):

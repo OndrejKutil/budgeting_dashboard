@@ -19,6 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { fundsApi, tokenManager, ApiError } from '@/lib/api/client';
@@ -61,8 +67,12 @@ export default function FundsPage() {
     target_amount: '',
   });
 
-  const totalTarget = funds.reduce((sum, f) => sum + f.target_amount, 0);
-  const totalCurrent = funds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const activeFunds = funds.filter(f => f.fund_is_active !== false);
+  const inactiveFunds = funds.filter(f => f.fund_is_active === false);
+  const totalTarget = activeFunds.reduce((sum, f) => sum + f.target_amount, 0);
+  const totalCurrent = activeFunds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
 
   const handleOpenModal = (fund?: SavingsFund) => {
     if (fund) {
@@ -179,6 +189,7 @@ export default function FundsPage() {
     mutationFn: fundsApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funds'] });
+      setDeleteConfirmId(null);
       toast({
         title: 'Fund deleted',
         description: 'The savings fund has been removed.',
@@ -223,6 +234,112 @@ export default function FundsPage() {
     );
   }
 
+  const renderFundCard = (fund: SavingsFund) => {
+    const current = fund.current_amount || 0;
+    const progress = fund.target_amount > 0 ? (current / fund.target_amount) * 100 : 0;
+    const isComplete = progress >= 100;
+
+    return (
+      <motion.div
+        key={fund.savings_funds_id_pk}
+        variants={fadeIn}
+        layout
+        className={cn(
+          'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
+          fund.fund_is_active === false
+            ? 'border-border/50 opacity-60'
+            : isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
+        )}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                'rounded-lg p-2.5',
+                isComplete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
+              )}
+            >
+              <Target className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold">{fund.fund_name}</h3>
+                {fund.fund_is_active === false && (
+                  <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    Inactive
+                  </span>
+                )}
+              </div>
+              {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
+                <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
+                  {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} this month
+                </p>
+              )}
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleOpenModal(fund)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteConfirmId(fund.savings_funds_id_pk)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-end justify-between mb-2">
+            <div>
+              <span className="text-2xl font-bold font-display">
+                {formatCurrency(current)}
+              </span>
+              <span className="text-muted-foreground/70 ml-1 text-xs">
+                of {formatCurrency(fund.target_amount)}
+              </span>
+            </div>
+            {isComplete && (
+              <span className="whitespace-nowrap rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
+                Goal Reached
+              </span>
+            )}
+          </div>
+          <Progress
+            value={Math.min(progress, 100)}
+            className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
+          />
+          {/* Timeline Projection */}
+          {!isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {fund.net_flow_30d > 0 ? (() => {
+                const remaining = fund.target_amount - current;
+                const monthsToGo = Math.ceil(remaining / fund.net_flow_30d);
+                const projected = new Date();
+                projected.setMonth(projected.getMonth() + monthsToGo);
+                return `~${projected.toLocaleString('default', { month: 'short', year: 'numeric' })} at current pace`;
+              })() : 'Net outflow — consider adding contributions'}
+            </p>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -262,7 +379,7 @@ export default function FundsPage() {
                 {formatCurrency(totalCurrent)}
               </p>
               <p className="text-sm text-muted-foreground">
-                of {formatCurrency(totalTarget)} target
+                of {formatCurrency(totalTarget)} active target
               </p>
             </div>
             <div className="w-full sm:w-48">
@@ -299,10 +416,10 @@ export default function FundsPage() {
             </div>
           ))}
         </div>
-      ) : funds.length === 0 ? (
+      ) : activeFunds.length === 0 ? (
         <EmptyState
           icon={<Target className="h-8 w-8 text-muted-foreground" />}
-          title="No savings funds yet"
+          title="No active funds yet"
           description="Create savings funds to track progress towards your financial goals — vacations, emergency reserves, big purchases, and more."
           action={{
             label: 'Create Your First Fund',
@@ -310,111 +427,40 @@ export default function FundsPage() {
           }}
         />
       ) : (
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          animate="show"
-          className="grid gap-4 sm:grid-cols-2"
-        >
-          <AnimatePresence mode='popLayout'>
-            {funds.map((fund) => {
-              const current = fund.current_amount || 0;
-              const progress = fund.target_amount > 0 ? (current / fund.target_amount) * 100 : 0;
-              const isComplete = progress >= 100;
+        <div className="space-y-8">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 sm:grid-cols-2"
+          >
+            <AnimatePresence mode='popLayout'>
+              {activeFunds.map(renderFundCard)}
+            </AnimatePresence>
+          </motion.div>
 
-              return (
-                <motion.div
-                  key={fund.savings_funds_id_pk}
-                  variants={fadeIn}
-                  layout
-                  className={cn(
-                    'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
-                    isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          'rounded-lg p-2.5',
-                          isComplete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
-                        )}
-                      >
-                        <Target className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{fund.fund_name}</h3>
-                        {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
-                          <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
-                            {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} this month
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleOpenModal(fund)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => handleDelete(fund.savings_funds_id_pk)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="flex items-end justify-between mb-2">
-                      <div>
-                        <span className="text-2xl font-bold font-display">
-                          {formatCurrency(current)}
-                        </span>
-                        <span className="text-muted-foreground/70 ml-1 text-xs">
-                          of {formatCurrency(fund.target_amount)}
-                        </span>
-                      </div>
-                      {isComplete && (
-                        <span className="whitespace-nowrap rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
-                          Goal Reached
-                        </span>
-                      )}
-                    </div>
-                    <Progress
-                      value={Math.min(progress, 100)}
-                      className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
-                    />
-                    {/* Timeline Projection */}
-                    {!isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        {fund.net_flow_30d > 0 ? (() => {
-                          const remaining = fund.target_amount - current;
-                          const monthsToGo = Math.ceil(remaining / fund.net_flow_30d);
-                          const projected = new Date();
-                          projected.setMonth(projected.getMonth() + monthsToGo);
-                          return `~${projected.toLocaleString('default', { month: 'short', year: 'numeric' })} at current pace`;
-                        })() : 'Net outflow — consider adding contributions'}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </motion.div>
+          {inactiveFunds.length > 0 && (
+            <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">
+              <AccordionItem value="inactive-funds" className="border-none">
+                <AccordionTrigger className="hover:no-underline py-4 text-muted-foreground font-medium">
+                  Inactive Funds ({inactiveFunds.length})
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  <motion.div
+                    variants={stagger}
+                    initial="hidden"
+                    animate="show"
+                    className="grid gap-4 sm:grid-cols-2 pt-2"
+                  >
+                    <AnimatePresence mode='popLayout'>
+                      {inactiveFunds.map(renderFundCard)}
+                    </AnimatePresence>
+                  </motion.div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
       )}
 
       {/* Create/Edit Modal */}
@@ -456,6 +502,32 @@ export default function FundsPage() {
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedFund ? 'Save Changes' : 'Create Fund'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Delete Savings Fund</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Are you sure you want to delete this fund? If it has existing transactions,
+            it will be deactivated instead of permanently deleted.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

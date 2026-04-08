@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -14,6 +15,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import {
   Select,
   SelectContent,
@@ -97,12 +104,17 @@ export default function AccountsPage() {
     currency: 'CZK',
   });
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const activeAccounts = accounts.filter(a => a.account_is_active !== false);
+  const inactiveAccounts = accounts.filter(a => a.account_is_active === false);
+
 
 
   const deleteMutation = useMutation({
     mutationFn: accountsApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      setDeleteConfirmId(null);
       toast({
         title: 'Account deleted',
         description: 'The account has been removed successfully.',
@@ -215,6 +227,117 @@ export default function AccountsPage() {
     );
   }
 
+  const renderAccountCard = (account: Account) => {
+    const Icon = iconMap[account.type.toLowerCase()] || Wallet;
+    return (
+      <motion.div
+        key={account.accounts_id_pk}
+        variants={fadeIn}
+        className={cn(
+          'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
+          account.account_is_active === false ? 'border-border/50 opacity-60' : 'border-border hover:border-primary/50'
+        )}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold">{account.account_name}</h3>
+                {account.account_is_active === false && (
+                  <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    Inactive
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">{account.type}</p>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openEditModal(account)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteConfirmId(account.accounts_id_pk)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="mt-4 space-y-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Current Balance</p>
+            <p className="text-2xl font-bold font-display">
+              {new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: account.currency || 'CZK',
+              }).format(account.current_balance || 0)}
+            </p>
+          </div>
+
+          <div className="h-[60px] w-full">
+            {account.history_30d && account.history_30d.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={account.history_30d}>
+                  <defs>
+                    <linearGradient id={`gradient-${account.accounts_id_pk}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill={`url(#gradient-${account.accounts_id_pk})`}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground/50">
+                No history
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">30d Net Flow</span>
+            <span
+              className={`font-medium ${(account.net_flow_30d || 0) >= 0
+                ? 'text-emerald-500'
+                : 'text-destructive'
+                }`}
+            >
+              {(account.net_flow_30d || 0) > 0 ? '+' : ''}
+              {new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: account.currency || 'CZK',
+              }).format(account.net_flow_30d || 0)}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -228,32 +351,30 @@ export default function AccountsPage() {
         }
       />
 
-      {/* Total Accounts Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
       >
-        <p className="text-sm text-muted-foreground">Total Accounts</p>
+        <p className="text-sm text-muted-foreground">Total Active Accounts</p>
         <div className="mt-1 text-3xl font-bold font-display">
-          {isLoading ? <Skeleton className="h-9 w-16 inline-block" /> : accounts.length}
+          {isLoading ? <Skeleton className="h-9 w-16 inline-block" /> : activeAccounts.length}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           Manage your financial accounts
         </p>
       </motion.div>
 
-      {/* Accounts Grid */}
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <AccountSkeleton key={i} />
           ))}
         </div>
-      ) : accounts.length === 0 ? (
+      ) : activeAccounts.length === 0 ? (
         <EmptyState
           icon={<Wallet className="h-8 w-8 text-muted-foreground" />}
-          title="No accounts yet"
+          title="No active accounts"
           description="Add your bank accounts to start tracking balances and transactions across all your finances."
           action={{
             label: 'Add Your First Account',
@@ -261,114 +382,36 @@ export default function AccountsPage() {
           }}
         />
       ) : (
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          animate="show"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {accounts.map((account) => {
-            const Icon = iconMap[account.type.toLowerCase()] || Wallet;
-            return (
-              <motion.div
-                key={account.accounts_id_pk}
-                variants={fadeIn}
-                className="group rounded-xl border border-border bg-card p-5 shadow-card transition-all hover:border-primary/50 hover:shadow-glow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{account.account_name}</h3>
-                      <p className="text-sm text-muted-foreground">{account.type}</p>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditModal(account)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => handleDelete(account.accounts_id_pk)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Current Balance</p>
-                    <p className="text-2xl font-bold font-display">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: account.currency || 'CZK',
-                      }).format(account.current_balance || 0)}
-                    </p>
-                  </div>
+        <div className="space-y-8">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {activeAccounts.map(renderAccountCard)}
+          </motion.div>
 
-                  {/* Sparkline Chart */}
-                  <div className="h-[60px] w-full">
-                    {account.history_30d && account.history_30d.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={account.history_30d}>
-                          <defs>
-                            <linearGradient id={`gradient-${account.accounts_id_pk}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <Area
-                            type="monotone"
-                            dataKey="balance"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            fill={`url(#gradient-${account.accounts_id_pk})`}
-                            isAnimationActive={false}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground/50">
-                        No history
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">30d Net Flow</span>
-                    <span
-                      className={`font-medium ${(account.net_flow_30d || 0) >= 0
-                        ? 'text-emerald-500'
-                        : 'text-destructive'
-                        }`}
-                    >
-                      {(account.net_flow_30d || 0) > 0 ? '+' : ''}
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: account.currency || 'CZK',
-                      }).format(account.net_flow_30d || 0)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+          {inactiveAccounts.length > 0 && (
+            <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">
+              <AccordionItem value="inactive-accounts" className="border-none">
+                <AccordionTrigger className="hover:no-underline py-4 text-muted-foreground font-medium">
+                  Inactive Accounts ({inactiveAccounts.length})
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  <motion.div
+                    variants={stagger}
+                    initial="hidden"
+                    animate="show"
+                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-2"
+                  >
+                    {inactiveAccounts.map(renderAccountCard)}
+                  </motion.div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
       )}
 
       {/* Create/Edit Modal */}
@@ -436,6 +479,32 @@ export default function AccountsPage() {
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedAccount ? 'Save Changes' : 'Add Account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Delete Account</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Are you sure you want to delete this account? If it has existing transactions,
+            it will be deactivated instead of permanently deleted.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

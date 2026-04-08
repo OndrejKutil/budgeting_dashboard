@@ -147,6 +147,7 @@ export interface Account {
     account_name: string;
     type: string;
     currency: string | null;
+    account_is_active?: boolean;
     current_balance: number | null;
     net_flow_30d: number | null;
     history_30d?: { date: string; balance: number }[];
@@ -166,6 +167,7 @@ export interface SavingsFund {
     user_id_fk: string;
     fund_name: string;
     target_amount: number;
+    fund_is_active?: boolean;
     current_amount?: number;
     net_flow_30d?: number;
     created_at: string | null;
