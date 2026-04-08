@@ -259,6 +259,8 @@ async def delete_account(
                 success=True,
                 message=f"Account {account_id} deleted successfully",
             )
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.info(f"Account deletion failed for account_id: {account_id}")
         logger.info(f"Full error details: {str(e)}")
