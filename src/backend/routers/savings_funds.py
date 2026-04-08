@@ -235,7 +235,7 @@ async def delete_savings_fund(
             .eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, fund_id)
             .execute()
         )
-        current_amount = sum((abs(tx["amount"]) for tx in tx_amounts.data)) if tx_amounts.data else 0.0
+        current_amount = sum((tx["amount"] for tx in tx_amounts.data)) if tx_amounts.data else 0.0
 
         if round(current_amount, 2) != 0:
             raise fastapi.HTTPException(
@@ -269,6 +269,8 @@ async def delete_savings_fund(
                 message=f"Fund {fund_id} deleted successfully",
                 data=None,
             )
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to delete savings fund {fund_id}: {str(e)}")
         
