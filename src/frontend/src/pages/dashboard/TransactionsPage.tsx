@@ -1016,7 +1016,9 @@ export default function TransactionsPage() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {categories
+                      .filter(c => c.is_active !== false)
+                      .map((cat) => (
                       <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
                         {cat.category_name}
                       </SelectItem>
@@ -1035,7 +1037,9 @@ export default function TransactionsPage() {
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map((acc) => (
+                  {accounts
+                    .filter(a => a.account_is_active !== false)
+                    .map((acc) => (
                     <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
                       {acc.account_name}
                     </SelectItem>
@@ -1056,7 +1060,7 @@ export default function TransactionsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {accounts
-                      .filter(acc => acc.accounts_id_pk !== formData.account_id_fk)
+                      .filter(acc => acc.account_is_active !== false && acc.accounts_id_pk !== formData.account_id_fk)
                       .map((acc) => (
                         <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
                           {acc.account_name}
@@ -1089,7 +1093,9 @@ export default function TransactionsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {funds.map((fund) => (
+                    {funds
+                      .filter(f => f.fund_is_active !== false)
+                      .map((fund) => (
                       <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
                         {fund.fund_name}
                       </SelectItem>
