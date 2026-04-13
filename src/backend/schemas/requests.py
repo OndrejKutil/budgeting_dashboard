@@ -1,6 +1,6 @@
 from datetime import date as Date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -156,6 +156,40 @@ class CategoryUpdateRequest(BaseModel):
                 "type": "expense",
                 "spending_type": "Core",
                 "is_active": True
+            }
+        }
+    )
+
+
+# ================================================================================================
+#                                   Dividend Calculator Requests
+# ================================================================================================
+
+
+class DividendPortfolioRequest(BaseModel):
+    """Request schema for saving a user's dividend portfolio"""
+    portfolio_value: Decimal = Field(..., ge=Decimal("0"), description="Total portfolio value")
+    portfolio: List[dict] = Field(..., description="Array of DividendStockRow objects")
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float},
+        json_schema_extra={
+            "example": {
+                "portfolio_value": 10000.00,
+                "portfolio": [
+                    {
+                        "ticker": "AAPL",
+                        "weight_pct": 50.0,
+                        "dividend_yield": 0.55,
+                        "yield_frequency": "annual"
+                    },
+                    {
+                        "ticker": "JNJ",
+                        "weight_pct": 50.0,
+                        "dividend_yield": 3.0,
+                        "yield_frequency": "annual"
+                    }
+                ]
             }
         }
     )

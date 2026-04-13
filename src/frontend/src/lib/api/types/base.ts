@@ -431,3 +431,35 @@ export interface MenuOption {
     name: string;
     value: string;
 }
+
+// ================================================================================================
+//                                   Dividend Calculator Types
+// ================================================================================================
+
+/**
+ * Dividend yield frequency
+ */
+export type DividendYieldFrequency = 'annual' | 'quarterly' | 'monthly';
+
+/**
+ * A single stock row in the dividend portfolio
+ * Matches backend DividendStockRow schema
+ */
+export interface DividendStockRow {
+    ticker: string;
+    weight_pct: number;
+    dividend_yield: number;
+    yield_frequency: DividendYieldFrequency;
+}
+
+/**
+ * Computed dividend calculation result returned from backend GET
+ * Matches backend DividendCalculationResult schema
+ */
+export interface DividendCalculationResult {
+    weighted_avg_yield: number;
+    annual_income: number;
+    monthly_income: number;
+    portfolio_value: number;
+    rows: DividendStockRow[];
+}

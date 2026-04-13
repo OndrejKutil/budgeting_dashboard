@@ -15,6 +15,7 @@ import type {
     MonthlyAnalytics,
     YearlyAnalyticsData,
     EmergencyFundData,
+    DividendCalculationResult,
 } from './base';
 
 // ================================================================================================
@@ -260,4 +261,25 @@ export interface BudgetSuccessResponse {
 export interface HealthResponse {
     status: string;
     message?: string;
+}
+
+// ================================================================================================
+//                                   Dividend Calculator Responses
+// ================================================================================================
+
+/**
+ * Dividend portfolio GET response
+ */
+export interface DividendPortfolioResponse {
+    data: DividendCalculationResult;
+    success: boolean;
+    message: string;
+}
+
+/**
+ * Dividend portfolio create/update/delete response
+ */
+export interface DividendPortfolioSuccessResponse {
+    success: boolean;
+    message: string;
 }

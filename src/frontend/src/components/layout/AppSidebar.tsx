@@ -18,6 +18,7 @@ import {
   Menu,
   Landmark,
   ListChecks,
+  CircleDollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -38,6 +39,7 @@ const analyticsItems = [
 const toolsItems = [
   { name: 'Investing Calculator', href: '/dashboard/investing-calculator', icon: Landmark },
   { name: 'Budget Maker', href: '/dashboard/budget-maker', icon: ListChecks },
+  { name: 'Dividend Calculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
 ];
 
 interface SidebarProps {

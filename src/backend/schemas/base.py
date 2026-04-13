@@ -630,3 +630,56 @@ class BudgetPlanRow(BaseModel):
 class BudgetPlan(BaseModel):
     """Schema for the entire budget plan JSON structure"""
     rows: List[BudgetPlanRow] = Field(..., description="List of budget plan rows")
+
+
+# ================================================================================================
+#                                   Dividend Calculator Schemas
+# ================================================================================================
+
+
+class DividendYieldFrequency(str, Enum):
+    """Enum for dividend yield frequency"""
+    ANNUAL = "annual"
+    QUARTERLY = "quarterly"
+    MONTHLY = "monthly"
+
+    def __str__(self):
+        return self.value
+
+
+class DividendStockRow(BaseModel):
+    """Schema for a single stock row in the dividend portfolio"""
+    ticker: str = Field(..., min_length=1, max_length=10, description="Stock ticker symbol")
+    weight_pct: Decimal = Field(..., ge=Decimal("0"), le=Decimal("100"), description="Portfolio weight percentage (0-100)")
+    dividend_yield: Decimal = Field(..., ge=Decimal("0"), description="Dividend yield percentage")
+    yield_frequency: DividendYieldFrequency = Field(DividendYieldFrequency.ANNUAL, description="Dividend frequency: annual or monthly")
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float},
+        json_schema_extra={
+            "example": {
+                "ticker": "AAPL",
+                "weight_pct": 25.0,
+                "dividend_yield": 0.55,
+                "yield_frequency": "annual"
+            }
+        }
+    )
+
+
+class DividendPortfolio(BaseModel):
+    """Schema for the full portfolio stored as JSON"""
+    rows: List[DividendStockRow] = Field(..., description="List of stock rows")
+
+
+class DividendCalculationResult(BaseModel):
+    """Computed dividend metrics returned to the frontend"""
+    weighted_avg_yield: Decimal = Field(..., description="Weighted average annual yield (%)")
+    annual_income: Decimal = Field(..., description="Estimated annual dividend income")
+    monthly_income: Decimal = Field(..., description="Estimated monthly dividend income (annual / 12)")
+    portfolio_value: Decimal = Field(..., description="Total portfolio value used in calculations")
+    rows: List[DividendStockRow] = Field(..., description="Stock rows as saved")
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float}
+    )
