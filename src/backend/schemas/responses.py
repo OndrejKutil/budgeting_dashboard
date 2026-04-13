@@ -20,7 +20,9 @@ from .base import (
     ExpenseRowResponse,
     SavingsRowResponse,
     InvestmentRowResponse,
-    BudgetSummaryResponse
+    BudgetSummaryResponse,
+    DividendCalculationResult,
+    DividendStockRow,
 )
 
 
@@ -470,6 +472,37 @@ class BudgetSuccessResponse(BaseModel):
             "example": {
                 "success": True,
                 "message": "Budget created successfully"
+            }
+        }
+    )
+
+
+# ================================================================================================
+#                                   Dividend Calculator Schemas
+# ================================================================================================
+
+
+class DividendPortfolioResponse(BaseModel):
+    """Response schema for the dividend portfolio GET endpoint"""
+    data: DividendCalculationResult = Field(..., description="Computed dividend calculation result")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float}
+    )
+
+
+class DividendPortfolioSuccessResponse(BaseModel):
+    """Response schema for dividend portfolio create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": "Dividend portfolio saved successfully"
             }
         }
     )

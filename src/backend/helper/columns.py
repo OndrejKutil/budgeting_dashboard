@@ -69,3 +69,15 @@ class BUDGET_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+
+
+class DIVIDEND_PORTFOLIO_COLUMNS(Enum):
+    ID_PK = "id_pk"
+    USER_ID_FK = "user_id_fk"
+    PORTFOLIO_VALUE = "portfolio_value"
+    PORTFOLIO_JSON = "portfolio_json"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+
+    def __str__(self):
+        return self.value

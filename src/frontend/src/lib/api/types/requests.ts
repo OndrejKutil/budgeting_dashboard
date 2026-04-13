@@ -154,3 +154,25 @@ export interface BudgetPlanRow {
 export interface BudgetPlan {
     rows: BudgetPlanRow[];
 }
+
+// ================================================================================================
+//                                   Dividend Calculator Requests
+// ================================================================================================
+
+/**
+ * A single stock row to send in a portfolio save request
+ */
+export interface DividendStockRowRequest {
+    ticker: string;
+    weight_pct: number;
+    dividend_yield: number;
+    yield_frequency: 'annual' | 'quarterly' | 'monthly';
+}
+
+/**
+ * Request payload for creating or updating a dividend portfolio
+ */
+export interface DividendPortfolioRequest {
+    portfolio_value: number;
+    portfolio: DividendStockRowRequest[];
+}

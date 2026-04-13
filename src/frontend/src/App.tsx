@@ -32,6 +32,7 @@ import YearlyAnalyticsPage from "./pages/dashboard/analytics/YearlyAnalyticsPage
 import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
 import BudgetMaker from "./pages/dashboard/BudgetMaker";
 import InvestingCalculator from "./pages/dashboard/InvestingCalculator";
+import DividendCalculator from "./pages/dashboard/DividendCalculator";
 
 const STALE_TIME: number = 1000 * 60 * 5; // 5 minutes
 
@@ -83,6 +84,7 @@ const AppContent = () => {
               <Route path="analytics/emergency-fund" element={<EmergencyFundPage />} />
               <Route path="budget-maker" element={<BudgetMaker />} />
               <Route path="investing-calculator" element={<InvestingCalculator />} />
+              <Route path="dividend-calculator" element={<DividendCalculator />} />
             </Route>
 
             {/* Catch-all */}
