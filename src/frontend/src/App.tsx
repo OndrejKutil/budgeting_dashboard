@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
@@ -45,11 +46,30 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Detects Supabase OAuth hash fragments (e.g. #access_token=...)
+ * on any page and redirects to /auth/callback where they are processed.
+ * This handles cases where Supabase redirects to the site root
+ * instead of /auth/callback.
+ */
+function OAuthHashRedirect() {
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=') && window.location.pathname !== '/auth/callback') {
+      // Use window.location.replace to preserve the hash fragment for AuthCallbackPage
+      window.location.replace('/auth/callback' + hash);
+    }
+  }, []);
+
+  return null;
+}
+
 const AppContent = () => {
   return (
     <BrowserRouter>
       <AuthProvider> {/* AuthProvider is used to provide authentication context to the app (access and refresh tokens, user id...) */}
         <UserProvider> {/* UserProvider is used to provide user context to the app (user data, profile initials, currency...) */}
+          <OAuthHashRedirect />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
