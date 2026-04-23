@@ -1,0 +1,23 @@
+{
+  "name": "Budgeting Dashboard",
+  "short_name": "Budget",
+  "description": "Personal budgeting and expense tracking dashboard",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#060d10",
+  "theme_color": "#060d10",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/ios_icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

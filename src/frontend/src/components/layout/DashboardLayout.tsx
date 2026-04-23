@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
 import { BottomNav } from './BottomNav';
+import { PullToRefresh } from './PullToRefresh';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -58,7 +59,9 @@ export function DashboardLayout() {
       >
         <Topbar onMobileMenuClick={() => setMobileMenuOpen(true)} />
         <main className="p-4 pb-24 lg:p-6 lg:pb-6">
-          <Outlet />
+          <PullToRefresh>
+            <Outlet />
+          </PullToRefresh>
         </main>
       </div>
 

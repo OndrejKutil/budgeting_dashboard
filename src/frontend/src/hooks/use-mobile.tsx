@@ -17,3 +17,25 @@ export function useIsMobile() {
 
   return !!isMobile;
 }
+
+/**
+ * Detects if the app is running in PWA standalone mode
+ * (i.e. added to home screen on iOS or installed as PWA on Android/desktop).
+ */
+export function useIsStandalone() {
+  const [isStandalone, setIsStandalone] = React.useState(false);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia('(display-mode: standalone)');
+    const check = () => {
+      setIsStandalone(
+        mql.matches || (navigator as any).standalone === true
+      );
+    };
+    check();
+    mql.addEventListener('change', check);
+    return () => mql.removeEventListener('change', check);
+  }, []);
+
+  return isStandalone;
+}
