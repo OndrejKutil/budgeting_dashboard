@@ -29,7 +29,7 @@ export function useIsStandalone() {
     const mql = window.matchMedia('(display-mode: standalone)');
     const check = () => {
       setIsStandalone(
-        mql.matches || (navigator as any).standalone === true
+        mql.matches || ('standalone' in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true)
       );
     };
     check();
