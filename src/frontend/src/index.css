@@ -271,6 +271,28 @@
   html {
     scrollbar-width: none;
   }
+
+  /* Prevent overscroll bounce (white flash at edges) */
+  html, body {
+    overscroll-behavior: none;
+  }
+
+  /* Disable text selection on interactive elements (feels more native) */
+  button, a, nav, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Disable long-press callout on links */
+  a {
+    -webkit-touch-callout: none;
+  }
+
+  /* Disable pull-down-to-safari bounce */
+  body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ---- Background Gradient Utility ---- */
