@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { UserNav } from '@/components/layout/UserNav';
 import {
-  TrendingUp,
   PieChart,
   Shield,
   Wallet,
@@ -17,17 +16,16 @@ import {
   HelpCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Landmark,
   BarChart3,
   DollarSign,
 } from 'lucide-react';
 
 /* ─── Data ─── */
 
-const principles = [
-  { num: '01', title: 'Manual Entry', desc: "You type every number. That's the point." },
-  { num: '02', title: 'Your Categories', desc: 'You define the system. The app follows.' },
-  { num: '03', title: 'Honest Math', desc: 'No estimates. No rounding. Your data, verified.' },
+const outcomes = [
+  { num: '01', title: 'Monthly Clarity', desc: 'Know your exact financial position — income, expenses, profit, and cash flow — every single month.' },
+  { num: '02', title: 'Resilience Score', desc: 'How many months could you survive on savings? Get a real answer based on your core expenses.' },
+  { num: '03', title: 'Budget Planning', desc: "Build next month's budget from real historical data, not wishful thinking." },
 ];
 
 const specs = [
@@ -39,12 +37,12 @@ const specs = [
   {
     icon: PieChart,
     label: 'Category System',
-    detail: 'Define your own spending categories. No AI guessing what "Groceries" means. You decide.',
+    detail: 'Define your own spending categories. See exactly where every koruna goes with visual breakdowns.',
   },
   {
     icon: PiggyBank,
     label: 'Savings Tracking',
-    detail: 'Create savings funds with targets. Track contributions and withdrawals separately.',
+    detail: 'Create savings funds with targets. Track contributions and withdrawals separately — net savings, not gross.',
   },
   {
     icon: Shield,
@@ -53,14 +51,7 @@ const specs = [
   },
 ];
 
-const toolSpecs = [
-  { label: 'Data Entry', value: 'Manual + CSV Import' },
-  { label: 'Bank Sync', value: 'None — by design' },
-  { label: 'Auto-Categorization', value: 'None — you decide' },
-  { label: 'AI Features', value: 'Voice input only (opt-in)' },
-  { label: 'Data Ownership', value: '100% yours' },
-  { label: 'Price', value: 'Free' },
-];
+
 
 const forYouPoints = [
   "You want a clean monthly overview of income, expenses, and net flow",
@@ -108,11 +99,9 @@ function DashboardPreview() {
 
   return (
     <div className="relative">
-      {/* Glow behind */}
       <div className="absolute -inset-4 bg-cyan-500/5 blur-[60px] rounded-full pointer-events-none" />
-
       <div className="relative rounded-2xl border border-white/10 bg-[hsl(var(--background))]/90 backdrop-blur-xl overflow-hidden shadow-2xl">
-        {/* Fake window bar */}
+        {/* Window bar */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[0.02]">
           <div className="flex gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
@@ -121,7 +110,6 @@ function DashboardPreview() {
           </div>
           <span className="text-[10px] text-white/30 ml-2 font-medium tracking-wide">Monthly Analytics — January 2026</span>
         </div>
-
         <div className="p-4 space-y-4">
           {/* KPI Row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -137,8 +125,7 @@ function DashboardPreview() {
               </div>
             ))}
           </div>
-
-          {/* Mini category breakdown */}
+          {/* Category breakdown */}
           <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <span className="text-[10px] text-white/40 uppercase tracking-wider block mb-3">Expense Breakdown</span>
             <div className="space-y-2">
@@ -146,10 +133,7 @@ function DashboardPreview() {
                 <div key={cat.name} className="flex items-center gap-3">
                   <span className="text-[11px] text-white/50 w-24 truncate">{cat.name}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500"
-                      style={{ width: `${cat.pct}%` }}
-                    />
+                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500" style={{ width: `${cat.pct}%` }} />
                   </div>
                   <span className="text-[11px] text-white/40 w-16 text-right">{cat.amount}</span>
                 </div>
@@ -212,38 +196,28 @@ export default function LandingPage() {
       <section className="relative z-10 min-h-screen flex items-center pt-16">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-16 items-center">
-            {/* Left — Copy */}
             <motion.div
               initial="hidden"
               animate="show"
               variants={staggerContainer}
               className="relative z-10 max-w-2xl"
             >
-              <motion.p
-                variants={fadeInUp}
-                className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-6"
-              >
+              <motion.p variants={fadeInUp} className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-6">
                 Personal Finance Tool
               </motion.p>
 
-              <motion.h1
-                variants={fadeInUp}
-                className="mb-8 text-4xl font-display sm:text-5xl lg:text-6xl leading-[1.1]"
-              >
-                <span className="text-hero-bold text-white">Every transaction.</span>
+              <motion.h1 variants={fadeInUp} className="mb-8 text-4xl font-display sm:text-5xl lg:text-6xl leading-[1.1]">
+                <span className="text-hero-bold text-white">Know your exact</span>
                 <br />
-                <span className="text-hero-bold text-white">Entered by hand.</span>
-                <br />
-                <span className="text-hero-bold text-gradient-teal">Understood completely.</span>
+                <span className="text-hero-bold text-white">number.</span>
+                {' '}
+                <span className="text-hero-bold text-gradient-teal">Every month.</span>
               </motion.h1>
 
-              <motion.p
-                variants={fadeInUp}
-                className="mb-10 max-w-xl text-lg text-white/50 leading-relaxed"
-              >
-                No bank sync. No auto-categorization. Just a clean ledger,
-                honest math, and the clarity that comes from entering the
-                numbers yourself.
+              <motion.p variants={fadeInUp} className="mb-10 max-w-xl text-lg text-white/50 leading-relaxed">
+                Not a guess. Not an estimate. Your real income minus your real
+                expenses — with savings, investments, and cash flow separated so
+                you actually understand what's happening with your money.
               </motion.p>
 
               <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-start gap-4">
@@ -280,7 +254,6 @@ export default function LandingPage() {
               )}
             </motion.div>
 
-            {/* Right — Dashboard Preview */}
             <motion.div
               initial={{ opacity: 0, y: 30, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -293,7 +266,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Philosophy Strip ─── */}
+      {/* ─── Outcomes Strip ─── */}
       <section className="relative z-10 border-y border-white/10 bg-white/[0.02]">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
@@ -303,15 +276,11 @@ export default function LandingPage() {
             variants={staggerContainer}
             className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/10"
           >
-            {principles.map((p) => (
-              <motion.div
-                key={p.num}
-                variants={fadeInUp}
-                className="py-10 px-0 md:px-10 first:pl-0 last:pr-0"
-              >
-                <span className="text-xs font-mono text-cyan-400/60 tracking-widest block mb-3">{p.num}</span>
-                <h3 className="text-lg font-semibold font-display text-white mb-2">{p.title}</h3>
-                <p className="text-sm text-white/40 leading-relaxed">{p.desc}</p>
+            {outcomes.map((o) => (
+              <motion.div key={o.num} variants={fadeInUp} className="py-10 px-0 md:px-10 first:pl-0 last:pr-0">
+                <span className="text-xs font-mono text-cyan-400/60 tracking-widest block mb-3">{o.num}</span>
+                <h3 className="text-lg font-semibold font-display text-white mb-2">{o.title}</h3>
+                <p className="text-sm text-white/40 leading-relaxed">{o.desc}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -333,7 +302,7 @@ export default function LandingPage() {
               <span className="text-hero-thin text-white/90"> does.</span>
             </h2>
             <p className="text-white/50 text-lg">
-              Four capabilities for people who want to understand their money — not hand it over to an algorithm.
+              Four capabilities for people who want to understand their money — not just see a chart of it.
             </p>
           </motion.div>
 
@@ -363,74 +332,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Manual Entry Is the Point ─── */}
-      <section className="relative z-10 py-24 lg:py-32 bg-white/[0.03] border-y border-white/10">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-start"
-          >
-            {/* Left — Copy */}
-            <div>
-              <motion.p variants={fadeInUp} className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-4">
-                Philosophy
-              </motion.p>
-              <motion.h2 variants={fadeInUp} className="text-3xl font-display sm:text-4xl tracking-tight text-white mb-8">
-                Manual entry is the point.
-              </motion.h2>
-              <div className="space-y-6 text-white/50 leading-relaxed">
-                <motion.p variants={fadeInUp}>
-                  Budgeting apps that sync your bank account give you a rearview
-                  mirror — you see what already happened. This app gives you a
-                  steering wheel.
-                </motion.p>
-                <motion.p variants={fadeInUp}>
-                  When you type the number yourself, you feel it. 200&nbsp;Kč on
-                  groceries hits different when your fingers press every digit.
-                  That friction is what separates people who{' '}
-                  <em className="text-white/80 italic">track</em> their money
-                  from people who{' '}
-                  <em className="text-white/80 italic">control</em> it.
-                </motion.p>
-                <motion.p variants={fadeInUp}>
-                  We didn't skip bank sync because we couldn't build it. We
-                  skipped it because the act of entering — of{' '}
-                  <em className="text-white/80 italic">deciding</em> what each
-                  transaction means — is where financial awareness actually
-                  starts.
-                </motion.p>
-              </div>
-            </div>
 
-            {/* Right — Tool Spec Card */}
-            <motion.div variants={fadeInUp}>
-              <div className="rounded-2xl border border-white/10 bg-[hsl(var(--card))]/80 backdrop-blur-lg p-8 lg:p-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 blur-[80px] rounded-full pointer-events-none" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-8">
-                    <Landmark className="h-4 w-4 text-cyan-400/60" />
-                    <span className="text-xs font-medium tracking-[0.15em] uppercase text-white/30">Tool Specifications</span>
-                  </div>
-                  <div className="space-y-0">
-                    {toolSpecs.map((row, i) => (
-                      <div
-                        key={i}
-                        className={`flex justify-between items-baseline gap-4 py-4 ${i < toolSpecs.length - 1 ? 'border-b border-white/[0.06]' : ''}`}
-                      >
-                        <span className="text-sm text-white/40">{row.label}</span>
-                        <span className="text-sm font-medium text-white/80 text-right">{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
 
       {/* ─── Is This For You ─── */}
       <section className="relative z-10 py-24 lg:py-32">
@@ -441,12 +343,8 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="mb-16 max-w-2xl"
           >
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-4">
-              Fit Check
-            </p>
-            <h2 className="text-3xl font-display sm:text-4xl tracking-tight text-white">
-              Is this for you?
-            </h2>
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-4">Fit Check</p>
+            <h2 className="text-3xl font-display sm:text-4xl tracking-tight text-white">Is this for you?</h2>
           </motion.div>
 
           <motion.div
@@ -456,7 +354,6 @@ export default function LandingPage() {
             variants={staggerContainer}
             className="grid lg:grid-cols-[1.4fr_1fr] gap-16 lg:gap-20"
           >
-            {/* For You */}
             <motion.div variants={fadeInUp}>
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-2 rounded-full bg-emerald-500/10 text-emerald-400">
@@ -468,15 +365,12 @@ export default function LandingPage() {
                 {forYouPoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-4 group">
                     <CheckCircle className="mt-1 h-4 w-4 flex-shrink-0 text-emerald-400/60 group-hover:text-emerald-400 transition-colors" />
-                    <span className="text-base text-white/50 group-hover:text-white/80 transition-colors leading-relaxed">
-                      {point}
-                    </span>
+                    <span className="text-base text-white/50 group-hover:text-white/80 transition-colors leading-relaxed">{point}</span>
                   </li>
                 ))}
               </ul>
             </motion.div>
 
-            {/* Not For You */}
             <motion.div variants={fadeInUp}>
               <div className="flex items-center gap-3 mb-8 opacity-70">
                 <div className="p-2 rounded-full bg-red-500/10 text-red-400">
@@ -535,20 +429,9 @@ export default function LandingPage() {
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-sm text-white/50 sm:flex-row">
           <span className="text-xs sm:text-sm">Built by Ondřej Kutil</span>
           <div className="flex items-center gap-6">
-            <Link to="/how-it-works" className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors">
-              How it works
-            </Link>
-            <Link to="/faq" className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors">
-              FAQs
-            </Link>
-            <a
-              href="https://github.com/OndrejKutil"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors"
-            >
-              GitHub
-            </a>
+            <Link to="/how-it-works" className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors">How it works</Link>
+            <Link to="/faq" className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors">FAQs</Link>
+            <a href="https://github.com/OndrejKutil" target="_blank" rel="noreferrer" className="text-xs sm:text-sm text-white/50 underline-offset-4 hover:text-white hover:underline transition-colors">GitHub</a>
           </div>
         </div>
       </footer>
