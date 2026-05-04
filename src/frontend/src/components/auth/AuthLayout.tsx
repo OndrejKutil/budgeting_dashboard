@@ -20,9 +20,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
         <div className="relative z-10 p-8">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-blurple">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
+
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </Link>
         </div>
@@ -90,9 +88,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
           {/* Mobile logo */}
           <div className="mb-8 flex justify-center lg:hidden">
             <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-blurple">
-                <Wallet className="h-5 w-5 text-white" />
-              </div>
+
               <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
             </Link>
           </div>

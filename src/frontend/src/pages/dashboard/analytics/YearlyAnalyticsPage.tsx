@@ -25,6 +25,7 @@ import {
   Zap,
   Info,
   Minus,
+  DollarSign,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -391,151 +392,139 @@ export default function YearlyAnalyticsPage() {
         animate="show"
         className="space-y-8"
       >
-        {/* KPI GROUPS */}
-        <div className="space-y-6">
-          {/* Group 1: Totals */}
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 block pl-1">Financial Totals</span>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <motion.div variants={itemVariants}>
-                <KPICard title="Total Income" value={data.total_income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} className="h-full bg-card/50" />
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                <KPICard title="Total Expenses" value={data.total_expense} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} className="h-full bg-card/50" />
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                <KPICard title="Total Savings" value={data.total_saving} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} className="h-full bg-card/50" />
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                <KPICard title="Investments" value={data.total_investment} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} className="h-full bg-card/50" />
-              </motion.div>
+        {/* Unified Financial Header with Inline Trends */}
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-4"
+        >
+          {/* Core Flows */}
+          <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <TrendingUp className="h-3 w-3 text-emerald-500" /> Income
+              </p>
+              <div className="flex flex-col mt-1">
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_income)}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-blue-400" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-blue-400'}`}>
+                    {data.trend_directions?.income_trend?.direction === 'growing' ? 'Growing' : data.trend_directions?.income_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <TrendingDown className="h-3 w-3 text-destructive" /> Expenses
+              </p>
+              <div className="flex flex-col mt-1">
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_expense)}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-emerald-500' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-amber-500' : 'text-blue-400'}`}>
+                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'Creeping' : data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Group 2: Outcomes & Rates (Separated) */}
-          <div className="grid gap-6 lg:grid-cols-2 pt-2">
-            {/* Outcomes */}
+          {/* Wealth Generation */}
+          <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 block pl-1">Net Outcomes</span>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <motion.div variants={itemVariants}>
-                  <KPICard title="Profit" value={data.profit} icon={<Wallet className="h-5 w-5" />} variant="default" formatter={formatCurrency} />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                  <KPICard title="Net Cash Flow" value={data.net_cash_flow} icon={<Activity className="h-5 w-5" />} variant="default" formatter={formatCurrency} />
-                </motion.div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <PiggyBank className="h-3 w-3 text-primary" /> Savings
+              </p>
+              <div className="flex flex-col mt-1">
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_saving)}</p>
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.savings_rate.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-amber-500' : 'text-blue-400'}`}>
+                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'Growing' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo
+                  </span>
+                </div>
               </div>
             </div>
-
-            {/* Rates */}
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3 block pl-1">Efficiency Rates</span>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <motion.div variants={itemVariants}>
-                  <KPICard title="Savings Rate" value={`${data.savings_rate.toFixed(1)}%`} icon={<Target className="h-5 w-5" />} variant="default" />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                  <KPICard title="Investment Rate" value={`${data.investment_rate.toFixed(1)}%`} icon={<Zap className="h-5 w-5" />} variant="default" />
-                </motion.div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <Briefcase className="h-3 w-3 text-primary" /> Investments
+              </p>
+              <div className="flex flex-col mt-1">
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_investment)}</p>
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.investment_rate.toFixed(1)}%</span>
+                </div>
+                <div className="h-4 mt-1"></div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Highlights & Trend Directions (Framed) */}
-        <div className="grid gap-6 lg:grid-cols-3 pt-4">
-          {/* Highlights */}
-          {/* Highlights (Redesigned) */}
-          <motion.div
-            variants={itemVariants}
-            className="lg:col-span-2 rounded-xl border border-border bg-card p-6 shadow-card"
-          >
-            <h3 className="mb-8 text-lg font-semibold font-display flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
-              Yearly Records
-            </h3>
-
-            <div className="grid gap-6 sm:grid-cols-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Best Cashflow</span>
-                <div className="mt-1">
-                  <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
-                </div>
-                <div className="text-sm font-medium text-emerald-500">
-                  +{formatCurrency(data.highlights.highest_cashflow_month.value)}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Highest Spend</span>
-                <div className="mt-1">
-                  <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_expense_month.month}</span>
-                </div>
-                <div className="text-sm font-medium text-destructive">
-                  -{formatCurrency(data.highlights.highest_expense_month.value)}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Top Savings Rate</span>
-                <div className="mt-1">
-                  <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_savings_rate_month.month}</span>
-                </div>
-                <div className="text-sm font-medium text-primary">
-                  {data.highlights.highest_savings_rate_month.value.toFixed(1)}%
-                </div>
+          {/* Outcomes */}
+          <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <DollarSign className="h-3 w-3 text-primary" /> Profit
+              </p>
+              <div className="flex flex-col mt-1">
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
               </div>
             </div>
-          </motion.div>
-
-          {/* Trend Directions */}
-          <motion.div variants={itemVariants} className="rounded-xl border border-border/60 bg-card/50 p-6 shadow-sm">
-            <h3 className="mb-2 text-lg font-semibold font-display flex items-center gap-2">
-              <Activity className="h-5 w-5 text-muted-foreground" />
-              Trend Directions
-            </h3>
-            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-              Shows whether each metric is rising, flat, or falling across the year. The %/mo value is the average monthly change relative to the mean — <span className="text-emerald-500">green</span> is a healthy direction, <span className="text-amber-500">amber</span> may need attention.
-            </p>
-
-            <div className="space-y-5">
-              {[
-                { label: 'Income', trend: data.trend_directions.income_trend, goodDirection: 'growing' as const },
-                { label: 'Savings Rate', trend: data.trend_directions.savings_rate_trend, goodDirection: 'growing' as const },
-                { label: 'Core Expenses', trend: data.trend_directions.core_expense_trend, goodDirection: 'declining' as const },
-              ].map((item) => {
-                const isGood = item.trend.direction === item.goodDirection;
-                const isNeutral = item.trend.direction === 'stable';
-                const Icon = item.trend.direction === 'growing' ? TrendingUp : item.trend.direction === 'declining' ? TrendingDown : Minus;
-                const iconColor = isNeutral ? 'text-blue-400' : isGood ? 'text-emerald-500' : 'text-amber-500';
-                const badgeClasses = isNeutral
-                  ? 'bg-blue-500/10 text-blue-400'
-                  : isGood
-                    ? 'bg-emerald-500/10 text-emerald-500'
-                    : 'bg-amber-500/10 text-amber-500';
-                const directionLabel = item.trend.direction === 'growing' ? (item.label === 'Core Expenses' ? 'Creeping' : 'Growing')
-                  : item.trend.direction === 'declining' ? (item.label === 'Core Expenses' ? 'Declining' : 'Declining')
-                    : 'Stable';
-                const sign = item.trend.avg_monthly_change_pct > 0 ? '+' : '';
-
-                return (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`h-4 w-4 ${iconColor}`} />
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{item.label}</div>
-                        <div className="text-xs text-muted-foreground">{sign}{item.trend.avg_monthly_change_pct}%/mo</div>
-                      </div>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClasses}`}>
-                      {directionLabel}
-                    </span>
-                  </div>
-                );
-              })}
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                <Wallet className="h-3 w-3 text-primary" /> Cash Flow
+              </p>
+              <div className="flex flex-col mt-1">
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.net_cash_flow)}</p>
+              </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
+
+        {/* Highlights */}
+        <motion.div
+          variants={itemVariants}
+          className="rounded-xl border border-border bg-card p-6 shadow-card"
+        >
+          <h3 className="mb-6 text-lg font-semibold font-display flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" />
+            Yearly Records
+          </h3>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Best Cashflow</span>
+              <div className="mt-1">
+                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
+              </div>
+              <div className="text-sm font-medium text-emerald-500">
+                +{formatCurrency(data.highlights.highest_cashflow_month.value)}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Highest Spend</span>
+              <div className="mt-1">
+                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_expense_month.month}</span>
+              </div>
+              <div className="text-sm font-medium text-destructive">
+                -{formatCurrency(data.highlights.highest_expense_month.value)}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Top Savings Rate</span>
+              <div className="mt-1">
+                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_savings_rate_month.month}</span>
+              </div>
+              <div className="text-sm font-medium text-primary">
+                {data.highlights.highest_savings_rate_month.value.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Long Term Trends Section */}
         <div className="mt-16 mb-8 border-t border-border/40 pt-12">

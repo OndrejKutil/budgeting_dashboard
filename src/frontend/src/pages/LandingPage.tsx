@@ -164,9 +164,7 @@ export default function LandingPage() {
       <header className="safe-top fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
         <div className="flex h-16 w-full items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
+
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
@@ -174,9 +172,7 @@ export default function LandingPage() {
               <UserNav />
             ) : (
               <>
-                <Button variant="ghost" asChild className="text-white/60 hover:text-white hover:bg-white/10 hidden sm:inline-flex">
-                  <Link to="/how-it-works">How It Works</Link>
-                </Button>
+
                 <Button variant="ghost" asChild className="text-white/80 hover:text-white hover:bg-white/10">
                   <Link to="/auth/login">Log in</Link>
                 </Button>
@@ -206,12 +202,13 @@ export default function LandingPage() {
                 Personal Finance Tool
               </motion.p>
 
-              <motion.h1 variants={fadeInUp} className="mb-8 text-4xl font-display sm:text-5xl lg:text-6xl leading-[1.1]">
-                <span className="text-hero-bold text-white">Know your exact</span>
+              <motion.h1 variants={fadeInUp} className="mb-8 text-5xl font-display sm:text-6xl lg:text-[4.2rem] leading-[1.1] tracking-tight">
+                <span className="font-extrabold text-white">Know your exact</span>
                 <br />
-                <span className="text-hero-bold text-white">number.</span>
+                <span className="font-extrabold text-white">number.</span>
+                <br className="sm:hidden" />
                 {' '}
-                <span className="text-hero-bold text-gradient-primary">Every month.</span>
+                <span className="font-serif italic font-normal text-amber-400/90 tracking-normal">Every month.</span>
               </motion.h1>
 
               <motion.p variants={fadeInUp} className="mb-10 max-w-xl text-lg text-white/50 leading-relaxed">
