@@ -73,7 +73,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: 'hsl(38, 92%, 50%)', fontSize: '14px', fontWeight: 'bold' }}>
           {formatCurrency(data.value)}
         </p>
       </div>
@@ -241,8 +241,8 @@ export default function MonthlyAnalyticsPage() {
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -279,7 +279,7 @@ export default function MonthlyAnalyticsPage() {
               <Area
                 type="monotone"
                 dataKey="amount"
-                stroke="hsl(185, 70%, 45%)"
+                stroke="hsl(38, 92%, 50%)"
                 strokeWidth={3}
                 fill="url(#spendingGradient)"
                 activeDot={{ r: 6, strokeWidth: 0 }}
@@ -379,12 +379,12 @@ export default function MonthlyAnalyticsPage() {
                     borderRadius: '8px',
                     color: 'hsl(var(--popover-foreground))',
                   }}
-                  itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
+                  itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
                   formatter={(value: number, name: string) => [formatCurrency(value), name]}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={32}>
                   {spendingTypeData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(185, 70%, ${45 - index * 5}%)`} opacity={0.9} />
+                    <Cell key={`cell-${index}`} fill={`hsl(38, 92%, ${50 - index * 5}%)`} opacity={0.9} />
                   ))}
                 </Bar>
               </BarChart>

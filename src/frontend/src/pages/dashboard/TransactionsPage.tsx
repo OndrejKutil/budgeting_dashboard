@@ -578,7 +578,10 @@ export default function TransactionsPage() {
             <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(c => <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>{c.category_name}</SelectItem>)}
+              {categories
+                .slice()
+                .sort((a, b) => a.category_name.localeCompare(b.category_name))
+                .map(c => <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>{c.category_name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -586,7 +589,10 @@ export default function TransactionsPage() {
             <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Account" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Accounts</SelectItem>
-              {accounts.map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{a.account_name}</SelectItem>)}
+              {accounts
+                .slice()
+                .sort((a, b) => a.account_name.localeCompare(b.account_name))
+                .map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{a.account_name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -595,7 +601,10 @@ export default function TransactionsPage() {
             <SelectContent>
               <SelectItem value="all">All Funds</SelectItem>
               <SelectItem value="none">Not Assigned</SelectItem>
-              {funds.map(f => <SelectItem key={f.savings_funds_id_pk} value={f.savings_funds_id_pk}>{f.fund_name}</SelectItem>)}
+              {funds
+                .slice()
+                .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
+                .map(f => <SelectItem key={f.savings_funds_id_pk} value={f.savings_funds_id_pk}>{f.fund_name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -1018,6 +1027,7 @@ export default function TransactionsPage() {
                   <SelectContent>
                     {categories
                       .filter(c => c.is_active !== false)
+                      .sort((a, b) => a.category_name.localeCompare(b.category_name))
                       .map((cat) => (
                       <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
                         {cat.category_name}
@@ -1039,6 +1049,7 @@ export default function TransactionsPage() {
                 <SelectContent>
                   {accounts
                     .filter(a => a.account_is_active !== false)
+                    .sort((a, b) => a.account_name.localeCompare(b.account_name))
                     .map((acc) => (
                     <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
                       {acc.account_name}
@@ -1061,6 +1072,7 @@ export default function TransactionsPage() {
                   <SelectContent>
                     {accounts
                       .filter(acc => acc.account_is_active !== false && acc.accounts_id_pk !== formData.account_id_fk)
+                      .sort((a, b) => a.account_name.localeCompare(b.account_name))
                       .map((acc) => (
                         <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
                           {acc.account_name}
@@ -1095,6 +1107,7 @@ export default function TransactionsPage() {
                     <SelectItem value="none">None</SelectItem>
                     {funds
                       .filter(f => f.fund_is_active !== false)
+                      .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
                       .map((fund) => (
                       <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
                         {fund.fund_name}

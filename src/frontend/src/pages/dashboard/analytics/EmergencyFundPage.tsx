@@ -216,12 +216,12 @@ export default function EmergencyFundPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
-                    itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
+                    itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
                     formatter={(value: number) => [formatCurrency(value), 'Amount']}
                   />
                   <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                     {Object.entries(data.core_category_breakdown).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(185, 70%, ${45 - (index % 5) * 5}%)`} />
+                      <Cell key={`cell-${index}`} fill={`hsl(38, 92%, ${50 - (index % 5) * 5}%)`} />
                     ))}
                   </Bar>
                 </BarChart>
