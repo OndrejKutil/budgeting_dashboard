@@ -71,40 +71,35 @@ export default function EmergencyFundPage() {
     const progress3 = (data.current_savings_amount / target3) * 100;
     const progress6 = (data.current_savings_amount / target6) * 100;
 
+    const titles = {
+      core: { title: 'Core Survival Scenario', desc: 'Essential expenses only (rent, utilities, groceries).' },
+      necessary: { title: 'Core + Necessary', desc: 'Core survival plus important but non-critical costs (insurance, transport).' },
+      all: { title: 'Complete Lifestyle', desc: 'Maintaining your exact current lifestyle based on all expenses.' }
+    };
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6 mt-6"
       >
-        {/* Overview Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KPICard
-            title="Monthly Average"
-            value={averageMonthly}
-            icon={<Info className="h-5 w-5" />}
-            className="border-primary/10 bg-primary/5"
-            formatter={formatCurrency}
-          />
-          <KPICard
-            title="Annual Total"
-            value={totalAnnual}
-            icon={<Info className="h-5 w-5" />}
-            className="border-primary/10 bg-primary/5"
-            formatter={formatCurrency}
-          />
-          <KPICard
-            title="3-Month Target"
-            value={target3}
-            icon={<Shield className="h-5 w-5" />}
-            formatter={formatCurrency}
-          />
-          <KPICard
-            title="6-Month Target"
-            value={target6}
-            icon={<Shield className="h-5 w-5" />}
-            formatter={formatCurrency}
-          />
+        {/* Scenario Header with Monthly Burn */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-xl border border-border bg-card shadow-sm">
+          <div>
+            <h3 className="text-xl font-display font-semibold text-foreground">{titles[variant].title}</h3>
+            <p className="text-muted-foreground mt-1 text-sm">{titles[variant].desc}</p>
+          </div>
+          <div className="flex items-center gap-6 text-right md:pr-4">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Monthly Burn</p>
+              <p className="text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(averageMonthly)}</p>
+            </div>
+            <div className="hidden sm:block w-px h-12 bg-border/50"></div>
+            <div className="hidden sm:block">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">Annual Total</p>
+              <p className="text-xl font-display font-medium text-muted-foreground tracking-tight">{formatCurrency(totalAnnual)}</p>
+            </div>
+          </div>
         </div>
 
         {/* Progress Trackers */}
@@ -235,24 +230,19 @@ export default function EmergencyFundPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Emergency Fund Analysis"
-        description="Track your emergency fund progress against different expense scenarios."
-      />
-
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex gap-3 text-sm text-muted-foreground">
-        <Info className="h-5 w-5 text-primary shrink-0" />
-        <div className="space-y-1">
-          <p className="font-medium text-foreground">How it works</p>
-          <p>
-            The progress bar tracks savings funds that include <strong>"Emergency Fund"</strong> (case-insensitive) in their name (e.g. "My Emergency Fund 1").
-            Create a fund with this name to start tracking.
-          </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
+        <PageHeader
+          title="Emergency Fund Analysis"
+          description="Track your emergency fund progress against different expense scenarios."
+        />
+        <div className="text-xs text-muted-foreground flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-md border border-border/50 max-w-sm">
+          <Info className="h-4 w-4 shrink-0 text-primary" />
+          <span>Tracking savings funds containing <strong>"Emergency Fund"</strong> in their name.</span>
         </div>
       </div>
 
       <Tabs defaultValue="core" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <TabsList className="grid w-full sm:w-[400px] grid-cols-3">
             <TabsTrigger value="core">Core Only</TabsTrigger>
             <TabsTrigger value="necessary">Core + Necessary</TabsTrigger>
@@ -272,9 +262,7 @@ export default function EmergencyFundPage() {
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-muted-foreground mb-6">
-          <strong>Core</strong> = survival essentials (rent, utilities, groceries) · <strong>Core + Necessary</strong> = adds important but non-critical costs (insurance, transport) · <strong>All</strong> = your complete monthly spending
-        </p>
+        
         <TabsContent value="core">
           {renderContent(
             data.average_monthly_core_expenses,
