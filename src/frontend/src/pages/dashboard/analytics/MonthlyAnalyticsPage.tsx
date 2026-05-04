@@ -28,6 +28,7 @@ import {
   Cell,
   BarChart,
   Bar,
+  LabelList,
 } from 'recharts';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -73,7 +74,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: 'hsl(38, 92%, 50%)', fontSize: '14px', fontWeight: 'bold' }}>
           {formatCurrency(data.value)}
         </p>
       </div>
@@ -133,14 +134,6 @@ export default function MonthlyAnalyticsPage() {
 
 
   // Transform data for charts
-  const expensePieData = data.expenses_breakdown
-    .map((item, index) => ({
-      name: item.category,
-      value: Number(item.total),
-      color: COLORS[index % COLORS.length],
-    }))
-    .sort((a, b) => b.value - a.value);
-
   const incomeBarData = data.income_breakdown
     .map((item) => ({ name: item.category, value: Number(item.total) }))
     .sort((a, b) => b.value - a.value);
@@ -196,7 +189,7 @@ export default function MonthlyAnalyticsPage() {
         }
       />
 
-      {/* KPIs */}
+      {/* Unified Financial Header */}
       {(() => {
         const prevDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 2, 1);
         const prevLabel = `vs. ${prevDate.toLocaleString('default', { month: 'short' })}`;
@@ -204,29 +197,94 @@ export default function MonthlyAnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+            className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-8"
           >
-            <KPICard title="Income" value={data.income} icon={<TrendingUp className="h-5 w-5" />} variant="income" formatter={formatCurrency} change={data.comparison.income_delta_pct} changeLabel={prevLabel} />
-            <KPICard title="Expenses" value={data.expenses} icon={<TrendingDown className="h-5 w-5" />} variant="expense" formatter={formatCurrency} change={data.comparison.expenses_delta_pct} changeLabel={prevLabel} invert={true} />
-            <KPICard title="Savings" value={data.savings} icon={<PiggyBank className="h-5 w-5" />} variant="savings" formatter={formatCurrency} change={data.comparison.savings_delta_pct} changeLabel={prevLabel} extra={`${data.savings_rate.toFixed(1)}% Rate`} />
-            <KPICard title="Investments" value={data.investments} icon={<Briefcase className="h-5 w-5" />} variant="investment" formatter={formatCurrency} change={data.comparison.investments_delta_pct} changeLabel={prevLabel} extra={`${data.investment_rate.toFixed(1)}% Rate`} />
-            <KPICard title="Profit" value={data.profit} icon={<DollarSign className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.profit_delta_pct} changeLabel={prevLabel} />
-            <KPICard title="Net Cash Flow" value={data.cashflow} icon={<Wallet className="h-5 w-5" />} formatter={formatCurrency} change={data.comparison.cashflow_delta_pct} changeLabel={prevLabel} />
+            {/* Core Flows */}
+            <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <TrendingUp className="h-3 w-3 text-emerald-500" /> Income
+                </p>
+                <div className="flex flex-col mt-1">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.income)}</p>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <TrendingDown className="h-3 w-3 text-destructive" /> Expenses
+                </p>
+                <div className="flex flex-col mt-1">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.expenses)}</p>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Wealth Generation */}
+            <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <PiggyBank className="h-3 w-3 text-primary" /> Savings
+                </p>
+                <div className="flex flex-col mt-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.savings)}</p>
+                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.savings_rate.toFixed(1)}%</span>
+                  </div>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <Briefcase className="h-3 w-3 text-primary" /> Investments
+                </p>
+                <div className="flex flex-col mt-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.investments)}</p>
+                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.investment_rate.toFixed(1)}%</span>
+                  </div>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Outcomes */}
+            <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <DollarSign className="h-3 w-3 text-primary" /> Profit
+                </p>
+                <div className="flex flex-col mt-1">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
+                  <Wallet className="h-3 w-3 text-primary" /> Cash Flow
+                </p>
+                <div className="flex flex-col mt-1">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.cashflow)}</p>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}% {prevLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
           </motion.div>
         );
       })()}
-
-      {/* Entry Ramp / Rhythm Breaker */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="flex items-center gap-4 py-8 max-w-lg mx-auto"
-      >
-        <div className="h-px flex-1 bg-border/30" />
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Spending Dynamics</span>
-        <div className="h-px flex-1 bg-border/30" />
-      </motion.div>
 
       {/* Daily Spending Chart */}
       <motion.div
@@ -241,8 +299,8 @@ export default function MonthlyAnalyticsPage() {
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="hsl(185, 70%, 45%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -279,7 +337,7 @@ export default function MonthlyAnalyticsPage() {
               <Area
                 type="monotone"
                 dataKey="amount"
-                stroke="hsl(185, 70%, 45%)"
+                stroke="hsl(38, 92%, 50%)"
                 strokeWidth={3}
                 fill="url(#spendingGradient)"
                 activeDot={{ r: 6, strokeWidth: 0 }}
@@ -290,116 +348,13 @@ export default function MonthlyAnalyticsPage() {
       </motion.div>
 
 
-      {/* Asymmetric Grid: Pie (1/3) + Bar (2/3) */}
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* Category Breakdown (Pie) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="lg:col-span-5 rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-        >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Distribution</h3>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="h-48 w-48 flex-shrink-0 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={expensePieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {expensePieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Center Label */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-xs font-medium text-muted-foreground/50">BY CATEGORY</span>
-              </div>
-            </div>
-            <div className="flex-1 w-full space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-              {expensePieData.slice(0, 6).map((cat, i) => (
-                <div key={i} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors truncate" title={cat.name}>{cat.name}</span>
-                  </div>
-                  <span className="text-xs font-mono font-medium">{formatCurrency(cat.value)}</span>
-                </div>
-              ))}
-              {expensePieData.length > 6 && (
-                <div className="pt-2 text-[10px] text-center text-muted-foreground italic">
-                  + {expensePieData.length - 6} more categories
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Spending Type Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="lg:col-span-7 rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-        >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Spending Type Breakdown</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={spendingTypeData} layout="vertical" barCategoryGap={12} margin={{ left: 0, right: 30 }}>
-                <XAxis
-                  type="number"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
-                  tickFormatter={(v) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: 'hsl(var(--foreground))', fontSize: 11, fontWeight: 500 }}
-                  width={80}
-                />
-                <Tooltip
-                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--popover))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    color: 'hsl(var(--popover-foreground))',
-                  }}
-                  itemStyle={{ color: 'hsl(185, 70%, 45%)' }}
-                  formatter={(value: number, name: string) => [formatCurrency(value), name]}
-                />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={32}>
-                  {spendingTypeData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(185, 70%, ${45 - index * 5}%)`} opacity={0.9} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Income/Expense Breakdown Rows */}
+      {/* 2-Column Grid: Income Sources & Spending Types */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Income Breakdown Bar Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2 }}
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Income Sources</h3>
@@ -408,7 +363,7 @@ export default function MonthlyAnalyticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={incomeBarData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
                   barCategoryGap={30}
                 >
                   <XAxis
@@ -419,9 +374,7 @@ export default function MonthlyAnalyticsPage() {
                     dy={10}
                     interval={0}
                   />
-                  <YAxis
-                    hide={true}
-                  />
+                  <YAxis hide={true} />
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
                     contentStyle={{
@@ -432,7 +385,17 @@ export default function MonthlyAnalyticsPage() {
                     }}
                     formatter={(value: number) => [formatCurrency(value), '']}
                   />
-                  <Bar dataKey="value" fill="hsl(142, 71%, 45%)" radius={[6, 6, 0, 0]} opacity={0.8} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="value"
+                      position="top"
+                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
+                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                    />
+                    {incomeBarData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill="hsl(var(--primary))" opacity={Math.max(0.3, 0.9 - index * 0.15)} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -441,11 +404,67 @@ export default function MonthlyAnalyticsPage() {
           </div>
         </motion.div>
 
-        {/* Expenses Breakdown Bar Chart */}
+        {/* Spending Type Breakdown */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
+        >
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Spending Type Breakdown</h3>
+          <div className="h-[300px]">
+            {spendingTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={spendingTypeData}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
+                  barCategoryGap={30}
+                >
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
+                    dy={10}
+                    interval={0}
+                  />
+                  <YAxis hide={true} />
+                  <Tooltip
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      color: 'hsl(var(--popover-foreground))',
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), '']}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="value"
+                      position="top"
+                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
+                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                    />
+                    {spendingTypeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill="hsl(var(--muted-foreground))" opacity={Math.max(0.4, 0.9 - index * 0.2)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No spending type data recorded</div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Full Width Grid: Expense Categories */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Categories</h3>
@@ -453,8 +472,8 @@ export default function MonthlyAnalyticsPage() {
             {expenseBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={expenseBarData.slice(0, 8)} // Limit to top 8 to reduce clutter
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  data={expenseBarData}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
                   barCategoryGap={20}
                 >
                   <XAxis
@@ -465,9 +484,7 @@ export default function MonthlyAnalyticsPage() {
                     dy={10}
                     interval={0}
                   />
-                  <YAxis
-                    hide={true}
-                  />
+                  <YAxis hide={true} />
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
                     contentStyle={{
@@ -478,7 +495,17 @@ export default function MonthlyAnalyticsPage() {
                     }}
                     formatter={(value: number) => [formatCurrency(value), '']}
                   />
-                  <Bar dataKey="value" fill="hsl(0, 84%, 60%)" radius={[6, 6, 0, 0]} opacity={0.8} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="value"
+                      position="top"
+                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
+                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                    />
+                    {expenseBarData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill="hsl(var(--muted-foreground))" opacity={Math.max(0.2, 0.8 - index * 0.05)} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (

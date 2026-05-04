@@ -127,129 +127,106 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <PageHeader title="Profile" description="Manage your identity and preferences" />
+    <div className="max-w-5xl mx-auto space-y-8 pb-16">
+      <PageHeader title="Profile & Settings" description="Manage your identity and preferences" />
 
-      {/* Identity Hero */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row items-center md:items-start gap-8 p-8 rounded-2xl border border-border bg-card shadow-sm"
+        className="space-y-8"
       >
-        <Avatar className="h-24 w-24 border-4 border-background shadow-sm ring-1 ring-border">
-          <AvatarImage src={profile?.user_metadata?.avatar_url} />
-          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary">
-            {getInitials()}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className="flex-1 text-center md:text-left space-y-3">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-bold tracking-tight font-display">{getDisplayName()}</h2>
-          </div>
-
-          <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
-            <div className="inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm">
-              <Calendar className="mr-1.5 h-3.5 w-3.5" />
-              Member since {getMemberSince()}
+        {/* Profile Header */}
+        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-12 border-b border-border/50">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+            <Avatar className="h-24 w-24 border-2 border-background shadow-sm ring-1 ring-border">
+              <AvatarImage src={profile?.user_metadata?.avatar_url} />
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 mt-3 sm:mt-2">
+              <h2 className="text-3xl font-bold tracking-tight font-display">{getDisplayName()}</h2>
+              <p className="text-muted-foreground">{profile?.email}</p>
+              <div className="mt-4 inline-flex items-center rounded-full bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
+                <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                Member since {getMemberSince()}
+              </div>
             </div>
-
           </div>
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handleLogout}
-          className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </Button>
-      </motion.div>
-
-      <div className="grid gap-8 md:grid-cols-2">
-        {/* Connected Accounts - NEW SECTION */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="h-full border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display">
-                <LinkIcon className="h-5 w-5 text-primary" />
-                Connected Accounts
-              </CardTitle>
-              <CardDescription>Manage your linked social accounts</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border">
-                    <GitHubIcon className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium leading-none">GitHub</p>
-                    <p className="text-sm text-muted-foreground">
-                      {isGitHubConnected
-                        ? 'Connected to your account'
-                        : 'Link your GitHub account'}
-                    </p>
-                  </div>
+        <div className="space-y-12 pt-4">
+          {/* Account Details Section */}
+          <section className="grid gap-8 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Account Details
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Your personal account information and identifiers.
+              </p>
+            </div>
+            
+            <div className="md:col-span-2 grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+                  <span className="font-medium text-foreground">{getDisplayName()}</span>
                 </div>
-                {isGitHubConnected ? (
-                  <div className="flex items-center text-success text-sm font-medium">
-                    <Check className="mr-2 h-4 w-4" />
-                    Connected
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLinkGitHub}
-                    disabled={isGitHubLinking}
-                  >
-                    {isGitHubLinking ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      'Connect'
-                    )}
-                  </Button>
-                )}
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        {/* Preferences */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="h-full border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Email Address</label>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+                  <span className="font-medium text-foreground">{profile?.email}</span>
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-foreground">System ID</label>
+                <div className="font-mono text-xs text-muted-foreground break-all bg-muted/50 p-3 rounded-lg border border-border/50 select-all shadow-inner">
+                  {profile?.id}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Preferences Section */}
+          <section className="grid gap-8 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
                 Preferences
-              </CardTitle>
-              <CardDescription>Customize your dashboard experience</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-primary">Default Currency</label>
-                  <p className="text-xs text-muted-foreground">
-                    This currency will be used for all aggregations and totals across your dashboard.
-                  </p>
-                </div>
-
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Customize your dashboard experience.
+              </p>
+            </div>
+            
+            <div className="md:col-span-2 space-y-4 max-w-md">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Default Currency</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  This currency will be used for all aggregations and totals across your dashboard.
+                </p>
                 <Select
                   value={currency}
                   onValueChange={handleCurrencyChange}
                   disabled={isUpdating}
                 >
-                  <SelectTrigger className="w-full bg-background border-primary/20 ring-offset-primary/10 focus:ring-primary/30 h-11">
+                  <SelectTrigger className="w-full bg-card border-border h-12 rounded-lg shadow-sm">
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -261,111 +238,107 @@ export default function ProfilePage() {
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </section>
 
-        {/* Data Management */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="md:col-span-2"
-        >
-          <Card className="h-full border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display">
+          <div className="h-px bg-border/50" />
+
+          {/* Connected Accounts */}
+          <section className="grid gap-8 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
+                <LinkIcon className="h-5 w-5 text-primary" />
+                Connected Accounts
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Manage your linked social and authentication accounts.
+              </p>
+            </div>
+            
+            <div className="md:col-span-2 max-w-md">
+              <div className="flex items-center justify-between rounded-xl border border-border bg-card p-5 shadow-sm">
+                <div className="flex items-center gap-5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background border border-border shadow-sm">
+                    <GitHubIcon className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="font-medium leading-none text-foreground text-base">GitHub</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isGitHubConnected ? 'Connected to your account' : 'Link your GitHub account'}
+                    </p>
+                  </div>
+                </div>
+                {isGitHubConnected ? (
+                  <div className="flex items-center text-success text-sm font-medium bg-success/10 px-3 py-1.5 rounded-full">
+                    <Check className="mr-1.5 h-4 w-4" />
+                    Connected
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={handleLinkGitHub}
+                    disabled={isGitHubLinking}
+                    className="h-9 px-4"
+                  >
+                    {isGitHubLinking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Connect'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Data Management */}
+          <section className="grid gap-8 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
                 Data Management
-              </CardTitle>
-              <CardDescription>Export or import your financial data</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl border border-border p-5 space-y-3">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Export Transactions</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Download all your data (transactions, categories, accounts and funds).
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleExport}
-                    disabled={isExporting}
-                    className="w-full"
-                  >
-                    {isExporting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {isExporting ? 'Exporting...' : 'Export CSV'}
-                  </Button>
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Export or import your financial data safely.
+              </p>
+            </div>
+            
+            <div className="md:col-span-2 grid gap-6 md:grid-cols-2">
+              <div className="rounded-xl border border-border bg-card p-6 space-y-5 shadow-sm">
+                <div className="space-y-2">
+                  <h4 className="text-base font-medium text-foreground">Export Transactions</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Download all your data (transactions, categories, accounts and funds) as a CSV file.
+                  </p>
                 </div>
-                <div className="rounded-xl border border-border p-5 space-y-3 opacity-50">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Import Transactions</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Upload a CSV file to bulk-import data into your dashboard.
-                    </p>
-                  </div>
-                  <Button
-                    disabled
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Coming Soon
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="w-full bg-background h-10"
+                >
+                  {isExporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Account Details */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="md:col-span-2"
-        >
-          <Card className="h-full border-border/60 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Account Details
-              </CardTitle>
-              <CardDescription>Your personal account information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
-                    <span className="font-medium text-foreground">{getDisplayName()}</span>
-                  </div>
+              <div className="rounded-xl border border-border bg-card p-6 space-y-5 shadow-sm opacity-50">
+                <div className="space-y-2">
+                  <h4 className="text-base font-medium text-foreground">Import Transactions</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a CSV file to bulk-import data into your dashboard.
+                  </p>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Email Address</label>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
-                    <span className="font-medium text-foreground">{profile?.email}</span>
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
+                <Button disabled variant="outline" className="w-full bg-background h-10">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Coming Soon
+                </Button>
               </div>
-
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System ID</label>
-                <div className="font-mono text-xs text-muted-foreground break-all bg-muted p-2 rounded border border-border/50 select-all">
-                  {profile?.id}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+            </div>
+          </section>
+        </div>
+      </motion.div>
     </div>
   );
 }

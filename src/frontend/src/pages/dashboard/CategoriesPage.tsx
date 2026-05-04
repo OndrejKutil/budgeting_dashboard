@@ -83,19 +83,19 @@ const spendingTypeColors: Record<string, string> = {
 };
 
 const CATEGORY_TYPES = [
+  { value: 'exclude', label: 'Exclude' },
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
-  { value: 'saving', label: 'Saving' },
   { value: 'investment', label: 'Investment' },
-  { value: 'exclude', label: 'Exclude' },
+  { value: 'saving', label: 'Saving' },
 ] as const;
 
 const SPENDING_TYPES = [
   { value: 'Core', label: 'Core' },
-  { value: 'Necessary', label: 'Necessary' },
   { value: 'Fun', label: 'Fun' },
   { value: 'Future', label: 'Future' },
   { value: 'Income', label: 'Income' },
+  { value: 'Necessary', label: 'Necessary' },
 ] as const;
 
 const stagger = {

@@ -84,9 +84,9 @@ const fadeInUp = {
 function DashboardPreview() {
   const kpis = [
     { label: 'Income', value: '32 500 Kč', icon: ArrowUpRight, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Expenses', value: '18 700 Kč', icon: ArrowDownRight, color: 'text-red-400', bg: 'bg-red-500/10' },
-    { label: 'Savings', value: '8 000 Kč', icon: PiggyBank, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-    { label: 'Profit', value: '5 800 Kč', icon: DollarSign, color: 'text-teal-400', bg: 'bg-teal-500/10' },
+    { label: 'Expenses', value: '18 700 Kč', icon: ArrowDownRight, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+    { label: 'Savings', value: '8 000 Kč', icon: PiggyBank, color: 'text-zinc-400', bg: 'bg-zinc-500/10' },
+    { label: 'Profit', value: '5 800 Kč', icon: DollarSign, color: 'text-amber-400', bg: 'bg-amber-500/10' },
   ];
 
   const categories = [
@@ -99,7 +99,7 @@ function DashboardPreview() {
 
   return (
     <div className="relative">
-      <div className="absolute -inset-4 bg-cyan-500/5 blur-[60px] rounded-full pointer-events-none" />
+      <div className="absolute -inset-4 bg-amber-500/5 blur-[60px] rounded-full pointer-events-none" />
       <div className="relative rounded-2xl border border-white/10 bg-[hsl(var(--background))]/90 backdrop-blur-xl overflow-hidden shadow-2xl">
         {/* Window bar */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[0.02]">
@@ -133,7 +133,7 @@ function DashboardPreview() {
                 <div key={cat.name} className="flex items-center gap-3">
                   <span className="text-[11px] text-white/50 w-24 truncate">{cat.name}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500" style={{ width: `${cat.pct}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${cat.pct}%` }} />
                   </div>
                   <span className="text-[11px] text-white/40 w-16 text-right">{cat.amount}</span>
                 </div>
@@ -164,9 +164,7 @@ export default function LandingPage() {
       <header className="safe-top fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
         <div className="flex h-16 w-full items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
+
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
@@ -174,13 +172,11 @@ export default function LandingPage() {
               <UserNav />
             ) : (
               <>
-                <Button variant="ghost" asChild className="text-white/60 hover:text-white hover:bg-white/10 hidden sm:inline-flex">
-                  <Link to="/how-it-works">How It Works</Link>
-                </Button>
+
                 <Button variant="ghost" asChild className="text-white/80 hover:text-white hover:bg-white/10">
                   <Link to="/auth/login">Log in</Link>
                 </Button>
-                <Button asChild className="border border-cyan-400/50 bg-transparent hover:bg-cyan-400/10 text-cyan-400 transition-all duration-300">
+                <Button asChild className="border border-amber-500/50 bg-transparent hover:bg-amber-500/10 text-amber-500 transition-all duration-300">
                   <Link to="/auth/register">
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -202,16 +198,17 @@ export default function LandingPage() {
               variants={staggerContainer}
               className="relative z-10 max-w-2xl"
             >
-              <motion.p variants={fadeInUp} className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-6">
+              <motion.p variants={fadeInUp} className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500 mb-6">
                 Personal Finance Tool
               </motion.p>
 
-              <motion.h1 variants={fadeInUp} className="mb-8 text-4xl font-display sm:text-5xl lg:text-6xl leading-[1.1]">
-                <span className="text-hero-bold text-white">Know your exact</span>
+              <motion.h1 variants={fadeInUp} className="mb-8 text-5xl font-display sm:text-6xl lg:text-[4.2rem] leading-[1.1] tracking-tight">
+                <span className="font-extrabold text-white">Know your exact</span>
                 <br />
-                <span className="text-hero-bold text-white">number.</span>
+                <span className="font-extrabold text-white">number.</span>
+                <br className="sm:hidden" />
                 {' '}
-                <span className="text-hero-bold text-gradient-teal">Every month.</span>
+                <span className="font-serif italic font-normal text-amber-400/90 tracking-normal">Every month.</span>
               </motion.h1>
 
               <motion.p variants={fadeInUp} className="mb-10 max-w-xl text-lg text-white/50 leading-relaxed">
@@ -222,7 +219,7 @@ export default function LandingPage() {
 
               <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-start gap-4">
                 {isAuthenticated ? (
-                  <Button size="lg" asChild className="border border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-8 transition-all duration-300">
+                  <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
                     <Link to="/dashboard">
                       Go to Dashboard
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -230,7 +227,7 @@ export default function LandingPage() {
                   </Button>
                 ) : (
                   <>
-                    <Button size="lg" asChild className="border border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-8 transition-all duration-300">
+                    <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
                       <Link to="/auth/register">
                         Start Your Ledger
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -278,7 +275,7 @@ export default function LandingPage() {
           >
             {outcomes.map((o) => (
               <motion.div key={o.num} variants={fadeInUp} className="py-10 px-0 md:px-10 first:pl-0 last:pr-0">
-                <span className="text-xs font-mono text-cyan-400/60 tracking-widest block mb-3">{o.num}</span>
+                <span className="text-xs font-mono text-amber-500/60 tracking-widest block mb-3">{o.num}</span>
                 <h3 className="text-lg font-semibold font-display text-white mb-2">{o.title}</h3>
                 <p className="text-sm text-white/40 leading-relaxed">{o.desc}</p>
               </motion.div>
@@ -298,7 +295,7 @@ export default function LandingPage() {
           >
             <h2 className="mb-4 text-3xl font-display sm:text-4xl tracking-tight">
               <span className="text-hero-thin text-white/90">What the </span>
-              <span className="text-hero-bold text-gradient-teal">instrument</span>
+              <span className="text-hero-bold text-gradient-primary">instrument</span>
               <span className="text-hero-thin text-white/90"> does.</span>
             </h2>
             <p className="text-white/50 text-lg">
@@ -320,7 +317,7 @@ export default function LandingPage() {
                 className="group grid sm:grid-cols-[250px_1fr] gap-4 sm:gap-12 py-8 px-2 sm:px-4 border-b border-white/10 hover:bg-white/[0.02] transition-colors duration-300 items-baseline"
               >
                 <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center justify-center rounded-lg bg-white/5 p-2 text-cyan-400 ring-1 ring-white/10 group-hover:ring-cyan-400/30 transition-all duration-300">
+                  <div className="inline-flex items-center justify-center rounded-lg bg-white/5 p-2 text-amber-500 ring-1 ring-white/10 group-hover:ring-amber-500/30 transition-all duration-300">
                     <spec.icon className="h-4 w-4" />
                   </div>
                   <h3 className="text-base font-semibold font-display tracking-tight text-white">{spec.label}</h3>
@@ -343,7 +340,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="mb-16 max-w-2xl"
           >
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-cyan-400 mb-4">Fit Check</p>
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500 mb-4">Fit Check</p>
             <h2 className="text-3xl font-display sm:text-4xl tracking-tight text-white">Is this for you?</h2>
           </motion.div>
 
@@ -404,7 +401,7 @@ export default function LandingPage() {
             >
               <motion.h2 variants={fadeInUp} className="text-3xl font-display sm:text-4xl tracking-tight mb-6">
                 <span className="text-hero-thin text-white/90">The best time to start was </span>
-                <span className="text-hero-bold text-gradient-teal">last month.</span>
+                <span className="text-hero-bold text-gradient-primary">last month.</span>
               </motion.h2>
               <motion.p variants={fadeInUp} className="text-white/50 text-lg leading-relaxed mb-10 max-w-xl">
                 Open a free account. Set up your categories. Log your first
@@ -412,7 +409,7 @@ export default function LandingPage() {
                 this month than most people learn in a year.
               </motion.p>
               <motion.div variants={fadeInUp}>
-                <Button size="lg" asChild className="border border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-8 transition-all duration-300">
+                <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
                   <Link to="/auth/register">
                     Start Your Ledger
                     <ArrowRight className="ml-2 h-4 w-4" />

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Wallet, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function TermsPage() {
@@ -10,9 +10,6 @@ export default function TermsPage() {
       <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-blurple">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </Link>
           <Button variant="ghost" asChild>
@@ -33,14 +30,14 @@ export default function TermsPage() {
         >
           <div className="rounded-xl border border-border bg-card p-8 shadow-lg">
             <h1 className="mb-6 text-3xl font-bold font-display">Terms of Service</h1>
-            <p className="mb-4 text-sm text-muted-foreground">Last updated: January 9, 2026</p>
+            <p className="mb-4 text-sm text-muted-foreground">Last updated: May 4, 2026</p>
 
             <div className="space-y-6 text-foreground/90">
               <section>
-                <h2 className="mb-3 text-xl font-semibold text-destructive">⚠️ Important Disclaimer</h2>
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <h2 className="mb-3 text-xl font-semibold text-amber-500">Notice</h2>
+                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
                   <p className="text-sm">
-                    <strong>This application is provided strictly for educational and learning purposes only.</strong> It is NOT production-ready software and should NOT be used for managing real financial data or making actual financial decisions.
+                    <strong>Budgeting Dashboard is a personal student project.</strong> While it is fully functional, it is provided "as-is" without the warranties or guarantees typical of commercial software.
                   </p>
                 </div>
               </section>
@@ -55,21 +52,20 @@ export default function TermsPage() {
               <section>
                 <h2 className="mb-3 text-xl font-semibold">2. Nature of the Application</h2>
                 <p className="text-sm leading-relaxed">
-                  This Application is a demonstration and learning project. It is designed to showcase web development concepts and is not intended for commercial use or production deployment. The Application:
+                  This Application is an independent portfolio and learning project. While we strive to maintain a high-quality experience, the Application:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-                  <li>May contain bugs, errors, and security vulnerabilities</li>
-                  <li>Is not audited or certified for security compliance</li>
-                  <li>May experience downtime, data loss, or service interruptions</li>
+                  <li>May contain bugs or unhandled edge cases</li>
+                  <li>Is not audited for commercial compliance or security standards</li>
                   <li>Is provided on an "as-is" and "as-available" basis</li>
-                  <li>May be discontinued at any time without notice</li>
+                  <li>May experience downtime or service changes without prior notice</li>
                 </ul>
               </section>
 
               <section>
                 <h2 className="mb-3 text-xl font-semibold">3. No Financial Advice</h2>
                 <p className="text-sm leading-relaxed">
-                  The Application does not provide financial, investment, tax, legal, or accounting advice. Any information displayed is for illustrative purposes only. You should consult with qualified professionals for any financial decisions.
+                  The Application does not provide financial, investment, tax, legal, or accounting advice. Any analytics or metrics displayed are calculated strictly based on the data you provide. You remain entirely responsible for your own financial decisions.
                 </p>
               </section>
 
@@ -79,60 +75,51 @@ export default function TermsPage() {
                   You understand and agree that:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-                  <li>All data you enter into the Application is entirely at your own risk</li>
-                  <li>You are solely responsible for any data you input or store</li>
-                  <li>You should not enter sensitive personal information, real financial data, or any information you would not want to lose or have exposed</li>
-                  <li>Any reliance on the Application is strictly at your own risk</li>
+                  <li>All data you enter into the Application is at your own discretion and risk</li>
+                  <li>You are solely responsible for maintaining the confidentiality of your account credentials</li>
+                  <li>You should maintain your own independent records or backups of critical financial data</li>
+                  <li>Any reliance on the Application's calculations or storage is strictly at your own risk</li>
                 </ul>
               </section>
 
               <section>
                 <h2 className="mb-3 text-xl font-semibold">5. Limitation of Liability</h2>
                 <p className="text-sm leading-relaxed">
-                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE DEVELOPER(S) OF THIS APPLICATION SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
+                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE DEVELOPER(S) SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-                  <li>Loss of data or corruption of data</li>
-                  <li>Financial losses of any kind</li>
+                  <li>Loss or corruption of data</li>
+                  <li>Financial losses of any kind resulting from app usage or calculation errors</li>
                   <li>Unauthorized access to your information</li>
-                  <li>Service interruptions or failures</li>
-                  <li>Bugs, errors, or inaccuracies in the Application</li>
-                  <li>Any damages resulting from the use or inability to use the Application</li>
+                  <li>Service interruptions or hosting failures</li>
                 </ul>
               </section>
 
               <section>
                 <h2 className="mb-3 text-xl font-semibold">6. No Warranty</h2>
                 <p className="text-sm leading-relaxed">
-                  THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THE DEVELOPER(S) MAKE NO WARRANTY THAT THE APPLICATION WILL BE UNINTERRUPTED, TIMELY, SECURE, OR ERROR-FREE.
+                  THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
                 </p>
               </section>
 
               <section>
                 <h2 className="mb-3 text-xl font-semibold">7. Data Handling</h2>
                 <p className="text-sm leading-relaxed">
-                  We make no guarantees regarding the security, backup, or persistence of any data you enter. Data may be lost, corrupted, or exposed at any time. Do not use this Application for storing any data you cannot afford to lose.
+                  While the Application utilizes modern infrastructure (Supabase, Render) to store data securely, we make no absolute guarantees regarding the long-term persistence or invulnerability of your data.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">8. Indemnification</h2>
+                <h2 className="mb-3 text-xl font-semibold">8. Changes to Terms</h2>
                 <p className="text-sm leading-relaxed">
-                  You agree to indemnify and hold harmless the developer(s) from any claims, damages, losses, or expenses arising from your use of the Application or violation of these Terms.
+                  These Terms may be modified at any time. Continued use of the Application constitutes acceptance of any modified terms.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">9. Changes to Terms</h2>
+                <h2 className="mb-3 text-xl font-semibold">9. Contact</h2>
                 <p className="text-sm leading-relaxed">
-                  These Terms may be modified at any time without prior notice. Continued use of the Application constitutes acceptance of any modified terms.
-                </p>
-              </section>
-
-              <section>
-                <h2 className="mb-3 text-xl font-semibold">10. Contact</h2>
-                <p className="text-sm leading-relaxed">
-                  If you have any questions about these Terms, you can reach out through the project repository or contact information provided there.
+                  If you have any questions or encounter issues, please reach out via email at <a href="mailto:me@ondrejkutil.com" className="text-amber-500 hover:underline">me@ondrejkutil.com</a> or open an issue on the <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">GitHub repository</a>.
                 </p>
               </section>
             </div>

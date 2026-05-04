@@ -77,8 +77,8 @@ function AccountSkeleton() {
   );
 }
 
-const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash'];
-const CURRENCIES = ['USD', 'EUR', 'CZK', 'GBP', 'PLN', 'CAD', 'AUD'];
+const ACCOUNT_TYPES = ['cash', 'checking', 'credit', 'investment', 'savings'];
+const CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'];
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
