@@ -31,18 +31,18 @@ const kpiSections = [
     {
         title: "Net Savings",
         icon: PiggyBank,
-        color: "text-cyan-400",
-        bg: "bg-cyan-500/10",
-        border: "border-cyan-500/20",
+        color: "text-zinc-400",
+        bg: "bg-zinc-500/10",
+        border: "border-zinc-500/20",
         description: "Savings are calculated as 'Net Savings'. This means we take the total amount you put into savings and subtract any withdrawals you made from those funds. This reveals your actual savings progress for the period.",
         formula: "Total Savings Contributions - Savings Funds Withdrawals"
     },
     {
         title: "Profit",
         icon: DollarSign,
-        color: "text-teal-400",
-        bg: "bg-teal-500/10",
-        border: "border-teal-500/20",
+        color: "text-amber-400",
+        bg: "bg-amber-500/10",
+        border: "border-amber-500/20",
         description: "Profit is your financial bottom line. It tells you how much money is left from your earnings after covering all expenses and investments. It represents the money that you still have available (liquid).",
         formula: "Clean Income - Expenses - Investments"
     },
@@ -73,18 +73,18 @@ const systemNodes = [
         title: "Render — Frontend",
         subtitle: "React + Vite static site",
         icon: Monitor,
-        color: "text-cyan-400",
-        bg: "bg-cyan-500/10",
-        border: "border-cyan-500/20",
+        color: "text-zinc-400",
+        bg: "bg-zinc-500/10",
+        border: "border-zinc-500/20",
     },
     {
         id: "render-backend",
         title: "Render — Backend",
         subtitle: "Python FastAPI in Docker",
         icon: Server,
-        color: "text-teal-400",
-        bg: "bg-teal-500/10",
-        border: "border-teal-500/20",
+        color: "text-zinc-400",
+        bg: "bg-zinc-500/10",
+        border: "border-zinc-500/20",
     },
     {
         id: "supabase",
@@ -100,9 +100,9 @@ const systemNodes = [
         title: "Security",
         subtitle: "JWT tokens, RLS, unit-tested financial calculations",
         icon: Shield,
-        color: "text-violet-400",
-        bg: "bg-violet-500/10",
-        border: "border-violet-500/20",
+        color: "text-zinc-400",
+        bg: "bg-zinc-500/10",
+        border: "border-zinc-500/20",
     },
 ];
 
@@ -145,7 +145,7 @@ export default function HowItWorksPage() {
             <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
                             <Wallet className="h-5 w-5 text-white" />
                         </div>
                         <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
@@ -169,7 +169,7 @@ export default function HowItWorksPage() {
                     <div className="text-center space-y-4">
                         <h1 className="text-4xl tracking-tight font-display">
                             <span className="text-hero-thin text-white/90">HOW IT </span>
-                            <span className="text-hero-bold text-gradient-teal">WORKS</span>
+                            <span className="text-hero-bold text-gradient-primary">WORKS</span>
                         </h1>
                         <p className="mx-auto max-w-2xl text-lg text-white/60">
                             Understand what the numbers mean, explore the technology behind the app, and see how everything fits together.
@@ -181,14 +181,14 @@ export default function HowItWorksPage() {
                         <TabsList className="w-full flex bg-white/5 border border-white/10 rounded-xl p-1 h-auto flex-wrap gap-1">
                             <TabsTrigger
                                 value="logic"
-                                className="flex-1 min-w-[120px] data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/20 data-[state=active]:to-teal-500/20 data-[state=active]:text-cyan-400 data-[state=active]:border-cyan-500/30 data-[state=active]:border text-white/60 rounded-lg py-2.5 text-sm font-medium transition-all"
+                                className="flex-1 min-w-[120px] data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500/20 data-[state=active]:to-orange-500/20 data-[state=active]:text-amber-500 data-[state=active]:border-amber-500/30 data-[state=active]:border text-white/60 rounded-lg py-2.5 text-sm font-medium transition-all"
                             >
                                 <DollarSign className="mr-2 h-4 w-4" />
                                 Business Logic
                             </TabsTrigger>
                             <TabsTrigger
                                 value="tech"
-                                className="flex-1 min-w-[120px] data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500/20 data-[state=active]:to-purple-500/20 data-[state=active]:text-violet-400 data-[state=active]:border-violet-500/30 data-[state=active]:border text-white/60 rounded-lg py-2.5 text-sm font-medium transition-all"
+                                className="flex-1 min-w-[120px] data-[state=active]:bg-gradient-to-r data-[state=active]:from-zinc-500/20 data-[state=active]:to-zinc-400/20 data-[state=active]:text-zinc-400 data-[state=active]:border-zinc-500/30 data-[state=active]:border text-white/60 rounded-lg py-2.5 text-sm font-medium transition-all"
                             >
                                 <Cpu className="mr-2 h-4 w-4" />
                                 Tech Stack
@@ -253,8 +253,8 @@ export default function HowItWorksPage() {
                                 </div>
 
                                 {/* Data Sources callout */}
-                                <motion.div variants={fadeInUp} className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 backdrop-blur-sm p-6">
-                                    <h3 className="text-lg font-bold font-display text-cyan-400 mb-2">Where does the data come from?</h3>
+                                <motion.div variants={fadeInUp} className="rounded-xl border border-amber-500/20 bg-amber-500/5 backdrop-blur-sm p-6">
+                                    <h3 className="text-lg font-bold font-display text-amber-500 mb-2">Where does the data come from?</h3>
                                     <p className="text-white/60 leading-relaxed">
                                         All data is entered by you — either through <strong className="text-white/80">manual entry</strong> or <strong className="text-white/80">CSV import</strong> from your bank.
                                         The app categorizes each transaction based on your own category rules. There is no external data source, no scraping, and no third-party bank connections.
@@ -277,7 +277,7 @@ export default function HowItWorksPage() {
                                     <h2 className="text-lg font-bold font-display text-white mb-2">System Architecture</h2>
                                     <p className="text-white/60 leading-relaxed">
                                         A full-stack application with clear separation of concerns. The entire codebase is{' '}
-                                        <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
+                                        <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer" className="text-amber-500 hover:text-amber-400 underline underline-offset-2 transition-colors">
                                             open-source on GitHub
                                         </a>.
                                     </p>
@@ -416,7 +416,7 @@ export default function HowItWorksPage() {
                                 </motion.div>
 
                                 {/* CTA */}
-                                <motion.div variants={fadeInUp} className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/10 via-transparent to-cyan-500/10 p-8 text-center space-y-4">
+                                <motion.div variants={fadeInUp} className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/10 via-transparent to-orange-500/10 p-8 text-center space-y-4">
                                     <h3 className="text-xl font-bold font-display text-white">Want this for your setup?</h3>
                                     <p className="text-white/60 max-w-lg mx-auto">
                                         The AI voice workflow is a custom n8n integration tailored to each user's categories and context. If you're interested in having something similar set up for you, get in touch.

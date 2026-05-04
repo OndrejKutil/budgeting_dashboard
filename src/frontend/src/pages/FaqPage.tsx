@@ -49,7 +49,7 @@ export default function FaqPage() {
             <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
                             <Wallet className="h-5 w-5 text-white" />
                         </div>
                         <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
@@ -72,7 +72,7 @@ export default function FaqPage() {
                     <div className="text-center space-y-4">
                         <h1 className="text-4xl tracking-tight font-display">
                             <span className="text-hero-thin text-white/90">FREQUENTLY ASKED </span>
-                            <span className="text-hero-bold text-gradient-teal">QUESTIONS</span>
+                            <span className="text-hero-bold text-gradient-primary">QUESTIONS</span>
                         </h1>
                         <p className="text-white/60 text-lg">Common questions about the Budgeting Dashboard.</p>
                     </div>
@@ -95,7 +95,7 @@ export default function FaqPage() {
                         <p className="mb-6 text-white/60">
                             Feel free to reach out to the developer directly.
                         </p>
-                        <div className="flex items-center justify-center gap-2 text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <div className="flex items-center justify-center gap-2 text-amber-500 hover:text-amber-400 transition-colors">
                             <Mail className="h-5 w-5" />
                             <a href="mailto:me@ondrejkutil.com" className="font-medium hover:underline">
                                 me@ondrejkutil.com
