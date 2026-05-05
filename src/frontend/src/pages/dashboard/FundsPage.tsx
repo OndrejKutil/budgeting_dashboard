@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Target, MoreHorizontal, Pencil, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Target, MoreHorizontal, Pencil, Trash2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -292,6 +292,14 @@ export default function FundsPage() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
+              {fund.fund_is_active === false && (
+                <DropdownMenuItem
+                  onClick={() => updateMutation.mutate({ id: fund.savings_funds_id_pk, data: { fund_is_active: true } })}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Activate
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => setDeleteConfirmId(fund.savings_funds_id_pk)}

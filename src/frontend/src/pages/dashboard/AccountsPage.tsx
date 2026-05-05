@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, Loader2 } from 'lucide-react';
+import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, Loader2, RefreshCw } from 'lucide-react';
 import { accountsApi, ApiError } from '@/lib/api/client';
-import { Account } from '@/lib/api/types';
+import { Account, UpdateAccountRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -152,7 +152,7 @@ export default function AccountsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; data: typeof formData }) => accountsApi.update(data.id, data.data),
+    mutationFn: (data: { id: string; data: UpdateAccountRequest }) => accountsApi.update(data.id, data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Account updated successfully' });
@@ -270,6 +270,14 @@ export default function AccountsPage() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
+              {account.account_is_active === false && (
+                <DropdownMenuItem
+                  onClick={() => updateMutation.mutate({ id: account.accounts_id_pk, data: { account_is_active: true } })}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Activate
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => setDeleteConfirmId(account.accounts_id_pk)}

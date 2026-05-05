@@ -87,6 +87,7 @@ export interface UpdateAccountRequest {
     type?: string;
     currency?: string;
     current_balance?: number;
+    account_is_active?: boolean;
 }
 
 // ================================================================================================
@@ -131,6 +132,7 @@ export interface CreateSavingsFundRequest {
 export interface UpdateSavingsFundRequest {
     fund_name?: string;
     target_amount?: number;
+    fund_is_active?: boolean;
 }
 
 // ================================================================================================

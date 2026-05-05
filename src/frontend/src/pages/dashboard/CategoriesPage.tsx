@@ -29,6 +29,7 @@ import {
   Trash2,
   MoreHorizontal,
   Info,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Collapsible,
@@ -387,6 +388,14 @@ export default function CategoriesPage() {
                                   <Pencil className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
+                                {category.is_active === false && (
+                                  <DropdownMenuItem
+                                    onClick={() => updateMutation.mutate({ id: category.categories_id_pk, data: { is_active: true } })}
+                                  >
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Activate
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
                                   onClick={() => setDeleteConfirmId(category.categories_id_pk)}
