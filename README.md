@@ -51,23 +51,6 @@ The final implementation reflects deliberate architectural and UX decisions beyo
 
 Crucially, the entire backend and database development was performed manually, ensuring a robust and custom-tailored solution.
 
-## Screenshots
-
-| Landing Page | Registration |
-|:------------------:|:---------------------:|
-| ![Landing Page](screenshots/Landing_page.png) | ![Registration](screenshots/registration_page.png) |
-| Welcome screen and dashboard entry | Secure user registration |
-
-| Monthly Analytics | Transactions |
-|:------------------:|:--------------------:|
-| ![Monthly Analytics](screenshots/monthly_analytics_page.png) | ![Transactions](screenshots/transactions_page.png) |
-| Detailed monthly breakdown | List of all transactions |
-
-| Accounts Overview | Emergency Fund |
-|:-----------------:|:-----------------:|
-| ![Accounts](screenshots/accounts_page.png) | ![Emergency Fund](screenshots/em_analysis.png) |
-| Comprehensive accounts management | dedicated emergency fund tracking |
-
 ## Project Structure
 
 ```bash
