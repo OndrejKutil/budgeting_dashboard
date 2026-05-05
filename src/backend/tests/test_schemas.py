@@ -80,6 +80,7 @@ def test_account_creation():
         account_name="Main Bank",
         type="Checking",
         currency="USD",
-        created_at=None
+        created_at=None,
+        account_is_active=True
     )
     assert acc.account_name == "Main Bank"

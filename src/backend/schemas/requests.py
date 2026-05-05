@@ -41,6 +41,7 @@ class AccountRequest(BaseModel):
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: Optional[str] = Field(..., description="Currency of the account")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+    account_is_active: Optional[bool] = Field(None, description="Whether the account is active")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -68,6 +69,7 @@ class SavingsFundsRequest(BaseModel):
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
     created_at: Optional[datetime] = Field(None, description="Creation timestamp of the savings fund")
+    fund_is_active: Optional[bool] = Field(None, description="Whether the savings fund is active")
 
     model_config = ConfigDict(
         json_schema_extra={
