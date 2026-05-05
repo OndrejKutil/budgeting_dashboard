@@ -4,6 +4,9 @@ name: CI Pipeline
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
   pull_request:
     branches: [ "main" ]
 
