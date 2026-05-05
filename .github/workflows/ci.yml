@@ -4,14 +4,44 @@ name: CI Pipeline
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  detect-changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'src/backend/**'
+              - '.github/workflows/**'
+            frontend:
+              - 'src/frontend/**'
+              - '.github/workflows/**'
+
   backend-ci:
     name: Backend (Python)
-
-    # Runs on the latest Ubuntu environment
+    # Only run on PRs when backend files changed
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.backend == 'true'
+    needs: [detect-changes]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,6 +72,9 @@ jobs:
 
   frontend-ci:
     name: Frontend (React)
+    # Only run on PRs when frontend files changed
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.frontend == 'true'
+    needs: [detect-changes]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,9 +102,7 @@ jobs:
   deploy-render:
     name: Deploy (Render)
     runs-on: ubuntu-latest
-    # Only runs after both backend and frontend CI jobs complete successfully.
-    needs: [backend-ci, frontend-ci]
-    # Only deploy from direct pushes to main (including merges).
+    # Only runs on direct pushes/merges to main (not on PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
