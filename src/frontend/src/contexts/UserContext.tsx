@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserContext } from './user-context';
 import { useAuth } from './auth-context';
-import { profileApi } from '@/lib/api/client';
+import { profileApi } from '@/lib/api/endpoints';
 import { ProfileData } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 

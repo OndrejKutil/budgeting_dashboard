@@ -29,7 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, Loader2, RefreshCw } from 'lucide-react';
-import { accountsApi, ApiError } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/client';
+import { accountsApi } from '@/lib/api/endpoints';
 import { Account, UpdateAccountRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';

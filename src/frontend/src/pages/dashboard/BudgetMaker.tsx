@@ -29,7 +29,8 @@ import {
 } from '@/components/ui/card';
 import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
-import { categoriesApi, budgetApi, ApiError } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/client';
+import { categoriesApi, budgetApi } from '@/lib/api/endpoints';
 import { BudgetPlan, BudgetPlanRow } from '@/lib/api/types/requests';
 import { BudgetRowResponse } from '@/lib/api/types/responses';
 import { toast } from '@/hooks/use-toast';

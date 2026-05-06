@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
-import { authApi, tokenManager, exportApi } from '@/lib/api/client';
+import { tokenManager } from '@/lib/api/client';
+import { authApi, exportApi } from '@/lib/api/endpoints';
 import {
   Select,
   SelectContent,

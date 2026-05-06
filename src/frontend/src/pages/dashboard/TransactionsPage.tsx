@@ -66,7 +66,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { transactionsApi, categoriesApi, accountsApi, fundsApi, ApiError } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/client';
+import { transactionsApi, categoriesApi, accountsApi, fundsApi } from '@/lib/api/endpoints';
 import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';

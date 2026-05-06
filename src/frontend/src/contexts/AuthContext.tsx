@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext } from './auth-context';
-import { tokenManager, authApi, ApiError } from '@/lib/api/client';
+import { tokenManager, ApiError } from '@/lib/api/client';
+import { authApi } from '@/lib/api/endpoints';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 

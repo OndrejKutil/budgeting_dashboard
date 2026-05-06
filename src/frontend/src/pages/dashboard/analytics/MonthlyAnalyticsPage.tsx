@@ -34,7 +34,7 @@ import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
+import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 
 

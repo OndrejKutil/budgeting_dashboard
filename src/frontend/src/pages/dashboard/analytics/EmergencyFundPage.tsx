@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
+import { analyticsApi } from '@/lib/api/endpoints';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeferredRender } from '@/components/performance/DeferredRender';

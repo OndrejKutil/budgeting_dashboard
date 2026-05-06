@@ -44,7 +44,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
+import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 
 

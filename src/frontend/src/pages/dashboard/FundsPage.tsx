@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { fundsApi, tokenManager, ApiError } from '@/lib/api/client';
+import { tokenManager, ApiError } from '@/lib/api/client';
+import { fundsApi } from '@/lib/api/endpoints';
 import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';

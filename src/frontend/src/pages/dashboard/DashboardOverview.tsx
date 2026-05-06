@@ -21,7 +21,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { summaryApi, analyticsApi } from '@/lib/api/client';
+import { summaryApi, analyticsApi } from '@/lib/api/endpoints';
 import type { SummaryData, YearlyAnalyticsData } from '@/lib/api/types';
 import { useUser } from '@/contexts/user-context';
 
