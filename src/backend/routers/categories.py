@@ -58,7 +58,15 @@ async def get_all_categories(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        query = user_supabase_client.table(TABLE_NAME).select("*")
+        category_fields = ",".join([
+            CATEGORIES_COLUMNS.ID.value,
+            CATEGORIES_COLUMNS.NAME.value,
+            CATEGORIES_COLUMNS.TYPE.value,
+            CATEGORIES_COLUMNS.IS_ACTIVE.value,
+            CATEGORIES_COLUMNS.SPENDING_TYPE.value,
+            CATEGORIES_COLUMNS.CREATED_AT.value
+        ])
+        query = user_supabase_client.table(TABLE_NAME).select(category_fields)
 
         if category_id:
             query = query.eq(CATEGORIES_COLUMNS.ID.value, category_id)
@@ -194,13 +202,13 @@ async def delete_category(
         # Check if any transactions reference this category
         tx_check = (
             user_supabase_client.table("fct_transactions")
-            .select("id_pk", count="exact")
+            .select("id_pk")
             .eq("category_id_fk", category_id)
             .limit(1)
             .execute()
         )
         
-        has_transactions = tx_check.count and tx_check.count > 0
+        has_transactions = bool(tx_check.data)
         
         if has_transactions:
             # Soft delete: set is_active to false

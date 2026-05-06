@@ -64,10 +64,20 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
     from ...data.database import get_db_client
     try:
         user_supabase_client = get_db_client(access_token)
-        
+
+        monthly_fields = ",".join([
+            TRANSACTIONS_COLUMNS.ID.value,
+            TRANSACTIONS_COLUMNS.USER_ID.value,
+            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
+            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
+            TRANSACTIONS_COLUMNS.AMOUNT.value,
+            TRANSACTIONS_COLUMNS.DATE.value,
+            TRANSACTIONS_COLUMNS.NOTES.value,
+            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
+        ])
+
         query = user_supabase_client.table('fct_transactions').select(
-            '*',
-            'dim_categories_users(*)'
+            f"{monthly_fields}, dim_categories_users(type, category_name, spending_type)"
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())

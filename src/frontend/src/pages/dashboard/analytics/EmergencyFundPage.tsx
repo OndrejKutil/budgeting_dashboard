@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { useMemo } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { Progress } from '@/components/ui/progress';
@@ -25,25 +24,33 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
+import { analyticsApi } from '@/lib/api/endpoints';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DeferredRender } from '@/components/performance/DeferredRender';
 
 export default function EmergencyFundPage() {
   const { formatCurrency } = useUser();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i + 2);
+  const selectedYearNumber = parseInt(selectedYear);
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear - i + 2), [currentYear]);
 
   const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['emergency-fund', selectedYear],
+    queryKey: ['emergency-fund', selectedYearNumber],
     queryFn: async () => {
-      const response = await analyticsApi.getEmergencyFund({ year: parseInt(selectedYear) });
+      const response = await analyticsApi.getEmergencyFund({ year: selectedYearNumber });
       if (response.success && response.data) {
         return response.data;
       }
       throw new Error(response.message || 'Failed to load emergency fund data');
     },
+    placeholderData: keepPreviousData,
   });
+
+  const coreCategoryBreakdownData = useMemo(() => Object.entries(data?.core_category_breakdown ?? {})
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount), [data]);
 
   if (loading) {
     return <AnalyticsSkeleton />;
@@ -75,11 +82,7 @@ export default function EmergencyFundPage() {
     };
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-6 mt-6"
-      >
+      <div className="space-y-6 mt-6">
         {/* Scenario Header with Monthly Burn */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-xl border border-border bg-card shadow-sm">
           <div>
@@ -184,44 +187,44 @@ export default function EmergencyFundPage() {
 
         {/* Core Breakdown only shown for core tab */}
         {variant === 'core' && (
-          <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-            <h3 className="mb-4 text-lg font-semibold font-display">Core Monthly Expenses Breakdown</h3>
-            <p className="mb-6 text-sm text-muted-foreground">
-              These essential expenses make up your core survival budget.
-            </p>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={Object.entries(data.core_category_breakdown)
-                    .map(([name, amount]) => ({ name, amount }))
-                    .sort((a, b) => b.amount - a.amount)}
-                  layout="vertical"
-                  barCategoryGap={12}
-                  margin={{ left: 20 }}
-                >
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
-                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} width={100} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Amount']}
-                  />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                    {Object.entries(data.core_category_breakdown).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(38, 92%, ${50 - (index % 5) * 5}%)`} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <DeferredRender fallback={<div className="min-h-[480px] rounded-xl border border-border bg-card" />}>
+            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+              <h3 className="mb-4 text-lg font-semibold font-display">Core Monthly Expenses Breakdown</h3>
+              <p className="mb-6 text-sm text-muted-foreground">
+                These essential expenses make up your core survival budget.
+              </p>
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={coreCategoryBreakdownData}
+                    layout="vertical"
+                    barCategoryGap={12}
+                    margin={{ left: 20 }}
+                  >
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
+                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} width={100} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
+                      formatter={(value: number) => [formatCurrency(value), 'Amount']}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+                      {coreCategoryBreakdownData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(38, 92%, ${50 - (index % 5) * 5}%)`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
+          </DeferredRender>
         )}
-      </motion.div>
+      </div>
     );
   };
 

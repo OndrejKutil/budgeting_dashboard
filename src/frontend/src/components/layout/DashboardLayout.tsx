@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
@@ -7,9 +7,20 @@ import { PullToRefresh } from './PullToRefresh';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
+const noop = () => {};
+
 export function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((collapsed) => !collapsed);
+  }, []);
+  const openMobileMenu = useCallback(() => {
+    setMobileMenuOpen(true);
+  }, []);
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -17,7 +28,7 @@ export function DashboardLayout() {
       <div className="hidden lg:block">
         <AppSidebar
           collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggle={toggleSidebar}
         />
       </div>
 
@@ -29,7 +40,7 @@ export function DashboardLayout() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={closeMobileMenu}
               className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
             />
             <motion.div
@@ -41,9 +52,9 @@ export function DashboardLayout() {
             >
               <AppSidebar
                 collapsed={false}
-                onToggle={() => {}}
+                onToggle={noop}
                 isMobile
-                onClose={() => setMobileMenuOpen(false)}
+                onClose={closeMobileMenu}
               />
             </motion.div>
           </>
@@ -57,7 +68,7 @@ export function DashboardLayout() {
           sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
         )}
       >
-        <Topbar onMobileMenuClick={() => setMobileMenuOpen(true)} />
+        <Topbar onMobileMenuClick={openMobileMenu} />
         <main className="p-4 pb-24 lg:p-6 lg:pb-6">
           <PullToRefresh>
             <Outlet />

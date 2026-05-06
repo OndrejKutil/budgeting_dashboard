@@ -104,9 +104,18 @@ def _fetch_summary_transactions(
     try:
         user_supabase_client = get_db_client(access_token)
         
+        summary_fields = ",".join([
+            TRANSACTIONS_COLUMNS.ID.value,
+            TRANSACTIONS_COLUMNS.USER_ID.value,
+            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
+            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
+            TRANSACTIONS_COLUMNS.AMOUNT.value,
+            TRANSACTIONS_COLUMNS.DATE.value,
+            TRANSACTIONS_COLUMNS.NOTES.value,
+            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
+        ])
         query = user_supabase_client.table("fct_transactions").select(
-            '*',
-            'dim_categories_users(*)'
+            f"{summary_fields}, dim_categories_users(type, category_name, spending_type)"
         )
 
         # Apply date filters if provided

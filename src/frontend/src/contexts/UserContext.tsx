@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserContext } from './user-context';
 import { useAuth } from './auth-context';
-import { profileApi } from '@/lib/api/client';
+import { profileApi } from '@/lib/api/endpoints';
 import { ProfileData } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -43,7 +43,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
     }, [isAuthenticated, fetchProfile]);
 
-    const updateProfile = async (data: { full_name?: string; currency?: string }) => {
+    const updateProfile = useCallback(async (data: { full_name?: string; currency?: string }) => {
         try {
             const response = await profileApi.updateProfile(data);
             if (response.success) {
@@ -62,28 +62,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             });
             throw error;
         }
-    };
+    }, []);
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = useCallback((amount: number) => {
         return new Intl.NumberFormat(currency === 'CZK' ? 'cs-CZ' : 'en-US', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: currency === 'CZK' ? 2 : 2,
             maximumFractionDigits: currency === 'CZK' ? 2 : 2,
         }).format(amount);
-    };
+    }, [currency]);
+
+    const value = useMemo(() => ({
+        profile,
+        currency,
+        isLoading,
+        refreshProfile: fetchProfile,
+        updateProfile,
+        formatCurrency,
+    }), [profile, currency, isLoading, fetchProfile, updateProfile, formatCurrency]);
 
     return (
-        <UserContext.Provider
-            value={{
-                profile,
-                currency,
-                isLoading,
-                refreshProfile: fetchProfile,
-                updateProfile,
-                formatCurrency,
-            }}
-        >
+        <UserContext.Provider value={value}>
             {children}
         </UserContext.Provider>
     );

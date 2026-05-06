@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { AnalyticsSkeleton } from '@/components/skeletons';
@@ -31,12 +30,12 @@ import {
   Bar,
   LabelList,
 } from 'recharts';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
-import { MonthlyAnalytics } from '@/lib/api/types';
+import { analyticsApi } from '@/lib/api/endpoints';
+import { DeferredRender } from '@/components/performance/DeferredRender';
 
 
 
@@ -86,17 +85,19 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency } = useUser();
-  const currentDate = new Date();
+  const currentDate = useMemo(() => new Date(), []);
 
   const [selectedYear, setSelectedYear] = useUrlState('year', currentDate.getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useUrlState('month', (currentDate.getMonth() + 1).toString().padStart(2, '0'));
+  const selectedYearNumber = parseInt(selectedYear);
+  const selectedMonthNumber = parseInt(selectedMonth);
 
 
   // Generate years for filter (current year + 4 years)
   // TODO: Get years from API
-  const years = Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString());
+  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString()), [currentDate]);
 
-  const months = [
+  const months = useMemo(() => [
     { value: '01', label: 'January' },
     { value: '02', label: 'February' },
     { value: '03', label: 'March' },
@@ -109,21 +110,46 @@ export default function MonthlyAnalyticsPage() {
     { value: '10', label: 'October' },
     { value: '11', label: 'November' },
     { value: '12', label: 'December' },
-  ];
+  ], []);
+
+  const prevLabel = useMemo(() => {
+    const prevDate = new Date(selectedYearNumber, selectedMonthNumber - 2, 1);
+    return `vs. ${prevDate.toLocaleString('default', { month: 'short' })}`;
+  }, [selectedMonthNumber, selectedYearNumber]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['monthly-analytics', { year: selectedYear, month: selectedMonth }],
+    queryKey: ['monthly-analytics', { year: selectedYearNumber, month: selectedMonthNumber }],
     queryFn: async () => {
       const result = await analyticsApi.getMonthly({
-        year: parseInt(selectedYear),
-        month: parseInt(selectedMonth)
+        year: selectedYearNumber,
+        month: selectedMonthNumber
       });
       if (result.success) {
         return result.data;
       }
       throw new Error(result.message || 'Failed to fetch analytics');
     },
+    placeholderData: keepPreviousData,
   });
+
+  const incomeBarData = useMemo(() => data?.income_breakdown
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
+    .sort((a, b) => b.value - a.value) ?? [], [data]);
+
+  const expenseBarData = useMemo(() => data?.expenses_breakdown
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
+    .sort((a, b) => b.value - a.value) ?? [], [data]);
+
+  const spendingTypeData = useMemo(() => data?.spending_type_breakdown.map((item) => ({
+    name: item.type,
+    value: Number(item.amount),
+  })) ?? [], [data]);
+
+  const dailyData = useMemo(() => data?.daily_spending_heatmap.map((item) => ({
+    day: new Date(item.day).getDate(),
+    fullDate: item.day,
+    amount: Number(item.amount),
+  })) ?? [], [data]);
 
   if (isLoading) {
     return <AnalyticsSkeleton />;
@@ -132,28 +158,6 @@ export default function MonthlyAnalyticsPage() {
   if (!data) {
     return <div className="p-8 text-center text-muted-foreground">No data available for this month.</div>;
   }
-
-
-  // Transform data for charts
-  const incomeBarData = data.income_breakdown
-    .map((item) => ({ name: item.category, value: Number(item.total) }))
-    .sort((a, b) => b.value - a.value);
-
-  const expenseBarData = data.expenses_breakdown
-    .map((item) => ({ name: item.category, value: Number(item.total) }))
-    .sort((a, b) => b.value - a.value);
-
-  const spendingTypeData = data.spending_type_breakdown.map((item) => ({
-    name: item.type,
-    value: Number(item.amount),
-  }));
-
-  const dailyData = data.daily_spending_heatmap.map((item) => ({
-    day: new Date(item.day).getDate(),
-    fullDate: item.day,
-    amount: Number(item.amount),
-  }));
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -191,13 +195,8 @@ export default function MonthlyAnalyticsPage() {
       />
 
       {/* Unified Financial Header */}
-      {(() => {
-        const prevDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 2, 1);
-        const prevLabel = `vs. ${prevDate.toLocaleString('default', { month: 'short' })}`;
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+      {(
+          <div
             className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-8"
           >
             {/* Core Flows */}
@@ -283,15 +282,11 @@ export default function MonthlyAnalyticsPage() {
                 </div>
               </div>
             </div>
-          </motion.div>
-        );
-      })()}
+          </div>
+      )}
 
       {/* Daily Spending Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+      <div
         className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
       >
         <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Daily Spending</h3>
@@ -346,16 +341,16 @@ export default function MonthlyAnalyticsPage() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </motion.div>
+      </div>
 
 
       {/* 2-Column Grid: Income Sources & Spending Types */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <DeferredRender
+        className="grid gap-6 lg:grid-cols-2"
+        fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card lg:col-span-2" />}
+      >
         {/* Income Breakdown Bar Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Income Sources</h3>
@@ -403,13 +398,10 @@ export default function MonthlyAnalyticsPage() {
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No income data recorded</div>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {/* Spending Type Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+        <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Spending Type Breakdown</h3>
@@ -457,15 +449,15 @@ export default function MonthlyAnalyticsPage() {
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No spending type data recorded</div>
             )}
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </DeferredRender>
 
       {/* Full Width Grid: Expense Categories */}
-      <div className="grid gap-6 lg:grid-cols-1">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+      <DeferredRender
+        className="grid gap-6 lg:grid-cols-1"
+        fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card" />}
+      >
+        <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Categories</h3>
@@ -513,8 +505,8 @@ export default function MonthlyAnalyticsPage() {
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No expense data recorded</div>
             )}
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </DeferredRender>
     </div>
   );
 }

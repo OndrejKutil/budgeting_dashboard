@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
-import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
@@ -45,8 +44,8 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/client';
-import type { YearlyAnalyticsData } from '@/lib/api/types';
+import { analyticsApi } from '@/lib/api/endpoints';
+import { DeferredRender } from '@/components/performance/DeferredRender';
 
 
 
@@ -68,6 +67,11 @@ const PIE_COLORS = [
   'hsl(195, 20%, 60%)',
   'hsl(0, 84%, 60%)',
 ];
+
+const MONTH_MAP: Record<string, string> = {
+  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+};
 
 
 
@@ -104,28 +108,11 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
   return null;
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
-
 export default function YearlyAnalyticsPage() {
   const { formatCurrency } = useUser();
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
-
-  const MONTH_MAP: Record<string, string> = {
-    Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-    Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-  };
+  const selectedYearNumber = parseInt(selectedYear);
 
   const handleMonthClick = (monthAbbr: string) => {
     const monthNum = MONTH_MAP[monthAbbr];
@@ -135,34 +122,21 @@ export default function YearlyAnalyticsPage() {
   };
 
   // TODO: Get years from API
-  const years = [2028, 2027, 2026, 2025];
+  const years = useMemo(() => [2028, 2027, 2026, 2025], []);
 
   const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['yearly-analytics', selectedYear],
+    queryKey: ['yearly-analytics', selectedYearNumber],
     queryFn: async () => {
-      const response = await analyticsApi.getYearly({ year: parseInt(selectedYear) });
+      const response = await analyticsApi.getYearly({ year: selectedYearNumber });
       if (response.success && response.data) {
         return response.data;
       }
       throw new Error(response.message || 'Failed to load yearly analytics');
     },
+    placeholderData: keepPreviousData,
   });
 
-  if (loading) {
-    return <AnalyticsSkeleton />;
-  }
-
-  if (error || !data) {
-    return (
-      <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    );
-  }
-
-  // Transform data for charts
-  const monthlyTrendsData = data.months.map((month, index) => {
+  const monthlyTrendsData = useMemo(() => data?.months.map((month, index) => {
     const income = data.monthly_income[index] || 0;
     const savings = data.monthly_saving[index] || 0;
     const investments = data.monthly_investment[index] || 0;
@@ -176,28 +150,31 @@ export default function YearlyAnalyticsPage() {
       savingsRate: income > 0 ? (savings / income) * 100 : 0,
       investmentRate: income > 0 ? (investments / income) * 100 : 0,
     };
-  });
+  }) ?? [], [data]);
 
-  const spendingTypeData = data.months.map((month, index) => ({
+  const spendingTypeData = useMemo(() => data?.months.map((month, index) => ({
     month,
     Core: data.monthly_core_expense[index] || 0,
     Fun: data.monthly_fun_expense[index] || 0,
     Future: data.monthly_future_expense[index] || 0,
-  }));
+  })) ?? [], [data]);
 
-  const categoryBreakdownData = Object.entries(data.expense_by_category)
+  const categoryBreakdownData = useMemo(() => Object.entries(data?.expense_by_category ?? {})
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 8); // Top 8 categories
+    .slice(0, 8), [data]);
 
-  const balanceData = [
-    { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
-    { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
-    { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
-  ].filter(d => d.value > 0);
+  const balanceData = useMemo(() => {
+    if (!data) return [];
 
-  // Synchronize zero lines for dual-axis chart
-  const { left: leftDomain, right: rightDomain } = (() => {
+    return [
+      { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
+      { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
+      { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
+    ].filter(d => d.value > 0);
+  }, [data]);
+
+  const { left: leftDomain, right: rightDomain } = useMemo(() => {
     const keysLeft = ['savings', 'investments'];
     const keysRight = ['savingsRate', 'investmentRate'];
 
@@ -206,90 +183,10 @@ export default function YearlyAnalyticsPage() {
     const minRight = Math.min(...monthlyTrendsData.map(d => Math.min(...keysRight.map(k => d[k] || 0))), 0);
     const maxRight = Math.max(...monthlyTrendsData.map(d => Math.max(...keysRight.map(k => d[k] || 0))), 0);
 
-    // Calculate "positive-heaviness" ratio for both. Formula: max / (max - min)
-    // 1.0 = All positive (min=0). 0.0 = All negative (max=0).
-    // ratio = height above zero / total height.
-    // We need to pick the smallest ratio (meaning the one that needs the MOST negative space) to accommodate both.
-
-    const rangeLeft = maxLeft - minLeft;
-    const rangeRight = maxRight - minRight;
-
-    // Default to strict [min, max] first
-    let lMin = minLeft;
-    const lMax = maxLeft;
-    let rMin = minRight;
-    const rMax = maxRight;
-
-    if (rangeLeft > 0 && rangeRight > 0) {
-      // Calculate the "zero line position" from bottom (0.0 to 1.0)
-      // pos = -min / (max - min). 
-      // 0 is at bottom if min=0.
-      const zeroPosLeft = -minLeft / rangeLeft;
-      const zeroPosRight = -minRight / rangeRight;
-
-      // We need a common zero position that satisfies BOTH requirements without cutting data.
-      // To satisfy a required Z, we must ensure:
-      // -min / (max - min) = Z  => -min = Z*max - Z*min => -min(1-Z) = Z*max => |min| = max * Z / (1-Z)
-
-      // We pick the LARGEST zeroPos (highest zero line) required by either dataset.
-      // Example: Left needs 0.2 (mostly positive). Right needs 0.8 (mostly negative).
-      // If we choose 0.2, Right's negative data (-8) would need huge positive space (32) to make -8 represent 20% of range. 
-      // If we choose 0.8, Left's positive data (10) would need huge negative space (-40) to make 0 at 80% height.
-      // Actually, to display strictly, we should just take specific domains that cover data.
-      // But to SYNC them, we need specific padding.
-
-      const targetZeroPos = Math.max(zeroPosLeft, zeroPosRight);
-
-      // Adjust Left Domain
-      // If targetZ > currentZ, we need to add negative space (extend min).
-      // If targetZ < currentZ, we need to add positive space (extend max).
-      // Since we picked max(), targetZ >= currentZ is practically guaranteed if we consider extending 'min' is the way to raise zero line.
-      // BUT wait. 
-      // range = max + |min|. 
-      // zeroPos = |min| / range.
-      // If we want HIGHER zeroPos, we need LARGER |min| portion. 
-      // So we satisfy the requirement by extending |min|.
-      // New|min| = max * targetZ / (1 - targetZ).
-
-      // Check both bounds for Left
-      const reqAbsMinLeft = lMax * targetZeroPos / (1 - targetZeroPos || 0.001);
-      // If calculated |min| < actual |min|, then 1-targetZ was too large? No.
-      // If we need Z=0.8, and data is [0, 10]. |min| must be 40.
-      // If data is [-10, 0]. Z=1. |min|=10. max=0. Formula breaks if max=0?
-      // if targetZ=1, reqMin -> infinity. Correct (if max>0).
-
-      // Simpler approach:
-      // We need min <= - (max * R_n / R_p).
-      // Let ratio R = |min| / max.
-      // We want strict equality R_left = R_right.
-      // Current ratios:
-      const rRatioLeft = maxLeft === 0 ? 999999 : Math.abs(minLeft) / maxLeft;
-      const rRatioRight = maxRight === 0 ? 999999 : Math.abs(minRight) / maxRight;
-
-      const targetR = Math.max(rRatioLeft, rRatioRight);
-
-      // Apply target ratio
-      // If Left has smaller ratio, we extend its Min (more negative).
-      if (targetR > rRatioLeft) {
-        lMin = - (maxLeft * targetR);
-      } else {
-        // Already big or maxLeft was 0.
-        // If maxLeft=0, lMin is just minLeft. targetR handled by other axis?
-        // If maxLeft=0, rRatioLeft is huge. targetR is huge.
-        // If right axis was normal (max>0), we force it to have huge negative?
-        // Yes, if one chart shows only negative, the other must have zero at the top too.
-      }
-
-      if (targetR > rRatioRight && maxRight > 0) {
-        rMin = - (maxRight * targetR);
-      }
-    }
-
-    // Now adding "Nice Number" padding to avoid Recharts auto-tick mess
     const niceScale = (min: number, max: number) => {
       const range = max - min;
-      const roughStep = range / 4; // 4 ticks roughly
-      const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+      const roughStep = range / 4;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep || 1)));
       const normalizedStep = roughStep / magnitude;
       let step = 1;
       if (normalizedStep > 5) step = 10;
@@ -297,70 +194,47 @@ export default function YearlyAnalyticsPage() {
       else if (normalizedStep > 1) step = 2;
       step *= magnitude;
 
-      // Expand strictly outwards
       const newMax = Math.ceil(max / step) * step;
       const newMin = Math.floor(min / step) * step;
       return [newMin, newMax];
     };
 
-    // We must ensure that after "nicing", the zero position is IDENTICAL.
-    // ZeroPos = |min| / (|min| + max).
-    // It's easier to Nice the "Max" (Positive side) first, then STRICTLY calculate Min from it using targetR.
-    // Or Nice the "Larger" absolute side.
-
-    // For Left:
-    const [_, niceMaxLeft] = niceScale(0, lMax);
-    // We use naive nicing for Max.
-    const finalLMax = niceMaxLeft === 0 ? 0 : niceMaxLeft;
-    // Recalculate Min to preserve ratio perfectly
-    const rRatio = (Math.abs(lMin) / (lMax || 1));
-    // Wait, use the targetR from before!
-    // But we might have changed effective ratio if we just extended min?
-
-    // Let's restart the "Nice" Strategy:
-    // 1. Calculate 'Max' for both, round them to Nice Numbers.
-    // 2. Determine implied 'Min' required to cover data AND satisfy common Ratio. No.
-
-    // Let's stick to the simplest solid logic:
-    // 1. Get loose Nice domains for both INDEPENDENTLY first.
     let [niceLMin, niceLMax] = niceScale(minLeft, maxLeft);
     let [niceRMin, niceRMax] = niceScale(minRight, maxRight);
 
-    // 2. Ensure they encompass 0.
     niceLMax = Math.max(niceLMax, 0); niceLMin = Math.min(niceLMin, 0);
     niceRMax = Math.max(niceRMax, 0); niceRMin = Math.min(niceRMin, 0);
 
-    // 3. Compare Ratios of these Nice Domains.
-    // Ratio = |min| / max. (Undefined if max=0).
     const ratioL = niceLMax === 0 ? 1000 : Math.abs(niceLMin) / niceLMax;
     const ratioR = niceRMax === 0 ? 1000 : Math.abs(niceRMin) / niceRMax;
-
     const finalRatio = Math.max(ratioL, ratioR);
 
-    // 4. Adjust the "Lighter" side to match FinalRatio.
-    // If Left is lighter (smaller ratio, less negative relative to positive), extend Negative.
     if (ratioL < finalRatio) {
-      // We assume Max is fixed (it's already Nice). We extend Min.
-      // |min| = max * finalRatio.
       niceLMin = -niceLMax * finalRatio;
     }
 
-    // Similarly for Right
     if (ratioR < finalRatio) {
       niceRMin = -niceRMax * finalRatio;
     }
-
-    // Result: 
-    // Max is Nice (e.g. 100). 
-    // Min is derived (e.g. -50 if ratio=0.5).
-    // -50 is usually also "Nice" enough because ratio effectively comes from another Nice domain.
-    // (If Ratio came from 200/-100 => 0.5. Then 100/-50 works).
 
     return {
       left: [niceLMin, niceLMax],
       right: [niceRMin, niceRMax]
     };
-  })();
+  }, [monthlyTrendsData]);
+
+  if (loading) {
+    return <AnalyticsSkeleton />;
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex h-96 items-center justify-center flex-col gap-4">
+        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -383,17 +257,9 @@ export default function YearlyAnalyticsPage() {
         }
       />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="space-y-8"
-      >
+      <div className="space-y-8">
         {/* Unified Financial Header with Inline Trends */}
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-4"
-        >
+        <div className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-4">
           {/* Core Flows */}
           <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
             <div>
@@ -478,13 +344,10 @@ export default function YearlyAnalyticsPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Highlights */}
-        <motion.div
-          variants={itemVariants}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
-        >
+        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-6 text-lg font-semibold font-display flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
             Yearly Records
@@ -521,7 +384,7 @@ export default function YearlyAnalyticsPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Long Term Trends Section */}
         <div className="mt-16 mb-8 border-t border-border/40 pt-12">
@@ -530,10 +393,12 @@ export default function YearlyAnalyticsPage() {
         </div>
 
         {/* Charts Grid */}
-        <div className="grid gap-8 lg:grid-cols-2">
+        <DeferredRender
+          className="grid gap-8 lg:grid-cols-2"
+          fallback={<div className="min-h-[368px] rounded-xl border border-border/50 bg-card lg:col-span-2" />}
+        >
           {/* Income vs Expenses Chart */}
-          <motion.div
-            variants={itemVariants}
+          <div
             className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
           >
             <div className="flex items-center justify-between mb-8">
@@ -588,11 +453,10 @@ export default function YearlyAnalyticsPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </motion.div>
+          </div>
 
           {/* Wealth Generation Chart */}
-          <motion.div
-            variants={itemVariants}
+          <div
             className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
           >
             <div className="flex items-center justify-between mb-8">
@@ -655,17 +519,17 @@ export default function YearlyAnalyticsPage() {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </DeferredRender>
 
 
         {/* Composition Section */}
-        <div className="mt-12 pt-8">
+        <DeferredRender className="mt-12 pt-8" fallback={<div className="min-h-[420px] rounded-xl border border-border/50 bg-card" />}>
           <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-6">Composition & Balance</h2>
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Category Breakdown */}
-            <motion.div variants={itemVariants} className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
+            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
               <h3 className="mb-6 text-lg font-semibold font-display">Expense Distribution</h3>
               <div className="h-[300px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -689,10 +553,10 @@ export default function YearlyAnalyticsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </motion.div>
+            </div>
 
             {/* Spending Balance & Type Analysis */}
-            <motion.div variants={itemVariants} className="space-y-6">
+            <div className="space-y-6">
               {/* Balance Stats */}
               <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
                 <h3 className="mb-4 text-lg font-semibold font-display">Spending Balance</h3>
@@ -750,10 +614,10 @@ export default function YearlyAnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </DeferredRender>
+      </div>
     </div>
   );
 }

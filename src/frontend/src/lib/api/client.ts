@@ -199,9 +199,3 @@ export const apiClient = {
     request<T>(endpoint, { method: 'DELETE' }),
 };
 
-// Re-export all endpoint APIs for convenience
-// Yes it would be cleaner to update all imports ('@/lib/api/client') to use the endpoints directly
-// But I don't want to do that now
-// TODO: Update all imports to use the endpoints directly
-// then remove this line
-export * from './endpoints';
