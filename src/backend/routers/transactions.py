@@ -71,12 +71,26 @@ async def get_all_data(
 
     try:
         user_supabase_client = get_db_client(user["access_token"])
+
+        transaction_fields = ",".join([
+            TRANSACTIONS_COLUMNS.ID.value,
+            TRANSACTIONS_COLUMNS.USER_ID.value,
+            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
+            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
+            TRANSACTIONS_COLUMNS.AMOUNT.value,
+            TRANSACTIONS_COLUMNS.DATE.value,
+            TRANSACTIONS_COLUMNS.NOTES.value,
+            TRANSACTIONS_COLUMNS.CREATED_AT.value,
+            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
+        ])
         
         # Select with potential join for category filtering
         if category_type:
-             query = user_supabase_client.table("fct_transactions").select("*, dim_categories_users!inner(type)", count="exact")
+             query = user_supabase_client.table("fct_transactions").select(
+                 f"{transaction_fields}, dim_categories_users!inner(type)"
+             )
         else:
-             query = user_supabase_client.table("fct_transactions").select("*", count="exact")
+             query = user_supabase_client.table("fct_transactions").select(transaction_fields)
         
         if start_date:
             query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
@@ -111,10 +125,11 @@ async def get_all_data(
             query = query.range(offset, offset + limit)
         
         response = query.execute()
+        response_data = response.data or []
         
         return TransactionsResponse(
-            data=[TransactionData(**item) for item in response.data],
-            count=response.count,
+            data=[TransactionData(**item) for item in response_data],
+            count=len(response_data),
             success=True,
             message="Transactions retrieved successfully"
         )

@@ -112,9 +112,15 @@ async def get_dividend_portfolio(
     try:
         supabase = get_db_client(user["access_token"])
 
+        portfolio_fields = ",".join([
+            DIVIDEND_PORTFOLIO_COLUMNS.USER_ID_FK.value,
+            DIVIDEND_PORTFOLIO_COLUMNS.PORTFOLIO_VALUE.value,
+            DIVIDEND_PORTFOLIO_COLUMNS.PORTFOLIO_JSON.value
+        ])
+
         response = (
             supabase.table(TABLE)
-            .select("*")
+            .select(portfolio_fields)
             .eq(DIVIDEND_PORTFOLIO_COLUMNS.USER_ID_FK.value, user["user_id"])
             .limit(1)
             .execute()

@@ -79,7 +79,19 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
     """Fetch transactions from the database for a specific date range."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*)')
+        yearly_fields = ",".join([
+            TRANSACTIONS_COLUMNS.ID.value,
+            TRANSACTIONS_COLUMNS.USER_ID.value,
+            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
+            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
+            TRANSACTIONS_COLUMNS.AMOUNT.value,
+            TRANSACTIONS_COLUMNS.DATE.value,
+            TRANSACTIONS_COLUMNS.NOTES.value,
+            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
+        ])
+        query = user_supabase_client.table('fct_transactions').select(
+            f"{yearly_fields}, dim_categories_users(type, category_name, spending_type)"
+        )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
@@ -534,7 +546,19 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
     """Fetch transactions for emergency fund analysis."""
     try:
         user_supabase_client = get_db_client(access_token)
-        query = user_supabase_client.table('fct_transactions').select('*, dim_categories_users(*), dim_savings_funds(*)')
+        emergency_fields = ",".join([
+            TRANSACTIONS_COLUMNS.ID.value,
+            TRANSACTIONS_COLUMNS.USER_ID.value,
+            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
+            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
+            TRANSACTIONS_COLUMNS.AMOUNT.value,
+            TRANSACTIONS_COLUMNS.DATE.value,
+            TRANSACTIONS_COLUMNS.NOTES.value,
+            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
+        ])
+        query = user_supabase_client.table('fct_transactions').select(
+            f"{emergency_fields}, dim_categories_users(type, category_name, spending_type), dim_savings_funds(fund_name)"
+        )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)

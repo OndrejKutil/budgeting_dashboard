@@ -58,7 +58,16 @@ async def get_all_accounts(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        query = user_supabase_client.table("dim_accounts").select("*")
+        account_fields = ",".join([
+            ACCOUNTS_COLUMNS.ID.value,
+            ACCOUNTS_COLUMNS.USER_ID.value,
+            ACCOUNTS_COLUMNS.NAME.value,
+            ACCOUNTS_COLUMNS.TYPE.value,
+            ACCOUNTS_COLUMNS.CURRENCY.value,
+            ACCOUNTS_COLUMNS.IS_ACTIVE.value,
+            ACCOUNTS_COLUMNS.CREATED_AT.value
+        ])
+        query = user_supabase_client.table("dim_accounts").select(account_fields)
 
         if account_id:
             query = query.eq(ACCOUNTS_COLUMNS.ID.value, account_id)
@@ -212,13 +221,13 @@ async def delete_account(
         # Check if any transactions reference this account
         tx_check = (
             user_supabase_client.table("fct_transactions")
-            .select("id_pk", count="exact")
+            .select("id_pk")
             .eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
             .limit(1)
             .execute()
         )
 
-        has_transactions = tx_check.count and tx_check.count > 0
+        has_transactions = bool(tx_check.data)
 
         # Additionally check the balance
         tx_amounts = (

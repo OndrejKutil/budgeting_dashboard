@@ -63,7 +63,15 @@ async def get_savings_funds(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        query = user_supabase_client.table("dim_savings_funds").select("*")
+        fund_fields = ",".join([
+            SAVINGS_FUNDS_COLUMNS.ID.value,
+            SAVINGS_FUNDS_COLUMNS.USER_ID.value,
+            SAVINGS_FUNDS_COLUMNS.NAME.value,
+            SAVINGS_FUNDS_COLUMNS.TARGET_AMOUNT.value,
+            SAVINGS_FUNDS_COLUMNS.IS_ACTIVE.value,
+            SAVINGS_FUNDS_COLUMNS.CREATED_AT.value
+        ])
+        query = user_supabase_client.table("dim_savings_funds").select(fund_fields)
 
         if fund_id:
             query = query.eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id)
@@ -220,13 +228,13 @@ async def delete_savings_fund(
         # Check if any transactions reference this fund
         tx_check = (
             user_supabase_client.table("fct_transactions")
-            .select("id_pk", count="exact")
+            .select("id_pk")
             .eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, fund_id)
             .limit(1)
             .execute()
         )
 
-        has_transactions = tx_check.count and tx_check.count > 0
+        has_transactions = bool(tx_check.data)
 
         # Additionally check the balance
         tx_amounts = (

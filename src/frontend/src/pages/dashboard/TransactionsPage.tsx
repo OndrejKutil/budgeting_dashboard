@@ -185,7 +185,9 @@ export default function TransactionsPage() {
   });
 
   const transactions = transactionsData?.data || [];
-  const totalCount = transactionsData?.count || 0;
+  const rangeStart = transactions.length === 0 ? 0 : offset + 1;
+  const rangeEnd = transactions.length === 0 ? 0 : offset + transactions.length;
+  const hasNextPage = transactions.length === ITEMS_PER_PAGE;
   const isLoading = isTransactionsLoading;
   const error = transactionsError ? (transactionsError as Error).message : null;
 
@@ -434,8 +436,6 @@ export default function TransactionsPage() {
       savings_fund_id_fk: '',
     });
   };
-
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   if (error && !isLoading && transactions.length === 0) {
     return (
@@ -849,9 +849,8 @@ export default function TransactionsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
               <p className="text-xs text-muted-foreground">
-                Showing <span className="font-medium text-foreground">{offset + 1}</span>-
-                <span className="font-medium text-foreground">{Math.min(offset + ITEMS_PER_PAGE, totalCount)}</span> of{' '}
-                <span className="font-medium text-foreground">{totalCount}</span> transactions
+                Showing <span className="font-medium text-foreground">{rangeStart}</span>-
+                <span className="font-medium text-foreground">{rangeEnd}</span> transactions
               </p>
               <div className="flex gap-2">
                 <Button
@@ -877,7 +876,7 @@ export default function TransactionsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={page >= totalPages}
+                    disabled={!hasNextPage}
                     onClick={() => setPage(page + 1)}
                     className="h-8 bg-background/50"
                   >
