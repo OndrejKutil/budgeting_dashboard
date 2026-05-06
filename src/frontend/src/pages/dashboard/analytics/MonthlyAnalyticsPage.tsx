@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
+import { AnalyticsSkeleton } from '@/components/skeletons';
 import {
   Select,
   SelectContent,
@@ -125,7 +126,7 @@ export default function MonthlyAnalyticsPage() {
   });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8">Loading analytics...</div>;
+    return <AnalyticsSkeleton />;
   }
 
   if (!data) {

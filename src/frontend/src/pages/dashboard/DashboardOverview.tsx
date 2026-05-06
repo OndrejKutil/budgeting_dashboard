@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { DashboardSkeleton } from '@/components/skeletons';
 import {
   TrendingUp,
   TrendingDown,
@@ -100,11 +101,7 @@ export default function DashboardOverview() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
+import { AnalyticsSkeleton } from '@/components/skeletons';
 import {
   Select,
   SelectContent,
@@ -148,11 +149,7 @@ export default function YearlyAnalyticsPage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   if (error || !data) {
