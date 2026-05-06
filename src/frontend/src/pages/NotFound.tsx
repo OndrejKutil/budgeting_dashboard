@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ArrowLeft, SearchX, Home } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
@@ -12,71 +12,68 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background relative overflow-hidden p-4">
-      {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] pointer-events-none opacity-50" />
+    <div className="min-h-screen bg-background flex items-center overflow-hidden">
+      {/* Subtle ambient glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute left-1/4 top-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[140px]" />
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card max-w-2xl w-full p-8 text-center relative z-10 flex flex-col items-center shadow-card border-gradient"
-      >
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-8 lg:px-16 grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-20 items-center py-16">
+        {/* Left: Big 404 */}
         <motion.div
-          initial={{ scale: 0.8, rotate: -10 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="mb-6 p-4 rounded-full bg-muted/50 border border-border/50 relative"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+          className="flex flex-col"
         >
-          <SearchX className="h-16 w-16 text-primary" />
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
-            className="absolute -bottom-2 -right-2 bg-destructive text-destructive-foreground p-1.5 rounded-full border-2 border-background"
-          >
-            <Wallet className="h-5 w-5" />
-          </motion.div>
+          <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-primary mb-6 block">
+            Error 404
+          </span>
+          <h1 className="font-display font-black text-[clamp(7rem,20vw,14rem)] leading-none tracking-tighter text-foreground select-none">
+            404
+          </h1>
+          <div className="mt-6 h-px bg-border/50 w-full" />
+          <p className="mt-4 font-mono text-xs text-muted-foreground/50 tracking-widest uppercase">
+            404_INSUFFICIENT_FUNDS
+          </p>
         </motion.div>
 
-        <h1 className="mb-2 text-6xl font-black tracking-tight text-gradient-blurple drop-shadow-sm">
-          404
-        </h1>
+        {/* Right: Content */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+          className="flex flex-col"
+        >
+          <h2 className="text-3xl font-display font-bold tracking-tight text-foreground mb-3">
+            Budget Not Found
+          </h2>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-3">
+            We couldn't find the page you're looking for.
+          </p>
+          <p className="text-base text-primary/70 italic font-serif mb-10">
+            "It must have been cut from this month's budget."
+          </p>
 
-        <h2 className="mb-4 text-2xl font-bold tracking-tight">
-          Budget Not Found
-        </h2>
-
-        <p className="mb-8 text-muted-foreground text-lg leading-relaxed">
-          We couldn't find the page you're looking for. <br />
-          <span className="italic text-primary/80">"It must have been cut from this month's budget."</span>
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <Button asChild variant="default" className="gap-2 shadow-lg hover:shadow-primary/20 transition-all">
-            <Link to="/">
-              <Home className="h-4 w-4" />
-              Return Home
-            </Link>
-          </Button>
-
-          <Button asChild variant="outline" className="gap-2 bg-background/50 hover:bg-background/80">
-            <Link to=".." onClick={(e) => {
-              e.preventDefault();
-              window.history.back();
-            }}>
-              <ArrowLeft className="h-4 w-4" />
-              Go Back
-            </Link>
-          </Button>
-        </div>
-      </motion.div>
-
-      <footer className="absolute bottom-8 text-sm text-muted-foreground/60">
-        Error: 404_INSUFFICIENT_FUNDS
-      </footer>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button asChild size="lg" className="gap-2">
+              <Link to="/">
+                <Home className="h-4 w-4" />
+                Return Home
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="gap-2">
+              <Link to=".." onClick={(e) => { e.preventDefault(); window.history.back(); }}>
+                <ArrowLeft className="h-4 w-4" />
+                Go Back
+              </Link>
+            </Button>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
 
 export default NotFound;
+

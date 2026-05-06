@@ -37,8 +37,11 @@ const analyticsItems = [
 ];
 
 const toolsItems = [
-  { name: 'Investing Calculator', href: '/dashboard/investing-calculator', icon: Landmark },
   { name: 'Budget Maker', href: '/dashboard/budget-maker', icon: ListChecks },
+];
+
+const calculatorsItems = [
+  { name: 'Investing Calculator', href: '/dashboard/investing-calculator', icon: Landmark },
   { name: 'Dividend Calculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
 ];
 
@@ -219,6 +222,44 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
             {!collapsed && "Tools"}
           </div>
           {toolsItems.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              end={item.href === '/dashboard'}
+              onClick={handleNavClick}
+              className={({ isActive: active }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
+                  collapsed ? 'justify-center px-2' : 'px-3',
+                  active || isActive(item.href)
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                )
+              }
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <AnimatePresence mode="wait">
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="overflow-hidden whitespace-nowrap"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Calculators section */}
+        <div className="space-y-1 pt-4">
+          <div className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
+            {!collapsed && "Calculators"}
+          </div>
+          {calculatorsItems.map((item) => (
             <NavLink
               key={item.href}
               to={item.href}
