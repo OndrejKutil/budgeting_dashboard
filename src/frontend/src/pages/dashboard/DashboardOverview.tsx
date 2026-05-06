@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
-import { KPICard } from '@/components/ui/kpi-card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { DashboardSkeleton } from '@/components/skeletons';
@@ -19,13 +18,6 @@ import {
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  LineChart,
-  Line,
   AreaChart,
   Area,
 } from 'recharts';
@@ -43,62 +35,116 @@ const COLORS = [
   'hsl(0, 84%, 60%)',     // Destructive red
 ];
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+const getSummaryData = async () => {
+  const response = await summaryApi.get();
+  if (response.success && response.data) {
+    return response.data;
+  }
+  throw new Error(response.message || 'Failed to load summary data');
 };
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
+const getYearlyAnalyticsData = async (year: number) => {
+  const response = await analyticsApi.getYearly({ year });
+  if (response.success && response.data) {
+    return response.data;
+  }
+  throw new Error(response.message || 'Failed to load yearly analytics');
+};
+
+const getMonthlyAnalyticsData = async (year: number, month: number) => {
+  const response = await analyticsApi.getMonthly({ year, month });
+  if (response.success && response.data) {
+    return response.data;
+  }
+  throw new Error(response.message || 'Failed to load monthly analytics');
 };
 
 export default function DashboardOverview() {
   const { formatCurrency } = useUser();
-  const [data, setData] = useState<SummaryData | null>(null);
-  const [yearlyData, setYearlyData] = useState<YearlyAnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-  const prevMonthName = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleString('default', { month: 'short' });
+  const queryClient = useQueryClient();
+  const today = useMemo(() => new Date(), []);
+  const currentYear = today.getFullYear();
+  const currentMonthNumber = today.getMonth() + 1;
+  const currentMonth = useMemo(
+    () => today.toLocaleString('default', { month: 'long', year: 'numeric' }),
+    [today]
+  );
+  const prevMonthName = useMemo(
+    () => new Date(currentYear, currentMonthNumber - 2, 1).toLocaleString('default', { month: 'short' }),
+    [currentMonthNumber, currentYear]
+  );
+
+  const {
+    data,
+    isLoading: loading,
+    error,
+  } = useQuery<SummaryData>({
+    queryKey: ['summary'],
+    queryFn: getSummaryData,
+  });
+
+  const { data: yearlyData } = useQuery<YearlyAnalyticsData>({
+    queryKey: ['yearly-analytics', currentYear],
+    queryFn: () => getYearlyAnalyticsData(currentYear),
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await summaryApi.get();
-        if (response.success && response.data) {
-          setData(response.data);
-        } else {
-          setError(response.message || 'Failed to load summary data');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching dashboard data');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    queryClient.prefetchQuery({
+      queryKey: ['monthly-analytics', { year: currentYear, month: currentMonthNumber }],
+      queryFn: () => getMonthlyAnalyticsData(currentYear, currentMonthNumber),
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['yearly-analytics', currentYear],
+      queryFn: () => getYearlyAnalyticsData(currentYear),
+    });
+  }, [currentMonthNumber, currentYear, queryClient]);
 
-    fetchData();
-  }, []);
+  const kpiMetrics = useMemo(() => {
+    if (!data) return [];
 
-  // Secondary fetch for sparkline data
-  useEffect(() => {
-    const fetchYearly = async () => {
-      try {
-        const response = await analyticsApi.getYearly({ year: new Date().getFullYear() });
-        if (response.success && response.data) {
-          setYearlyData(response.data);
-        }
-      } catch (err) {
-        // Sparklines are non-critical, silently ignore
-      }
-    };
-    fetchYearly();
-  }, []);
+    const toSparkData = (values?: number[]) =>
+      values?.slice(0, currentMonthNumber).map((v, idx) => ({ v, idx })) ?? [];
+
+    return [
+      {
+        label: "Total Income",
+        value: data.total_income,
+        icon: TrendingUp,
+        delta: data.comparison.income_delta_pct,
+        sparkData: toSparkData(yearlyData?.monthly_income),
+        color: 'text-emerald-500'
+      },
+      {
+        label: "Total Expenses",
+        value: data.total_expense,
+        icon: TrendingDown,
+        delta: data.comparison.expense_delta_pct,
+        sparkData: toSparkData(yearlyData?.monthly_expense),
+        color: 'text-rose-500',
+        invert: true
+      },
+      {
+        label: "Savings",
+        value: data.total_saving,
+        icon: PiggyBank,
+        delta: data.comparison.saving_delta_pct,
+        sparkData: toSparkData(yearlyData?.monthly_saving),
+        extra: `${(data.savings_rate * 100).toFixed(1)}% Rate`,
+        color: 'text-emerald-500'
+      },
+      {
+        label: "Investments",
+        value: data.total_investment,
+        icon: Briefcase,
+        delta: data.comparison.investment_delta_pct,
+        sparkData: toSparkData(yearlyData?.monthly_investment),
+        extra: `${(data.investment_rate * 100).toFixed(1)}% Rate`,
+        color: 'text-primary'
+      },
+    ];
+  }, [currentMonthNumber, data, yearlyData]);
+
+  const topExpenses = useMemo(() => data?.top_expenses.slice(0, 3) ?? [], [data]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -107,7 +153,7 @@ export default function DashboardOverview() {
   if (error || !data) {
     return (
       <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error || 'No data available'}</p>
+        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
@@ -137,12 +183,7 @@ export default function DashboardOverview() {
       />
 
       {/* Primary KPI Section (Hero) */}
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
-      >
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* HERO CARD: Net Cash Flow */}
         <div className="col-span-2 row-span-1 rounded-2xl border border-border/50 bg-gradient-to-br from-card to-card/50 p-8 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -191,46 +232,10 @@ export default function DashboardOverview() {
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: "Total Income",
-            value: data.total_income,
-            icon: TrendingUp,
-            delta: data.comparison.income_delta_pct,
-            sparkData: yearlyData?.monthly_income.slice(0, new Date().getMonth() + 1),
-            color: 'text-emerald-500'
-          },
-          {
-            label: "Total Expenses",
-            value: data.total_expense,
-            icon: TrendingDown,
-            delta: data.comparison.expense_delta_pct,
-            sparkData: yearlyData?.monthly_expense.slice(0, new Date().getMonth() + 1),
-            color: 'text-rose-500',
-            invert: true
-          },
-          {
-            label: "Savings",
-            value: data.total_saving,
-            icon: PiggyBank,
-            delta: data.comparison.saving_delta_pct,
-            sparkData: yearlyData?.monthly_saving.slice(0, new Date().getMonth() + 1),
-            extra: `${(data.savings_rate * 100).toFixed(1)}% Rate`,
-            color: 'text-emerald-500'
-          },
-          {
-            label: "Investments",
-            value: data.total_investment,
-            icon: Briefcase,
-            delta: data.comparison.investment_delta_pct,
-            sparkData: yearlyData?.monthly_investment.slice(0, new Date().getMonth() + 1),
-            extra: `${(data.investment_rate * 100).toFixed(1)}% Rate`,
-            color: 'text-primary'
-          },
-        ].map((metric, i) => {
+        {kpiMetrics.map((metric, i) => {
           const isPositive = metric.invert ? metric.delta <= 0 : metric.delta >= 0;
           return (
             <div key={i} className="flex flex-col justify-between p-4 rounded-xl border border-border/30 bg-card/30 hover:bg-card/50 transition-colors min-h-[110px]">
@@ -258,10 +263,10 @@ export default function DashboardOverview() {
                   {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">vs. {prevMonthName}</span>
                 </span>
 
-                {metric.sparkData && metric.sparkData.length > 0 && (
+                {metric.sparkData.length > 0 && (
                   <div className="h-8 w-20 opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={metric.sparkData.map((v, idx) => ({ v: v, idx }))}>
+                      <AreaChart data={metric.sparkData}>
                         <defs>
                           <linearGradient id={`gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} stopOpacity={0.2} />
@@ -289,10 +294,7 @@ export default function DashboardOverview() {
       {/* Featured Insights */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Largest Transactions - Revised */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+        <div
           className="lg:col-span-2 rounded-2xl border border-border bg-card p-0 shadow-sm overflow-hidden"
         >
           <div className="p-6 border-b border-border/50 flex items-center justify-between">
@@ -328,16 +330,13 @@ export default function DashboardOverview() {
               <div className="text-sm text-muted-foreground text-center py-8">No transactions found</div>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {/* Insight Columns */}
         <div className="space-y-6">
           {/* Biggest Mover - Redesigned */}
           {data.biggest_mover && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+            <div
               className="rounded-2xl border border-border bg-card p-6 shadow-sm group"
             >
               <div className="flex items-start justify-between mb-4">
@@ -369,19 +368,16 @@ export default function DashboardOverview() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Top Expenses List Summary */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+          <div
             className="rounded-2xl border border-border bg-card p-6 shadow-sm"
           >
             <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-widest">Category Top 3</h3>
             <div className="space-y-4">
-              {data.top_expenses.slice(0, 3).map((category, i) => (
+              {topExpenses.map((category, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
                     <div className={`h-1.5 w-1.5 rounded-full ${i === 0 ? 'bg-destructive' : 'bg-muted-foreground'}`} />
@@ -393,7 +389,7 @@ export default function DashboardOverview() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

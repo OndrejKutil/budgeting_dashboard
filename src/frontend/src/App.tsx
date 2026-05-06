@@ -2,38 +2,40 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
+import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
+import { DashboardLayout } from "./components/layout/DashboardLayout";
 
 // Pages
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/auth/LoginPage";
-import RegisterPage from "./pages/auth/RegisterPage";
-import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import AuthCallbackPage from "./pages/auth/AuthCallbackPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import NotFound from "./pages/NotFound";
-import FaqPage from "./pages/FaqPage";
-import HowItWorksPage from "./pages/HowItWorksPage";
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
+const AuthCallbackPage = lazy(() => import("./pages/auth/AuthCallbackPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const FaqPage = lazy(() => import("./pages/FaqPage"));
+const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 
 // Dashboard
-import { DashboardLayout } from "./components/layout/DashboardLayout";
-import DashboardOverview from "./pages/dashboard/DashboardOverview";
-import TransactionsPage from "./pages/dashboard/TransactionsPage";
-import AccountsPage from "./pages/dashboard/AccountsPage";
-import CategoriesPage from "./pages/dashboard/CategoriesPage";
-import FundsPage from "./pages/dashboard/FundsPage";
-import ProfilePage from "./pages/dashboard/ProfilePage";
-import MonthlyAnalyticsPage from "./pages/dashboard/analytics/MonthlyAnalyticsPage";
-import YearlyAnalyticsPage from "./pages/dashboard/analytics/YearlyAnalyticsPage";
-import EmergencyFundPage from "./pages/dashboard/analytics/EmergencyFundPage";
-import BudgetMaker from "./pages/dashboard/BudgetMaker";
-import InvestingCalculator from "./pages/dashboard/InvestingCalculator";
-import DividendCalculator from "./pages/dashboard/DividendCalculator";
+const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
+const TransactionsPage = lazy(() => import("./pages/dashboard/TransactionsPage"));
+const AccountsPage = lazy(() => import("./pages/dashboard/AccountsPage"));
+const CategoriesPage = lazy(() => import("./pages/dashboard/CategoriesPage"));
+const FundsPage = lazy(() => import("./pages/dashboard/FundsPage"));
+const ProfilePage = lazy(() => import("./pages/dashboard/ProfilePage"));
+const MonthlyAnalyticsPage = lazy(() => import("./pages/dashboard/analytics/MonthlyAnalyticsPage"));
+const YearlyAnalyticsPage = lazy(() => import("./pages/dashboard/analytics/YearlyAnalyticsPage"));
+const EmergencyFundPage = lazy(() => import("./pages/dashboard/analytics/EmergencyFundPage"));
+const BudgetMaker = lazy(() => import("./pages/dashboard/BudgetMaker"));
+const InvestingCalculator = lazy(() => import("./pages/dashboard/InvestingCalculator"));
+const DividendCalculator = lazy(() => import("./pages/dashboard/DividendCalculator"));
 
 const STALE_TIME: number = 1000 * 60 * 5; // 5 minutes
 
@@ -45,6 +47,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const PageFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
+
+const withSuspense = (element: ReactNode, fallback: ReactNode = <PageFallback />) => (
+  <Suspense fallback={fallback}>{element}</Suspense>
+);
 
 /**
  * Detects Supabase OAuth hash fragments (e.g. #access_token=...)
@@ -72,16 +84,16 @@ const AppContent = () => {
           <OAuthHashRedirect />
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/register" element={<RegisterPage />} />
-            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/faq" element={<FaqPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/" element={withSuspense(<LandingPage />)} />
+            <Route path="/auth/login" element={withSuspense(<LoginPage />)} />
+            <Route path="/auth/register" element={withSuspense(<RegisterPage />)} />
+            <Route path="/auth/forgot-password" element={withSuspense(<ForgotPasswordPage />)} />
+            <Route path="/auth/reset-password" element={withSuspense(<ResetPasswordPage />)} />
+            <Route path="/auth/callback" element={withSuspense(<AuthCallbackPage />)} />
+            <Route path="/terms" element={withSuspense(<TermsPage />)} />
+            <Route path="/privacy" element={withSuspense(<PrivacyPage />)} />
+            <Route path="/faq" element={withSuspense(<FaqPage />)} />
+            <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
 
             {/* Protected dashboard routes */}
             <Route
@@ -93,22 +105,22 @@ const AppContent = () => {
               }
             >
               {/* Routes living under the /dashboard/{...} */}
-              <Route index element={<DashboardOverview />} />
-              <Route path="transactions" element={<TransactionsPage />} />
-              <Route path="accounts" element={<AccountsPage />} />
-              <Route path="categories" element={<CategoriesPage />} />
-              <Route path="funds" element={<FundsPage />} />
-              <Route path="profile" element={<ProfilePage />} />
-              <Route path="analytics/monthly" element={<MonthlyAnalyticsPage />} />
-              <Route path="analytics/yearly" element={<YearlyAnalyticsPage />} />
-              <Route path="analytics/emergency-fund" element={<EmergencyFundPage />} />
-              <Route path="budget-maker" element={<BudgetMaker />} />
-              <Route path="investing-calculator" element={<InvestingCalculator />} />
-              <Route path="dividend-calculator" element={<DividendCalculator />} />
+              <Route index element={withSuspense(<DashboardOverview />, <DashboardSkeleton />)} />
+              <Route path="transactions" element={withSuspense(<TransactionsPage />, <DashboardSkeleton />)} />
+              <Route path="accounts" element={withSuspense(<AccountsPage />, <DashboardSkeleton />)} />
+              <Route path="categories" element={withSuspense(<CategoriesPage />, <DashboardSkeleton />)} />
+              <Route path="funds" element={withSuspense(<FundsPage />, <DashboardSkeleton />)} />
+              <Route path="profile" element={withSuspense(<ProfilePage />, <DashboardSkeleton />)} />
+              <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+              <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+              <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
+              <Route path="budget-maker" element={withSuspense(<BudgetMaker />, <BudgetMakerSkeleton />)} />
+              <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
+              <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
             </Route>
 
             {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={withSuspense(<NotFound />)} />
           </Routes>
         </UserProvider>
       </AuthProvider>

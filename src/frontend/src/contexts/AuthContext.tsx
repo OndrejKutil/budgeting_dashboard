@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext } from './auth-context';
 import { tokenManager, authApi, ApiError } from '@/lib/api/client';
 import { useNavigate } from 'react-router-dom';
@@ -69,17 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const value = useMemo(() => ({
+    isAuthenticated,
+    isLoading,
+    userId,
+    login,
+    register,
+    logout,
+  }), [isAuthenticated, isLoading, userId, login, register, logout]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        isLoading,
-        userId,
-        login,
-        register,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
