@@ -686,17 +686,9 @@ export default function TransactionsPage() {
                     const account = accountMap[transaction.account_id_fk];
                     const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
                     const txType = category?.type || 'expense';
-                    const borderColor = txType === 'income'
-                      ? 'border-l-emerald-500'
-                      : txType === 'saving'
-                      ? 'border-l-sky-500'
-                      : txType === 'investment'
-                      ? 'border-l-purple-500'
-                      : 'border-l-rose-500';
                     return (
                       <TableRow key={transaction.id_pk} className={cn(
-                        'group border-b border-border/40 last:border-0 transition-colors border-l-2',
-                        borderColor,
+                        'group border-b border-border/40 last:border-0 transition-colors',
                         rowIndex % 2 === 0 ? 'bg-transparent hover:bg-muted/40' : 'bg-muted/20 hover:bg-muted/40'
                       )}>
                         <TableCell className="font-mono text-xs text-muted-foreground pl-4">
@@ -740,7 +732,14 @@ export default function TransactionsPage() {
                             {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="relative pr-0">
+                          {/* Colored stripe at far right of the table row */}
+                          <span className={cn(
+                            'absolute right-0 top-0 bottom-0 w-[2px]',
+                            txType === 'income' ? 'bg-emerald-500' :
+                            txType === 'saving' ? 'bg-sky-500' :
+                            txType === 'investment' ? 'bg-purple-500' : 'bg-rose-500'
+                          )} />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -779,17 +778,16 @@ export default function TransactionsPage() {
                 const category = categoryMap[transaction.category_id_fk];
                 const account = accountMap[transaction.account_id_fk];
                 const txType = category?.type || 'expense';
-                const mobileBorderColor = txType === 'income'
-                  ? 'border-l-emerald-500'
-                  : txType === 'saving'
-                  ? 'border-l-sky-500'
-                  : txType === 'investment'
-                  ? 'border-l-purple-500'
-                  : 'border-l-rose-500';
                 return (
                   <div key={transaction.id_pk} className={cn(
-                    'p-4 rounded-xl border bg-card shadow-sm space-y-3 border-l-2',
-                    mobileBorderColor
+                    'p-4 rounded-xl border bg-card shadow-sm space-y-3 border-r-2',
+                    txType === 'income'
+                      ? 'border-r-emerald-500'
+                      : txType === 'saving'
+                      ? 'border-r-sky-500'
+                      : txType === 'investment'
+                      ? 'border-r-purple-500'
+                      : 'border-r-rose-500'
                   )}>
                     <div className="flex justify-between items-start">
                       <div>
