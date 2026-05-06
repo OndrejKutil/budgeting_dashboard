@@ -6,6 +6,12 @@ import logging
 # Create logger for this module
 logger = logging.getLogger(__name__)
 
+_BASE_CLIENT: Optional[Client] = None
+_BASE_OPTIONS = ClientOptions(
+    auto_refresh_token=False,
+    persist_session=False
+)
+
 def get_db_client(access_token: Optional[str] = None) -> Client:
     """
     Create and return a Supabase client.
@@ -28,31 +34,19 @@ def get_db_client(access_token: Optional[str] = None) -> Client:
         logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
         raise EnvironmentError('Missing environment variables for database connection.')
     
-    # Disable auto_refresh_token - the frontend is responsible for token refresh
-    # This prevents the backend from rotating tokens without the frontend knowing
-    options = ClientOptions(
+    # Reuse a base, anonymous client to avoid re-initializing config each request.
+    # Authenticated requests use a request-scoped client with per-request headers.
+    global _BASE_CLIENT
+    if _BASE_CLIENT is None:
+        _BASE_CLIENT = create_client(project_url, anon_key, options=_BASE_OPTIONS)
+
+    if not access_token:
+        return _BASE_CLIENT
+
+    auth_headers = {"Authorization": f"Bearer {access_token}"}
+    auth_options = ClientOptions(
         auto_refresh_token=False,
-        persist_session=False
+        persist_session=False,
+        headers=auth_headers
     )
-    
-    client: Client = create_client(project_url, anon_key, options=options)
-    
-    if access_token:
-        try:
-            client.postgrest.auth(access_token)
-        except AttributeError:
-             # Fallback if postgrest attribute is missing or different in this version
-             # Try setting header directly if possible, or log warning
-             logger.warning("client.postgrest.auth failed with AttributeError, attempting fallback")
-             if hasattr(client, "options") and hasattr(client.options, "headers"):
-                 client.options.headers.update({"Authorization": f"Bearer {access_token}"})
-             else:
-                 # If we can't set auth, we should probably raise to avoid security issues
-                 # or returning public data when private data is expected.
-                 logger.error("Could not set authentication on Supabase client")
-                 raise
-        except Exception as e:
-            logger.error(f"Failed to set authentication token: {str(e)}")
-            raise
-        
-    return client
+    return create_client(project_url, anon_key, options=auth_options)
