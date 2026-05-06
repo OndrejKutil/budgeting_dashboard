@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { BudgetMakerSkeleton } from '@/components/skeletons';
 import {
     Select,
     SelectContent,
@@ -731,9 +732,7 @@ export default function BudgetMaker() {
             </div>
 
             {isLoading ? (
-                <div className="flex justify-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
+                <BudgetMakerSkeleton />
             ) : (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

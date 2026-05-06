@@ -40,10 +40,7 @@ export default function FaqPage() {
 
     return (
         <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
-            {/* Particle Wave Background */}
-            <div className="absolute inset-0 z-0">
-                <ParticleWave />
-            </div>
+
 
             {/* Header */}
             <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[hsl(var(--background))]/80 backdrop-blur-xl">

@@ -1,38 +1,50 @@
 import { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { MobileSidebarTrigger } from './AppSidebar';
 import { UserNav } from './UserNav';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/contexts/user-context';
 
 interface TopbarProps {
   onMobileMenuClick: () => void;
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export function Topbar({ onMobileMenuClick }: TopbarProps) {
   const queryClient = useQueryClient();
+  const { profile } = useUser();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     await queryClient.invalidateQueries();
-    // Small delay for visual feedback
     await new Promise(resolve => setTimeout(resolve, 500));
     setIsRefreshing(false);
   }, [isRefreshing, queryClient]);
+
+  const firstName = profile?.user_metadata?.full_name?.split(' ')[0]
+    || profile?.email?.split('@')[0]
+    || null;
 
   return (
     <header className="safe-top sticky top-0 z-30 flex h-16 box-content items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:px-6">
       <div className="flex items-center gap-4">
         <MobileSidebarTrigger onClick={onMobileMenuClick} />
-        <Button variant="link" asChild className="hidden text-sm text-muted-foreground lg:block px-0 h-auto font-normal hover:no-underline hover:text-foreground transition-colors">
-          <Link to="/how-it-works">
-            See how it works
-          </Link>
-        </Button>
+        {firstName && (
+          <span className="hidden lg:block text-sm text-muted-foreground">
+            {getGreeting()},{' '}
+            <span className="font-semibold text-foreground">{firstName}</span>
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -57,3 +69,4 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
     </header>
   );
 }
+

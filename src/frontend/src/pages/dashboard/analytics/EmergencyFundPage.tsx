@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { Progress } from '@/components/ui/progress';
+import { AnalyticsSkeleton } from '@/components/skeletons';
 import { Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -45,11 +46,7 @@ export default function EmergencyFundPage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   if (error || !data) {

@@ -681,13 +681,25 @@ export default function TransactionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => {
+                  {transactions.map((transaction, rowIndex) => {
                     const category = categoryMap[transaction.category_id_fk];
                     const account = accountMap[transaction.account_id_fk];
                     const fund = transaction.savings_fund_id_fk ? fundMap[transaction.savings_fund_id_fk] : null;
+                    const txType = category?.type || 'expense';
+                    const borderColor = txType === 'income'
+                      ? 'border-l-emerald-500'
+                      : txType === 'saving'
+                      ? 'border-l-sky-500'
+                      : txType === 'investment'
+                      ? 'border-l-purple-500'
+                      : 'border-l-rose-500';
                     return (
-                      <TableRow key={transaction.id_pk} className="group hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors">
-                        <TableCell className="font-mono text-xs text-muted-foreground pl-6">
+                      <TableRow key={transaction.id_pk} className={cn(
+                        'group border-b border-border/40 last:border-0 transition-colors border-l-2',
+                        borderColor,
+                        rowIndex % 2 === 0 ? 'bg-transparent hover:bg-muted/40' : 'bg-muted/20 hover:bg-muted/40'
+                      )}>
+                        <TableCell className="font-mono text-xs text-muted-foreground pl-4">
                           {new Date(transaction.date).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -699,7 +711,12 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <div className="flex items-center gap-2">
-                            <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success/50" : "bg-primary/30")} />
+                            <div className={cn(
+                              'h-1.5 w-1.5 rounded-full',
+                              txType === 'income' ? 'bg-emerald-500' :
+                              txType === 'saving' ? 'bg-sky-500' :
+                              txType === 'investment' ? 'bg-purple-500' : 'bg-rose-500'
+                            )} />
                             <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                               {category?.category_name || 'Unknown'}
                             </span>
@@ -711,7 +728,7 @@ export default function TransactionsPage() {
                         <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                           {fund ? (
                             <div className="flex items-center gap-1.5">
-                              <div className="h-1.5 w-1.5 rounded-full bg-chart-investment/50" />
+                              <div className="h-1.5 w-1.5 rounded-full bg-amber-500/60" />
                               <span>{fund.fund_name}</span>
                             </div>
                           ) : (
@@ -719,17 +736,9 @@ export default function TransactionsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* Indicator Dot */}
-                            <div className={cn(
-                              "h-1.5 w-1.5 rounded-full shrink-0",
-                              transaction.amount > 0 ? "bg-emerald-500" : "bg-rose-500"
-                            )} />
-                            {/* Neutral Text */}
-                            <span className="font-mono font-medium text-foreground">
-                              {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
-                            </span>
-                          </div>
+                          <span className="font-mono font-medium text-foreground">
+                            {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -769,8 +778,19 @@ export default function TransactionsPage() {
               {transactions.map((transaction) => {
                 const category = categoryMap[transaction.category_id_fk];
                 const account = accountMap[transaction.account_id_fk];
+                const txType = category?.type || 'expense';
+                const mobileBorderColor = txType === 'income'
+                  ? 'border-l-emerald-500'
+                  : txType === 'saving'
+                  ? 'border-l-sky-500'
+                  : txType === 'investment'
+                  ? 'border-l-purple-500'
+                  : 'border-l-rose-500';
                 return (
-                  <div key={transaction.id_pk} className="p-4 rounded-xl border bg-card shadow-sm space-y-3">
+                  <div key={transaction.id_pk} className={cn(
+                    'p-4 rounded-xl border bg-card shadow-sm space-y-3 border-l-2',
+                    mobileBorderColor
+                  )}>
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-medium">{transaction.notes || 'No description'}</div>
@@ -778,18 +798,20 @@ export default function TransactionsPage() {
                           {new Date(transaction.date).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className={cn(
-                        "font-bold",
-                        transaction.amount > 0 ? "text-emerald-500" : "text-destructive"
-                      )}>
-                        {formatCurrency(transaction.amount)}
+                      <div className="font-bold text-foreground">
+                        {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t text-sm">
                       <div className="flex gap-2 items-center">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                          <div className={cn("h-1.5 w-1.5 rounded-full", category?.type === 'income' ? "bg-success" : "bg-primary")} />
+                        <span className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                          txType === 'income' ? 'bg-emerald-500/10 text-emerald-500' :
+                          txType === 'saving' ? 'bg-sky-500/10 text-sky-500' :
+                          txType === 'investment' ? 'bg-purple-500/10 text-purple-500' :
+                          'bg-rose-500/10 text-rose-500'
+                        )}>
                           {category?.category_name || 'Unknown'}
                         </span>
                         <span className="text-xs text-muted-foreground">
