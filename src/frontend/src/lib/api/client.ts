@@ -13,6 +13,27 @@ const API_KEY = import.meta.env.VITE_API_KEY || '';
 const ACCESS_TOKEN_KEY = 'finance_access_token';
 const REFRESH_TOKEN_KEY = 'finance_refresh_token';
 const USER_ID_KEY = 'finance_user_id';
+const TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    return JSON.parse(window.atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function getTokenExpirationMs(token: string): number | null {
+  const payload = decodeJwtPayload(token);
+  const exp = payload?.exp;
+
+  return typeof exp === 'number' ? exp * 1000 : null;
+}
 
 // ============================================
 // Token Management
@@ -21,6 +42,13 @@ export const tokenManager = {
   getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
   getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
   getUserId: () => localStorage.getItem(USER_ID_KEY),
+  shouldRefreshAccessToken: (bufferMs = TOKEN_REFRESH_BUFFER_MS) => {
+    const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!accessToken) return !!localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    const expiresAt = getTokenExpirationMs(accessToken);
+    return expiresAt !== null && expiresAt - Date.now() <= bufferMs;
+  },
 
   setTokens: (accessToken: string, refreshToken: string, userId?: string) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
@@ -99,7 +127,7 @@ async function refreshAccessToken(): Promise<boolean> {
       tokenManager.setTokens(
         data.data.access_token,
         data.data.refresh_token,
-        data.data.id
+        data.data.user_id
       );
       return true;
     } catch (error) {
@@ -120,6 +148,18 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+export async function ensureFreshAccessToken(): Promise<boolean> {
+  if (!tokenManager.getAccessToken() && !tokenManager.getRefreshToken()) {
+    return false;
+  }
+
+  if (!tokenManager.shouldRefreshAccessToken()) {
+    return true;
+  }
+
+  return refreshAccessToken();
+}
+
 // ============================================
 // Main Request Function
 // ============================================
@@ -128,6 +168,13 @@ async function request<T>(
   options: RequestInit = {},
   retryOnExpired = true
 ): Promise<ApiResponse<T>> {
+  if (retryOnExpired && tokenManager.shouldRefreshAccessToken()) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      throw new TokenExpiredError();
+    }
+  }
+
   const accessToken = tokenManager.getAccessToken();
 
   const headers: HeadersInit = {
@@ -147,6 +194,11 @@ async function request<T>(
 
   // Handle token expiration
   if (response.status === 498 && retryOnExpired) {
+    const latestAccessToken = tokenManager.getAccessToken();
+    if (latestAccessToken && latestAccessToken !== accessToken) {
+      return request<T>(endpoint, options, false);
+    }
+
     const refreshed: boolean = await refreshAccessToken();
     if (refreshed) {
       return request<T>(endpoint, options, false);

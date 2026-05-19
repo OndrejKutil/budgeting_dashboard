@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext } from './auth-context';
-import { tokenManager, ApiError } from '@/lib/api/client';
+import { ensureFreshAccessToken, tokenManager, ApiError } from '@/lib/api/client';
 import { authApi } from '@/lib/api/endpoints';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -13,11 +13,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check initial auth state
-    const authenticated = tokenManager.isAuthenticated();
-    setIsAuthenticated(authenticated);
-    setUserId(tokenManager.getUserId());
-    setIsLoading(false);
+    let cancelled = false;
+
+    const initializeAuth = async () => {
+      const hasStoredSession = tokenManager.isAuthenticated();
+
+      if (!hasStoredSession) {
+        if (!cancelled) {
+          setIsAuthenticated(false);
+          setUserId(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const hasFreshToken = await ensureFreshAccessToken();
+
+      if (!cancelled) {
+        setIsAuthenticated(hasFreshToken && tokenManager.isAuthenticated());
+        setUserId(tokenManager.getUserId());
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

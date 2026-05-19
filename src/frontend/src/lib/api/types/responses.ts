@@ -57,7 +57,7 @@ export interface RefreshResponse {
     data: {
         access_token: string;
         refresh_token: string;
-        id: string;
+        user_id: string;
     };
     user: {
         id: string;
