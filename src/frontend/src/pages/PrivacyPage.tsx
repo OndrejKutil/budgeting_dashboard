@@ -30,7 +30,7 @@ export default function PrivacyPage() {
         >
           <div className="rounded-xl border border-border bg-card p-8 shadow-lg">
             <h1 className="mb-6 text-3xl font-bold font-display">Privacy Policy</h1>
-            <p className="mb-4 text-sm text-muted-foreground">Last updated: May 4, 2026</p>
+            <p className="mb-4 text-sm text-muted-foreground">Last updated: May 19, 2026</p>
 
             <div className="space-y-6 text-foreground/90">
               <section>
@@ -58,6 +58,7 @@ export default function PrivacyPage() {
                   <li>Email address (for account registration and authentication)</li>
                   <li>Name (optional, for profile personalization)</li>
                   <li>Authentication credentials (securely hashed via our auth provider)</li>
+                  <li>Basic OAuth profile information when you choose to sign in with a provider such as Google or GitHub</li>
                   <li>Financial data you actively input (transactions, accounts, categories, savings goals)</li>
                 </ul>
               </section>
@@ -81,6 +82,7 @@ export default function PrivacyPage() {
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
                   <li><strong>Supabase:</strong> Handles secure user authentication, database storage, and backend logic via PostgreSQL.</li>
+                  <li><strong>Google:</strong> Provides optional Google account sign-in when you choose that authentication method.</li>
                   <li><strong>Render:</strong> Hosts the application services and APIs.</li>
                 </ul>
                 <p className="mt-2 text-sm leading-relaxed">

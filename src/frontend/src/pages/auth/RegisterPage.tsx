@@ -16,6 +16,15 @@ const GitHubIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+    <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9c.87-2.6 3.3-4.52 6.16-4.52z" />
+  </svg>
+);
+
 const passwordRequirements = [
   { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
   { label: 'Contains a number', test: (p: string) => /\d/.test(p) },
@@ -29,6 +38,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isLongLoading, setIsLongLoading] = useState(false);
   const [errors, setErrors] = useState<{
     email?: string;
@@ -39,6 +49,7 @@ export default function RegisterPage() {
 
   const { register } = useAuth();
   const navigate = useNavigate();
+  const isOAuthLoading = isGitHubLoading || isGoogleLoading;
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -89,6 +100,19 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    setIsGoogleLoading(true);
+    setErrors({});
+
+    try {
+      const response = await authApi.getGoogleOAuthUrl();
+      window.location.href = response.url;
+    } catch (error) {
+      setErrors({ general: 'Failed to connect to Google. Please try again.' });
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <AuthLayout
       title="Create an account"
@@ -107,7 +131,7 @@ export default function RegisterPage() {
           variant="outline"
           className="w-full gap-2"
           onClick={handleGitHubSignup}
-          disabled={isLoading || isGitHubLoading}
+          disabled={isLoading || isOAuthLoading}
         >
           {isGitHubLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -115,6 +139,21 @@ export default function RegisterPage() {
             <GitHubIcon className="h-4 w-4" />
           )}
           Sign up with GitHub
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full gap-2"
+          onClick={handleGoogleSignup}
+          disabled={isLoading || isOAuthLoading}
+        >
+          {isGoogleLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <GoogleIcon className="h-4 w-4" />
+          )}
+          Sign up with Google
         </Button>
 
         <div className="relative">
@@ -134,7 +173,7 @@ export default function RegisterPage() {
             placeholder="John Doe"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            disabled={isLoading || isGitHubLoading}
+            disabled={isLoading || isOAuthLoading}
           />
         </div>
 
@@ -147,7 +186,7 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={cn(errors.email && 'border-destructive focus-visible:ring-destructive')}
-            disabled={isLoading || isGitHubLoading}
+            disabled={isLoading || isOAuthLoading}
           />
           {errors.email && (
             <p className="text-xs text-destructive">{errors.email}</p>
@@ -167,7 +206,7 @@ export default function RegisterPage() {
                 'pr-10',
                 errors.password && 'border-destructive focus-visible:ring-destructive'
               )}
-              disabled={isLoading || isGitHubLoading}
+              disabled={isLoading || isOAuthLoading}
             />
             <button
               type="button"
@@ -208,7 +247,7 @@ export default function RegisterPage() {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading || isGitHubLoading}
+          disabled={isLoading || isOAuthLoading}
         >
           {isLoading ? (
             <>
