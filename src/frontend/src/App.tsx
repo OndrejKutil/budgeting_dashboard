@@ -9,6 +9,7 @@ import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -130,11 +131,13 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

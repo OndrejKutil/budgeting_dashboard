@@ -93,6 +93,87 @@
     /* ---- Accent Gold (for highlights) ---- */
     --accent-gold: 38 92% 50%;
   }
+
+  .light {
+    /* ---- Core Backgrounds ---- */
+    --background: 0 0% 98%;
+    --background-secondary: 0 0% 94%;
+    --foreground: 0 0% 11%;
+
+    /* ---- Card/Surface ---- */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 11%;
+    --card-elevated: 0 0% 98%;
+
+    /* ---- Popover ---- */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+
+    /* ---- Primary (Amber/Orange) ---- */
+    --primary: 38 92% 45%;
+    --primary-foreground: 0 0% 10%;
+    --primary-hover: 24 95% 48%;
+    --primary-muted: 38 92% 88%;
+
+    /* ---- Secondary ---- */
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 12%;
+
+    /* ---- Muted ---- */
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 42%;
+
+    /* ---- Accent ---- */
+    --accent: 0 0% 91%;
+    --accent-foreground: 0 0% 12%;
+
+    /* ---- Destructive ---- */
+    --destructive: 351 84% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* ---- Status Colors ---- */
+    --success: 158 58% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 10%;
+    --info: 0 0% 38%;
+    --info-foreground: 0 0% 100%;
+
+    /* ---- Chart Colors (Warm palette) ---- */
+    --chart-income: 158 58% 38%;
+    --chart-expense: 351 84% 52%;
+    --chart-savings: 0 0% 38%;
+    --chart-investment: 38 92% 45%;
+    --chart-blue: 24 95% 48%;
+    --chart-teal: 0 0% 48%;
+
+    /* ---- Border/Input ---- */
+    --border: 0 0% 84%;
+    --input: 0 0% 84%;
+    --ring: 38 92% 45%;
+
+    /* ---- Sidebar ---- */
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 38%;
+    --sidebar-primary: 38 92% 45%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 90%;
+    --sidebar-accent-foreground: 0 0% 12%;
+    --sidebar-border: 0 0% 84%;
+    --sidebar-ring: 38 92% 45%;
+
+    /* ---- Glass Effects ---- */
+    --glass-bg: 0 0% 100% / 0.82;
+    --glass-border: 0 0% 80% / 0.55;
+
+    /* ---- Gradients ---- */
+    --gradient-primary: linear-gradient(135deg, hsl(38 92% 45%) 0%, hsl(24 95% 48%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 100%);
+    --gradient-hero: radial-gradient(ellipse at 15% 10%, hsl(38 92% 93%) 0%, hsl(0 0% 98%) 35%, hsl(0 0% 96%) 70%, hsl(0 0% 94%) 100%);
+
+    /* ---- Accent Gold (for highlights) ---- */
+    --accent-gold: 38 92% 45%;
+  }
 }
 
 @layer base {
@@ -250,6 +331,23 @@
     background-image: radial-gradient(hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
     background-size: 20px 20px;
   }
+
+  /* ---- Theme-aware marketing surface aliases ---- */
+  .theme-text-strong { @apply text-foreground dark:text-white; }
+  .theme-text-strong-90 { @apply text-foreground/90 dark:text-white/90; }
+  .theme-text-muted { @apply text-muted-foreground dark:text-white/50; }
+  .theme-text-muted-80 { @apply text-muted-foreground/80 dark:text-white/80; }
+  .theme-text-muted-70 { @apply text-muted-foreground/70 dark:text-white/70; }
+  .theme-text-muted-60 { @apply text-muted-foreground/70 dark:text-white/60; }
+  .theme-text-muted-50 { @apply text-muted-foreground dark:text-white/50; }
+  .theme-text-muted-40 { @apply text-muted-foreground/80 dark:text-white/40; }
+  .theme-text-muted-35 { @apply text-muted-foreground/70 dark:text-white/35; }
+  .theme-text-muted-30 { @apply text-muted-foreground/60 dark:text-white/30; }
+  .theme-border-subtle { @apply border-border dark:border-white/10; }
+  .theme-bg-subtle { @apply bg-muted/40 dark:bg-white/[0.02]; }
+  .theme-bg-panel { @apply bg-card/85 dark:bg-white/5; }
+  .theme-bg-chip { @apply bg-muted/60 dark:bg-white/5; }
+  .theme-ring-subtle { @apply ring-border dark:ring-white/10; }
 }
 
 /* ---- Custom Scrollbar ---- */

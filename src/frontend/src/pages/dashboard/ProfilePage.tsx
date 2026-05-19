@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check, Download, Upload, Database } from 'lucide-react';
+import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check, Download, Upload, Database, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -42,11 +43,17 @@ const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 export default function ProfilePage() {
   const { logout, userId } = useAuth();
   const { profile, currency, updateProfile, isLoading } = useUser();
+  const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGitHubLinking, setIsGitHubLinking] = useState(false);
   const [isGoogleLinking, setIsGoogleLinking] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -273,6 +280,41 @@ export default function ProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <label className="text-sm font-medium text-foreground">Theme</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Choose how the app appears on this device.
+                </p>
+                <div className="grid w-28 grid-cols-2 rounded-lg border border-border bg-muted/50 p-1 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    disabled={!themeMounted}
+                    aria-label="Use dark theme"
+                    className={`flex h-9 items-center justify-center rounded-md transition-colors ${
+                      resolvedTheme !== 'light'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Moon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    disabled={!themeMounted}
+                    aria-label="Use light theme"
+                    className={`flex h-9 items-center justify-center rounded-md transition-colors ${
+                      resolvedTheme === 'light'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Sun className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </section>
