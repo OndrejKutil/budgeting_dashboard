@@ -4,6 +4,8 @@ import { tokenManager } from '@/lib/api/client';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
+
 export default function AuthCallbackPage() {
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [error, setError] = useState<string>('');
@@ -45,7 +47,9 @@ export default function AuthCallbackPage() {
 
                 // Redirect to dashboard after a brief delay
                 setTimeout(() => {
-                    navigate('/dashboard', { replace: true });
+                    const redirectTarget = sessionStorage.getItem(OAUTH_REDIRECT_TARGET_KEY) || '/dashboard';
+                    sessionStorage.removeItem(OAUTH_REDIRECT_TARGET_KEY);
+                    window.location.replace(redirectTarget);
                 }, 1500);
 
             } catch (err: unknown) {

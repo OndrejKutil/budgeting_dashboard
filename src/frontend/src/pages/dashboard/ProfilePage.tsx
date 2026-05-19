@@ -37,6 +37,7 @@ const GoogleIcon = ({ className }: { className?: string }) => (
 );
 
 const CURRENCIES = ['CZK', 'USD', 'EUR', 'GBP'];
+const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 
 export default function ProfilePage() {
   const { logout, userId } = useAuth();
@@ -69,6 +70,7 @@ export default function ProfilePage() {
 
       const response = await authApi.linkGitHub(accessToken);
       // Redirect to GitHub OAuth
+      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard/profile?linked=github');
       window.location.href = response.url;
     } catch (error) {
       console.error('Failed to link GitHub:', error);
@@ -88,6 +90,7 @@ export default function ProfilePage() {
       if (!accessToken) throw new Error('Not authenticated');
 
       const response = await authApi.linkGoogle(accessToken);
+      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard/profile?linked=google');
       window.location.href = response.url;
     } catch (error) {
       console.error('Failed to link Google:', error);
