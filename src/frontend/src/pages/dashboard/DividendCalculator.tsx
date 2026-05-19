@@ -128,7 +128,7 @@ function StatCard({ title, value, subtitle, icon, accent }: StatCardProps) {
 // ================================================================================================
 
 export default function DividendCalculator() {
-    const { formatCurrency } = useUser()
+    const { formatCurrency, t } = useUser()
     const { toast } = useToast()
     const queryClient = useQueryClient()
 
@@ -181,11 +181,11 @@ export default function DividendCalculator() {
             hasExistingRecord.current = true
             setIsDirty(false)
             queryClient.invalidateQueries({ queryKey: ["dividend-portfolio"] })
-            toast({ title: "Saved", description: res.data.message })
+            toast({ title: t('pages.dividendCalculator.saved'), description: res.data.message })
         },
         onError: (err) => {
-            const msg = err instanceof ApiError ? err.message : "Failed to save portfolio."
-            toast({ title: "Error", description: msg, variant: "destructive" })
+            const msg = err instanceof ApiError ? err.message : t('pages.dividendCalculator.saveFailed')
+            toast({ title: t('common.error'), description: msg, variant: "destructive" })
         },
     })
 
@@ -197,11 +197,11 @@ export default function DividendCalculator() {
             setRows([EMPTY_ROW()])
             setIsDirty(false)
             queryClient.invalidateQueries({ queryKey: ["dividend-portfolio"] })
-            toast({ title: "Deleted", description: "Portfolio cleared successfully." })
+            toast({ title: t('pages.dividendCalculator.deleted'), description: t('pages.dividendCalculator.cleared') })
         },
         onError: (err) => {
-            const msg = err instanceof ApiError ? err.message : "Failed to delete portfolio."
-            toast({ title: "Error", description: msg, variant: "destructive" })
+            const msg = err instanceof ApiError ? err.message : t('pages.dividendCalculator.deleteFailed')
+            toast({ title: t('common.error'), description: msg, variant: "destructive" })
         },
     })
 
@@ -247,8 +247,8 @@ export default function DividendCalculator() {
         const validRows = rows.filter((r) => r.ticker.trim() !== "")
         if (validRows.length > 0 && weightError) {
             toast({
-                title: "Validation error",
-                description: `Weights must sum to 100% (currently ${calc.totalWeight.toFixed(2)}%).`,
+                title: t('pages.dividendCalculator.validationError'),
+                description: t('pages.dividendCalculator.weightError', { weight: calc.totalWeight.toFixed(2) }),
                 variant: "destructive",
             })
             return
@@ -287,13 +287,13 @@ export default function DividendCalculator() {
         return (
             <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground">
                 <AlertTriangle className="h-10 w-10 text-destructive" />
-                <p>Failed to load dividend portfolio.</p>
+                <p>{t('pages.dividendCalculator.loadFailed')}</p>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={() => queryClient.invalidateQueries({ queryKey: ["dividend-portfolio"] })}
                 >
-                    <RefreshCcw className="mr-2 h-4 w-4" /> Retry
+                    <RefreshCcw className="mr-2 h-4 w-4" /> {t('common.retry')}
                 </Button>
             </div>
         )
@@ -309,10 +309,10 @@ export default function DividendCalculator() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">
-                            Dividend Calculator
+                            {t('pages.dividendCalculator.title')}
                         </h1>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                            Track your dividend portfolio and estimate income
+                            {t('pages.dividendCalculator.description')}
                         </p>
                     </div>
                 </div>
@@ -331,7 +331,7 @@ export default function DividendCalculator() {
                         ) : (
                             <Trash2 className="h-4 w-4" />
                         )}
-                        <span className="ml-1.5 hidden sm:inline">Clear</span>
+                        <span className="ml-1.5 hidden sm:inline">{t('pages.dividendCalculator.clear')}</span>
                     </Button>
                     <Button
                         size="sm"
@@ -343,7 +343,7 @@ export default function DividendCalculator() {
                         ) : (
                             <Save className="h-4 w-4" />
                         )}
-                        <span className="ml-1.5">Save</span>
+                        <span className="ml-1.5">{t('pages.dividendCalculator.save')}</span>
                     </Button>
                 </div>
             </div>
@@ -351,29 +351,29 @@ export default function DividendCalculator() {
             {/* Summary cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                    title="Portfolio Value"
+                    title={t('pages.dividendCalculator.portfolioValue')}
                     value={formatCurrency(portfolioValue)}
-                    subtitle="Used for income estimates"
+                    subtitle={t('pages.dividendCalculator.valueSubtitle')}
                     icon={<CircleDollarSign className="h-4 w-4 text-muted-foreground" />}
                 />
                 <StatCard
-                    title="Weighted Avg Yield"
+                    title={t('pages.dividendCalculator.weightedAvgYield')}
                     value={`${calc.weightedAvgYield.toFixed(2)}%`}
-                    subtitle="Annual, weighted by position"
+                    subtitle={t('pages.dividendCalculator.weightedSubtitle')}
                     icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
                     accent
                 />
                 <StatCard
-                    title="Annual Income"
+                    title={t('pages.dividendCalculator.annualIncome')}
                     value={formatCurrency(calc.annualIncome)}
-                    subtitle="Estimated annual dividends"
+                    subtitle={t('pages.dividendCalculator.annualSubtitle')}
                     icon={<TrendingUp className="h-4 w-4 text-primary" />}
                     accent
                 />
                 <StatCard
-                    title="Monthly Income"
+                    title={t('pages.dividendCalculator.monthlyIncome')}
                     value={formatCurrency(calc.monthlyIncome)}
-                    subtitle="Annual ÷ 12"
+                    subtitle={t('pages.dividendCalculator.monthlySubtitle')}
                     icon={<CircleDollarSign className="h-4 w-4 text-muted-foreground" />}
                 />
             </div>
@@ -381,13 +381,13 @@ export default function DividendCalculator() {
             {/* Portfolio value input row */}
             <Card className="border-border/50 shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-base">Portfolio Settings</CardTitle>
-                    <CardDescription>Set your total portfolio value for income calculations</CardDescription>
+                    <CardTitle className="text-base">{t('pages.dividendCalculator.settings')}</CardTitle>
+                    <CardDescription>{t('pages.dividendCalculator.settingsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-3 max-w-xs">
                         <Label htmlFor="portfolio-value" className="whitespace-nowrap">
-                            Total Value
+                            {t('pages.dividendCalculator.totalValue')}
                         </Label>
                         <Input
                             id="portfolio-value"
@@ -408,15 +408,15 @@ export default function DividendCalculator() {
                     <div>
                         <CardTitle className="text-base flex items-center gap-2">
                             <Pencil className="h-4 w-4" />
-                            Holdings
+                            {t('pages.dividendCalculator.holdings')}
                         </CardTitle>
                         <CardDescription className="mt-1">
-                            One row per stock. Weights must sum to 100%.
+                            {t('pages.dividendCalculator.holdingsDescription')}
                         </CardDescription>
                     </div>
                     <Button variant="outline" size="sm" onClick={addRow}>
                         <PlusCircle className="h-4 w-4 mr-1.5" />
-                        Add Stock
+                        {t('pages.dividendCalculator.addStock')}
                     </Button>
                 </CardHeader>
 
@@ -426,18 +426,18 @@ export default function DividendCalculator() {
                         <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                             Weights sum to <strong className="mx-1">{calc.totalWeight.toFixed(2)}%</strong>
-                            — they must equal 100% before saving.
+                            - {t('pages.dividendCalculator.weightsMustEqual')}
                         </div>
                     )}
 
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-left text-muted-foreground border-b border-border/50">
-                                <th className="pb-2 pr-3 font-medium">Ticker</th>
-                                <th className="pb-2 px-3 font-medium">Weight&nbsp;%</th>
-                                <th className="pb-2 px-3 font-medium">Yield&nbsp;%</th>
-                                <th className="pb-2 px-3 font-medium">Frequency</th>
-                                <th className="pb-2 px-3 font-medium text-right">Annual&nbsp;Income</th>
+                                <th className="pb-2 pr-3 font-medium">{t('pages.dividendCalculator.ticker')}</th>
+                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.weight')}</th>
+                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.yield')}</th>
+                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.frequency')}</th>
+                                <th className="pb-2 px-3 font-medium text-right">{t('pages.dividendCalculator.annualIncome')}</th>
                                 <th className="pb-2 pl-3 font-medium w-10"></th>
                             </tr>
                         </thead>
@@ -501,9 +501,9 @@ export default function DividendCalculator() {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="annual">Annual</SelectItem>
-                                                <SelectItem value="quarterly">Quarterly</SelectItem>
-                                                <SelectItem value="monthly">Monthly</SelectItem>
+                                                <SelectItem value="annual">{t('pages.dividendCalculator.annual')}</SelectItem>
+                                                <SelectItem value="quarterly">{t('pages.dividendCalculator.quarterly')}</SelectItem>
+                                                <SelectItem value="monthly">{t('pages.dividendCalculator.monthly')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </td>
@@ -533,7 +533,7 @@ export default function DividendCalculator() {
                         {rows.some((r) => r.ticker.trim()) && (
                             <tfoot>
                                 <tr className="border-t border-border text-muted-foreground font-medium">
-                                    <td className="pt-3 pr-3 text-xs uppercase tracking-wide">Total</td>
+                                    <td className="pt-3 pr-3 text-xs uppercase tracking-wide">{t('pages.dividendCalculator.total')}</td>
                                     <td className={`pt-3 px-3 tabular-nums ${weightError ? "text-destructive font-bold" : "text-foreground"}`}>
                                         {calc.totalWeight.toFixed(2)}%
                                     </td>
@@ -554,7 +554,7 @@ export default function DividendCalculator() {
                     <div className="mt-4">
                         <Button variant="outline" size="sm" onClick={addRow} className="w-full">
                             <PlusCircle className="h-4 w-4 mr-2" />
-                            Add Another Stock
+                            {t('pages.dividendCalculator.addAnotherStock')}
                         </Button>
                     </div>
                 </CardContent>
@@ -566,31 +566,31 @@ export default function DividendCalculator() {
                     <CardContent className="py-4">
                         <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
                             <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Daily</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.daily')}</p>
                                 <p className="text-lg font-bold text-primary">
                                     {formatCurrency(calc.annualIncome / 365)}
                                 </p>
                             </div>
                             <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Monthly</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.monthly')}</p>
                                 <p className="text-lg font-bold text-primary">
                                     {formatCurrency(calc.monthlyIncome)}
                                 </p>
                             </div>
                             <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Quarterly</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.quarterly')}</p>
                                 <p className="text-lg font-bold text-primary">
                                     {formatCurrency(calc.annualIncome / 4)}
                                 </p>
                             </div>
                             <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Annual</p>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.annual')}</p>
                                 <p className="text-lg font-bold text-primary">
                                     {formatCurrency(calc.annualIncome)}
                                 </p>
                             </div>
                             <p className="text-xs text-muted-foreground ml-auto hidden md:block">
-                                * Estimates — assumes dividends are evenly distributed throughout the year.
+                                {t('pages.dividendCalculator.estimatesNote')}
                             </p>
                         </div>
                     </CardContent>

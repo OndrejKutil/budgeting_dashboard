@@ -11,16 +11,16 @@ interface TopbarProps {
   onMobileMenuClick: () => void;
 }
 
-function getGreeting(): string {
+function getGreetingKey(): 'topbar.goodMorning' | 'topbar.goodAfternoon' | 'topbar.goodEvening' {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'topbar.goodMorning';
+  if (hour < 18) return 'topbar.goodAfternoon';
+  return 'topbar.goodEvening';
 }
 
 export function Topbar({ onMobileMenuClick }: TopbarProps) {
   const queryClient = useQueryClient();
-  const { profile } = useUser();
+  const { profile, t } = useUser();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -41,7 +41,7 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
         <MobileSidebarTrigger onClick={onMobileMenuClick} />
         {firstName && (
           <span className="hidden lg:block text-sm text-muted-foreground">
-            {getGreeting()},{' '}
+            {t(getGreetingKey())},{' '}
             <span className="font-semibold text-foreground">{firstName}</span>
           </span>
         )}
@@ -55,7 +55,7 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="lg:hidden min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
-          aria-label="Refresh data"
+          aria-label={t('common.refreshData')}
         >
           <RefreshCw className={cn(
             "h-4 w-4 transition-transform",

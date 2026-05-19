@@ -57,6 +57,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUser } from '@/contexts/user-context';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Housing: Home,
@@ -85,19 +86,19 @@ const spendingTypeColors: Record<string, string> = {
 };
 
 const CATEGORY_TYPES = [
-  { value: 'exclude', label: 'Exclude' },
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'investment', label: 'Investment' },
-  { value: 'saving', label: 'Saving' },
+  { value: 'exclude' },
+  { value: 'expense' },
+  { value: 'income' },
+  { value: 'investment' },
+  { value: 'saving' },
 ] as const;
 
 const SPENDING_TYPES = [
-  { value: 'Core', label: 'Core' },
-  { value: 'Fun', label: 'Fun' },
-  { value: 'Future', label: 'Future' },
-  { value: 'Income', label: 'Income' },
-  { value: 'Necessary', label: 'Necessary' },
+  { value: 'Core' },
+  { value: 'Fun' },
+  { value: 'Future' },
+  { value: 'Income' },
+  { value: 'Necessary' },
 ] as const;
 
 const stagger = {
@@ -131,6 +132,21 @@ const initialFormData = {
 
 export default function CategoriesPage() {
   const queryClient = useQueryClient();
+  const { t } = useUser();
+  const categoryTypeLabel = (type: string) => ({
+    exclude: t('types.exclude'),
+    expense: t('types.expense'),
+    income: t('types.income'),
+    investment: t('types.investment'),
+    saving: t('types.saving'),
+  }[type] ?? type);
+  const spendingTypeLabel = (type: string) => ({
+    Core: t('types.core'),
+    Necessary: t('types.necessary'),
+    Fun: t('types.fun'),
+    Future: t('types.future'),
+    Income: t('metrics.income'),
+  }[type] ?? type);
 
   const { data: categories = [], isLoading, error } = useQuery({
     queryKey: ['categories'],
@@ -173,13 +189,13 @@ export default function CategoriesPage() {
     mutationFn: categoriesApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({ title: 'Category created successfully' });
+      toast({ title: t('pages.categories.created') });
       handleCloseModal();
     },
     onError: (err: Error | ApiError) => {
       const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : 'Failed to create category';
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+        ? err.detail : t('pages.categories.createFailed');
+      toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
   });
 
@@ -188,13 +204,13 @@ export default function CategoriesPage() {
       categoriesApi.update(data.id, data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({ title: 'Category updated successfully' });
+      toast({ title: t('pages.categories.updated') });
       handleCloseModal();
     },
     onError: (err: Error | ApiError) => {
       const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : 'Failed to update category';
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+        ? err.detail : t('pages.categories.updateFailed');
+      toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
   });
 
@@ -203,13 +219,13 @@ export default function CategoriesPage() {
     onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       // The backend response message tells us whether it was soft-deleted or hard-deleted
-      toast({ title: 'Category removed' });
+      toast({ title: t('pages.categories.removed') });
       setDeleteConfirmId(null);
     },
     onError: (err: Error | ApiError) => {
       const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : 'Failed to delete category';
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+        ? err.detail : t('pages.categories.deleteFailed');
+      toast({ title: t('common.error'), description: message, variant: 'destructive' });
       setDeleteConfirmId(null);
     },
   });
@@ -217,7 +233,7 @@ export default function CategoriesPage() {
   // ─── Form Submit ────────────────────────────────────────────
   const handleSubmit = () => {
     if (!formData.category_name.trim()) {
-      toast({ title: 'Validation Error', description: 'Category name is required.', variant: 'destructive' });
+      toast({ title: t('common.validationError'), description: t('pages.categories.nameRequired'), variant: 'destructive' });
       return;
     }
 
@@ -248,21 +264,21 @@ export default function CategoriesPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Categories"
-          description="View and manage spending categories"
+          title={t('pages.categories.title')}
+          description={t('pages.categories.description')}
           actions={
             <Button onClick={() => handleOpenModal()}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Category
+              {t('pages.categories.add')}
             </Button>
           }
         />
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="text-lg font-semibold">Failed to load categories</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <h3 className="text-lg font-semibold">{t('pages.categories.failedToLoad')}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : t('common.unknownError')}</p>
           <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['categories'] })}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       </div>
@@ -272,12 +288,12 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Categories"
-        description="View and manage spending categories"
+        title={t('pages.categories.title')}
+        description={t('pages.categories.description')}
         actions={
           <Button onClick={() => handleOpenModal()}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Category
+            {t('pages.categories.add')}
           </Button>
         }
       />
@@ -286,10 +302,7 @@ export default function CategoriesPage() {
       <div className="flex items-start gap-3 rounded-xl border border-info/30 bg-info/5 p-4 text-sm text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
         <p>
-          Categories help you classify transactions for budgeting and analytics.
-          Each category has a <strong>type</strong> (income, expense, saving, investment, exclude)
-          and an optional <strong>spending type</strong> (Core, Necessary, Fun, Future) for expense analysis.
-          Categories with existing transactions will be deactivated instead of deleted.
+          {t('pages.categories.info')}
         </p>
       </div>
 
@@ -320,7 +333,7 @@ export default function CategoriesPage() {
               >
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg p-2 group">
                   <h2 className="text-lg font-semibold font-display capitalize flex items-center gap-2">
-                    {type}
+                    {categoryTypeLabel(type)}
                     <span className="text-sm font-normal text-muted-foreground">
                       ({cats.length})
                     </span>
@@ -364,12 +377,12 @@ export default function CategoriesPage() {
                                       'bg-muted text-muted-foreground'
                                     )}
                                   >
-                                    {category.spending_type}
+                                    {spendingTypeLabel(category.spending_type)}
                                   </span>
                                 )}
                                 {category.is_active === false && (
                                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                    Inactive
+                                    {t('states.inactive')}
                                   </span>
                                 )}
                               </div>
@@ -387,14 +400,14 @@ export default function CategoriesPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleOpenModal(category)}>
                                   <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
+                                  {t('common.edit')}
                                 </DropdownMenuItem>
                                 {category.is_active === false && (
                                   <DropdownMenuItem
                                     onClick={() => updateMutation.mutate({ id: category.categories_id_pk, data: { is_active: true } })}
                                   >
                                     <RefreshCw className="mr-2 h-4 w-4" />
-                                    Activate
+                                    {t('common.activate')}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem
@@ -402,7 +415,7 @@ export default function CategoriesPage() {
                                   onClick={() => setDeleteConfirmId(category.categories_id_pk)}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  {t('common.delete')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -423,50 +436,50 @@ export default function CategoriesPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {selectedCategory ? 'Edit Category' : 'Add Category'}
+              {selectedCategory ? t('pages.categories.editTitle') : t('pages.categories.addTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="category-name">Name</Label>
+              <Label htmlFor="category-name">{t('common.name')}</Label>
               <Input
                 id="category-name"
-                placeholder="e.g., Groceries, Salary, Gym"
+                placeholder={t('pages.categories.namePlaceholder')}
                 value={formData.category_name}
                 onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category-type">Type</Label>
+              <Label htmlFor="category-type">{t('common.type')}</Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
               >
                 <SelectTrigger id="category-type">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={t('common.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORY_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
-                      {t.label}
+                      {categoryTypeLabel(t.value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="spending-type">Spending Type</Label>
+              <Label htmlFor="spending-type">{t('pages.categories.spendingType')}</Label>
               <Select
                 value={formData.spending_type}
                 onValueChange={(value) => setFormData({ ...formData, spending_type: value })}
               >
                 <SelectTrigger id="spending-type">
-                  <SelectValue placeholder="Select spending type" />
+                  <SelectValue placeholder={t('common.selectSpendingType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {SPENDING_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
-                      {t.label}
+                      {spendingTypeLabel(t.value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -475,14 +488,14 @@ export default function CategoriesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {selectedCategory ? 'Save Changes' : 'Add Category'}
+              {selectedCategory ? t('common.save') : t('pages.categories.add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -492,15 +505,14 @@ export default function CategoriesPage() {
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Delete Category</DialogTitle>
+            <DialogTitle className="font-display">{t('pages.categories.deleteTitle')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            Are you sure you want to delete this category? If it has existing transactions,
-            it will be deactivated instead of permanently deleted.
+            {t('pages.categories.deleteDescription')}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -508,7 +520,7 @@ export default function CategoriesPage() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

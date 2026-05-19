@@ -58,7 +58,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -91,7 +90,7 @@ function TableRowSkeleton() {
 }
 
 export default function TransactionsPage() {
-  const { formatCurrency } = useUser();
+  const { formatCurrency, formatDate, formatMonth, t } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
@@ -255,14 +254,14 @@ export default function TransactionsPage() {
       // Also invalidate summary/analytics if needed
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({
-        title: 'Transaction deleted',
-        description: 'The transaction has been removed successfully.',
+        title: t('pages.transactions.deleted'),
+        description: t('pages.transactions.deletedDescription'),
       });
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to delete transaction';
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.deleteFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -278,13 +277,13 @@ export default function TransactionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
-      toast({ title: 'Transaction created successfully' });
+      toast({ title: t('pages.transactions.created') });
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to save transaction';
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -296,13 +295,13 @@ export default function TransactionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
-      toast({ title: 'Transaction updated successfully' });
+      toast({ title: t('pages.transactions.updated') });
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to save transaction';
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -313,8 +312,8 @@ export default function TransactionsPage() {
     if (isTransfer) {
       if (!formData.account_id_fk || !transferToAccountId || !formData.amount) {
         toast({
-          title: 'Validation Error',
-          description: 'Please select both accounts and enter an amount.',
+          title: t('common.validationError'),
+          description: t('pages.transactions.transferValidation'),
           variant: 'destructive',
         });
         return;
@@ -324,8 +323,8 @@ export default function TransactionsPage() {
       const excludeCategory = categories.find(c => c.category_name === 'Exclude');
       if (!excludeCategory) {
         toast({
-          title: 'Configuration Error',
-          description: 'The "Exclude" category is required for transfers but was not found.',
+          title: t('pages.transactions.configurationError'),
+          description: t('pages.transactions.excludeMissing'),
           variant: 'destructive',
         });
         return;
@@ -340,7 +339,7 @@ export default function TransactionsPage() {
         category_id_fk: categoryId,
         amount: -Math.abs(amount),
         date: formData.date,
-        notes: `Transfer to ${accountMap[transferToAccountId]?.account_name || 'Account'}: ${formData.notes || ''}`,
+        notes: t('pages.transactions.transferTo', { account: accountMap[transferToAccountId]?.account_name || t('common.account'), notes: formData.notes || '' }),
         savings_fund_id_fk: null,
       };
 
@@ -350,7 +349,7 @@ export default function TransactionsPage() {
         category_id_fk: categoryId,
         amount: Math.abs(amount),
         date: formData.date,
-        notes: `Transfer from ${accountMap[formData.account_id_fk]?.account_name || 'Account'}: ${formData.notes || ''}`,
+        notes: t('pages.transactions.transferFrom', { account: accountMap[formData.account_id_fk]?.account_name || t('common.account'), notes: formData.notes || '' }),
         savings_fund_id_fk: null,
       };
 
@@ -362,12 +361,12 @@ export default function TransactionsPage() {
         queryClient.invalidateQueries({ queryKey: ['summary'] });
         queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Update account balances
 
-        toast({ title: 'Transfer completed successfully' });
+        toast({ title: t('pages.transactions.transferCompleted') });
         closeModal();
       } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to complete transfer';
+        const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.transferFailed');
         toast({
-          title: 'Error',
+          title: t('common.error'),
           description: message,
           variant: 'destructive',
         });
@@ -377,8 +376,8 @@ export default function TransactionsPage() {
 
     if (!formData.account_id_fk || !formData.category_id_fk || !formData.amount) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields.',
+        title: t('common.validationError'),
+        description: t('common.requiredFields'),
         variant: 'destructive',
       });
       return;
@@ -441,18 +440,18 @@ export default function TransactionsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Transactions"
-          description="View and manage all your financial transactions"
+          title={t('pages.transactions.title')}
+          description={t('pages.transactions.description')}
           actions={
             <Button onClick={() => setIsCreateModalOpen(true)} className="hidden sm:inline-flex">
               <Plus className="mr-2 h-4 w-4" />
-              Add Transaction
+              {t('pages.transactions.add')}
             </Button>
           }
         />
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="text-lg font-semibold">Failed to load transactions</h3>
+          <h3 className="text-lg font-semibold">{t('pages.transactions.failedToLoad')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
@@ -462,12 +461,12 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Transactions"
-        description="View and manage all your financial transactions"
+        title={t('pages.transactions.title')}
+        description={t('pages.transactions.description')}
         actions={
           <Button onClick={() => setIsCreateModalOpen(true)} className="hidden sm:inline-flex">
             <Plus className="mr-2 h-4 w-4" />
-            Add Transaction
+            {t('pages.transactions.add')}
           </Button>
         }
       />
@@ -478,7 +477,7 @@ export default function TransactionsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by notes..."
+              placeholder={t('pages.transactions.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-background/50 border-input/50 focus:bg-background transition-colors"
@@ -490,7 +489,7 @@ export default function TransactionsPage() {
               onClick={clearFilters}
               className="shrink-0 text-muted-foreground hover:text-foreground"
             >
-              Reset Filters
+              {t('pages.transactions.resetFilters')}
             </Button>
           )}
         </div>
@@ -499,7 +498,7 @@ export default function TransactionsPage() {
         <div className="flex flex-wrap gap-2">
           {[
             {
-              label: 'This Month',
+              label: t('pages.transactions.thisMonth'),
               action: () => {
                 const now = new Date();
                 setYearFilter(now.getFullYear().toString());
@@ -507,7 +506,7 @@ export default function TransactionsPage() {
               },
             },
             {
-              label: 'Last Month',
+              label: t('pages.transactions.lastMonth'),
               action: () => {
                 const prev = new Date();
                 prev.setMonth(prev.getMonth() - 1);
@@ -516,7 +515,7 @@ export default function TransactionsPage() {
               },
             },
             {
-              label: 'Last 3 Months',
+              label: t('pages.transactions.last3Months'),
               action: () => {
                 const now = new Date();
                 setYearFilter(now.getFullYear().toString());
@@ -524,7 +523,7 @@ export default function TransactionsPage() {
               },
             },
             {
-              label: 'This Year',
+              label: t('pages.transactions.thisYear'),
               action: () => {
                 setYearFilter(new Date().getFullYear().toString());
                 setMonthFilter('all');
@@ -546,39 +545,39 @@ export default function TransactionsPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3">
           <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Year" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.year')} /></SelectTrigger>
             <SelectContent>
               {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
 
           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Month" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.month')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Months</SelectItem>
+              <SelectItem value="all">{t('pages.transactions.allMonths')}</SelectItem>
               {[...Array(12)].map((_, i) => (
                 <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                  {formatMonth(i)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.type')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="income">Income</SelectItem>
-              <SelectItem value="expense">Expense</SelectItem>
-              <SelectItem value="saving">Saving</SelectItem>
-              <SelectItem value="investment">Investment</SelectItem>
+              <SelectItem value="all">{t('pages.transactions.allTypes')}</SelectItem>
+              <SelectItem value="income">{t('types.income')}</SelectItem>
+              <SelectItem value="expense">{t('types.expense')}</SelectItem>
+              <SelectItem value="saving">{t('types.saving')}</SelectItem>
+              <SelectItem value="investment">{t('types.investment')}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.category')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">{t('pages.transactions.allCategories')}</SelectItem>
               {categories
                 .slice()
                 .sort((a, b) => a.category_name.localeCompare(b.category_name))
@@ -587,9 +586,9 @@ export default function TransactionsPage() {
           </Select>
 
           <Select value={accountFilter} onValueChange={setAccountFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Account" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.account')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
+              <SelectItem value="all">{t('pages.transactions.allAccounts')}</SelectItem>
               {accounts
                 .slice()
                 .sort((a, b) => a.account_name.localeCompare(b.account_name))
@@ -598,10 +597,10 @@ export default function TransactionsPage() {
           </Select>
 
           <Select value={fundFilter} onValueChange={setFundFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Savings Fund" /></SelectTrigger>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('pages.transactions.savingsFund')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Funds</SelectItem>
-              <SelectItem value="none">Not Assigned</SelectItem>
+              <SelectItem value="all">{t('pages.transactions.allFunds')}</SelectItem>
+              <SelectItem value="none">{t('pages.transactions.notAssigned')}</SelectItem>
               {funds
                 .slice()
                 .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
@@ -610,7 +609,7 @@ export default function TransactionsPage() {
           </Select>
 
           <Input
-            placeholder="Min Amount"
+            placeholder={t('pages.transactions.minAmount')}
             type="number"
             value={minAmount}
             onChange={e => setMinAmount(e.target.value)}
@@ -618,7 +617,7 @@ export default function TransactionsPage() {
           />
 
           <Input
-            placeholder="Max Amount"
+            placeholder={t('pages.transactions.maxAmount')}
             type="number"
             value={maxAmount}
             onChange={e => setMaxAmount(e.target.value)}
@@ -638,12 +637,12 @@ export default function TransactionsPage() {
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-32 pl-6">Date</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead className="hidden sm:table-cell">Category</TableHead>
-                <TableHead className="hidden md:table-cell">Account</TableHead>
-                <TableHead className="hidden lg:table-cell">Fund</TableHead>
-                <TableHead className="text-right pr-6">Amount</TableHead>
+                <TableHead className="w-32 pl-6">{t('common.date')}</TableHead>
+                <TableHead>{t('common.notes')}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t('common.category')}</TableHead>
+                <TableHead className="hidden md:table-cell">{t('common.account')}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t('pages.transactions.fund')}</TableHead>
+                <TableHead className="text-right pr-6">{t('common.amount')}</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -656,10 +655,10 @@ export default function TransactionsPage() {
         ) : transactions.length === 0 ? (
           <EmptyState
             icon={<Receipt className="h-8 w-8 text-muted-foreground" />}
-            title="No transactions found"
-            description="Try adjusting your filters or add a new transaction"
+            title={t('pages.transactions.noTransactionsTitle')}
+            description={t('pages.transactions.noTransactionsDescription')}
             action={{
-              label: 'Add Transaction',
+              label: t('pages.transactions.add'),
               onClick: () => setIsCreateModalOpen(true),
             }}
             className="m-6 border-0 bg-transparent"
@@ -672,12 +671,12 @@ export default function TransactionsPage() {
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="hover:bg-transparent border-b border-border/50">
-                    <TableHead className="w-32 pl-6 font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold">Notes</TableHead>
-                    <TableHead className="hidden sm:table-cell font-semibold">Category</TableHead>
-                    <TableHead className="hidden md:table-cell font-semibold">Account</TableHead>
-                    <TableHead className="hidden lg:table-cell font-semibold">Fund</TableHead>
-                    <TableHead className="text-right pr-6 font-semibold">Amount</TableHead>
+                    <TableHead className="w-32 pl-6 font-semibold">{t('common.date')}</TableHead>
+                    <TableHead className="font-semibold">{t('common.notes')}</TableHead>
+                    <TableHead className="hidden sm:table-cell font-semibold">{t('common.category')}</TableHead>
+                    <TableHead className="hidden md:table-cell font-semibold">{t('common.account')}</TableHead>
+                    <TableHead className="hidden lg:table-cell font-semibold">{t('pages.transactions.fund')}</TableHead>
+                    <TableHead className="text-right pr-6 font-semibold">{t('common.amount')}</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
                 </TableHeader>
@@ -693,11 +692,7 @@ export default function TransactionsPage() {
                         rowIndex % 2 === 0 ? 'bg-transparent hover:bg-muted/40' : 'bg-muted/20 hover:bg-muted/40'
                       )}>
                         <TableCell className="font-mono text-xs text-muted-foreground pl-4">
-                          {new Date(transaction.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
+                          {formatDate(transaction.date)}
                         </TableCell>
                         <TableCell>
                           <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
@@ -711,12 +706,12 @@ export default function TransactionsPage() {
                               txType === 'investment' ? 'bg-purple-500' : 'bg-rose-500'
                             )} />
                             <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                              {category?.category_name || 'Unknown'}
+                              {category?.category_name || t('common.unknown')}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                          {account?.account_name || 'Unknown'}
+                          {account?.account_name || t('common.unknown')}
                         </TableCell>
                         <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                           {fund ? (
@@ -754,14 +749,14 @@ export default function TransactionsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => openEditModal(transaction)}>
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Edit
+                                {t('common.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => handleDelete(transaction.id_pk)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                {t('common.delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -792,9 +787,9 @@ export default function TransactionsPage() {
                   )}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{transaction.notes || 'No description'}</div>
+                        <div className="font-medium">{transaction.notes || t('pages.transactions.noDescription')}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {new Date(transaction.date).toLocaleDateString()}
+                          {formatDate(transaction.date)}
                         </div>
                       </div>
                       <div className="font-bold text-foreground">
@@ -811,10 +806,10 @@ export default function TransactionsPage() {
                           txType === 'investment' ? 'bg-purple-500/10 text-purple-500' :
                           'bg-rose-500/10 text-rose-500'
                         )}>
-                          {category?.category_name || 'Unknown'}
+                          {category?.category_name || t('common.unknown')}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {account?.account_name || 'Unknown'}
+                          {account?.account_name || t('common.unknown')}
                         </span>
                       </div>
                       <DropdownMenu>
@@ -826,14 +821,14 @@ export default function TransactionsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEditModal(transaction)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            {t('common.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(transaction.id_pk)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            {t('common.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -899,25 +894,25 @@ export default function TransactionsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {selectedTransaction ? 'Edit Transaction' : 'Add Transaction'}
+              {selectedTransaction ? t('pages.transactions.editTitle') : t('pages.transactions.addTitle')}
             </DialogTitle>
             <div className="text-sm text-muted-foreground">
-              {selectedTransaction ? 'Make changes to your transaction details below.' : 'Add a new transaction to your records.'}
+              {selectedTransaction ? t('pages.transactions.editDescription') : t('pages.transactions.addDescription')}
             </div>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('common.notes')}</Label>
               <Input
                 id="notes"
-                placeholder="e.g., Grocery Store"
+                placeholder={t('pages.transactions.notesPlaceholder')}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">{t('common.amount')}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -928,7 +923,7 @@ export default function TransactionsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="date">{t('common.date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -939,9 +934,9 @@ export default function TransactionsPage() {
                       )}
                     >
                       {formData.date ? (
-                        format(new Date(formData.date), "PPP")
+                        formatDate(formData.date, { dateStyle: 'long' })
                       ) : (
-                        <span>Pick a date</span>
+                        <span>{t('pages.transactions.pickDate')}</span>
                       )}
                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
@@ -989,14 +984,14 @@ export default function TransactionsPage() {
                   htmlFor="withdrawal"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Withdrawal from Fund
+                  {t('pages.transactions.withdrawalFromFund')}
                 </label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="max-w-xs">Check this when you are taking money OUT of a savings fund. It will be recorded as income.</p>
+                    <p className="max-w-xs">{t('pages.transactions.withdrawalHelp')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -1021,14 +1016,14 @@ export default function TransactionsPage() {
                   htmlFor="transfer"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Transfer between Accounts
+                  {t('pages.transactions.transferBetweenAccounts')}
                 </label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="max-w-xs">Move money between accounts. This will create two transactions using the 'Exclude' category.</p>
+                    <p className="max-w-xs">{t('pages.transactions.transferHelp')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -1036,13 +1031,13 @@ export default function TransactionsPage() {
 
             {!isWithdrawal && !isTransfer && (
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">{t('common.category')}</Label>
                 <Select
                   value={formData.category_id_fk}
                   onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder={t('pages.transactions.selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories
@@ -1058,13 +1053,13 @@ export default function TransactionsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="account">Account</Label>
+              <Label htmlFor="account">{t('common.account')}</Label>
               <Select
                 value={formData.account_id_fk}
                 onValueChange={(value) => setFormData({ ...formData, account_id_fk: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
+                  <SelectValue placeholder={t('pages.transactions.selectAccount')} />
                 </SelectTrigger>
                 <SelectContent>
                   {accounts
@@ -1081,13 +1076,13 @@ export default function TransactionsPage() {
 
             {isTransfer && (
               <div className="space-y-2">
-                <Label htmlFor="to-account">To Account</Label>
+                <Label htmlFor="to-account">{t('pages.transactions.toAccount')}</Label>
                 <Select
                   value={transferToAccountId}
                   onValueChange={setTransferToAccountId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select destination account" />
+                    <SelectValue placeholder={t('pages.transactions.selectDestinationAccount')} />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts
@@ -1106,13 +1101,13 @@ export default function TransactionsPage() {
             {!isTransfer && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="fund">Savings Fund {isWithdrawal ? '' : '(Optional)'}</Label>
+                  <Label htmlFor="fund">{isWithdrawal ? t('pages.transactions.savingsFund') : t('pages.transactions.savingsFundOptional')}</Label>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">To allocate money to a fund: Select a 'Saving' category (e.g., 'Emergency Fund') and then select the corresponding Fund here.</p>
+                      <p className="max-w-xs">{t('pages.transactions.fundHelp')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -1121,10 +1116,10 @@ export default function TransactionsPage() {
                   onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select fund" />
+                    <SelectValue placeholder={t('pages.transactions.selectFund')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">{t('common.none')}</SelectItem>
                     {funds
                       .filter(f => f.fund_is_active !== false)
                       .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
@@ -1140,14 +1135,14 @@ export default function TransactionsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
               {createMutation.isPending || updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {selectedTransaction ? 'Save Changes' : 'Add Transaction'}
+              {selectedTransaction ? t('common.save') : t('pages.transactions.add')}
             </Button>
           </DialogFooter>
         </DialogContent>

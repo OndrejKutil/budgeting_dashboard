@@ -86,12 +86,14 @@ class UpdateProfileRequest(BaseModel):
     """Schema for updating user profile"""
     full_name: Optional[str] = Field(None, description="User full name")
     currency: Optional[str] = Field(None, description="User preferred currency (e.g., USD, CZK)")
+    locale: Optional[str] = Field(None, description="User preferred locale (e.g., en-US, cs-CZ)")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "full_name": "John Doe",
-                "currency": "CZK"
+                "currency": "CZK",
+                "locale": "cs-CZ"
             }
         }
     )

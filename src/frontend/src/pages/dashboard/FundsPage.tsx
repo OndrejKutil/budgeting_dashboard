@@ -46,7 +46,7 @@ const fadeIn = {
 };
 
 export default function FundsPage() {
-  const { formatCurrency } = useUser();
+  const { formatCurrency, formatDate, t } = useUser();
   const queryClient = useQueryClient();
   // const [funds, setFunds] = useState<SavingsFund[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
@@ -105,11 +105,11 @@ export default function FundsPage() {
     mutationFn: fundsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funds'] });
-      toast({ title: 'Fund created successfully' });
+      toast({ title: t('pages.funds.created') });
       handleCloseModal();
     },
     onError: (err: Error | ApiError) => {
-      let message = 'Failed to create fund';
+      let message = t('pages.funds.createFailed');
       if (err instanceof ApiError) {
         if (typeof err.detail === 'string') {
           message = err.detail;
@@ -120,7 +120,7 @@ export default function FundsPage() {
         }
       }
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -131,11 +131,11 @@ export default function FundsPage() {
     mutationFn: (data: { id: string; data: UpdateSavingsFundRequest }) => fundsApi.update(data.id, data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funds'] });
-      toast({ title: 'Fund updated successfully' });
+      toast({ title: t('pages.funds.updated') });
       handleCloseModal();
     },
     onError: (err: Error | ApiError) => {
-      let message = 'Failed to update fund';
+      let message = t('pages.funds.updateFailed');
       if (err instanceof ApiError) {
         if (typeof err.detail === 'string') {
           message = err.detail;
@@ -146,7 +146,7 @@ export default function FundsPage() {
         }
       }
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -156,8 +156,8 @@ export default function FundsPage() {
   const handleSubmit = async () => {
     if (!formData.fund_name || !formData.target_amount) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields.',
+        title: t('common.validationError'),
+        description: t('common.requiredFields'),
         variant: 'destructive',
       });
       return;
@@ -166,7 +166,7 @@ export default function FundsPage() {
     const userId = tokenManager.getUserId();
     if (!userId) {
       toast({
-        title: 'Authentication Error',
+        title: t('common.authenticationError'),
         description: 'User ID not found. Please log in again.',
         variant: 'destructive',
       });
@@ -192,14 +192,14 @@ export default function FundsPage() {
       queryClient.invalidateQueries({ queryKey: ['funds'] });
       setDeleteConfirmId(null);
       toast({
-        title: 'Fund deleted',
-        description: 'The savings fund has been removed.',
+        title: t('pages.funds.deleted'),
+        description: t('pages.funds.deletedDescription'),
       });
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to delete fund';
+      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.funds.deleteFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -214,21 +214,21 @@ export default function FundsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Savings Funds"
-          description="Track your savings goals and progress"
+          title={t('pages.funds.title')}
+          description={t('pages.funds.description')}
           actions={
             <Button onClick={() => handleOpenModal()}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Fund
+              {t('pages.funds.create')}
             </Button>
           }
         />
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="text-lg font-semibold">Failed to load funds</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <h3 className="text-lg font-semibold">{t('pages.funds.failedToLoad')}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : t('common.unknownError')}</p>
           <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['funds'] })}>
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       </div>
@@ -267,13 +267,13 @@ export default function FundsPage() {
                 <h3 className="font-semibold">{fund.fund_name}</h3>
                 {fund.fund_is_active === false && (
                   <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Inactive
+                    {t('states.inactive')}
                   </span>
                 )}
               </div>
               {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
                 <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
-                  {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} this month
+                  {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} {t('states.thisMonth')}
                 </p>
               )}
             </div>
@@ -291,14 +291,14 @@ export default function FundsPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleOpenModal(fund)}>
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t('common.edit')}
               </DropdownMenuItem>
               {fund.fund_is_active === false && (
                 <DropdownMenuItem
                   onClick={() => updateMutation.mutate({ id: fund.savings_funds_id_pk, data: { fund_is_active: true } })}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Activate
+                  {t('common.activate')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -306,7 +306,7 @@ export default function FundsPage() {
                 onClick={() => setDeleteConfirmId(fund.savings_funds_id_pk)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -319,12 +319,12 @@ export default function FundsPage() {
                 {formatCurrency(current)}
               </span>
               <span className="text-muted-foreground/70 ml-1 text-xs">
-                of {formatCurrency(fund.target_amount)}
+                {t('pages.funds.of')} {formatCurrency(fund.target_amount)}
               </span>
             </div>
             {isComplete && (
               <span className="whitespace-nowrap rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
-                Goal Reached
+                {t('states.goalReached')}
               </span>
             )}
           </div>
@@ -340,8 +340,8 @@ export default function FundsPage() {
                 const monthsToGo = Math.ceil(remaining / fund.net_flow_30d);
                 const projected = new Date();
                 projected.setMonth(projected.getMonth() + monthsToGo);
-                return `~${projected.toLocaleString('default', { month: 'short', year: 'numeric' })} at current pace`;
-              })() : 'Net outflow — consider adding contributions'}
+                return `~${formatDate(projected, { month: 'short', year: 'numeric' })} ${t('states.atCurrentPace')}`;
+              })() : t('states.netOutflowHint')}
             </p>
           )}
         </div>
@@ -352,12 +352,12 @@ export default function FundsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Savings Funds"
-        description="Track your savings goals and progress"
+        title={t('pages.funds.title')}
+        description={t('pages.funds.description')}
         actions={
           <Button onClick={() => handleOpenModal()}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Fund
+            {t('pages.funds.create')}
           </Button>
         }
       />
@@ -383,12 +383,12 @@ export default function FundsPage() {
         ) : (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Total Saved</p>
+              <p className="text-sm text-muted-foreground">{t('metrics.totalSaved')}</p>
               <p className="text-3xl font-bold font-display">
                 {formatCurrency(totalCurrent)}
               </p>
               <p className="text-sm text-muted-foreground">
-                of {formatCurrency(totalTarget)} active target
+                {t('pages.funds.of')} {formatCurrency(totalTarget)} {t('pages.funds.activeTarget')}
               </p>
             </div>
             <div className="w-full sm:w-48">
@@ -397,7 +397,7 @@ export default function FundsPage() {
                 className="h-3"
               />
               <p className="mt-1 text-right text-sm text-muted-foreground">
-                {totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}% complete
+                {totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}% {t('states.complete')}
               </p>
             </div>
           </div>
@@ -428,10 +428,10 @@ export default function FundsPage() {
       ) : activeFunds.length === 0 ? (
         <EmptyState
           icon={<Target className="h-8 w-8 text-muted-foreground" />}
-          title="No active funds yet"
-          description="Create savings funds to track progress towards your financial goals — vacations, emergency reserves, big purchases, and more."
+          title={t('pages.funds.noActiveTitle')}
+          description={t('pages.funds.noActiveDescription')}
           action={{
-            label: 'Create Your First Fund',
+            label: t('pages.funds.createFirst'),
             onClick: () => handleOpenModal(),
           }}
         />
@@ -452,7 +452,7 @@ export default function FundsPage() {
             <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">
               <AccordionItem value="inactive-funds" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-4 text-muted-foreground font-medium">
-                  Inactive Funds ({inactiveFunds.length})
+                  {t('pages.funds.inactiveFunds')} ({inactiveFunds.length})
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
                   <motion.div
@@ -477,21 +477,21 @@ export default function FundsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {selectedFund ? 'Edit Savings Fund' : 'Create Savings Fund'}
+              {selectedFund ? t('pages.funds.editTitle') : t('pages.funds.createTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Fund Name</Label>
+              <Label htmlFor="name">{t('pages.funds.fundName')}</Label>
               <Input
                 id="name"
-                placeholder="e.g., Vacation, Emergency Fund"
+                placeholder={t('pages.funds.fundNamePlaceholder')}
                 value={formData.fund_name}
                 onChange={(e) => setFormData({ ...formData, fund_name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target">Target Amount</Label>
+              <Label htmlFor="target">{t('pages.funds.targetAmount')}</Label>
               <Input
                 id="target"
                 type="number"
@@ -503,14 +503,14 @@ export default function FundsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {selectedFund ? 'Save Changes' : 'Create Fund'}
+              {selectedFund ? t('common.save') : t('pages.funds.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -520,15 +520,14 @@ export default function FundsPage() {
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Delete Savings Fund</DialogTitle>
+            <DialogTitle className="font-display">{t('pages.funds.deleteTitle')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            Are you sure you want to delete this fund? If it has existing transactions,
-            it will be deactivated instead of permanently deleted.
+            {t('pages.funds.deleteDescription')}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -536,7 +535,7 @@ export default function FundsPage() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

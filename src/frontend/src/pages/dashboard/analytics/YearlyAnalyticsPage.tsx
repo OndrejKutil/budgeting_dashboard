@@ -109,7 +109,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 };
 
 export default function YearlyAnalyticsPage() {
-  const { formatCurrency } = useUser();
+  const { formatCurrency, t } = useUser();
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
@@ -131,7 +131,7 @@ export default function YearlyAnalyticsPage() {
       if (response.success && response.data) {
         return response.data;
       }
-      throw new Error(response.message || 'Failed to load yearly analytics');
+      throw new Error(response.message || t('common.unknownError'));
     },
     placeholderData: keepPreviousData,
   });
@@ -154,9 +154,9 @@ export default function YearlyAnalyticsPage() {
 
   const spendingTypeData = useMemo(() => data?.months.map((month, index) => ({
     month,
-    Core: data.monthly_core_expense[index] || 0,
-    Fun: data.monthly_fun_expense[index] || 0,
-    Future: data.monthly_future_expense[index] || 0,
+      Core: data.monthly_core_expense[index] || 0,
+      Fun: data.monthly_fun_expense[index] || 0,
+      Future: data.monthly_future_expense[index] || 0,
   })) ?? [], [data]);
 
   const categoryBreakdownData = useMemo(() => Object.entries(data?.expense_by_category ?? {})
@@ -168,11 +168,11 @@ export default function YearlyAnalyticsPage() {
     if (!data) return [];
 
     return [
-      { name: 'Core', value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
-      { name: 'Fun', value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
-      { name: 'Future', value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
+      { name: t('types.core'), value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
+      { name: t('types.fun'), value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
+      { name: t('types.future'), value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
     ].filter(d => d.value > 0);
-  }, [data]);
+  }, [data, t]);
 
   const { left: leftDomain, right: rightDomain } = useMemo(() => {
     const keysLeft = ['savings', 'investments'];
@@ -230,8 +230,8 @@ export default function YearlyAnalyticsPage() {
   if (error || !data) {
     return (
       <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+        <p className="text-destructive">{error instanceof Error ? error.message : t('states.noDataAvailable')}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>{t('common.retry')}</Button>
       </div>
     );
   }
@@ -239,8 +239,8 @@ export default function YearlyAnalyticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Yearly Analytics"
-        description={`Detailed financial analysis for ${selectedYear}`}
+        title={t('pages.yearlyAnalytics.title')}
+        description={t('pages.yearlyAnalytics.description', { year: selectedYear })}
         actions={
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger className="w-32">
@@ -264,28 +264,28 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <TrendingUp className="h-3 w-3 text-emerald-500" /> Income
+                <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_income)}</p>
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-blue-400'}`}>
-                    {data.trend_directions?.income_trend?.direction === 'growing' ? 'Growing' : data.trend_directions?.income_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.income_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.income_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo
                   </span>
                 </div>
               </div>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <TrendingDown className="h-3 w-3 text-destructive" /> Expenses
+                <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_expense)}</p>
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-emerald-500' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-amber-500' : 'text-blue-400'}`}>
-                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'Creeping' : data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? t('states.creeping') : data.trend_directions?.core_expense_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo
                   </span>
                 </div>
               </div>
@@ -296,7 +296,7 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <PiggyBank className="h-3 w-3 text-primary" /> Savings
+                <PiggyBank className="h-3 w-3 text-primary" /> {t('metrics.savings')}
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
@@ -306,14 +306,14 @@ export default function YearlyAnalyticsPage() {
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-amber-500' : 'text-blue-400'}`}>
-                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'Growing' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'Declining' : 'Stable'} {(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo
                   </span>
                 </div>
               </div>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Briefcase className="h-3 w-3 text-primary" /> Investments
+                <Briefcase className="h-3 w-3 text-primary" /> {t('metrics.investments')}
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
@@ -329,7 +329,7 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <DollarSign className="h-3 w-3 text-primary" /> Profit
+                <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
@@ -337,7 +337,7 @@ export default function YearlyAnalyticsPage() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Wallet className="h-3 w-3 text-primary" /> Cash Flow
+                <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.net_cash_flow)}</p>
@@ -350,12 +350,12 @@ export default function YearlyAnalyticsPage() {
         <div className="rounded-xl border border-border bg-card p-6 shadow-card">
           <h3 className="mb-6 text-lg font-semibold font-display flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
-            Yearly Records
+            {t('pages.yearlyAnalytics.records')}
           </h3>
 
           <div className="grid gap-6 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Best Cashflow</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.bestCashflow')}</span>
               <div className="mt-1">
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
               </div>
@@ -365,7 +365,7 @@ export default function YearlyAnalyticsPage() {
             </div>
 
             <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Highest Spend</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.highestSpend')}</span>
               <div className="mt-1">
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_expense_month.month}</span>
               </div>
@@ -375,7 +375,7 @@ export default function YearlyAnalyticsPage() {
             </div>
 
             <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Top Savings Rate</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.topSavingsRate')}</span>
               <div className="mt-1">
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_savings_rate_month.month}</span>
               </div>
@@ -388,8 +388,8 @@ export default function YearlyAnalyticsPage() {
 
         {/* Long Term Trends Section */}
         <div className="mt-16 mb-8 border-t border-border/40 pt-12">
-          <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Long-term Trends</h2>
-          <p className="text-muted-foreground mt-1 text-lg">Historical performance and wealth accumulation.</p>
+          <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">{t('pages.yearlyAnalytics.longTermTrends')}</h2>
+          <p className="text-muted-foreground mt-1 text-lg">{t('pages.yearlyAnalytics.longTermDescription')}</p>
         </div>
 
         {/* Charts Grid */}
@@ -403,8 +403,8 @@ export default function YearlyAnalyticsPage() {
           >
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-lg font-semibold font-display">Income vs Costs</h3>
-                <p className="text-sm text-muted-foreground">Monthly cash flow gap · <span className="text-primary/70">Click a point to drill down</span></p>
+                <h3 className="text-lg font-semibold font-display">{t('pages.yearlyAnalytics.incomeVsCosts')}</h3>
+                <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.monthlyCashFlowGap')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickPoint')}</span></p>
               </div>
             </div>
             <div className="h-80">
@@ -437,7 +437,7 @@ export default function YearlyAnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="income"
-                    name="Income"
+                    name={t('metrics.income')}
                     stroke="hsl(142, 71%, 45%)"
                     strokeWidth={3}
                     dot={false}
@@ -445,7 +445,7 @@ export default function YearlyAnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="expenses"
-                    name="Expenses"
+                    name={t('metrics.expenses')}
                     stroke="hsl(0, 84%, 60%)"
                     strokeWidth={3}
                     dot={false}
@@ -461,8 +461,8 @@ export default function YearlyAnalyticsPage() {
           >
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-lg font-semibold font-display">Wealth Generation</h3>
-                <p className="text-sm text-muted-foreground">Savings + Investments · <span className="text-primary/70">Click a bar to drill down</span></p>
+                <h3 className="text-lg font-semibold font-display">{t('pages.yearlyAnalytics.wealthGeneration')}</h3>
+                <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.savingsInvestments')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickBar')}</span></p>
               </div>
             </div>
             <div className="h-80">
@@ -511,11 +511,11 @@ export default function YearlyAnalyticsPage() {
                   />
                   <Legend iconType="circle" />
                   <ReferenceLine y={0} yAxisId="left" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} />
-                  <Bar yAxisId="left" dataKey="savings" name="Savings" fill="hsl(199, 89%, 48%)" radius={[4, 4, 0, 0]} opacity={0.9} />
-                  <Bar yAxisId="left" dataKey="investments" name="Investments" fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                  <Bar yAxisId="left" dataKey="savings" name={t('metrics.savings')} fill="hsl(199, 89%, 48%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                  <Bar yAxisId="left" dataKey="investments" name={t('metrics.investments')} fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
                   {/* Rate Lines */}
-                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name="Sav. Rate" stroke="hsl(199, 70%, 68%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
-                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name="Invest. Rate" stroke="hsl(280, 50%, 75%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
+                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name={t('pages.yearlyAnalytics.savingsRateShort')} stroke="hsl(199, 70%, 68%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
+                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name={t('pages.yearlyAnalytics.investmentRateShort')} stroke="hsl(280, 50%, 75%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -525,12 +525,12 @@ export default function YearlyAnalyticsPage() {
 
         {/* Composition Section */}
         <DeferredRender className="mt-12 pt-8" fallback={<div className="min-h-[420px] rounded-xl border border-border/50 bg-card" />}>
-          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-6">Composition & Balance</h2>
+          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-6">{t('pages.yearlyAnalytics.compositionBalance')}</h2>
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Category Breakdown */}
             <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-              <h3 className="mb-6 text-lg font-semibold font-display">Expense Distribution</h3>
+              <h3 className="mb-6 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.expenseDistribution')}</h3>
               <div className="h-[300px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -559,7 +559,7 @@ export default function YearlyAnalyticsPage() {
             <div className="space-y-6">
               {/* Balance Stats */}
               <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-                <h3 className="mb-4 text-lg font-semibold font-display">Spending Balance</h3>
+                <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.spendingBalance')}</h3>
                 <div className="flex items-center justify-around">
                   {balanceData.map((item) => (
                     <div key={item.name} className="text-center">
@@ -578,13 +578,13 @@ export default function YearlyAnalyticsPage() {
                   ))}
                 </div>
                 <div className="mt-3 text-xs text-center text-muted-foreground/60">
-                  Target: 50% Core / 30% Fun / 20% Future
+                  {t('pages.yearlyAnalytics.targetBalance')}
                 </div>
               </div>
 
               {/* Spending Type Trend */}
               <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-                <h3 className="mb-4 text-lg font-semibold font-display">Spending Type History</h3>
+                <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.spendingTypeHistory')}</h3>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={spendingTypeData} stackOffset="expand" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -607,9 +607,9 @@ export default function YearlyAnalyticsPage() {
                         formatter={(value: number) => [formatCurrency(value), '']}
                       />
                       <Legend iconType="circle" />
-                      <Bar dataKey="Core" stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
-                      <Bar dataKey="Fun" stackId="a" fill="hsl(340, 65%, 55%)" opacity={0.9} />
-                      <Bar dataKey="Future" stackId="a" fill="hsl(38, 80%, 55%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Core" name={t('types.core')} stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Fun" name={t('types.fun')} stackId="a" fill="hsl(340, 65%, 55%)" opacity={0.9} />
+                      <Bar dataKey="Future" name={t('types.future')} stackId="a" fill="hsl(38, 80%, 55%)" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

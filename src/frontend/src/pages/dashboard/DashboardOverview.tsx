@@ -35,43 +35,43 @@ const COLORS = [
   'hsl(0, 84%, 60%)',     // Destructive red
 ];
 
-const getSummaryData = async () => {
+const getSummaryData = async (fallbackMessage: string) => {
   const response = await summaryApi.get();
   if (response.success && response.data) {
     return response.data;
   }
-  throw new Error(response.message || 'Failed to load summary data');
+  throw new Error(response.message || fallbackMessage);
 };
 
-const getYearlyAnalyticsData = async (year: number) => {
+const getYearlyAnalyticsData = async (year: number, fallbackMessage: string) => {
   const response = await analyticsApi.getYearly({ year });
   if (response.success && response.data) {
     return response.data;
   }
-  throw new Error(response.message || 'Failed to load yearly analytics');
+  throw new Error(response.message || fallbackMessage);
 };
 
-const getMonthlyAnalyticsData = async (year: number, month: number) => {
+const getMonthlyAnalyticsData = async (year: number, month: number, fallbackMessage: string) => {
   const response = await analyticsApi.getMonthly({ year, month });
   if (response.success && response.data) {
     return response.data;
   }
-  throw new Error(response.message || 'Failed to load monthly analytics');
+  throw new Error(response.message || fallbackMessage);
 };
 
 export default function DashboardOverview() {
-  const { formatCurrency } = useUser();
+  const { formatCurrency, formatDate, formatMonth, t } = useUser();
   const queryClient = useQueryClient();
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
   const currentMonthNumber = today.getMonth() + 1;
   const currentMonth = useMemo(
-    () => today.toLocaleString('default', { month: 'long', year: 'numeric' }),
-    [today]
+    () => formatDate(today, { month: 'long', year: 'numeric' }),
+    [formatDate, today]
   );
   const prevMonthName = useMemo(
-    () => new Date(currentYear, currentMonthNumber - 2, 1).toLocaleString('default', { month: 'short' }),
-    [currentMonthNumber, currentYear]
+    () => formatMonth(currentMonthNumber - 2, 'short'),
+    [currentMonthNumber, formatMonth]
   );
 
   const {
@@ -80,24 +80,24 @@ export default function DashboardOverview() {
     error,
   } = useQuery<SummaryData>({
     queryKey: ['summary'],
-    queryFn: getSummaryData,
+    queryFn: () => getSummaryData(t('pages.overview.loadSummaryFailed')),
   });
 
   const { data: yearlyData } = useQuery<YearlyAnalyticsData>({
     queryKey: ['yearly-analytics', currentYear],
-    queryFn: () => getYearlyAnalyticsData(currentYear),
+    queryFn: () => getYearlyAnalyticsData(currentYear, t('pages.overview.loadYearlyFailed')),
   });
 
   useEffect(() => {
     queryClient.prefetchQuery({
       queryKey: ['monthly-analytics', { year: currentYear, month: currentMonthNumber }],
-      queryFn: () => getMonthlyAnalyticsData(currentYear, currentMonthNumber),
+      queryFn: () => getMonthlyAnalyticsData(currentYear, currentMonthNumber, t('pages.overview.loadMonthlyFailed')),
     });
     queryClient.prefetchQuery({
       queryKey: ['yearly-analytics', currentYear],
-      queryFn: () => getYearlyAnalyticsData(currentYear),
+      queryFn: () => getYearlyAnalyticsData(currentYear, t('pages.overview.loadYearlyFailed')),
     });
-  }, [currentMonthNumber, currentYear, queryClient]);
+  }, [currentMonthNumber, currentYear, queryClient, t]);
 
   const kpiMetrics = useMemo(() => {
     if (!data) return [];
@@ -107,7 +107,7 @@ export default function DashboardOverview() {
 
     return [
       {
-        label: "Total Income",
+        label: t('pages.overview.totalIncome'),
         value: data.total_income,
         icon: TrendingUp,
         delta: data.comparison.income_delta_pct,
@@ -115,7 +115,7 @@ export default function DashboardOverview() {
         color: 'text-emerald-500'
       },
       {
-        label: "Total Expenses",
+        label: t('pages.overview.totalExpenses'),
         value: data.total_expense,
         icon: TrendingDown,
         delta: data.comparison.expense_delta_pct,
@@ -124,25 +124,25 @@ export default function DashboardOverview() {
         invert: true
       },
       {
-        label: "Savings",
+        label: t('metrics.savings'),
         value: data.total_saving,
         icon: PiggyBank,
         delta: data.comparison.saving_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_saving),
-        extra: `${(data.savings_rate * 100).toFixed(1)}% Rate`,
+        extra: `${(data.savings_rate * 100).toFixed(1)}% ${t('pages.overview.rate')}`,
         color: 'text-emerald-500'
       },
       {
-        label: "Investments",
+        label: t('metrics.investments'),
         value: data.total_investment,
         icon: Briefcase,
         delta: data.comparison.investment_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_investment),
-        extra: `${(data.investment_rate * 100).toFixed(1)}% Rate`,
+        extra: `${(data.investment_rate * 100).toFixed(1)}% ${t('pages.overview.rate')}`,
         color: 'text-primary'
       },
     ];
-  }, [currentMonthNumber, data, yearlyData]);
+  }, [currentMonthNumber, data, t, yearlyData]);
 
   const topExpenses = useMemo(() => data?.top_expenses.slice(0, 3) ?? [], [data]);
 
@@ -153,8 +153,8 @@ export default function DashboardOverview() {
   if (error || !data) {
     return (
       <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error instanceof Error ? error.message : 'No data available'}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>Retry</Button>
+        <p className="text-destructive">{error instanceof Error ? error.message : t('states.noDataAvailable')}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>{t('common.retry')}</Button>
       </div>
     );
   }
@@ -162,20 +162,20 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto">
       <PageHeader
-        title="Monthly Overview"
-        description={`Financial summary for ${currentMonth}`}
+        title={t('pages.overview.title')}
+        description={t('pages.overview.description', { month: currentMonth })}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link to="/dashboard/transactions">
                 <Receipt className="mr-2 h-4 w-4" />
-                Transactions
+                {t('pages.overview.transactions')}
               </Link>
             </Button>
             <Button size="sm" asChild>
               <Link to="/dashboard/analytics/monthly">
                 <BarChart3 className="mr-2 h-4 w-4" />
-                Full Analytics
+                {t('pages.overview.fullAnalytics')}
               </Link>
             </Button>
           </div>
@@ -191,18 +191,18 @@ export default function DashboardOverview() {
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Cash Flow</h3>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netCashFlow')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   {formatCurrency(data.net_cash_flow)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
                   {data.comparison.cashflow_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.cashflow_delta_pct).toFixed(1)}%
-                  <span className="text-xs text-muted-foreground/40 ml-1">vs. {prevMonthName}</span>
+                  <span className="text-xs text-muted-foreground/40 ml-1">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground/60">
-                {data.net_cash_flow >= 0 ? "Positive cash flow. You are building alignment." : "Negative cash flow. Outflows exceed inflows."}
+                {data.net_cash_flow >= 0 ? t('pages.overview.positiveCashFlow') : t('pages.overview.negativeCashFlow')}
               </p>
             </div>
           </div>
@@ -216,18 +216,18 @@ export default function DashboardOverview() {
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Net Profit</h3>
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netProfit')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   {formatCurrency(data.profit)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
                   {data.comparison.profit_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.profit_delta_pct).toFixed(1)}%
-                  <span className="text-xs text-muted-foreground/40 ml-1">vs. {prevMonthName}</span>
+                  <span className="text-xs text-muted-foreground/40 ml-1">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground/60">
-                {data.profit >= 0 ? "You're net positive this month." : "Expenses exceeding income."}
+                {data.profit >= 0 ? t('pages.overview.netPositive') : t('pages.overview.expensesExceedingIncome')}
               </p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function DashboardOverview() {
 
               <div className="flex items-center justify-between mt-3">
                 <span className={`text-xs ${isPositive ? 'text-success/70' : 'text-destructive/70'} font-medium flex items-center gap-1`}>
-                  {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">vs. {prevMonthName}</span>
+                  {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
 
                 {metric.sparkData.length > 0 && (
@@ -299,11 +299,11 @@ export default function DashboardOverview() {
         >
           <div className="p-6 border-b border-border/50 flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold font-display">Largest Transactions</h3>
-              <p className="text-sm text-muted-foreground">Where the money went</p>
+              <h3 className="text-lg font-semibold font-display">{t('pages.overview.largestTransactions')}</h3>
+              <p className="text-sm text-muted-foreground">{t('pages.overview.whereMoneyWent')}</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-xs">
-              <Link to="/dashboard/transactions">View All</Link>
+              <Link to="/dashboard/transactions">{t('pages.overview.viewAll')}</Link>
             </Button>
           </div>
           <div className="p-0">
@@ -316,8 +316,8 @@ export default function DashboardOverview() {
                         {i + 1}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{tx.notes || 'Uncategorized'}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                        <span className="font-medium text-foreground">{tx.notes || t('pages.overview.uncategorized')}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(tx.date, { month: 'short', day: 'numeric' })}</span>
                       </div>
                     </div>
                     <div className="font-mono font-medium text-foreground">
@@ -327,7 +327,7 @@ export default function DashboardOverview() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground text-center py-8">No transactions found</div>
+              <div className="text-sm text-muted-foreground text-center py-8">{t('pages.overview.noTransactionsFound')}</div>
             )}
           </div>
         </div>
@@ -341,7 +341,7 @@ export default function DashboardOverview() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="text-xs font-mono text-primary uppercase tracking-wider mb-1">Spotlight</div>
+                  <div className="text-xs font-mono text-primary uppercase tracking-wider mb-1">{t('pages.overview.spotlight')}</div>
                   <h3 className="text-lg font-bold font-display text-foreground">{data.biggest_mover.name}</h3>
                 </div>
                 <div className="p-2 bg-primary/10 rounded-full text-primary group-hover:scale-110 transition-transform">
@@ -352,12 +352,12 @@ export default function DashboardOverview() {
               <div className="space-y-4">
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold">{formatCurrency(data.biggest_mover.total)}</span>
-                  <span className="text-xs text-muted-foreground">total spend</span>
+                  <span className="text-xs text-muted-foreground">{t('pages.overview.totalSpend')}</span>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Share of Wallet</span>
+                    <span className="text-muted-foreground">{t('pages.overview.shareOfWallet')}</span>
                     <span className="font-medium">{(data.biggest_mover.share_of_total || 0).toFixed(1)}%</span>
                   </div>
                   <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
@@ -375,7 +375,7 @@ export default function DashboardOverview() {
           <div
             className="rounded-2xl border border-border bg-card p-6 shadow-sm"
           >
-            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-widest">Category Top 3</h3>
+            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-widest">{t('pages.overview.categoryTop3')}</h3>
             <div className="space-y-4">
               {topExpenses.map((category, i) => (
                 <div key={i} className="flex items-center justify-between group">

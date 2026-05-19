@@ -8,17 +8,19 @@ import {
   PiggyBank,
   User,
 } from 'lucide-react';
+import { useUser } from '@/contexts/user-context';
 
 const navItems = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Txns', href: '/dashboard/transactions', icon: Receipt },
-  { name: 'Accounts', href: '/dashboard/accounts', icon: Wallet },
-  { name: 'Funds', href: '/dashboard/funds', icon: PiggyBank },
-  { name: 'Profile', href: '/dashboard/profile', icon: User },
-];
+  { labelKey: 'nav.overview', href: '/dashboard', icon: LayoutDashboard },
+  { labelKey: 'nav.transactionsShort', href: '/dashboard/transactions', icon: Receipt },
+  { labelKey: 'nav.accounts', href: '/dashboard/accounts', icon: Wallet },
+  { labelKey: 'nav.savingsFundsShort', href: '/dashboard/funds', icon: PiggyBank },
+  { labelKey: 'nav.profile', href: '/dashboard/profile', icon: User },
+] as const;
 
 export function BottomNav() {
   const location = useLocation();
+  const { t } = useUser();
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return location.pathname === href;
@@ -65,7 +67,7 @@ export function BottomNav() {
                   active ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
-                {item.name}
+                {t(item.labelKey)}
               </span>
 
               {/* Active dot indicator */}

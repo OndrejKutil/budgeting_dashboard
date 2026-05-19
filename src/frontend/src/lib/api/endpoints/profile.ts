@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '../client';
+import type { UpdateProfileRequest } from '../types/requests';
 import type { ProfileResponse } from '../types/responses';
 
 export const profileApi = {
@@ -12,7 +13,7 @@ export const profileApi = {
         return response.data;
     },
 
-    updateProfile: async (data: { full_name?: string; currency?: string }) => {
+    updateProfile: async (data: UpdateProfileRequest) => {
         const response = await apiClient.put<ProfileResponse>('/profile/me', data);
         return response.data;
     },

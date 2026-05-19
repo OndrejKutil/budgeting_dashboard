@@ -62,6 +62,7 @@ export interface ProfileData {
         full_name?: string;
         avatar_url?: string;
         currency?: string;
+        locale?: string;
         [key: string]: unknown;
     } | null;
     identities: IdentityData[] | null;

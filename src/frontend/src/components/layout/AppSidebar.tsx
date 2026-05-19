@@ -21,29 +21,30 @@ import {
   CircleDollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useUser } from '@/contexts/user-context';
 
 const mainNavItems = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Transactions', href: '/dashboard/transactions', icon: Receipt },
-  { name: 'Accounts', href: '/dashboard/accounts', icon: Wallet },
-  { name: 'Categories', href: '/dashboard/categories', icon: Tags },
-  { name: 'Savings Funds', href: '/dashboard/funds', icon: PiggyBank },
-];
+  { labelKey: 'nav.overview', href: '/dashboard', icon: LayoutDashboard },
+  { labelKey: 'nav.transactions', href: '/dashboard/transactions', icon: Receipt },
+  { labelKey: 'nav.accounts', href: '/dashboard/accounts', icon: Wallet },
+  { labelKey: 'nav.categories', href: '/dashboard/categories', icon: Tags },
+  { labelKey: 'nav.savingsFunds', href: '/dashboard/funds', icon: PiggyBank },
+] as const;
 
 const analyticsItems = [
-  { name: 'Monthly', href: '/dashboard/analytics/monthly', icon: Calendar },
-  { name: 'Yearly', href: '/dashboard/analytics/yearly', icon: TrendingUp },
-  { name: 'Emergency Fund', href: '/dashboard/analytics/emergency-fund', icon: ShieldCheck },
-];
+  { labelKey: 'nav.monthly', href: '/dashboard/analytics/monthly', icon: Calendar },
+  { labelKey: 'nav.yearly', href: '/dashboard/analytics/yearly', icon: TrendingUp },
+  { labelKey: 'nav.emergencyFund', href: '/dashboard/analytics/emergency-fund', icon: ShieldCheck },
+] as const;
 
 const toolsItems = [
-  { name: 'Budget Maker', href: '/dashboard/budget-maker', icon: ListChecks },
-];
+  { labelKey: 'nav.budgetMaker', href: '/dashboard/budget-maker', icon: ListChecks },
+] as const;
 
 const calculatorsItems = [
-  { name: 'Investing Calculator', href: '/dashboard/investing-calculator', icon: Landmark },
-  { name: 'Dividend Calculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
-];
+  { labelKey: 'nav.investingCalculator', href: '/dashboard/investing-calculator', icon: Landmark },
+  { labelKey: 'nav.dividendCalculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
+] as const;
 
 interface SidebarProps {
   collapsed: boolean;
@@ -55,6 +56,7 @@ interface SidebarProps {
 export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarProps) {
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const location = useLocation();
+  const { t } = useUser();
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return location.pathname === href;
@@ -83,7 +85,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               exit={{ opacity: 0 }}
               className="flex items-center gap-2"
             >
-              <span className="text-lg font-bold font-display text-foreground">Budgeting Dashboard</span>
+              <span className="text-lg font-bold font-display text-foreground">{t('appName')}</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -141,7 +143,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    {item.name}
+                    {t(item.labelKey)}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -158,7 +160,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent"
               >
                 <BarChart3 className="h-5 w-5 flex-shrink-0" />
-                <span className="flex-1 text-left">Analytics</span>
+                <span className="flex-1 text-left">{t('nav.analytics')}</span>
                 <ChevronDown
                   className={cn('h-4 w-4 transition-transform', analyticsOpen && 'rotate-180')}
                 />
@@ -186,7 +188,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                         }
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
+                        <span>{t(item.labelKey)}</span>
                       </NavLink>
                     ))}
                   </motion.div>
@@ -219,7 +221,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
         {/* Tools section */}
         <div className="space-y-1 pt-4">
           <div className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
-            {!collapsed && "Tools"}
+            {!collapsed && t('nav.tools')}
           </div>
           {toolsItems.map((item) => (
             <NavLink
@@ -246,7 +248,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    {item.name}
+                    {t(item.labelKey)}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -257,7 +259,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
         {/* Calculators section */}
         <div className="space-y-1 pt-4">
           <div className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
-            {!collapsed && "Calculators"}
+            {!collapsed && t('nav.calculators')}
           </div>
           {calculatorsItems.map((item) => (
             <NavLink
@@ -284,7 +286,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    {item.name}
+                    {t(item.labelKey)}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -309,7 +311,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
           }
         >
           <User className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span>Profile</span>}
+          {!collapsed && <span>{t('nav.profile')}</span>}
         </NavLink>
       </div>
     </aside>
