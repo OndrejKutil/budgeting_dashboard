@@ -3,7 +3,7 @@ import fastapi
 from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
-from ..auth.auth import api_key_auth, get_current_user, get_supabase_refresh_token
+from ..auth.auth import api_key_auth, get_current_user
 from ..schemas.base import UserData
 from ..schemas.requests import LoginRequest, ForgotPasswordRequest, ResetPasswordRequest
 from ..schemas.responses import LoginResponse, MessageResponse, OAuthUrlResponse
@@ -17,6 +17,7 @@ from ..data.database import get_db_client
 
 # logging
 import logging
+import httpx
 
 # supabase client
 from supabase.client import create_client, Client
@@ -214,6 +215,43 @@ def _get_link_callback_url(provider: str) -> str:
     return f"{redirect_url}/dashboard/profile?linked={provider}"
 
 
+async def _get_link_identity_url(provider: str, access_token: str) -> str:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(
+            f"{env.PROJECT_URL}/auth/v1/user/identities/authorize",
+            params={
+                "provider": provider,
+                "redirect_to": _get_link_callback_url(provider),
+                "skip_http_redirect": "true",
+            },
+            headers={
+                "apikey": env.ANON_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+        )
+
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
+
+    if response.status_code >= 400:
+        detail = data.get("msg") or data.get("message") or data.get("error_description") or data.get("error") or response.text
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Supabase identity linking failed: {detail}"
+        )
+
+    link_url = data.get("url")
+    if not isinstance(link_url, str) or not link_url:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Supabase identity linking did not return an OAuth URL"
+        )
+
+    return link_url
+
+
 @router.get("/oauth/github", response_model=OAuthUrlResponse)
 @limiter.limit(RATE_LIMITS["auth"])
 async def get_github_oauth_url(
@@ -288,35 +326,22 @@ async def get_google_oauth_url(
 async def link_github_account(
     request: Request,
     api_key: str = Depends(api_key_auth),
-    current_user: dict = Depends(get_current_user),
-    refresh_token: str = Depends(get_supabase_refresh_token)
+    current_user: dict = Depends(get_current_user)
 ) -> OAuthUrlResponse:
     """
     Get GitHub OAuth URL for linking to an existing account.
     Requires user to be authenticated. After GitHub auth, account will be linked.
     """
     try:
-        supabase_client: Client = get_db_client()
-        
-        # Set the session from the current user's token
-        supabase_client.auth.set_session(
-            current_user["access_token"],
-            refresh_token
-        )
-        
-        # Link identity - this will associate GitHub with the current user
-        response = supabase_client.auth.link_identity({
-            "provider": "github",
-            "options": {
-                "redirect_to": _get_link_callback_url("github")
-            }
-        })
+        link_url = await _get_link_identity_url("github", current_user["access_token"])
         
         return OAuthUrlResponse(
-            url=response.url,
+            url=link_url,
             provider="github"
         )
         
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get GitHub link URL")
         logger.info(f"GitHub link error: {str(e)}")
@@ -331,35 +356,22 @@ async def link_github_account(
 async def link_google_account(
     request: Request,
     api_key: str = Depends(api_key_auth),
-    current_user: dict = Depends(get_current_user),
-    refresh_token: str = Depends(get_supabase_refresh_token)
+    current_user: dict = Depends(get_current_user)
 ) -> OAuthUrlResponse:
     """
     Get Google OAuth URL for linking to an existing account.
     Requires user to be authenticated. After Google auth, account will be linked.
     """
     try:
-        supabase_client: Client = get_db_client()
-
-        # Set the session from the current user's token
-        supabase_client.auth.set_session(
-            current_user["access_token"],
-            refresh_token
-        )
-
-        # Link identity - this will associate Google with the current user
-        response = supabase_client.auth.link_identity({
-            "provider": "google",
-            "options": {
-                "redirect_to": _get_link_callback_url("google")
-            }
-        })
+        link_url = await _get_link_identity_url("google", current_user["access_token"])
 
         return OAuthUrlResponse(
-            url=response.url,
+            url=link_url,
             provider="google"
         )
 
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get Google link URL")
         logger.info(f"Google link error: {str(e)}")
