@@ -204,6 +204,16 @@ async def reset_password(
 #                                   OAuth Endpoints
 # ================================================================================================
 
+def _get_oauth_callback_url() -> str:
+    redirect_url = env.FRONTEND_URL or "http://localhost:8080"
+    return f"{redirect_url}/auth/callback"
+
+
+def _get_link_callback_url(provider: str) -> str:
+    redirect_url = env.FRONTEND_URL or "http://localhost:8080"
+    return f"{redirect_url}/dashboard/profile?linked={provider}"
+
+
 @router.get("/oauth/github", response_model=OAuthUrlResponse)
 @limiter.limit(RATE_LIMITS["auth"])
 async def get_github_oauth_url(
@@ -217,15 +227,11 @@ async def get_github_oauth_url(
     try:
         supabase_client: Client = get_db_client()
         
-        # Get the redirect URL from environment or use default
-        redirect_url = env.FRONTEND_URL or "http://localhost:8080"
-        callback_url = f"{redirect_url}/auth/callback"
-        
         # Get the OAuth URL from Supabase
         response = supabase_client.auth.sign_in_with_oauth({
             "provider": "github",
             "options": {
-                "redirect_to": callback_url
+                "redirect_to": _get_oauth_callback_url()
             }
         })
         
@@ -240,6 +246,40 @@ async def get_github_oauth_url(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to initialize GitHub login"
+        )
+
+
+@router.get("/oauth/google", response_model=OAuthUrlResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def get_google_oauth_url(
+    request: Request,
+    api_key: str = Depends(api_key_auth)
+) -> OAuthUrlResponse:
+    """
+    Get Google OAuth authorization URL.
+    Frontend should redirect the user to this URL to initiate OAuth flow.
+    """
+    try:
+        supabase_client: Client = get_db_client()
+
+        response = supabase_client.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {
+                "redirect_to": _get_oauth_callback_url()
+            }
+        })
+
+        return OAuthUrlResponse(
+            url=response.url,
+            provider="google"
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get Google OAuth URL")
+        logger.info(f"Google OAuth URL error: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initialize Google login"
         )
 
 
@@ -263,15 +303,11 @@ async def link_github_account(
             current_user["refresh_token"]
         )
         
-        # Get the redirect URL from environment or use default
-        redirect_url = env.FRONTEND_URL or "http://localhost:8080"
-        callback_url = f"{redirect_url}/dashboard/profile?linked=github"
-        
         # Link identity - this will associate GitHub with the current user
         response = supabase_client.auth.link_identity({
             "provider": "github",
             "options": {
-                "redirect_to": callback_url
+                "redirect_to": _get_link_callback_url("github")
             }
         })
         
@@ -286,4 +322,46 @@ async def link_github_account(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to initialize GitHub account linking"
+        )
+
+
+@router.post("/oauth/link-google", response_model=OAuthUrlResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def link_google_account(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    current_user: dict = Depends(get_current_user)
+) -> OAuthUrlResponse:
+    """
+    Get Google OAuth URL for linking to an existing account.
+    Requires user to be authenticated. After Google auth, account will be linked.
+    """
+    try:
+        supabase_client: Client = get_db_client()
+
+        # Set the session from the current user's token
+        supabase_client.auth.set_session(
+            current_user["access_token"],
+            current_user["refresh_token"]
+        )
+
+        # Link identity - this will associate Google with the current user
+        response = supabase_client.auth.link_identity({
+            "provider": "google",
+            "options": {
+                "redirect_to": _get_link_callback_url("google")
+            }
+        })
+
+        return OAuthUrlResponse(
+            url=response.url,
+            provider="google"
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get Google link URL")
+        logger.info(f"Google link error: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initialize Google account linking"
         )
