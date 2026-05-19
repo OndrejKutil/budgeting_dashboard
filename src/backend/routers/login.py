@@ -3,7 +3,7 @@ import fastapi
 from fastapi import APIRouter, Depends, status, Request
 
 # auth dependencies
-from ..auth.auth import api_key_auth, get_current_user
+from ..auth.auth import api_key_auth, get_current_user, get_supabase_refresh_token
 from ..schemas.base import UserData
 from ..schemas.requests import LoginRequest, ForgotPasswordRequest, ResetPasswordRequest
 from ..schemas.responses import LoginResponse, MessageResponse, OAuthUrlResponse
@@ -288,7 +288,8 @@ async def get_google_oauth_url(
 async def link_github_account(
     request: Request,
     api_key: str = Depends(api_key_auth),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    refresh_token: str = Depends(get_supabase_refresh_token)
 ) -> OAuthUrlResponse:
     """
     Get GitHub OAuth URL for linking to an existing account.
@@ -300,7 +301,7 @@ async def link_github_account(
         # Set the session from the current user's token
         supabase_client.auth.set_session(
             current_user["access_token"],
-            current_user["refresh_token"]
+            refresh_token
         )
         
         # Link identity - this will associate GitHub with the current user
@@ -330,7 +331,8 @@ async def link_github_account(
 async def link_google_account(
     request: Request,
     api_key: str = Depends(api_key_auth),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    refresh_token: str = Depends(get_supabase_refresh_token)
 ) -> OAuthUrlResponse:
     """
     Get Google OAuth URL for linking to an existing account.
@@ -342,7 +344,7 @@ async def link_google_account(
         # Set the session from the current user's token
         supabase_client.auth.set_session(
             current_user["access_token"],
-            current_user["refresh_token"]
+            refresh_token
         )
 
         # Link identity - this will associate Google with the current user

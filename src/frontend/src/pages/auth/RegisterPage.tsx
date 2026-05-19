@@ -31,6 +31,8 @@ const passwordRequirements = [
   { label: 'Contains uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
 ];
 
+const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -93,6 +95,7 @@ export default function RegisterPage() {
 
     try {
       const response = await authApi.getGitHubOAuthUrl();
+      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
       window.location.href = response.url;
     } catch (error) {
       setErrors({ general: 'Failed to connect to GitHub. Please try again.' });
@@ -106,6 +109,7 @@ export default function RegisterPage() {
 
     try {
       const response = await authApi.getGoogleOAuthUrl();
+      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
       window.location.href = response.url;
     } catch (error) {
       setErrors({ general: 'Failed to connect to Google. Please try again.' });

@@ -122,11 +122,17 @@ export const authApi = {
     },
 
     linkGitHub: async (accessToken: string) => {
+        const refreshToken = tokenManager.getRefreshToken();
+        if (!refreshToken) {
+            throw new ApiError('Missing refresh token', 401, 'Missing refresh token');
+        }
+
         const response = await fetch(`${API_BASE_URL}/auth/oauth/link-github`, {
             method: 'POST',
             headers: {
                 'X-API-KEY': API_KEY,
                 'Authorization': `Bearer ${accessToken}`,
+                'X-Refresh-Token': refreshToken,
             },
         });
 
@@ -139,11 +145,17 @@ export const authApi = {
     },
 
     linkGoogle: async (accessToken: string) => {
+        const refreshToken = tokenManager.getRefreshToken();
+        if (!refreshToken) {
+            throw new ApiError('Missing refresh token', 401, 'Missing refresh token');
+        }
+
         const response = await fetch(`${API_BASE_URL}/auth/oauth/link-google`, {
             method: 'POST',
             headers: {
                 'X-API-KEY': API_KEY,
                 'Authorization': `Bearer ${accessToken}`,
+                'X-Refresh-Token': refreshToken,
             },
         });
 
