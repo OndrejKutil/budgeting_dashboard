@@ -13,15 +13,35 @@ export default function FaqPage() {
     const faqs = [
         {
             question: "Is my data safe?",
-            answer: "Yes, this is a personal project designed with privacy in mind. While built with secure tools and modern solutions, it is not a production-grade application. Vulnerabilities may exist."
+            answer: "The app uses modern infrastructure and authentication, but it is a personal project rather than audited commercial finance software. Avoid storing irreplaceable or highly sensitive financial records."
         },
         {
             question: "Can I connect my bank account?",
             answer: "Currently, we do not support automatic bank synchronization. The dashboard is designed for manual entry or CSV imports to give you full control over your data."
         },
         {
+            question: "Why can savings be negative?",
+            answer: "Savings are shown as Net Savings. If you withdraw more from savings funds than you contribute during a selected period, the result is negative."
+        },
+        {
+            question: "Why are savings not counted as expenses?",
+            answer: "Saving money is a transfer to another purpose, not spending. Keeping savings separate makes your everyday expenses easier to understand."
+        },
+        {
+            question: "Why are savings withdrawals not counted as income?",
+            answer: "A withdrawal from savings does not create new money. It moves existing money back into your main balance, so it affects Cash Flow instead of Clean Income."
+        },
+        {
+            question: "Why is Profit different from Cash Flow?",
+            answer: "Profit shows what remains after income, expenses, and investments. Cash Flow also includes savings movements, so contributions lower cash flow and withdrawals raise it."
+        },
+        {
+            question: "Are investments counted as expenses?",
+            answer: "No. Investments are tracked separately so normal spending and investing do not get mixed together."
+        },
+        {
             question: "How do I reset my password?",
-            answer: "You can reset your password on the login page."
+            answer: "Use the forgot-password link on the login page and follow the email instructions."
         },
         {
             question: "Is this free to use?",
@@ -29,10 +49,10 @@ export default function FaqPage() {
         },
         {
             question: "Do you have a mobile app?",
-            answer: "For the best mobile experience on iphone, put the website on your home screen and use it as a web app."
+            answer: "There is no separate mobile app. For the best mobile experience on iPhone, add the website to your home screen and use it as a web app."
         },
         {
-            question: "What if I need further assistance, have a wish, suggestion or found a bug?",
+            question: "What if I need help, have a feature request, or found a bug?",
             answer: "Feel free to reach out to the developer directly at me@ondrejkutil.com"
         }
     ];

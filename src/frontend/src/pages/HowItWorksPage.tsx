@@ -13,8 +13,8 @@ const kpiSections = [
         color: "text-emerald-500",
         bg: "bg-emerald-500/10",
         border: "border-emerald-500/20",
-        description: "We calculate your income based on what you actually earn. Money moved out of savings funds and back into your main account is NOT counted as new income – it's just a transfer. This gives you a true picture of your earnings.",
-        formula: "Total Income - Savings Funds Withdrawals"
+        description: "Clean Income is the money you actually earned in the selected period. Withdrawals from savings funds are removed because they are transfers of money you already had, not new earnings.",
+        formula: "Income transactions - Savings withdrawals"
     },
     {
         title: "True Expenses",
@@ -22,8 +22,8 @@ const kpiSections = [
         color: "text-destructive",
         bg: "bg-destructive/10",
         border: "border-destructive/20",
-        description: "Expenses are straightforward: everything you spend. We track everyday spending separately from savings contributions to help you see where your money really goes.",
-        formula: "Sum of all Expense transactions"
+        description: "True Expenses are only spending transactions. Savings contributions and investment purchases are tracked separately, so they do not blur your everyday cost of living.",
+        formula: "Sum of Expense transactions"
     },
     {
         title: "Net Savings",
@@ -31,8 +31,8 @@ const kpiSections = [
         color: "text-primary",
         bg: "bg-primary/10",
         border: "border-primary/20",
-        description: "Savings are calculated as 'Net Savings'. This means we take the total amount you put into savings and subtract any withdrawals you made from those funds. This reveals your actual savings progress for the period.",
-        formula: "Total Savings Contributions - Savings Funds Withdrawals"
+        description: "Net Savings shows your real savings movement. It can be positive when you saved more than you withdrew, or negative when withdrawals were higher than contributions.",
+        formula: "Savings contributions - Savings withdrawals"
     },
     {
         title: "Profit",
@@ -40,8 +40,8 @@ const kpiSections = [
         color: "text-foreground",
         bg: "bg-foreground/5",
         border: "border-border/50",
-        description: "Profit is your financial bottom line. It tells you how much money is left from your earnings after covering all expenses and investments. It represents the money that you still have available (liquid).",
-        formula: "Clean Income - Expenses - Investments"
+        description: "Profit shows what remains from earned income after expenses and investments. It is calculated before savings movements, which is why it can differ from Cash Flow.",
+        formula: "Clean Income - True Expenses - Investments"
     },
     {
         title: "Cash Flow",
@@ -49,9 +49,17 @@ const kpiSections = [
         color: "text-sky-500",
         bg: "bg-sky-500/10",
         border: "border-sky-500/20",
-        description: "Cash Flow represents the actual net change in your main account's balance. It accounts for everything: income, expenses, investments, AND net savings movements.",
-        formula: "All Income - All Expenses - All Investments - All Net Savings"
+        description: "Cash Flow is the net change in your main balance. It includes savings movements, so positive savings reduce cash flow and negative savings increase it.",
+        formula: "Clean Income - True Expenses - Investments - Net Savings"
     }
+];
+
+const exampleRows = [
+    { label: "Clean Income", value: "30 000 Kč" },
+    { label: "True Expenses", value: "18 000 Kč" },
+    { label: "Investments", value: "3 000 Kč" },
+    { label: "Savings contributions", value: "5 000 Kč" },
+    { label: "Savings withdrawals", value: "2 000 Kč" },
 ];
 
 /* ─── Animation variants ─── */
@@ -96,7 +104,19 @@ export default function HowItWorksPage() {
                             How It Works
                         </h1>
                         <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">
-                            Every metric in the dashboard is calculated directly from your raw transaction data. We do not estimate or fabricate any numbers. Here is the exact logic behind your financial flow.
+                            Every metric is calculated directly from your transaction data. The dashboard separates
+                            income, expenses, savings, investments, profit, and cash flow so transfers do not distort
+                            your real financial picture.
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5">
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-amber-500">
+                            Core principle
+                        </h2>
+                        <p className="text-sm leading-relaxed text-foreground/80">
+                            Savings withdrawals are not treated as new income. Savings contributions are not treated
+                            as expenses. They are savings movements, which is why Net Savings can be negative.
                         </p>
                     </div>
 
@@ -142,6 +162,46 @@ export default function HowItWorksPage() {
                             ))}
                         </div>
                     </motion.div>
+
+                    <section className="border-t border-border pt-12">
+                        <div className="grid gap-8 md:grid-cols-[1fr_1.1fr] md:items-start">
+                            <div className="space-y-3">
+                                <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">
+                                    Example month
+                                </h2>
+                                <p className="text-base leading-relaxed text-muted-foreground">
+                                    In this example, the user saved 5 000 Kč and withdrew 2 000 Kč, so Net Savings is
+                                    3 000 Kč. That amount is then subtracted from Profit to show the actual cash flow.
+                                </p>
+                            </div>
+
+                            <div className="rounded-lg border border-border bg-card/60 p-5">
+                                <div className="space-y-3">
+                                    {exampleRows.map((row) => (
+                                        <div key={row.label} className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-muted-foreground">{row.label}</span>
+                                            <span className="font-mono text-foreground">{row.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="my-4 border-t border-border" />
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between gap-4 text-sm">
+                                        <span className="font-medium text-foreground">Net Savings</span>
+                                        <span className="font-mono text-foreground">3 000 Kč</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 text-sm">
+                                        <span className="font-medium text-foreground">Profit</span>
+                                        <span className="font-mono text-foreground">9 000 Kč</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 text-sm">
+                                        <span className="font-medium text-foreground">Cash Flow</span>
+                                        <span className="font-mono text-amber-500">6 000 Kč</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </motion.div>
             </main>
         </div>

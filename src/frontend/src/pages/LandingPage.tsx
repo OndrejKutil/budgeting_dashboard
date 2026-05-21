@@ -422,14 +422,43 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="relative z-10 border-t theme-border-subtle py-8">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-sm theme-text-muted-50 sm:flex-row">
-          <span className="text-xs sm:text-sm">Built by Ondřej Kutil</span>
-          <div className="flex items-center gap-6">
-            <Link to="/how-it-works" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">How it works</Link>
-            <Link to="/faq" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">FAQs</Link>
-            <a href="https://github.com/OndrejKutil" target="_blank" rel="noreferrer" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">GitHub</a>
+      <footer className="relative z-10 border-t theme-border-subtle py-10">
+        <div className="container mx-auto grid gap-10 px-4 text-sm theme-text-muted-50 md:grid-cols-[1.4fr_2fr] lg:px-8">
+          <div className="space-y-3">
+            <Link to="/" className="inline-flex font-display text-lg font-bold theme-text-strong">
+              Budgeting Dashboard
+            </Link>
+            <p className="max-w-sm text-xs leading-relaxed sm:text-sm">
+              Personal finance analytics for income, expenses, savings, and cash flow.
+            </p>
+            <p className="text-xs sm:text-sm">Built by Ondřej Kutil</p>
           </div>
+
+          <nav aria-label="Footer" className="grid gap-8 sm:grid-cols-3">
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Product</h2>
+              <div className="flex flex-col gap-2">
+                <Link to="/how-it-works" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">How it works</Link>
+                <Link to="/faq" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">FAQs</Link>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Project</h2>
+              <div className="flex flex-col gap-2">
+                <Link to="/about" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">About</Link>
+                <a href="https://github.com/OndrejKutil" target="_blank" rel="noreferrer" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">GitHub</a>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Legal</h2>
+              <div className="flex flex-col gap-2">
+                <Link to="/privacy" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">Terms of Service</Link>
+              </div>
+            </div>
+          </nav>
         </div>
       </footer>
     </div>
