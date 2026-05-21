@@ -57,6 +57,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 // Types for local state
 interface LocalBudgetRow extends BudgetPlanRow {
@@ -329,9 +330,9 @@ export default function BudgetMaker() {
                             <div className="flex items-baseline gap-4">
                                 <h2 className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</h2>
                                 <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
-                                    {formatCurrency(total)}
+                                    <SensitiveValue>{formatCurrency(total)}</SensitiveValue>
                                     <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
-                                        ({pctOfIncome.toFixed(1)}%)
+                                        (<SensitiveValue>{pctOfIncome.toFixed(1)}%</SensitiveValue>)
                                     </span>
                                 </span>
                             </div>
@@ -420,13 +421,15 @@ export default function BudgetMaker() {
                                                             className="h-9 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
-                                                        <span className="text-foreground font-medium">{formatCurrency(row.amount)}</span>
+                                                        <span className="text-foreground font-medium">
+                                                            <SensitiveValue>{formatCurrency(row.amount)}</SensitiveValue>
+                                                        </span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right py-2 font-mono font-medium">
                                                     {row.actual != null ? (
                                                         <span className="text-muted-foreground">
-                                                            {formatCurrency(row.actual)}
+                                                            <SensitiveValue>{formatCurrency(row.actual)}</SensitiveValue>
                                                         </span>
                                                     ) : '-'}
                                                 </TableCell>
@@ -440,7 +443,7 @@ export default function BudgetMaker() {
                                                                     ? (group === 'expense' ? "text-success" : "text-destructive")
                                                                     : "text-muted-foreground"
                                                         )}>
-                                                            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
+                                                            <SensitiveValue>{row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%</SensitiveValue>
                                                         </span>
                                                     ) : '-'}
                                                 </TableCell>
@@ -533,13 +536,15 @@ export default function BudgetMaker() {
                                                             className="h-9 w-28 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
-                                                        <span className="font-mono font-medium text-foreground">{formatCurrency(row.amount)}</span>
+                                                        <span className="font-mono font-medium text-foreground">
+                                                            <SensitiveValue>{formatCurrency(row.amount)}</SensitiveValue>
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col items-end">
                                                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.actual')}</span>
                                                     <span className="font-mono font-medium text-muted-foreground">
-                                                        {row.actual != null ? formatCurrency(row.actual) : '-'}
+                                                        {row.actual != null ? <SensitiveValue>{formatCurrency(row.actual)}</SensitiveValue> : '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col items-end">
@@ -553,7 +558,7 @@ export default function BudgetMaker() {
                                                                     ? (group === 'expense' ? "text-success" : "text-destructive")
                                                                     : "text-muted-foreground"
                                                         )}>
-                                                            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
+                                                            <SensitiveValue>{row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%</SensitiveValue>
                                                         </span>
                                                     ) : (
                                                         <span className="text-muted-foreground/40 text-sm">-</span>
@@ -761,9 +766,9 @@ export default function BudgetMaker() {
                                             {t('metrics.remainingPlannedBudget')}
                                         </CardTitle>
                                         <div className={cn("text-3xl font-bold font-mono tracking-tight", remainingBudget >= 0 ? "text-foreground" : "text-destructive")}>
-                                            {formatCurrency(remainingBudget)}
+                                            <SensitiveValue>{formatCurrency(remainingBudget)}</SensitiveValue>
                                             <span className="text-sm ml-2 font-normal text-muted-foreground select-none">
-                                                ({remainingBudgetPct.toFixed(1)}%)
+                                                (<SensitiveValue>{remainingBudgetPct.toFixed(1)}%</SensitiveValue>)
                                             </span>
                                         </div>
                                     </div>

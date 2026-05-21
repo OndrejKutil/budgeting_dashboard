@@ -46,6 +46,8 @@ import {
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { usePrivacyMode } from '@/contexts/privacy-context';
 
 
 
@@ -100,7 +102,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
           {data.name}
         </p>
         <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
-          {formatCurrency(data.value)}
+          <SensitiveValue>{formatCurrency(data.value)}</SensitiveValue>
         </p>
       </div>
     );
@@ -110,7 +112,9 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 
 export default function YearlyAnalyticsPage() {
   const { formatCurrency, t } = useUser();
+  const { isPrivacyMode } = usePrivacyMode();
   const navigate = useNavigate();
+  const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
 
@@ -267,11 +271,11 @@ export default function YearlyAnalyticsPage() {
                 <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
               </p>
               <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_income)}</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_income)}</SensitiveValue></p>
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-blue-400'}`}>
-                    {data.trend_directions?.income_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.income_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.income_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.income_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
               </div>
@@ -281,11 +285,11 @@ export default function YearlyAnalyticsPage() {
                 <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
               </p>
               <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_expense)}</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_expense)}</SensitiveValue></p>
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-emerald-500' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-amber-500' : 'text-blue-400'}`}>
-                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? t('states.creeping') : data.trend_directions?.core_expense_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? t('states.creeping') : data.trend_directions?.core_expense_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
               </div>
@@ -300,13 +304,13 @@ export default function YearlyAnalyticsPage() {
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_saving)}</p>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.savings_rate.toFixed(1)}%</span>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_saving)}</SensitiveValue></p>
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
                   {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
                   <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-amber-500' : 'text-blue-400'}`}>
-                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} {(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo
+                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
               </div>
@@ -317,8 +321,8 @@ export default function YearlyAnalyticsPage() {
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.total_investment)}</p>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.investment_rate.toFixed(1)}%</span>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_investment)}</SensitiveValue></p>
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.investment_rate.toFixed(1)}%</SensitiveValue></span>
                 </div>
                 <div className="h-4 mt-1"></div>
               </div>
@@ -332,7 +336,7 @@ export default function YearlyAnalyticsPage() {
                 <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
               </p>
               <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
               </div>
             </div>
             <div>
@@ -340,7 +344,7 @@ export default function YearlyAnalyticsPage() {
                 <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
               </p>
               <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.net_cash_flow)}</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.net_cash_flow)}</SensitiveValue></p>
               </div>
             </div>
           </div>
@@ -360,7 +364,7 @@ export default function YearlyAnalyticsPage() {
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
               </div>
               <div className="text-sm font-medium text-emerald-500">
-                +{formatCurrency(data.highlights.highest_cashflow_month.value)}
+                <SensitiveValue>+{formatCurrency(data.highlights.highest_cashflow_month.value)}</SensitiveValue>
               </div>
             </div>
 
@@ -370,7 +374,7 @@ export default function YearlyAnalyticsPage() {
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_expense_month.month}</span>
               </div>
               <div className="text-sm font-medium text-destructive">
-                -{formatCurrency(data.highlights.highest_expense_month.value)}
+                <SensitiveValue>-{formatCurrency(data.highlights.highest_expense_month.value)}</SensitiveValue>
               </div>
             </div>
 
@@ -380,7 +384,7 @@ export default function YearlyAnalyticsPage() {
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_savings_rate_month.month}</span>
               </div>
               <div className="text-sm font-medium text-primary">
-                {data.highlights.highest_savings_rate_month.value.toFixed(1)}%
+                <SensitiveValue>{data.highlights.highest_savings_rate_month.value.toFixed(1)}%</SensitiveValue>
               </div>
             </div>
           </div>
@@ -407,7 +411,7 @@ export default function YearlyAnalyticsPage() {
                 <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.monthlyCashFlowGap')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickPoint')}</span></p>
               </div>
             </div>
-            <div className="h-80">
+            <div className={`h-80 ${sensitiveChartClass}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
@@ -431,7 +435,7 @@ export default function YearlyAnalyticsPage() {
                       color: 'hsl(var(--popover-foreground))',
                     }}
                     itemStyle={{ padding: 0 }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
+                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Legend iconType="circle" />
                   <Line
@@ -465,7 +469,7 @@ export default function YearlyAnalyticsPage() {
                 <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.savingsInvestments')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickBar')}</span></p>
               </div>
             </div>
-            <div className="h-80">
+            <div className={`h-80 ${sensitiveChartClass}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={monthlyTrendsData} barGap={4} barSize={18} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
                   <XAxis
@@ -504,9 +508,9 @@ export default function YearlyAnalyticsPage() {
                     labelStyle={{ color: 'hsl(var(--foreground))', marginBottom: '0.5rem' }}
                     formatter={(value: number, name: string) => {
                       if (name.includes('Rate')) {
-                        return [`${value.toFixed(2)}%`, name];
+                        return [<SensitiveValue key="value">{value.toFixed(2)}%</SensitiveValue>, name];
                       }
-                      return [formatCurrency(value), name];
+                      return [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, name];
                     }}
                   />
                   <Legend iconType="circle" />
@@ -531,7 +535,7 @@ export default function YearlyAnalyticsPage() {
             {/* Category Breakdown */}
             <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
               <h3 className="mb-6 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.expenseDistribution')}</h3>
-              <div className="h-[300px] flex items-center justify-center">
+              <div className={`h-[300px] flex items-center justify-center ${sensitiveChartClass}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -563,7 +567,9 @@ export default function YearlyAnalyticsPage() {
                 <div className="flex items-center justify-around">
                   {balanceData.map((item) => (
                     <div key={item.name} className="text-center">
-                      <div className="text-2xl font-bold" style={{ color: item.color }}>{item.value.toFixed(1)}%</div>
+                      <div className="text-2xl font-bold" style={{ color: item.color }}>
+                        <SensitiveValue>{item.value.toFixed(1)}%</SensitiveValue>
+                      </div>
                       <div className="text-sm text-muted-foreground">{item.name}</div>
                     </div>
                   ))}
@@ -585,7 +591,7 @@ export default function YearlyAnalyticsPage() {
               {/* Spending Type Trend */}
               <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
                 <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.spendingTypeHistory')}</h3>
-                <div className="h-[250px] w-full">
+                <div className={`h-[250px] w-full ${sensitiveChartClass}`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={spendingTypeData} stackOffset="expand" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <XAxis dataKey="month" hide />
@@ -604,7 +610,7 @@ export default function YearlyAnalyticsPage() {
                           borderRadius: '8px',
                           color: 'hsl(var(--popover-foreground))'
                         }}
-                        formatter={(value: number) => [formatCurrency(value), '']}
+                        formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                       />
                       <Legend iconType="circle" />
                       <Bar dataKey="Core" name={t('types.core')} stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />

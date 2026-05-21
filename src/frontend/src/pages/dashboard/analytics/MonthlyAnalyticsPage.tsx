@@ -36,6 +36,8 @@ import { useUrlState } from '@/hooks/use-url-state';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { usePrivacyMode } from '@/contexts/privacy-context';
 
 
 
@@ -75,7 +77,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
           {data.name}
         </p>
         <p style={{ color: 'hsl(38, 92%, 50%)', fontSize: '14px', fontWeight: 'bold' }}>
-          {formatCurrency(data.value)}
+          <SensitiveValue>{formatCurrency(data.value)}</SensitiveValue>
         </p>
       </div>
     );
@@ -85,7 +87,9 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency, formatDate, formatMonth, t } = useUser();
+  const { isPrivacyMode } = usePrivacyMode();
   const currentDate = useMemo(() => new Date(), []);
+  const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
 
   const [selectedYear, setSelectedYear] = useUrlState('year', currentDate.getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useUrlState('month', (currentDate.getMonth() + 1).toString().padStart(2, '0'));
@@ -213,9 +217,9 @@ export default function MonthlyAnalyticsPage() {
                   <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
                 </p>
                 <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.income)}</p>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.income)}</SensitiveValue></p>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -224,9 +228,9 @@ export default function MonthlyAnalyticsPage() {
                   <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
                 </p>
                 <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.expenses)}</p>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.expenses)}</SensitiveValue></p>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -240,11 +244,11 @@ export default function MonthlyAnalyticsPage() {
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
-                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.savings)}</p>
-                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.savings_rate.toFixed(1)}%</span>
+                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.savings)}</SensitiveValue></p>
+                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
                   </div>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -254,11 +258,11 @@ export default function MonthlyAnalyticsPage() {
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
-                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.investments)}</p>
-                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm">{data.investment_rate.toFixed(1)}%</span>
+                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.investments)}</SensitiveValue></p>
+                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.investment_rate.toFixed(1)}%</SensitiveValue></span>
                   </div>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -271,9 +275,9 @@ export default function MonthlyAnalyticsPage() {
                   <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
                 </p>
                 <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -282,9 +286,9 @@ export default function MonthlyAnalyticsPage() {
                   <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
                 </p>
                 <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.cashflow)}</p>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.cashflow)}</SensitiveValue></p>
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                    {data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}% {prevLabel}
+                    <SensitiveValue>{data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
               </div>
@@ -297,7 +301,7 @@ export default function MonthlyAnalyticsPage() {
         className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
       >
         <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.dailySpending')}</h3>
-        <div className="h-72">
+        <div className={`h-72 ${sensitiveChartClass}`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
@@ -328,7 +332,7 @@ export default function MonthlyAnalyticsPage() {
                   color: 'hsl(var(--popover-foreground))',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
-                formatter={(value: number) => [formatCurrency(value), t('metrics.spending')]}
+                formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.spending')]}
                 labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0]) {
@@ -361,7 +365,7 @@ export default function MonthlyAnalyticsPage() {
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.incomeSources')}</h3>
-          <div className="h-[300px]">
+          <div className={`h-[300px] ${sensitiveChartClass}`}>
             {incomeBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -386,7 +390,7 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
+                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                     <LabelList
@@ -412,7 +416,7 @@ export default function MonthlyAnalyticsPage() {
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.spendingTypeBreakdown')}</h3>
-          <div className="h-[300px]">
+          <div className={`h-[300px] ${sensitiveChartClass}`}>
             {spendingTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -437,7 +441,7 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
+                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                     <LabelList
@@ -468,7 +472,7 @@ export default function MonthlyAnalyticsPage() {
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.expenseCategories')}</h3>
-          <div className="h-[300px]">
+          <div className={`h-[300px] ${sensitiveChartClass}`}>
             {expenseBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -493,7 +497,7 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
-                    formatter={(value: number) => [formatCurrency(value), '']}
+                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                     <LabelList

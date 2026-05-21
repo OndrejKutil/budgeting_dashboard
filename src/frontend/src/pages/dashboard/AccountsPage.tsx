@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useUser } from '@/contexts/user-context';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   checking: Wallet,
@@ -308,7 +309,7 @@ export default function AccountsPage() {
           <div>
             <p className="text-xs text-muted-foreground">{t('metrics.currentBalance')}</p>
             <p className="text-2xl font-bold font-display">
-              {formatAccountCurrency(account.current_balance || 0, account.currency || 'CZK')}
+              <SensitiveValue>{formatAccountCurrency(account.current_balance || 0, account.currency || 'CZK')}</SensitiveValue>
             </p>
           </div>
 
@@ -348,7 +349,7 @@ export default function AccountsPage() {
                 }`}
             >
               {(account.net_flow_30d || 0) > 0 ? '+' : ''}
-              {formatAccountCurrency(account.net_flow_30d || 0, account.currency || 'CZK')}
+              <SensitiveValue>{formatAccountCurrency(account.net_flow_30d || 0, account.currency || 'CZK')}</SensitiveValue>
             </span>
           </div>
         </div>

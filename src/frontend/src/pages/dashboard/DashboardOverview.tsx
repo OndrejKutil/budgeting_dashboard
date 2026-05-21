@@ -24,6 +24,7 @@ import {
 import { summaryApi, analyticsApi } from '@/lib/api/endpoints';
 import type { SummaryData, YearlyAnalyticsData } from '@/lib/api/types';
 import { useUser } from '@/contexts/user-context';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 // Constants for charts - Teal-based palette
 const COLORS = [
@@ -194,10 +195,10 @@ export default function DashboardOverview() {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netCashFlow')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-                  {formatCurrency(data.net_cash_flow)}
+                  <SensitiveValue>{formatCurrency(data.net_cash_flow)}</SensitiveValue>
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
-                  {data.comparison.cashflow_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.cashflow_delta_pct).toFixed(1)}%
+                  <SensitiveValue>{data.comparison.cashflow_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.cashflow_delta_pct).toFixed(1)}%</SensitiveValue>
                   <span className="text-xs text-muted-foreground/40 ml-1">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
               </div>
@@ -219,10 +220,10 @@ export default function DashboardOverview() {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netProfit')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-                  {formatCurrency(data.profit)}
+                  <SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue>
                 </span>
                 <span className="text-sm font-medium text-muted-foreground/60 flex items-center gap-1">
-                  {data.comparison.profit_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.profit_delta_pct).toFixed(1)}%
+                  <SensitiveValue>{data.comparison.profit_delta_pct >= 0 ? '↑' : '↓'} {Math.abs(data.comparison.profit_delta_pct).toFixed(1)}%</SensitiveValue>
                   <span className="text-xs text-muted-foreground/40 ml-1">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
               </div>
@@ -249,18 +250,20 @@ export default function DashboardOverview() {
                   </div>
                   {metric.extra && (
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 ${metric.color}`}>
-                      {metric.extra}
+                      <SensitiveValue>{metric.extra}</SensitiveValue>
                     </span>
                   )}
                 </div>
                 <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-lg font-semibold font-display tracking-tight">{formatCurrency(metric.value)}</span>
+                  <span className="text-lg font-semibold font-display tracking-tight">
+                    <SensitiveValue>{formatCurrency(metric.value)}</SensitiveValue>
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between mt-3">
                 <span className={`text-xs ${isPositive ? 'text-success/70' : 'text-destructive/70'} font-medium flex items-center gap-1`}>
-                  {metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}% <span className="text-muted-foreground/40 font-normal">{t('pages.overview.vs')} {prevMonthName}</span>
+                  <SensitiveValue>{metric.delta > 0 ? '+' : ''}{metric.delta.toFixed(1)}%</SensitiveValue> <span className="text-muted-foreground/40 font-normal">{t('pages.overview.vs')} {prevMonthName}</span>
                 </span>
 
                 {metric.sparkData.length > 0 && (
@@ -321,7 +324,7 @@ export default function DashboardOverview() {
                       </div>
                     </div>
                     <div className="font-mono font-medium text-foreground">
-                      {formatCurrency(Math.abs(Number(tx.amount)))}
+                      <SensitiveValue>{formatCurrency(Math.abs(Number(tx.amount)))}</SensitiveValue>
                     </div>
                   </div>
                 ))}
@@ -351,14 +354,18 @@ export default function DashboardOverview() {
 
               <div className="space-y-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{formatCurrency(data.biggest_mover.total)}</span>
+                  <span className="text-2xl font-bold">
+                    <SensitiveValue>{formatCurrency(data.biggest_mover.total)}</SensitiveValue>
+                  </span>
                   <span className="text-xs text-muted-foreground">{t('pages.overview.totalSpend')}</span>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{t('pages.overview.shareOfWallet')}</span>
-                    <span className="font-medium">{(data.biggest_mover.share_of_total || 0).toFixed(1)}%</span>
+                    <span className="font-medium">
+                      <SensitiveValue>{(data.biggest_mover.share_of_total || 0).toFixed(1)}%</SensitiveValue>
+                    </span>
                   </div>
                   <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                     <div
@@ -384,7 +391,7 @@ export default function DashboardOverview() {
                     <span className="text-sm font-medium group-hover:text-foreground transition-colors">{category.name}</span>
                   </div>
                   <div className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-                    {formatCurrency(category.total)}
+                    <SensitiveValue>{formatCurrency(category.total)}</SensitiveValue>
                   </div>
                 </div>
               ))}
