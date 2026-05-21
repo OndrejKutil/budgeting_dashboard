@@ -13,6 +13,7 @@ from ..helper import environment as env
 
 # logging
 import logging
+import httpx
 
 # supabase client
 from ..data.database import get_db_client
@@ -130,6 +131,8 @@ async def update_profile(
             metadata_update["full_name"] = profile_update.full_name
         if profile_update.currency is not None:
             metadata_update["currency"] = profile_update.currency
+        if profile_update.locale is not None:
+            metadata_update["locale"] = profile_update.locale
             
         if not metadata_update:
              # Nothing to update, fetch current profile and return
@@ -141,9 +144,28 @@ async def update_profile(
                     message="No changes provided"
                 )
 
-        # Update user metadata in Supabase Auth
-        update_attributes = {"data": metadata_update}
-        updated_user = user_supabase_client.auth.update_user(update_attributes)
+        user_profile = user_supabase_client.auth.get_user(user["access_token"])
+        current_metadata = {}
+        if user_profile and user_profile.user and user_profile.user.user_metadata:
+            current_metadata = dict(user_profile.user.user_metadata)
+
+        # Update user metadata in Supabase Auth. Use the REST endpoint directly because
+        # supabase-py 1.0.4 requires internal session state for auth.update_user().
+        update_attributes = {"data": {**current_metadata, **metadata_update}}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            update_response = await client.put(
+                f"{env.PROJECT_URL}/auth/v1/user",
+                json=update_attributes,
+                headers={
+                    "apikey": env.ANON_KEY,
+                    "Authorization": f"Bearer {user['access_token']}",
+                },
+            )
+
+        if update_response.status_code >= 400:
+            raise RuntimeError(update_response.text)
+
+        updated_user = user_supabase_client.auth.get_user(user["access_token"])
         
         if updated_user is None or updated_user.user is None:
              raise fastapi.HTTPException(

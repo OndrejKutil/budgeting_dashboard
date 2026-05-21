@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
 import { tokenManager } from '@/lib/api/client';
 import { authApi, exportApi } from '@/lib/api/endpoints';
+import { LOCALE_LABELS, LOCALES } from '@/lib/i18n';
+import type { AppLocale } from '@/lib/i18n';
 import {
   Select,
   SelectContent,
@@ -15,9 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check, Download, Upload, Database } from 'lucide-react';
+import { Mail, Calendar, LogOut, Loader2, Globe, CreditCard, Link as LinkIcon, Check, Download, Upload, Database, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { formatDate } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 // GitHub icon component
@@ -41,12 +42,18 @@ const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 
 export default function ProfilePage() {
   const { logout, userId } = useAuth();
-  const { profile, currency, updateProfile, isLoading } = useUser();
+  const { profile, currency, locale, updateProfile, isLoading, t } = useUser();
+  const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGitHubLinking, setIsGitHubLinking] = useState(false);
   const [isGoogleLinking, setIsGoogleLinking] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -57,6 +64,15 @@ export default function ProfilePage() {
     setIsUpdating(true);
     try {
       await updateProfile({ currency: newCurrency });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleLocaleChange = async (newLocale: AppLocale) => {
+    setIsUpdating(true);
+    try {
+      await updateProfile({ locale: newLocale });
     } finally {
       setIsUpdating(false);
     }
@@ -75,8 +91,8 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to link GitHub:', error);
       toast({
-        title: 'Linking failed',
-        description: 'Could not initiate GitHub linking. Please try again.',
+        title: t('profile.linkingFailed'),
+        description: t('profile.githubLinkingFailedDescription'),
         variant: 'destructive',
       });
       setIsGitHubLinking(false);
@@ -95,8 +111,8 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Failed to link Google:', error);
       toast({
-        title: 'Linking failed',
-        description: 'Could not initiate Google linking. Please try again.',
+        title: t('profile.linkingFailed'),
+        description: t('profile.googleLinkingFailedDescription'),
         variant: 'destructive',
       });
       setIsGoogleLinking(false);
@@ -108,14 +124,14 @@ export default function ProfilePage() {
     try {
       await exportApi.downloadTransactionsCSV();
       toast({
-        title: 'Export complete',
-        description: 'Your transactions have been exported as CSV.',
+        title: t('profile.exportComplete'),
+        description: t('profile.exportCompleteDescription'),
       });
     } catch (error) {
       console.error('Export failed:', error);
       toast({
-        title: 'Export failed',
-        description: 'Could not export transactions. Please try again.',
+        title: t('profile.exportFailed'),
+        description: t('profile.exportFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -164,7 +180,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
-      <PageHeader title="Profile & Settings" description="Manage your identity and preferences" />
+      <PageHeader title={t('profile.title')} description={t('profile.description')} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -185,7 +201,7 @@ export default function ProfilePage() {
               <p className="text-muted-foreground">{profile?.email}</p>
               <div className="mt-4 inline-flex items-center rounded-full bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
                 <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                Member since {getMemberSince()}
+                {t('profile.memberSince', { year: getMemberSince() })}
               </div>
             </div>
           </div>
@@ -195,7 +211,7 @@ export default function ProfilePage() {
             className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
           >
             <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+            {t('profile.signOut')}
           </Button>
         </div>
 
@@ -205,23 +221,23 @@ export default function ProfilePage() {
             <div className="md:col-span-1">
               <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" />
-                Account Details
+                {t('profile.accountDetails')}
               </h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Your personal account information and identifiers.
+                {t('profile.accountDetailsDescription')}
               </p>
             </div>
             
             <div className="md:col-span-2 grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <label className="text-sm font-medium text-foreground">{t('profile.fullName')}</label>
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
                   <span className="font-medium text-foreground">{getDisplayName()}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email Address</label>
+                <label className="text-sm font-medium text-foreground">{t('profile.emailAddress')}</label>
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
                   <span className="font-medium text-foreground">{profile?.email}</span>
                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -229,7 +245,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">System ID</label>
+                <label className="text-sm font-medium text-foreground">{t('profile.systemId')}</label>
                 <div className="font-mono text-xs text-muted-foreground break-all bg-muted/50 p-3 rounded-lg border border-border/50 select-all shadow-inner">
                   {profile?.id}
                 </div>
@@ -244,18 +260,18 @@ export default function ProfilePage() {
             <div className="md:col-span-1">
               <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
-                Preferences
+                {t('profile.preferences')}
               </h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Customize your dashboard experience.
+                {t('profile.preferencesDescription')}
               </p>
             </div>
             
             <div className="md:col-span-2 space-y-4 max-w-md">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Default Currency</label>
+                <label className="text-sm font-medium text-foreground">{t('profile.defaultCurrency')}</label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  This currency will be used for all aggregations and totals across your dashboard.
+                  {t('profile.defaultCurrencyDescription')}
                 </p>
                 <Select
                   value={currency}
@@ -263,7 +279,7 @@ export default function ProfilePage() {
                   disabled={isUpdating}
                 >
                   <SelectTrigger className="w-full bg-card border-border h-12 rounded-lg shadow-sm">
-                    <SelectValue placeholder="Select currency" />
+                    <SelectValue placeholder={t('profile.selectCurrency')} />
                   </SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map((c) => (
@@ -273,6 +289,64 @@ export default function ProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <label className="text-sm font-medium text-foreground">{t('profile.language')}</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t('profile.languageDescription')}
+                </p>
+                <Select
+                  value={locale}
+                  onValueChange={(value) => handleLocaleChange(value as AppLocale)}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger className="w-full bg-card border-border h-12 rounded-lg shadow-sm">
+                    <SelectValue placeholder={t('profile.selectLanguage')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCALES.map((localeOption) => (
+                      <SelectItem key={localeOption} value={localeOption}>
+                        <span className="font-medium">{LOCALE_LABELS[localeOption]}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <label className="text-sm font-medium text-foreground">{t('profile.theme')}</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {t('profile.themeDescription')}
+                </p>
+                <div className="grid w-28 grid-cols-2 rounded-lg border border-border bg-muted/50 p-1 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    disabled={!themeMounted}
+                    aria-label={t('profile.useDarkTheme')}
+                    className={`flex h-9 items-center justify-center rounded-md transition-colors ${
+                      resolvedTheme !== 'light'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Moon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    disabled={!themeMounted}
+                    aria-label={t('profile.useLightTheme')}
+                    className={`flex h-9 items-center justify-center rounded-md transition-colors ${
+                      resolvedTheme === 'light'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Sun className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </section>
@@ -284,10 +358,10 @@ export default function ProfilePage() {
             <div className="md:col-span-1">
               <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <LinkIcon className="h-5 w-5 text-primary" />
-                Connected Accounts
+                {t('profile.connectedAccounts')}
               </h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Manage your linked social and authentication accounts.
+                {t('profile.connectedAccountsDescription')}
               </p>
             </div>
             
@@ -300,14 +374,14 @@ export default function ProfilePage() {
                   <div className="space-y-1.5">
                     <p className="font-medium leading-none text-foreground text-base">GitHub</p>
                     <p className="text-xs text-muted-foreground">
-                      {isGitHubConnected ? 'Connected to your account' : 'Link your GitHub account'}
+                      {isGitHubConnected ? t('profile.githubConnected') : t('profile.githubNotConnected')}
                     </p>
                   </div>
                 </div>
                 {isGitHubConnected ? (
                   <div className="flex items-center text-success text-sm font-medium bg-success/10 px-3 py-1.5 rounded-full">
                     <Check className="mr-1.5 h-4 w-4" />
-                    Connected
+                    {t('common.connected')}
                   </div>
                 ) : (
                   <Button
@@ -316,7 +390,7 @@ export default function ProfilePage() {
                     disabled={isGitHubLinking}
                     className="h-9 px-4"
                   >
-                    {isGitHubLinking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Connect'}
+                    {isGitHubLinking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('common.connect')}
                   </Button>
                 )}
               </div>
@@ -329,14 +403,14 @@ export default function ProfilePage() {
                   <div className="space-y-1.5">
                     <p className="font-medium leading-none text-foreground text-base">Google</p>
                     <p className="text-xs text-muted-foreground">
-                      {isGoogleConnected ? 'Connected to your account' : 'Link your Google account'}
+                      {isGoogleConnected ? t('profile.googleConnected') : t('profile.googleNotConnected')}
                     </p>
                   </div>
                 </div>
                 {isGoogleConnected ? (
                   <div className="flex items-center text-success text-sm font-medium bg-success/10 px-3 py-1.5 rounded-full">
                     <Check className="mr-1.5 h-4 w-4" />
-                    Connected
+                    {t('common.connected')}
                   </div>
                 ) : (
                   <Button
@@ -345,7 +419,7 @@ export default function ProfilePage() {
                     disabled={isGoogleLinking}
                     className="h-9 px-4"
                   >
-                    {isGoogleLinking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Connect'}
+                    {isGoogleLinking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('common.connect')}
                   </Button>
                 )}
               </div>
@@ -359,19 +433,19 @@ export default function ProfilePage() {
             <div className="md:col-span-1">
               <h3 className="text-lg font-semibold font-display tracking-tight flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                Data Management
+                {t('profile.dataManagement')}
               </h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Export or import your financial data safely.
+                {t('profile.dataManagementDescription')}
               </p>
             </div>
             
             <div className="md:col-span-2 grid gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-border bg-card p-6 space-y-5 shadow-sm">
                 <div className="space-y-2">
-                  <h4 className="text-base font-medium text-foreground">Export Transactions</h4>
+                  <h4 className="text-base font-medium text-foreground">{t('profile.exportTransactions')}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Download all your data (transactions, categories, accounts and funds) as a CSV file.
+                    {t('profile.exportDescription')}
                   </p>
                 </div>
                 <Button
@@ -385,19 +459,19 @@ export default function ProfilePage() {
                   ) : (
                     <Download className="mr-2 h-4 w-4" />
                   )}
-                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                  {isExporting ? t('profile.exporting') : t('profile.exportCsv')}
                 </Button>
               </div>
               <div className="rounded-xl border border-border bg-card p-6 space-y-5 shadow-sm opacity-50">
                 <div className="space-y-2">
-                  <h4 className="text-base font-medium text-foreground">Import Transactions</h4>
+                  <h4 className="text-base font-medium text-foreground">{t('profile.importTransactions')}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Upload a CSV file to bulk-import data into your dashboard.
+                    {t('profile.importDescription')}
                   </p>
                 </div>
                 <Button disabled variant="outline" className="w-full bg-background h-10">
                   <Upload className="mr-2 h-4 w-4" />
-                  Coming Soon
+                  {t('common.comingSoon')}
                 </Button>
               </div>
             </div>

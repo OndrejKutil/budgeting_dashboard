@@ -35,6 +35,7 @@ export interface RegisterRequest {
 export interface UpdateProfileRequest {
     full_name?: string;
     currency?: string;
+    locale?: string;
 }
 
 // ================================================================================================

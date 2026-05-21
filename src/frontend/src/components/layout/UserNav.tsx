@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 export function UserNav() {
     const { logout, userId } = useAuth();
-    const { profile } = useUser();
+    const { profile, t } = useUser();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -74,16 +74,16 @@ export function UserNav() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                     <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
+                    {t('nav.dashboard')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    {t('nav.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Log out
+                    {t('userMenu.logOut')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

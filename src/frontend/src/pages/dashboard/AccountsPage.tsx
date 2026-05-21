@@ -40,6 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUser } from '@/contexts/user-context';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   checking: Wallet,
@@ -83,6 +84,7 @@ const CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'];
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
+  const { locale, t } = useUser();
   // const [accounts, setAccounts] = useState<Account[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
@@ -109,6 +111,19 @@ export default function AccountsPage() {
   const activeAccounts = accounts.filter(a => a.account_is_active !== false);
   const inactiveAccounts = accounts.filter(a => a.account_is_active === false);
 
+  const formatAccountCurrency = (value: number, currency: string) => new Intl.NumberFormat(currency === 'CZK' ? 'cs-CZ' : locale, {
+    style: 'currency',
+    currency,
+  }).format(value);
+
+  const accountTypeLabel = (type: string) => ({
+    cash: t('types.cash'),
+    checking: t('types.checking'),
+    credit: t('types.credit'),
+    investment: t('types.investment'),
+    savings: t('types.savings'),
+  }[type] ?? type);
+
 
 
   const deleteMutation = useMutation({
@@ -117,14 +132,14 @@ export default function AccountsPage() {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDeleteConfirmId(null);
       toast({
-        title: 'Account deleted',
-        description: 'The account has been removed successfully.',
+        title: t('pages.accounts.deleted'),
+        description: t('pages.accounts.deletedDescription'),
       });
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? String(err.detail) : 'Failed to delete account';
+      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.deleteFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -139,13 +154,13 @@ export default function AccountsPage() {
     mutationFn: accountsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast({ title: 'Account created successfully' });
+      toast({ title: t('pages.accounts.created') });
       closeModal();
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? String(err.detail) : 'Failed to create account';
+      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.createFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -156,13 +171,13 @@ export default function AccountsPage() {
     mutationFn: (data: { id: string; data: UpdateAccountRequest }) => accountsApi.update(data.id, data.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast({ title: 'Account updated successfully' });
+      toast({ title: t('pages.accounts.updated') });
       closeModal();
     },
     onError: (err) => {
-      const message = err instanceof ApiError ? String(err.detail) : 'Failed to update account';
+      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.updateFailed');
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
@@ -172,8 +187,8 @@ export default function AccountsPage() {
   const handleSubmit = async () => {
     if (!formData.account_name || !formData.type) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields.',
+        title: t('common.validationError'),
+        description: t('common.requiredFields'),
         variant: 'destructive',
       });
       return;
@@ -210,19 +225,19 @@ export default function AccountsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Accounts"
-          description="Manage your bank accounts and balances"
+          title={t('pages.accounts.title')}
+          description={t('pages.accounts.description')}
           actions={
             <Button onClick={() => setIsModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Account
+              {t('pages.accounts.add')}
             </Button>
           }
         />
         <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="text-lg font-semibold">Failed to load accounts</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Unknown error'}</p>
+          <h3 className="text-lg font-semibold">{t('pages.accounts.failedToLoad')}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : t('common.unknownError')}</p>
         </div>
       </div>
     );
@@ -249,11 +264,11 @@ export default function AccountsPage() {
                 <h3 className="font-semibold">{account.account_name}</h3>
                 {account.account_is_active === false && (
                   <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Inactive
+                    {t('states.inactive')}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">{account.type}</p>
+              <p className="text-sm text-muted-foreground">{accountTypeLabel(account.type)}</p>
             </div>
           </div>
           <DropdownMenu>
@@ -269,14 +284,14 @@ export default function AccountsPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => openEditModal(account)}>
                 <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                {t('common.edit')}
               </DropdownMenuItem>
               {account.account_is_active === false && (
                 <DropdownMenuItem
                   onClick={() => updateMutation.mutate({ id: account.accounts_id_pk, data: { account_is_active: true } })}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Activate
+                  {t('common.activate')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -284,19 +299,16 @@ export default function AccountsPage() {
                 onClick={() => setDeleteConfirmId(account.accounts_id_pk)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         <div className="mt-4 space-y-3">
           <div>
-            <p className="text-xs text-muted-foreground">Current Balance</p>
+            <p className="text-xs text-muted-foreground">{t('metrics.currentBalance')}</p>
             <p className="text-2xl font-bold font-display">
-              {new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: account.currency || 'CZK',
-              }).format(account.current_balance || 0)}
+              {formatAccountCurrency(account.current_balance || 0, account.currency || 'CZK')}
             </p>
           </div>
 
@@ -322,13 +334,13 @@ export default function AccountsPage() {
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground/50">
-                No history
+                {t('states.noHistory')}
               </div>
             )}
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">30d Net Flow</span>
+            <span className="text-muted-foreground">{t('metrics.netFlow30d')}</span>
             <span
               className={`font-medium ${(account.net_flow_30d || 0) >= 0
                 ? 'text-emerald-500'
@@ -336,10 +348,7 @@ export default function AccountsPage() {
                 }`}
             >
               {(account.net_flow_30d || 0) > 0 ? '+' : ''}
-              {new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: account.currency || 'CZK',
-              }).format(account.net_flow_30d || 0)}
+              {formatAccountCurrency(account.net_flow_30d || 0, account.currency || 'CZK')}
             </span>
           </div>
         </div>
@@ -350,12 +359,12 @@ export default function AccountsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Accounts"
-        description="Manage your bank accounts and balances"
+        title={t('pages.accounts.title')}
+        description={t('pages.accounts.description')}
         actions={
           <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Account
+            {t('pages.accounts.add')}
           </Button>
         }
       />
@@ -365,12 +374,12 @@ export default function AccountsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
       >
-        <p className="text-sm text-muted-foreground">Total Active Accounts</p>
+        <p className="text-sm text-muted-foreground">{t('metrics.totalActiveAccounts')}</p>
         <div className="mt-1 text-3xl font-bold font-display">
           {isLoading ? <Skeleton className="h-9 w-16 inline-block" /> : activeAccounts.length}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage your financial accounts
+          {t('pages.accounts.summaryDescription')}
         </p>
       </motion.div>
 
@@ -383,10 +392,10 @@ export default function AccountsPage() {
       ) : activeAccounts.length === 0 ? (
         <EmptyState
           icon={<Wallet className="h-8 w-8 text-muted-foreground" />}
-          title="No active accounts"
-          description="Add your bank accounts to start tracking balances and transactions across all your finances."
+          title={t('pages.accounts.noActiveTitle')}
+          description={t('pages.accounts.noActiveDescription')}
           action={{
-            label: 'Add Your First Account',
+            label: t('pages.accounts.addFirst'),
             onClick: () => setIsModalOpen(true),
           }}
         />
@@ -405,7 +414,7 @@ export default function AccountsPage() {
             <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">
               <AccordionItem value="inactive-accounts" className="border-none">
                 <AccordionTrigger className="hover:no-underline py-4 text-muted-foreground font-medium">
-                  Inactive Accounts ({inactiveAccounts.length})
+                  {t('pages.accounts.inactiveAccounts')} ({inactiveAccounts.length})
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
                   <motion.div
@@ -428,45 +437,45 @@ export default function AccountsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {selectedAccount ? 'Edit Account' : 'Add Account'}
+              {selectedAccount ? t('pages.accounts.editTitle') : t('pages.accounts.addTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="account_name">Account Name</Label>
+              <Label htmlFor="account_name">{t('pages.accounts.accountName')}</Label>
               <Input
                 id="account_name"
-                placeholder="e.g., Main Checking"
+                placeholder={t('pages.accounts.accountNamePlaceholder')}
                 value={formData.account_name}
                 onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Account Type</Label>
+              <Label htmlFor="type">{t('pages.accounts.accountType')}</Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={t('common.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
                   {ACCOUNT_TYPES.map((type) => (
                     <SelectItem key={type} value={type} className="capitalize">
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                      {accountTypeLabel(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">{t('common.currency')}</Label>
               <Select
                 value={formData.currency}
                 onValueChange={(value) => setFormData({ ...formData, currency: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
+                  <SelectValue placeholder={t('profile.selectCurrency')} />
                 </SelectTrigger>
                 <SelectContent>
                   {CURRENCIES.map((currency) => (
@@ -480,14 +489,14 @@ export default function AccountsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {selectedAccount ? 'Save Changes' : 'Add Account'}
+              {selectedAccount ? t('common.save') : t('pages.accounts.add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -497,15 +506,14 @@ export default function AccountsPage() {
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">Delete Account</DialogTitle>
+            <DialogTitle className="font-display">{t('pages.accounts.deleteTitle')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            Are you sure you want to delete this account? If it has existing transactions,
-            it will be deactivated instead of permanently deleted.
+            {t('pages.accounts.deleteDescription')}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -513,7 +521,7 @@ export default function AccountsPage() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

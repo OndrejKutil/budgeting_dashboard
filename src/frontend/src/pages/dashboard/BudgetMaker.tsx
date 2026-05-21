@@ -71,8 +71,9 @@ const MONTHS = [
 ];
 
 export default function BudgetMaker() {
-    const { formatCurrency } = useUser();
+    const { formatCurrency, formatMonth, t } = useUser();
     const queryClient = useQueryClient();
+    const monthOptions = useMemo(() => MONTHS.map((_, index) => formatMonth(index, 'long')), [formatMonth]);
 
     // UI State
     const [isEditing, setIsEditing] = useState(false);
@@ -233,13 +234,13 @@ export default function BudgetMaker() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] });
-            toast({ title: 'Budget saved successfully' });
+            toast({ title: t('pages.budgetMaker.saved') });
             setIsEditing(false); // Exit edit mode
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to save budget';
+            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.saveFailed');
             toast({
-                title: 'Error',
+                title: t('common.error'),
                 description: message,
                 variant: 'destructive',
             });
@@ -251,14 +252,14 @@ export default function BudgetMaker() {
         mutationFn: () => budgetApi.deleteBudget(selectedMonth, selectedYear),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] });
-            toast({ title: 'Budget deleted successfully' });
+            toast({ title: t('pages.budgetMaker.deleted') });
             setIsEditing(false);
             // Reset to empty state manually or let useEffect handle it after refetch
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to delete budget';
+            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.deleteFailed');
             toast({
-                title: 'Error',
+                title: t('common.error'),
                 description: message,
                 variant: 'destructive',
             });
@@ -294,13 +295,13 @@ export default function BudgetMaker() {
         onSuccess: () => {
             // Invalidate target budget queries
             queryClient.invalidateQueries({ queryKey: ['budget', copyTargetMonth, copyTargetYear] });
-            toast({ title: `Budget copied to ${MONTHS[copyTargetMonth - 1]} ${copyTargetYear}` });
+            toast({ title: t('pages.budgetMaker.copied', { month: monthOptions[copyTargetMonth - 1], year: copyTargetYear }) });
             setIsCopyOpen(false);
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : 'Failed to copy budget';
+            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.copyFailed');
             toast({
-                title: 'Error',
+                title: t('common.error'),
                 description: message,
                 variant: 'destructive',
             });
@@ -338,7 +339,7 @@ export default function BudgetMaker() {
 
                         {isEditing && (
                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); addRow(group); }} className="text-primary hover:text-primary/90 hover:bg-primary/10">
-                                <Plus className="h-4 w-4 mr-1" /> Add Row
+                                <Plus className="h-4 w-4 mr-1" /> {t('pages.budgetMaker.addRow')}
                             </Button>
                         )}
                     </div>
@@ -347,7 +348,7 @@ export default function BudgetMaker() {
                         <CardContent className="px-0 py-2">
                             {rows.length === 0 ? (
                                 <div className="px-6 py-8 text-center text-muted-foreground text-sm italic bg-muted/30 rounded-xl border border-dashed border-border/50">
-                                    No items in this section. {isEditing && "Click 'Add Row' to start."}
+                                    {t('pages.budgetMaker.noItems')} {isEditing && t('pages.budgetMaker.addRowHint')}
                                 </div>
                             ) : (
                                 <>
@@ -356,12 +357,12 @@ export default function BudgetMaker() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="hover:bg-transparent border-b border-border/50">
-                                            <TableHead className="w-[30%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Name</TableHead>
-                                            <TableHead className="w-[20%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Category</TableHead>
-                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Planned</TableHead>
-                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Actual</TableHead>
-                                            <TableHead className="w-[10%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Diff</TableHead>
-                                            <TableHead className="w-[5%] text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground/40" title="Include in Total">Inc.</TableHead>
+                                            <TableHead className="w-[30%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.name')}</TableHead>
+                                            <TableHead className="w-[20%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.category')}</TableHead>
+                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.planned')}</TableHead>
+                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.actual')}</TableHead>
+                                            <TableHead className="w-[10%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.diff')}</TableHead>
+                                            <TableHead className="w-[5%] text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground/40" title={t('metrics.includeInTotal')}>Inc.</TableHead>
                                             {isEditing && <TableHead className="w-[5%] pr-4"></TableHead>}
                                         </TableRow>
                                     </TableHeader>
@@ -373,7 +374,7 @@ export default function BudgetMaker() {
                                                         <Input
                                                             value={row.name}
                                                             onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
-                                                            placeholder="Item name"
+                                                            placeholder={t('pages.budgetMaker.itemName')}
                                                             className="h-9 bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
@@ -387,10 +388,10 @@ export default function BudgetMaker() {
                                                             onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
                                                         >
                                                             <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
-                                                                <SelectValue placeholder="Select..." />
+                                                                <SelectValue placeholder={t('pages.budgetMaker.selectCategory')} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="none">None</SelectItem>
+                                                                <SelectItem value="none">{t('common.none')}</SelectItem>
                                                                 {categories.filter(c => {
                                                                     if (group === 'income') return c.type === 'income';
                                                                     if (group === 'expense') return c.type === 'expense';
@@ -482,7 +483,7 @@ export default function BudgetMaker() {
                                                         <Input
                                                             value={row.name}
                                                             onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
-                                                            placeholder="Item name"
+                                                            placeholder={t('pages.budgetMaker.itemName')}
                                                             className="h-9 bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
@@ -502,10 +503,10 @@ export default function BudgetMaker() {
                                                     onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
                                                 >
                                                     <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
-                                                        <SelectValue placeholder="Category..." />
+                                                        <SelectValue placeholder={t('pages.budgetMaker.categoryPlaceholder')} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="none">None</SelectItem>
+                                                        <SelectItem value="none">{t('common.none')}</SelectItem>
                                                         {categories.filter(c => {
                                                             if (group === 'income') return c.type === 'income';
                                                             if (group === 'expense') return c.type === 'expense';
@@ -523,7 +524,7 @@ export default function BudgetMaker() {
 
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Planned</span>
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.planned')}</span>
                                                     {isEditing ? (
                                                         <Input
                                                             type="number"
@@ -536,13 +537,13 @@ export default function BudgetMaker() {
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Actual</span>
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.actual')}</span>
                                                     <span className="font-mono font-medium text-muted-foreground">
                                                         {row.actual != null ? formatCurrency(row.actual) : '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">Diff</span>
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.diff')}</span>
                                                     {row.diff != null ? (
                                                         <span className={cn(
                                                             "font-mono text-sm font-medium",
@@ -566,7 +567,7 @@ export default function BudgetMaker() {
                                                         checked={row.include_in_total}
                                                         onCheckedChange={(checked) => updateRow(group, row.id, 'include_in_total', checked)}
                                                     />
-                                                    <span className="text-xs text-muted-foreground">Include in total</span>
+                                                    <span className="text-xs text-muted-foreground">{t('metrics.includeInTotal')}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -584,8 +585,8 @@ export default function BudgetMaker() {
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-32">
             <PageHeader
-                title="Budget Maker"
-                description="Plan your monthly income, expenses, and savings goals."
+                title={t('pages.budgetMaker.title')}
+                description={t('pages.budgetMaker.description')}
                 actions={
                     <div className="flex gap-2">
                         {isEditing ? (
@@ -594,20 +595,20 @@ export default function BudgetMaker() {
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete Budget
+                                                <Trash2 className="mr-2 h-4 w-4" /> {t('pages.budgetMaker.deleteBudget')}
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogTitle>{t('pages.budgetMaker.deleteConfirmTitle')}</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete your budget plan for {MONTHS[selectedMonth - 1]} {selectedYear}.
+                                                    {t('pages.budgetMaker.deleteConfirmDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                                 <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive hover:bg-destructive/90">
-                                                    Delete
+                                                    {t('common.delete')}
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
@@ -618,10 +619,10 @@ export default function BudgetMaker() {
                                     onClick={() => {
                                         setIsEditing(false);
                                         queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] }); // Reset changes
-                                        toast({ title: "Changes discarded" });
+                                        toast({ title: t('common.changesDiscarded') });
                                     }}
                                 >
-                                    <X className="mr-2 h-4 w-4" /> Cancel
+                                    <X className="mr-2 h-4 w-4" /> {t('common.cancel')}
                                 </Button>
                                 <Button
                                     onClick={() => saveMutation.mutate()}
@@ -629,7 +630,7 @@ export default function BudgetMaker() {
                                     className="bg-primary hover:bg-primary/90 transition-all shadow-md"
                                 >
                                     {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    Save Budget
+                                    {t('pages.budgetMaker.saveBudget')}
                                 </Button>
                             </>
                         ) : (
@@ -637,33 +638,32 @@ export default function BudgetMaker() {
                                 <Dialog open={isCopyOpen} onOpenChange={setIsCopyOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline">
-                                            <Copy className="mr-2 h-4 w-4" /> Copy to...
+                                            <Copy className="mr-2 h-4 w-4" /> {t('pages.budgetMaker.copyTo')}
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Copy Budget Plan</DialogTitle>
+                                            <DialogTitle>{t('pages.budgetMaker.copyTitle')}</DialogTitle>
                                             <DialogDescription>
-                                                Copy the current budget plan ({MONTHS[selectedMonth - 1]} {selectedYear}) to another month.
-                                                This will overwrite any existing budget in the selected target month.
+                                                {t('pages.budgetMaker.copyDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="flex gap-4 py-4">
                                             <div className="flex flex-col gap-1.5 flex-1">
-                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Target Month</Label>
+                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetMonth')}</Label>
                                                 <Select value={copyTargetMonth.toString()} onValueChange={(val) => setCopyTargetMonth(parseInt(val))}>
                                                     <SelectTrigger>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {MONTHS.map((m, i) => (
+                                                        {monthOptions.map((m, i) => (
                                                             <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                             <div className="flex flex-col gap-1.5 w-1/3">
-                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Target Year</Label>
+                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetYear')}</Label>
                                                 <Select value={copyTargetYear.toString()} onValueChange={(val) => setCopyTargetYear(parseInt(val))}>
                                                     <SelectTrigger>
                                                         <SelectValue />
@@ -678,10 +678,10 @@ export default function BudgetMaker() {
                                             </div>
                                         </div>
                                         <DialogFooter>
-                                            <Button variant="ghost" onClick={() => setIsCopyOpen(false)}>Cancel</Button>
+                                            <Button variant="ghost" onClick={() => setIsCopyOpen(false)}>{t('common.cancel')}</Button>
                                             <Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending}>
                                                 {copyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Copy Budget
+                                                {t('pages.budgetMaker.copyBudget')}
                                             </Button>
                                         </DialogFooter>
                                     </DialogContent>
@@ -692,7 +692,7 @@ export default function BudgetMaker() {
                                     className="transition-all shadow-md"
                                 >
                                     <Pencil className="mr-2 h-4 w-4" />
-                                    Edit Budget
+                                    {t('pages.budgetMaker.editBudget')}
                                 </Button>
                             </>
                         )}
@@ -703,13 +703,13 @@ export default function BudgetMaker() {
             {/* Date Selectors */}
             <div className="flex gap-4 mb-4 bg-card p-4 rounded-xl border border-border shadow-sm w-fit transition-shadow hover:shadow-md">
                 <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Month</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('common.month')}</Label>
                     <Select value={selectedMonth.toString()} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
                         <SelectTrigger className="w-[140px] border-transparent bg-muted/50 focus:bg-background hover:bg-background transition-colors font-medium">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {MONTHS.map((m, i) => (
+                            {monthOptions.map((m, i) => (
                                 <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
                             ))}
                         </SelectContent>
@@ -717,7 +717,7 @@ export default function BudgetMaker() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Year</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('common.year')}</Label>
                     <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
                         <SelectTrigger className="w-[100px] border-transparent bg-muted/50 focus:bg-background hover:bg-background transition-colors font-medium">
                             <SelectValue />
@@ -741,10 +741,10 @@ export default function BudgetMaker() {
                     transition={{ duration: 0.3 }}
                     className="space-y-2"
                 >
-                    {renderSection('Income', 'income', incomeRows)}
-                    {renderSection('Expenses', 'expense', expenseRows)}
-                    {renderSection('Savings', 'saving', savingsRows)}
-                    {renderSection('Investments', 'investment', investmentRows)}
+                    {renderSection(t('metrics.income'), 'income', incomeRows)}
+                    {renderSection(t('metrics.expenses'), 'expense', expenseRows)}
+                    {renderSection(t('metrics.savings'), 'saving', savingsRows)}
+                    {renderSection(t('metrics.investments'), 'investment', investmentRows)}
 
                     {/* Summary Card */}
                     <AnimatePresence>
@@ -758,7 +758,7 @@ export default function BudgetMaker() {
                                 <CardHeader className="py-4 px-6 flex flex-row items-center gap-6 space-y-0">
                                     <div>
                                         <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                                            Remaining Planned Budget
+                                            {t('metrics.remainingPlannedBudget')}
                                         </CardTitle>
                                         <div className={cn("text-3xl font-bold font-mono tracking-tight", remainingBudget >= 0 ? "text-foreground" : "text-destructive")}>
                                             {formatCurrency(remainingBudget)}

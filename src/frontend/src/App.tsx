@@ -9,6 +9,7 @@ import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -22,6 +23,7 @@ const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const FaqPage = lazy(() => import("./pages/FaqPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
 
 // Dashboard
 const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
@@ -94,6 +96,7 @@ const AppContent = () => {
             <Route path="/privacy" element={withSuspense(<PrivacyPage />)} />
             <Route path="/faq" element={withSuspense(<FaqPage />)} />
             <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
+            <Route path="/about" element={withSuspense(<AboutPage />)} />
 
             {/* Protected dashboard routes */}
             <Route
@@ -130,11 +133,13 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

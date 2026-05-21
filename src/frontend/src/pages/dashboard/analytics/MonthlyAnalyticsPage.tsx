@@ -84,7 +84,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 };
 
 export default function MonthlyAnalyticsPage() {
-  const { formatCurrency } = useUser();
+  const { formatCurrency, formatDate, formatMonth, t } = useUser();
   const currentDate = useMemo(() => new Date(), []);
 
   const [selectedYear, setSelectedYear] = useUrlState('year', currentDate.getFullYear().toString());
@@ -98,24 +98,31 @@ export default function MonthlyAnalyticsPage() {
   const years = useMemo(() => Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString()), [currentDate]);
 
   const months = useMemo(() => [
-    { value: '01', label: 'January' },
-    { value: '02', label: 'February' },
-    { value: '03', label: 'March' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'May' },
-    { value: '06', label: 'June' },
-    { value: '07', label: 'July' },
-    { value: '08', label: 'August' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'October' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' },
-  ], []);
+    { value: '01', label: formatMonth(0, 'long') },
+    { value: '02', label: formatMonth(1, 'long') },
+    { value: '03', label: formatMonth(2, 'long') },
+    { value: '04', label: formatMonth(3, 'long') },
+    { value: '05', label: formatMonth(4, 'long') },
+    { value: '06', label: formatMonth(5, 'long') },
+    { value: '07', label: formatMonth(6, 'long') },
+    { value: '08', label: formatMonth(7, 'long') },
+    { value: '09', label: formatMonth(8, 'long') },
+    { value: '10', label: formatMonth(9, 'long') },
+    { value: '11', label: formatMonth(10, 'long') },
+    { value: '12', label: formatMonth(11, 'long') },
+  ], [formatMonth]);
 
   const prevLabel = useMemo(() => {
     const prevDate = new Date(selectedYearNumber, selectedMonthNumber - 2, 1);
-    return `vs. ${prevDate.toLocaleString('default', { month: 'short' })}`;
-  }, [selectedMonthNumber, selectedYearNumber]);
+    return `${t('pages.monthlyAnalytics.previousPrefix')} ${formatMonth(prevDate.getMonth(), 'short')}`;
+  }, [formatMonth, selectedMonthNumber, selectedYearNumber, t]);
+
+  const spendingTypeLabels = useMemo(() => ({
+    Core: t('types.core'),
+    Necessary: t('types.necessary'),
+    Fun: t('types.fun'),
+    Future: t('types.future'),
+  }), [t]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['monthly-analytics', { year: selectedYearNumber, month: selectedMonthNumber }],
@@ -127,7 +134,7 @@ export default function MonthlyAnalyticsPage() {
       if (result.success) {
         return result.data;
       }
-      throw new Error(result.message || 'Failed to fetch analytics');
+      throw new Error(result.message || t('common.unknownError'));
     },
     placeholderData: keepPreviousData,
   });
@@ -141,9 +148,9 @@ export default function MonthlyAnalyticsPage() {
     .sort((a, b) => b.value - a.value) ?? [], [data]);
 
   const spendingTypeData = useMemo(() => data?.spending_type_breakdown.map((item) => ({
-    name: item.type,
+    name: spendingTypeLabels[item.type as keyof typeof spendingTypeLabels] ?? item.type,
     value: Number(item.amount),
-  })) ?? [], [data]);
+  })) ?? [], [data, spendingTypeLabels]);
 
   const dailyData = useMemo(() => data?.daily_spending_heatmap.map((item) => ({
     day: new Date(item.day).getDate(),
@@ -156,18 +163,18 @@ export default function MonthlyAnalyticsPage() {
   }
 
   if (!data) {
-    return <div className="p-8 text-center text-muted-foreground">No data available for this month.</div>;
+    return <div className="p-8 text-center text-muted-foreground">{t('states.noDataForMonth')}</div>;
   }
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Monthly Analytics"
-        description={`Detailed breakdown of your monthly finances for ${selectedMonth}/${selectedYear}`}
+        title={t('pages.monthlyAnalytics.title')}
+        description={t('pages.monthlyAnalytics.description', { month: selectedMonth, year: selectedYear })}
         actions={
           <div className="flex gap-2">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Month" />
+                <SelectValue placeholder={t('common.month')} />
               </SelectTrigger>
               <SelectContent>
                 {months.map((month) => (
@@ -180,7 +187,7 @@ export default function MonthlyAnalyticsPage() {
 
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="Year" />
+                <SelectValue placeholder={t('common.year')} />
               </SelectTrigger>
               <SelectContent>
                 {years.map((year) => (
@@ -203,7 +210,7 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <TrendingUp className="h-3 w-3 text-emerald-500" /> Income
+                  <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.income)}</p>
@@ -214,7 +221,7 @@ export default function MonthlyAnalyticsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <TrendingDown className="h-3 w-3 text-destructive" /> Expenses
+                  <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.expenses)}</p>
@@ -229,7 +236,7 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <PiggyBank className="h-3 w-3 text-primary" /> Savings
+                  <PiggyBank className="h-3 w-3 text-primary" /> {t('metrics.savings')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
@@ -243,7 +250,7 @@ export default function MonthlyAnalyticsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Briefcase className="h-3 w-3 text-primary" /> Investments
+                  <Briefcase className="h-3 w-3 text-primary" /> {t('metrics.investments')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
@@ -261,7 +268,7 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <DollarSign className="h-3 w-3 text-primary" /> Profit
+                  <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.profit)}</p>
@@ -272,7 +279,7 @@ export default function MonthlyAnalyticsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Wallet className="h-3 w-3 text-primary" /> Cash Flow
+                  <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(data.cashflow)}</p>
@@ -289,7 +296,7 @@ export default function MonthlyAnalyticsPage() {
       <div
         className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
       >
-        <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Daily Spending</h3>
+        <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.dailySpending')}</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -321,13 +328,13 @@ export default function MonthlyAnalyticsPage() {
                   color: 'hsl(var(--popover-foreground))',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
-                formatter={(value: number) => [formatCurrency(value), 'Spending']}
+                formatter={(value: number) => [formatCurrency(value), t('metrics.spending')]}
                 labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0]) {
-                    return new Date(payload[0].payload.fullDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                    return formatDate(payload[0].payload.fullDate, { weekday: 'short', month: 'short', day: 'numeric' });
                   }
-                  return `Day ${label}`;
+                  return t('pages.monthlyAnalytics.day', { day: label });
                 }}
               />
               <Area
@@ -353,7 +360,7 @@ export default function MonthlyAnalyticsPage() {
         <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Income Sources</h3>
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.incomeSources')}</h3>
           <div className="h-[300px]">
             {incomeBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -395,7 +402,7 @@ export default function MonthlyAnalyticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No income data recorded</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noIncomeData')}</div>
             )}
           </div>
         </div>
@@ -404,7 +411,7 @@ export default function MonthlyAnalyticsPage() {
         <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Spending Type Breakdown</h3>
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.spendingTypeBreakdown')}</h3>
           <div className="h-[300px]">
             {spendingTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -446,7 +453,7 @@ export default function MonthlyAnalyticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No spending type data recorded</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noSpendingTypeData')}</div>
             )}
           </div>
         </div>
@@ -460,7 +467,7 @@ export default function MonthlyAnalyticsPage() {
         <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">Expense Categories</h3>
+          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.expenseCategories')}</h3>
           <div className="h-[300px]">
             {expenseBarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -502,7 +509,7 @@ export default function MonthlyAnalyticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No expense data recorded</div>
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noExpenseData')}</div>
             )}
           </div>
         </div>

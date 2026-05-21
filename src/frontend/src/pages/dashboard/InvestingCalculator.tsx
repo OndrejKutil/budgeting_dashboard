@@ -52,22 +52,20 @@ const PERIODS_PER_YEAR: Record<Frequency, number> = {
     [FREQUENCIES.YEARLY]: 1,
 }
 
-// Chart configuration for shadcn/ui chart component
-const chartConfig = {
-    invested: {
-        label: "Total Invested",
-        color: "hsl(var(--muted-foreground))",
-    },
-    balance: {
-        label: "Total Balance",
-        color: "hsl(var(--primary))",
-    },
-}
-
 export default function InvestingCalculator() {
 
     // --- State & Form ---
-    const { formatCurrency } = useUser()
+    const { formatCurrency, t } = useUser()
+    const chartConfig = useMemo(() => ({
+        invested: {
+            label: t('pages.investingCalculator.totalInvested'),
+            color: "hsl(var(--muted-foreground))",
+        },
+        balance: {
+            label: t('pages.investingCalculator.totalBalance'),
+            color: "hsl(var(--primary))",
+        },
+    } satisfies ChartConfig), [t])
 
     // URL State management
     const [startingAmount, setStartingAmount] = useUrlState<number>('start', 10000)
@@ -162,7 +160,7 @@ export default function InvestingCalculator() {
                     <Calculator className="h-6 w-6 text-primary" />
                 </div>
                 <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">
-                    Compound Growth Calculator
+                    {t('pages.investingCalculator.title')}
                 </h1>
             </div>
 
@@ -170,15 +168,15 @@ export default function InvestingCalculator() {
                 {/* --- Left Column: Input Form --- */}
                 <Card className="lg:col-span-4 border-border/50 shadow-sm">
                     <CardHeader>
-                        <CardTitle>Parameters</CardTitle>
+                        <CardTitle>{t('pages.investingCalculator.parameters')}</CardTitle>
                         <CardDescription>
-                            Adjust the values to simulate different scenarios.
+                            {t('pages.investingCalculator.parametersDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Starting Amount</Label>
+                                <Label>{t('pages.investingCalculator.startingAmount')}</Label>
                                 <Input
                                     type="number"
                                     value={startingAmount}
@@ -188,7 +186,7 @@ export default function InvestingCalculator() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Contribution</Label>
+                                    <Label>{t('pages.investingCalculator.contribution')}</Label>
                                     <Input
                                         type="number"
                                         value={addedAmount}
@@ -196,17 +194,17 @@ export default function InvestingCalculator() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Frequency</Label>
+                                    <Label>{t('pages.investingCalculator.frequency')}</Label>
                                     <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value={FREQUENCIES.DAILY}>Daily</SelectItem>
-                                            <SelectItem value={FREQUENCIES.WEEKLY}>Weekly</SelectItem>
-                                            <SelectItem value={FREQUENCIES.MONTHLY}>Monthly</SelectItem>
-                                            <SelectItem value={FREQUENCIES.QUARTERLY}>Quarterly</SelectItem>
-                                            <SelectItem value={FREQUENCIES.YEARLY}>Yearly</SelectItem>
+                                            <SelectItem value={FREQUENCIES.DAILY}>{t('pages.investingCalculator.daily')}</SelectItem>
+                                            <SelectItem value={FREQUENCIES.WEEKLY}>{t('pages.investingCalculator.weekly')}</SelectItem>
+                                            <SelectItem value={FREQUENCIES.MONTHLY}>{t('pages.investingCalculator.monthly')}</SelectItem>
+                                            <SelectItem value={FREQUENCIES.QUARTERLY}>{t('pages.investingCalculator.quarterly')}</SelectItem>
+                                            <SelectItem value={FREQUENCIES.YEARLY}>{t('pages.investingCalculator.yearly')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -214,7 +212,7 @@ export default function InvestingCalculator() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Interest Rate (%)</Label>
+                                    <Label>{t('pages.investingCalculator.interestRate')}</Label>
                                     <Input
                                         type="number"
                                         value={interestRate}
@@ -222,7 +220,7 @@ export default function InvestingCalculator() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Inflation (%)</Label>
+                                    <Label>{t('pages.investingCalculator.inflation')}</Label>
                                     <Input
                                         type="number"
                                         step="0.1"
@@ -233,7 +231,7 @@ export default function InvestingCalculator() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Time Period (Years)</Label>
+                                <Label>{t('pages.investingCalculator.timePeriod')}</Label>
                                 <Input
                                     type="number"
                                     value={years}
@@ -247,7 +245,7 @@ export default function InvestingCalculator() {
                                 onClick={handleReset}
                             >
                                 <RotateCcw className="mr-2 h-4 w-4" />
-                                Reset to Defaults
+                                {t('pages.investingCalculator.reset')}
                             </Button>
                         </div>
                     </CardContent>
@@ -259,7 +257,7 @@ export default function InvestingCalculator() {
                     <div className="grid gap-4 md:grid-cols-2">
                         <Card className="border-border/50 shadow-sm bg-primary/5">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Future Balance</CardTitle>
+                                <CardTitle className="text-sm font-medium">{t('pages.investingCalculator.futureBalance')}</CardTitle>
                                 <TrendingUp className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
@@ -267,13 +265,13 @@ export default function InvestingCalculator() {
                                     {formatCurrency(results.finalBalance)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    After {years} years {inflation > 0 && `(adjusting for ${inflation}% inflation)`}
+                                    {t('pages.investingCalculator.afterYears', { years })} {inflation > 0 && `(${t('pages.investingCalculator.adjustingForInflation', { inflation })})`}
                                 </p>
                             </CardContent>
                         </Card>
                         <Card className="border-border/50 shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Contributed</CardTitle>
+                                <CardTitle className="text-sm font-medium">{t('pages.investingCalculator.totalContributed')}</CardTitle>
                                 <Calculator className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
@@ -281,7 +279,7 @@ export default function InvestingCalculator() {
                                     {formatCurrency(results.totalInvested)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Principal + {years} years of contributions
+                                    {t('pages.investingCalculator.principalPlus', { years })}
                                 </p>
                             </CardContent>
                         </Card>
@@ -290,9 +288,9 @@ export default function InvestingCalculator() {
                     {/* Chart Area */}
                     <Card className="border-border/50 shadow-sm">
                         <CardHeader>
-                            <CardTitle>Growth Projection</CardTitle>
+                            <CardTitle>{t('pages.investingCalculator.growthProjection')}</CardTitle>
                             <CardDescription>
-                                Visualizing the power of compound interest over time.
+                                {t('pages.investingCalculator.growthDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -322,7 +320,7 @@ export default function InvestingCalculator() {
                                         tickLine={false}
                                         axisLine={false}
                                         tickMargin={8}
-                                        tickFormatter={(value) => `Year ${value}`}
+                                        tickFormatter={(value) => t('pages.investingCalculator.yearLabel', { year: value })}
                                         className="text-muted-foreground text-xs"
                                     />
                                     <YAxis

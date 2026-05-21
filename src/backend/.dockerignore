@@ -12,3 +12,6 @@ __pycache__/*
 .idea/*
 node_modules/*
 dist/*
+.pytest_cache/**
+.pytest_cache/*
+.pytest_cache
