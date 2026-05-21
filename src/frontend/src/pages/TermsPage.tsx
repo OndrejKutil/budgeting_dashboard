@@ -7,12 +7,12 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
+      <header className="fixed left-0 right-0 top-0 z-50 border-b theme-border-subtle bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
           </Link>
-          <Button variant="ghost" asChild>
+          <Button variant="ghost" asChild className="theme-text-muted-80 hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-white/10">
             <Link to="/">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
@@ -22,25 +22,29 @@ export default function TermsPage() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 pb-16 pt-24">
+      <main className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto max-w-3xl"
+          className="space-y-10"
         >
-          <div className="rounded-xl border border-border bg-card p-8 shadow-lg">
-            <h1 className="mb-6 text-3xl font-bold font-display">Terms of Service</h1>
-            <p className="mb-4 text-sm text-muted-foreground">Last updated: May 4, 2026</p>
+          <div className="space-y-4">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500">Legal</p>
+            <h1 className="text-4xl font-bold font-display tracking-tight theme-text-strong sm:text-5xl">
+              Terms of Service
+            </h1>
+            <p className="text-sm theme-text-muted-60">Last updated: May 4, 2026</p>
+          </div>
 
-            <div className="space-y-6 text-foreground/90">
-              <section>
-                <h2 className="mb-3 text-xl font-semibold text-amber-500">Notice</h2>
-                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
-                  <p className="text-sm">
-                    <strong>Budgeting Dashboard is a personal student project.</strong> While it is fully functional, it is provided "as-is" without the warranties or guarantees typical of commercial software.
-                  </p>
-                </div>
-              </section>
+          <div className="space-y-8 text-foreground/90">
+            <section>
+              <h2 className="mb-3 text-xl font-semibold text-amber-500">Notice</h2>
+              <div className="border-l-2 border-amber-500/70 bg-amber-500/10 py-3 pl-4 pr-3">
+                <p className="text-sm">
+                  <strong>Budgeting Dashboard is a personal student project.</strong> While it is fully functional, it is provided "as-is" without the warranties or guarantees typical of commercial software.
+                </p>
+              </div>
+            </section>
 
               <section>
                 <h2 className="mb-3 text-xl font-semibold">1. Acceptance of Terms</h2>
@@ -122,23 +126,27 @@ export default function TermsPage() {
                   If you have any questions or encounter issues, please reach out via email at <a href="mailto:me@ondrejkutil.com" className="text-amber-500 hover:underline">me@ondrejkutil.com</a> or open an issue on the <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">GitHub repository</a>.
                 </p>
               </section>
-            </div>
           </div>
         </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-8">
+      <footer className="border-t theme-border-subtle py-8">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-xs text-muted-foreground sm:flex-row sm:text-sm">
           <span>Built by Ondřej Kutil</span>
-          <a
-            href="https://github.com/OndrejKutil"
-            target="_blank"
-            rel="noreferrer"
-            className="underline-offset-4 hover:text-foreground hover:underline transition-colors"
-          >
-            GitHub
-          </a>
+          <div className="flex items-center gap-6">
+            <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline transition-colors">
+              Privacy Policy
+            </Link>
+            <a
+              href="https://github.com/OndrejKutil"
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-4 hover:text-foreground hover:underline transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
         </div>
       </footer>
     </div>
