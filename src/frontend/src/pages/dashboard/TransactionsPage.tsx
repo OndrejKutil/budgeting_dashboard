@@ -71,6 +71,7 @@ import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, 
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
 import { useDebounce } from '@/hooks/use-debounce';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 const ITEMS_PER_PAGE: number = 20;
 
@@ -725,7 +726,7 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell className="text-right pr-6">
                           <span className="font-mono font-medium text-foreground">
-                            {transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                            <SensitiveValue>{transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}</SensitiveValue>
                           </span>
                         </TableCell>
                         <TableCell className="relative pr-0">
@@ -793,7 +794,7 @@ export default function TransactionsPage() {
                         </div>
                       </div>
                       <div className="font-bold text-foreground">
-                        {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <SensitiveValue>{transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}</SensitiveValue>
                       </div>
                     </div>
 
@@ -916,10 +917,12 @@ export default function TransactionsPage() {
                 <Input
                   id="amount"
                   type="number"
+                  inputMode="decimal"
                   step="10.00"
                   placeholder="0.00"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  className="text-[16px]"
                 />
               </div>
               <div className="space-y-2">
@@ -1151,7 +1154,7 @@ export default function TransactionsPage() {
       {/* Mobile Floating Action Button */}
       <Button
         onClick={() => setIsCreateModalOpen(true)}
-        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-xl sm:hidden"
+        className="fixed bottom-[6.5rem] right-4 z-40 h-14 w-14 rounded-full shadow-xl sm:hidden"
         size="icon"
       >
         <Plus className="h-6 w-6" />

@@ -28,9 +28,12 @@ import { analyticsApi } from '@/lib/api/endpoints';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeferredRender } from '@/components/performance/DeferredRender';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { usePrivacyMode } from '@/contexts/privacy-context';
 
 export default function EmergencyFundPage() {
   const { formatCurrency, t } = useUser();
+  const { isPrivacyMode } = usePrivacyMode();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -74,6 +77,7 @@ export default function EmergencyFundPage() {
   ) => {
     const progress3 = (data.current_savings_amount / target3) * 100;
     const progress6 = (data.current_savings_amount / target6) * 100;
+    const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
 
     const titles = {
       core: { title: t('pages.emergencyFund.coreScenarioTitle'), desc: t('pages.emergencyFund.coreScenarioDescription') },
@@ -92,12 +96,12 @@ export default function EmergencyFundPage() {
           <div className="flex items-center gap-6 text-right md:pr-4">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">{t('metrics.monthlyBurn')}</p>
-              <p className="text-3xl font-display font-bold text-foreground tracking-tight">{formatCurrency(averageMonthly)}</p>
+              <p className="text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(averageMonthly)}</SensitiveValue></p>
             </div>
             <div className="hidden sm:block w-px h-12 bg-border/50"></div>
             <div className="hidden sm:block">
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">{t('metrics.annualTotal')}</p>
-              <p className="text-xl font-display font-medium text-muted-foreground tracking-tight">{formatCurrency(totalAnnual)}</p>
+              <p className="text-xl font-display font-medium text-muted-foreground tracking-tight"><SensitiveValue>{formatCurrency(totalAnnual)}</SensitiveValue></p>
             </div>
           </div>
         </div>
@@ -121,15 +125,15 @@ export default function EmergencyFundPage() {
               <div className="flex items-end justify-between mb-2">
                 <div>
                   <span className="text-3xl font-bold font-display tracking-tight">
-                    {formatCurrency(data.current_savings_amount)}
+                    <SensitiveValue>{formatCurrency(data.current_savings_amount)}</SensitiveValue>
                   </span>
-                  <span className="text-muted-foreground text-sm ml-1"> / {formatCurrency(target3)}</span>
+                  <span className="text-muted-foreground text-sm ml-1"> / <SensitiveValue>{formatCurrency(target3)}</SensitiveValue></span>
                 </div>
                 <span className={cn(
                   'text-lg font-medium',
                   progress3 >= 100 ? 'text-primary' : 'text-muted-foreground'
                 )}>
-                  {Math.min(progress3, 100).toFixed(0)}%
+                  <SensitiveValue>{Math.min(progress3, 100).toFixed(0)}%</SensitiveValue>
                 </span>
               </div>
               <Progress
@@ -138,7 +142,7 @@ export default function EmergencyFundPage() {
               />
               {progress3 < 100 && (
                 <p className="mt-3 text-xs text-muted-foreground font-medium">
-                  {t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target3 - data.current_savings_amount) })}
+                  <SensitiveValue>{t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target3 - data.current_savings_amount) })}</SensitiveValue>
                 </p>
               )}
             </div>
@@ -161,15 +165,15 @@ export default function EmergencyFundPage() {
               <div className="flex items-end justify-between mb-2">
                 <div>
                   <span className="text-3xl font-bold font-display tracking-tight">
-                    {formatCurrency(data.current_savings_amount)}
+                    <SensitiveValue>{formatCurrency(data.current_savings_amount)}</SensitiveValue>
                   </span>
-                  <span className="text-muted-foreground text-sm ml-1"> / {formatCurrency(target6)}</span>
+                  <span className="text-muted-foreground text-sm ml-1"> / <SensitiveValue>{formatCurrency(target6)}</SensitiveValue></span>
                 </div>
                 <span className={cn(
                   'text-lg font-medium',
                   progress6 >= 100 ? 'text-primary' : 'text-muted-foreground'
                 )}>
-                  {Math.min(progress6, 100).toFixed(0)}%
+                  <SensitiveValue>{Math.min(progress6, 100).toFixed(0)}%</SensitiveValue>
                 </span>
               </div>
               <Progress
@@ -178,7 +182,7 @@ export default function EmergencyFundPage() {
               />
               {progress6 < 100 && (
                 <p className="mt-3 text-xs text-muted-foreground font-medium">
-                  {t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target6 - data.current_savings_amount) })}
+                  <SensitiveValue>{t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target6 - data.current_savings_amount) })}</SensitiveValue>
                 </p>
               )}
             </div>
@@ -193,7 +197,7 @@ export default function EmergencyFundPage() {
               <p className="mb-6 text-sm text-muted-foreground">
                 {t('pages.emergencyFund.coreBreakdownDescription')}
               </p>
-              <div className="h-96">
+              <div className={`h-96 ${sensitiveChartClass}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={coreCategoryBreakdownData}
@@ -211,7 +215,7 @@ export default function EmergencyFundPage() {
                         color: 'hsl(var(--popover-foreground))',
                       }}
                       itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
-                      formatter={(value: number) => [formatCurrency(value), t('metrics.amount')]}
+                      formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.amount')]}
                     />
                     <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                       {coreCategoryBreakdownData.map((_, index) => (

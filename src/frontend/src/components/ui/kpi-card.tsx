@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 interface KPICardProps {
   title: string;
@@ -73,7 +74,7 @@ export function KPICard({
         <div className="space-y-1 min-w-0">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground">
-            {formattedValue}
+            <SensitiveValue>{formattedValue}</SensitiveValue>
           </p>
         </div>
         {icon && (
@@ -92,7 +93,7 @@ export function KPICard({
               isBad && 'text-destructive/70',
               isNeutral && 'text-muted-foreground/60'
             )}>
-              {isPositiveChange ? '↑' : isNegativeChange ? '↓' : '–'} {Math.abs(change).toFixed(1)}%
+              <SensitiveValue>{isPositiveChange ? '↑' : isNegativeChange ? '↓' : '–'} {Math.abs(change).toFixed(1)}%</SensitiveValue>
               {changeLabel && (
                 <span className="text-muted-foreground/40">{changeLabel}</span>
               )}
@@ -100,7 +101,7 @@ export function KPICard({
           ) : <span />}
           {extra && (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 text-emerald-500">
-              {extra}
+              <SensitiveValue>{extra}</SensitiveValue>
             </span>
           )}
         </div>

@@ -34,6 +34,7 @@ import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/contexts/user-context';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -273,7 +274,7 @@ export default function FundsPage() {
               </div>
               {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
                 <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
-                  {fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)} {t('states.thisMonth')}
+                  <SensitiveValue>{fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)}</SensitiveValue> {t('states.thisMonth')}
                 </p>
               )}
             </div>
@@ -316,10 +317,10 @@ export default function FundsPage() {
           <div className="flex items-end justify-between mb-2">
             <div>
               <span className="text-2xl font-bold font-display">
-                {formatCurrency(current)}
+                <SensitiveValue>{formatCurrency(current)}</SensitiveValue>
               </span>
               <span className="text-muted-foreground/70 ml-1 text-xs">
-                {t('pages.funds.of')} {formatCurrency(fund.target_amount)}
+                {t('pages.funds.of')} <SensitiveValue>{formatCurrency(fund.target_amount)}</SensitiveValue>
               </span>
             </div>
             {isComplete && (
@@ -385,10 +386,10 @@ export default function FundsPage() {
             <div>
               <p className="text-sm text-muted-foreground">{t('metrics.totalSaved')}</p>
               <p className="text-3xl font-bold font-display">
-                {formatCurrency(totalCurrent)}
+                <SensitiveValue>{formatCurrency(totalCurrent)}</SensitiveValue>
               </p>
               <p className="text-sm text-muted-foreground">
-                {t('pages.funds.of')} {formatCurrency(totalTarget)} {t('pages.funds.activeTarget')}
+                {t('pages.funds.of')} <SensitiveValue>{formatCurrency(totalTarget)}</SensitiveValue> {t('pages.funds.activeTarget')}
               </p>
             </div>
             <div className="w-full sm:w-48">
@@ -397,7 +398,7 @@ export default function FundsPage() {
                 className="h-3"
               />
               <p className="mt-1 text-right text-sm text-muted-foreground">
-                {totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}% {t('states.complete')}
+                <SensitiveValue>{totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}%</SensitiveValue> {t('states.complete')}
               </p>
             </div>
           </div>

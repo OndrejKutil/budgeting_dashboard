@@ -1,11 +1,17 @@
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { MobileSidebarTrigger } from './AppSidebar';
 import { UserNav } from './UserNav';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
+import { usePrivacyMode } from '@/contexts/privacy-context';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TopbarProps {
   onMobileMenuClick: () => void;
@@ -21,6 +27,7 @@ function getGreetingKey(): 'topbar.goodMorning' | 'topbar.goodAfternoon' | 'topb
 export function Topbar({ onMobileMenuClick }: TopbarProps) {
   const queryClient = useQueryClient();
   const { profile, t } = useUser();
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacyMode();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -48,6 +55,31 @@ export function Topbar({ onMobileMenuClick }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-3">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={togglePrivacyMode}
+              className={cn(
+                "min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground",
+                isPrivacyMode && "bg-primary/10 text-primary hover:text-primary"
+              )}
+              aria-label={isPrivacyMode ? t('common.showSensitiveValues') : t('common.hideSensitiveValues')}
+              aria-pressed={isPrivacyMode}
+            >
+              {isPrivacyMode ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isPrivacyMode ? t('common.showSensitiveValues') : t('common.hideSensitiveValues')}</p>
+          </TooltipContent>
+        </Tooltip>
+
         {/* Mobile refresh button */}
         <Button
           variant="ghost"

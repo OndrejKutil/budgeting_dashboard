@@ -350,6 +350,14 @@
   .theme-ring-subtle { @apply ring-border dark:ring-white/10; }
 }
 
+/* ---- Privacy Mode ---- */
+.privacy-chart-values .recharts-cartesian-axis-tick-value,
+.privacy-chart-values .recharts-label-list text,
+.privacy-chart-values .recharts-tooltip-wrapper {
+  filter: blur(9px);
+  user-select: none;
+}
+
 /* ---- Custom Scrollbar ---- */
 ::-webkit-scrollbar {
   width: 8px;

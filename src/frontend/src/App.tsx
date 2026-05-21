@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
+import { PrivacyModeProvider } from "@/contexts/PrivacyContext";
 import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -83,48 +84,50 @@ const AppContent = () => {
     <BrowserRouter>
       <AuthProvider> {/* AuthProvider is used to provide authentication context to the app (access and refresh tokens, user id...) */}
         <UserProvider> {/* UserProvider is used to provide user context to the app (user data, profile initials, currency...) */}
-          <OAuthHashRedirect />
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={withSuspense(<LandingPage />)} />
-            <Route path="/auth/login" element={withSuspense(<LoginPage />)} />
-            <Route path="/auth/register" element={withSuspense(<RegisterPage />)} />
-            <Route path="/auth/forgot-password" element={withSuspense(<ForgotPasswordPage />)} />
-            <Route path="/auth/reset-password" element={withSuspense(<ResetPasswordPage />)} />
-            <Route path="/auth/callback" element={withSuspense(<AuthCallbackPage />)} />
-            <Route path="/terms" element={withSuspense(<TermsPage />)} />
-            <Route path="/privacy" element={withSuspense(<PrivacyPage />)} />
-            <Route path="/faq" element={withSuspense(<FaqPage />)} />
-            <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
-            <Route path="/about" element={withSuspense(<AboutPage />)} />
+          <PrivacyModeProvider>
+            <OAuthHashRedirect />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={withSuspense(<LandingPage />)} />
+              <Route path="/auth/login" element={withSuspense(<LoginPage />)} />
+              <Route path="/auth/register" element={withSuspense(<RegisterPage />)} />
+              <Route path="/auth/forgot-password" element={withSuspense(<ForgotPasswordPage />)} />
+              <Route path="/auth/reset-password" element={withSuspense(<ResetPasswordPage />)} />
+              <Route path="/auth/callback" element={withSuspense(<AuthCallbackPage />)} />
+              <Route path="/terms" element={withSuspense(<TermsPage />)} />
+              <Route path="/privacy" element={withSuspense(<PrivacyPage />)} />
+              <Route path="/faq" element={withSuspense(<FaqPage />)} />
+              <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
+              <Route path="/about" element={withSuspense(<AboutPage />)} />
 
-            {/* Protected dashboard routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <RequireAuth>
-                  <DashboardLayout />
-                </RequireAuth>
-              }
-            >
-              {/* Routes living under the /dashboard/{...} */}
-              <Route index element={withSuspense(<DashboardOverview />, <DashboardSkeleton />)} />
-              <Route path="transactions" element={withSuspense(<TransactionsPage />, <DashboardSkeleton />)} />
-              <Route path="accounts" element={withSuspense(<AccountsPage />, <DashboardSkeleton />)} />
-              <Route path="categories" element={withSuspense(<CategoriesPage />, <DashboardSkeleton />)} />
-              <Route path="funds" element={withSuspense(<FundsPage />, <DashboardSkeleton />)} />
-              <Route path="profile" element={withSuspense(<ProfilePage />, <DashboardSkeleton />)} />
-              <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
-              <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
-              <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
-              <Route path="budget-maker" element={withSuspense(<BudgetMaker />, <BudgetMakerSkeleton />)} />
-              <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
-              <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
-            </Route>
+              {/* Protected dashboard routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireAuth>
+                    <DashboardLayout />
+                  </RequireAuth>
+                }
+              >
+                {/* Routes living under the /dashboard/{...} */}
+                <Route index element={withSuspense(<DashboardOverview />, <DashboardSkeleton />)} />
+                <Route path="transactions" element={withSuspense(<TransactionsPage />, <DashboardSkeleton />)} />
+                <Route path="accounts" element={withSuspense(<AccountsPage />, <DashboardSkeleton />)} />
+                <Route path="categories" element={withSuspense(<CategoriesPage />, <DashboardSkeleton />)} />
+                <Route path="funds" element={withSuspense(<FundsPage />, <DashboardSkeleton />)} />
+                <Route path="profile" element={withSuspense(<ProfilePage />, <DashboardSkeleton />)} />
+                <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
+                <Route path="budget-maker" element={withSuspense(<BudgetMaker />, <BudgetMakerSkeleton />)} />
+                <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
+                <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
+              </Route>
 
-            {/* Catch-all */}
-            <Route path="*" element={withSuspense(<NotFound />)} />
-          </Routes>
+              {/* Catch-all */}
+              <Route path="*" element={withSuspense(<NotFound />)} />
+            </Routes>
+          </PrivacyModeProvider>
         </UserProvider>
       </AuthProvider>
     </BrowserRouter>
