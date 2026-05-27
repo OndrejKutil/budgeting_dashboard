@@ -74,8 +74,29 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 const ITEMS_PER_PAGE: number = 20;
+const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
 
+function parseDecimalInput(value: string): number | null {
+  const compactValue = value.trim().replace(/\s/g, '');
+  if (!compactValue) return null;
 
+  const lastComma = compactValue.lastIndexOf(',');
+  const lastDot = compactValue.lastIndexOf('.');
+  const decimalSeparator = lastComma > lastDot ? ',' : lastDot >= 0 ? '.' : '';
+
+  let normalizedValue = compactValue;
+  if (decimalSeparator) {
+    const decimalIndex = decimalSeparator === ',' ? lastComma : lastDot;
+    const integerPart = compactValue.slice(0, decimalIndex).replace(/[.,]/g, '');
+    const decimalPart = compactValue.slice(decimalIndex + 1).replace(/[.,]/g, '');
+    normalizedValue = `${integerPart}.${decimalPart}`;
+  }
+
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(normalizedValue)) return null;
+
+  const parsedValue = Number(normalizedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
 
 function TableRowSkeleton() {
   return (
@@ -91,7 +112,7 @@ function TableRowSkeleton() {
 }
 
 export default function TransactionsPage() {
-  const { formatCurrency, formatDate, formatMonth, t } = useUser();
+  const { formatCurrency, formatDate, formatMonth, formatNumber, t } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
@@ -172,8 +193,8 @@ export default function TransactionsPage() {
       account_id: accountFilter === 'all' ? undefined : accountFilter,
       savings_fund_id: fundFilter === 'all' ? undefined : fundFilter,
       category_type: typeFilter === 'all' ? undefined : typeFilter,
-      min_amount: debouncedMin ? parseFloat(debouncedMin) : undefined,
-      max_amount: debouncedMax ? parseFloat(debouncedMax) : undefined,
+      min_amount: parseDecimalInput(debouncedMin) ?? undefined,
+      max_amount: parseDecimalInput(debouncedMax) ?? undefined,
       start_date: monthFilter === 'all'
         ? `${yearFilter}-01-01`
         : `${yearFilter}-${monthFilter.padStart(2, '0')}-01`,
@@ -311,7 +332,9 @@ export default function TransactionsPage() {
 
   const handleSubmit = async () => {
     if (isTransfer) {
-      if (!formData.account_id_fk || !transferToAccountId || !formData.amount) {
+      const amount = parseDecimalInput(formData.amount);
+
+      if (!formData.account_id_fk || !transferToAccountId || amount === null) {
         toast({
           title: t('common.validationError'),
           description: t('pages.transactions.transferValidation'),
@@ -331,7 +354,6 @@ export default function TransactionsPage() {
         return;
       }
 
-      const amount = parseFloat(formData.amount);
       const categoryId = excludeCategory.categories_id_pk;
 
       // 1. Outgoing Transaction (Negative)
@@ -375,7 +397,9 @@ export default function TransactionsPage() {
       return;
     }
 
-    if (!formData.account_id_fk || !formData.category_id_fk || !formData.amount) {
+    const amount = parseDecimalInput(formData.amount);
+
+    if (!formData.account_id_fk || !formData.category_id_fk || amount === null) {
       toast({
         title: t('common.validationError'),
         description: t('common.requiredFields'),
@@ -387,7 +411,7 @@ export default function TransactionsPage() {
     const payload = {
       account_id_fk: formData.account_id_fk,
       category_id_fk: parseInt(formData.category_id_fk),
-      amount: parseFloat(formData.amount),
+      amount,
       date: formData.date,
       notes: formData.notes || null,
       savings_fund_id_fk: formData.savings_fund_id_fk || null,
@@ -611,7 +635,9 @@ export default function TransactionsPage() {
 
           <Input
             placeholder={t('pages.transactions.minAmount')}
-            type="number"
+            type="text"
+            inputMode="decimal"
+            pattern={DECIMAL_INPUT_PATTERN}
             value={minAmount}
             onChange={e => setMinAmount(e.target.value)}
             className="bg-background/50 border-input/50"
@@ -619,7 +645,9 @@ export default function TransactionsPage() {
 
           <Input
             placeholder={t('pages.transactions.maxAmount')}
-            type="number"
+            type="text"
+            inputMode="decimal"
+            pattern={DECIMAL_INPUT_PATTERN}
             value={maxAmount}
             onChange={e => setMaxAmount(e.target.value)}
             className="bg-background/50 border-input/50"
@@ -916,10 +944,11 @@ export default function TransactionsPage() {
                 <Label htmlFor="amount">{t('common.amount')}</Label>
                 <Input
                   id="amount"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="10.00"
-                  placeholder="0.00"
+                  pattern={DECIMAL_INPUT_PATTERN}
+                  enterKeyHint="done"
+                  placeholder={formatNumber(0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="text-[16px]"
