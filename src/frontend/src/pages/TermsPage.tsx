@@ -22,7 +22,7 @@ export default function TermsPage() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
+      <main id="main-content" className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

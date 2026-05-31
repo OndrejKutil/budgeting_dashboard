@@ -56,3 +56,23 @@ def get_db_client(access_token: Optional[str] = None) -> Client:
             raise
         
     return client
+
+
+def get_service_db_client() -> Client:
+    """
+    Create a Supabase client using the service role key for account deletion.
+    This must only be used after authenticating the current user at the API layer.
+    """
+    project_url = env.PROJECT_URL
+    service_role_key = env.SERVICE_ROLE_KEY
+
+    if not project_url or not service_role_key:
+        logger.error('Environment variables PROJECT_URL or SERVICE_ROLE_KEY are not set.')
+        raise EnvironmentError('Missing environment variables for service database connection.')
+
+    options = ClientOptions(
+        auto_refresh_token=False,
+        persist_session=False
+    )
+
+    return create_client(project_url, service_role_key, options=options)

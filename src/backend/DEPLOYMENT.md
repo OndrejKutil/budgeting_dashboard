@@ -114,6 +114,7 @@ docker run -d \
   -e ADMIN_KEY="your_admin_key" \
   -e PROJECT_URL="https://your-project.supabase.co" \
   -e ANON_KEY="your_anon_key" \
+  -e SERVICE_ROLE_KEY="your_service_role_key" \
   -e SUPABASE_JWT_SECRET="your_jwt_secret" \
   -e DEVELOPMENT_MODE="False" \
   --name budgeting-backend \
@@ -177,6 +178,7 @@ docker-compose up -d
 **Required:**
 - `PROJECT_URL` - Supabase project URL
 - `ANON_KEY` - Supabase anonymous key
+- `SERVICE_ROLE_KEY` - Supabase service role key for account deletion
 - `SUPABASE_JWT_SECRET` - Supabase JWT secret
 - `API_KEY` - Your API authentication key
 - `ADMIN_KEY` - Admin authentication key

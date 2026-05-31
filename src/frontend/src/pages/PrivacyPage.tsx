@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
+      <main id="main-content" className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
             <h1 className="text-4xl font-bold font-display tracking-tight theme-text-strong sm:text-5xl">
               Privacy Policy
             </h1>
-            <p className="text-sm theme-text-muted-60">Last updated: May 19, 2026</p>
+            <p className="text-sm theme-text-muted-60">Last updated: May 31, 2026</p>
           </div>
 
           <div className="space-y-8 text-foreground/90">
@@ -63,7 +63,9 @@ export default function PrivacyPage() {
                   <li>Name (optional, for profile personalization)</li>
                   <li>Authentication credentials (securely hashed via our auth provider)</li>
                   <li>Basic OAuth profile information when you choose to sign in with a provider such as Google or GitHub</li>
-                  <li>Financial data you actively input (transactions, accounts, categories, savings goals)</li>
+                  <li>Financial data you actively input, including transactions, accounts, categories, savings funds, budgets, and dividend portfolio settings</li>
+                  <li>Profile preferences such as currency, language, theme, and privacy-mode display preference</li>
+                  <li>Technical account metadata such as account creation time, last sign-in time, and linked identity provider records</li>
                 </ul>
               </section>
 
@@ -87,6 +89,7 @@ export default function PrivacyPage() {
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
                   <li><strong>Supabase:</strong> Handles secure user authentication, database storage, and backend logic via PostgreSQL.</li>
                   <li><strong>Google:</strong> Provides optional Google account sign-in when you choose that authentication method.</li>
+                  <li><strong>GitHub:</strong> Provides optional GitHub account sign-in when you choose that authentication method.</li>
                   <li><strong>Render:</strong> Hosts the application services and APIs.</li>
                 </ul>
                 <p className="mt-2 text-sm leading-relaxed">
@@ -97,7 +100,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="mb-3 text-xl font-semibold">5. Cookies and Authentication</h2>
                 <p className="text-sm leading-relaxed">
-                  The Application uses JSON Web Tokens (JWTs) and secure HTTP-only cookies to maintain your logged-in session. We do not use third-party tracking cookies or advertising pixels.
+                  The Application uses JSON Web Tokens (JWTs) stored in your browser's local storage to maintain your logged-in session. It also stores local interface preferences such as theme, privacy mode, URL filters, and OAuth redirect state. We do not use third-party tracking cookies or advertising pixels.
                 </p>
               </section>
 
@@ -111,7 +114,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="mb-3 text-xl font-semibold">7. Your Rights & Data Deletion</h2>
                 <p className="text-sm leading-relaxed">
-                  You have full ownership of your data. If you wish to permanently delete your account and all associated financial records, you can do so through the application settings or by contacting the developer. Once deleted, your data cannot be recovered.
+                  You have full ownership of your data. You can export your transaction data from the profile page. You can also permanently delete your account and associated application records from the profile page or by contacting the developer. Once deleted, your data cannot be recovered.
                 </p>
               </section>
 

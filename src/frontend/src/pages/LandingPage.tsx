@@ -188,6 +188,7 @@ export default function LandingPage() {
         </div>
       </header>
 
+      <main id="main-content">
       {/* ─── Hero ─── */}
       <section className="relative z-10 min-h-screen flex items-center pt-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -420,6 +421,7 @@ export default function LandingPage() {
           </div>
         </section>
       )}
+      </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t theme-border-subtle py-10">

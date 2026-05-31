@@ -83,7 +83,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
       </div>
 
       {/* Right side - Form */}
-      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-12 xl:px-24">
+      <main id="main-content" className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-12 xl:px-24">
         <div className="mx-auto w-full max-w-md">
           {/* Mobile logo */}
           <div className="mb-8 flex justify-center lg:hidden">
@@ -102,7 +102,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
             {children}
           </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

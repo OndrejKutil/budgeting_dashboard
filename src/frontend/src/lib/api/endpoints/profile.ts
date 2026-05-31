@@ -5,7 +5,7 @@
 
 import { apiClient } from '../client';
 import type { UpdateProfileRequest } from '../types/requests';
-import type { ProfileResponse } from '../types/responses';
+import type { MessageResponse, ProfileResponse } from '../types/responses';
 
 export const profileApi = {
     getMe: async () => {
@@ -15,6 +15,11 @@ export const profileApi = {
 
     updateProfile: async (data: UpdateProfileRequest) => {
         const response = await apiClient.put<ProfileResponse>('/profile/me', data);
+        return response.data;
+    },
+
+    deleteAccount: async () => {
+        const response = await apiClient.delete<MessageResponse>('/profile/me');
         return response.data;
     },
 };

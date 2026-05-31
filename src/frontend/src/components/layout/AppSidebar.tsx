@@ -97,6 +97,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
             variant="ghost"
             size="icon"
             onClick={onToggle}
+            aria-label={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
             className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
@@ -107,6 +108,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
             variant="ghost"
             size="icon"
             onClick={onClose}
+            aria-label={t('nav.closeSidebar')}
             className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -124,6 +126,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               to={item.href}
               end={item.href === '/dashboard'}
               onClick={handleNavClick}
+              aria-label={collapsed ? t(item.labelKey) : undefined}
               className={({ isActive: active }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
@@ -202,6 +205,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                   key={item.href}
                   to={item.href}
                   onClick={handleNavClick}
+                  aria-label={t(item.labelKey)}
                   className={({ isActive: active }) =>
                     cn(
                       'flex items-center gap-3 rounded-lg justify-center px-2 py-2.5 text-sm font-medium transition-all',
@@ -229,6 +233,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               to={item.href}
               end={item.href === '/dashboard'}
               onClick={handleNavClick}
+              aria-label={collapsed ? t(item.labelKey) : undefined}
               className={({ isActive: active }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
@@ -267,6 +272,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               to={item.href}
               end={item.href === '/dashboard'}
               onClick={handleNavClick}
+              aria-label={collapsed ? t(item.labelKey) : undefined}
               className={({ isActive: active }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
@@ -300,6 +306,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
         <NavLink
           to="/dashboard/profile"
           onClick={handleNavClick}
+          aria-label={collapsed ? t('nav.profile') : undefined}
           className={({ isActive: active }) =>
             cn(
               'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
@@ -324,6 +331,7 @@ export function MobileSidebarTrigger({ onClick }: { onClick: () => void }) {
       variant="ghost"
       size="icon"
       onClick={onClick}
+      aria-label="Open navigation menu"
       className="lg:hidden min-h-[44px] min-w-[44px]"
     >
       <Menu className="h-5 w-5" />
