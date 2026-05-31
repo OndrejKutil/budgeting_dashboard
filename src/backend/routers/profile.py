@@ -16,11 +16,11 @@ import logging
 import httpx
 
 # supabase client
-from ..data.database import get_db_client
+from ..data.database import get_db_client, get_service_db_client
 
 # schemas
 from ..schemas.base import ProfileData
-from ..schemas.responses import ProfileResponse
+from ..schemas.responses import MessageResponse, ProfileResponse
 from ..schemas.requests import UpdateProfileRequest
 
 # helper
@@ -40,6 +40,15 @@ logger = logging.getLogger(__name__)
 # ================================================================================================
 
 router = APIRouter()
+
+USER_DATA_TABLES: tuple[tuple[str, str], ...] = (
+    ("fct_transactions", "user_id_fk"),
+    ("fct_budgets", "user_id_fk"),
+    ("fct_dividend_portfolios", "user_id_fk"),
+    ("dim_accounts", "user_id_fk"),
+    ("dim_categories_users", "user_id_fk"),
+    ("dim_savings_funds", "user_id_fk"),
+)
 
 #? This router prefix is /profile
 
@@ -200,4 +209,56 @@ async def update_profile(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user profile"
+        )
+
+
+@router.delete("/me", response_model=MessageResponse)
+@limiter.limit(RATE_LIMITS["write"])
+async def delete_my_account(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user)
+) -> MessageResponse:
+    """
+    Permanently delete the current user's application data and Supabase Auth account.
+    Requires SERVICE_ROLE_KEY because Supabase Auth users cannot self-delete with an anon token.
+    """
+    try:
+        service_client = get_service_db_client()
+        user_id = user["user_id"]
+
+        for table_name, user_column in USER_DATA_TABLES:
+            service_client.table(table_name).delete().eq(user_column, user_id).execute()
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            delete_response = await client.delete(
+                f"{env.PROJECT_URL}/auth/v1/admin/users/{user_id}",
+                headers={
+                    "apikey": env.SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {env.SERVICE_ROLE_KEY}",
+                },
+            )
+
+        if delete_response.status_code >= 400:
+            raise RuntimeError(delete_response.text)
+
+        return MessageResponse(
+            success=True,
+            message="Account and associated data deleted successfully"
+        )
+
+    except EnvironmentError:
+        logger.error("Account deletion requested but SERVICE_ROLE_KEY is not configured")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Account deletion is not configured on this deployment"
+        )
+    except fastapi.HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Account deletion failed for user_id: {user['user_id']}")
+        logger.info(f"Full error details: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account"
         )

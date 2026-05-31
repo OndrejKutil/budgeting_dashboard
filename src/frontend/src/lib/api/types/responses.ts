@@ -79,6 +79,11 @@ export interface ProfileResponse {
     message: string;
 }
 
+export interface MessageResponse {
+    success: boolean;
+    message: string;
+}
+
 // ================================================================================================
 //                                   Transaction Responses
 // ================================================================================================

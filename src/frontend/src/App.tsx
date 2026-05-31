@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "framer-motion";
 import { lazy, Suspense, useEffect } from "react";
 import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -82,6 +83,9 @@ function OAuthHashRedirect() {
 const AppContent = () => {
   return (
     <BrowserRouter>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:ring-2 focus:ring-ring">
+        Skip to main content
+      </a>
       <AuthProvider> {/* AuthProvider is used to provide authentication context to the app (access and refresh tokens, user id...) */}
         <UserProvider> {/* UserProvider is used to provide user context to the app (user data, profile initials, currency...) */}
           <PrivacyModeProvider>
@@ -137,11 +141,13 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
+      <MotionConfig reducedMotion="user">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </TooltipProvider>
+      </MotionConfig>
     </ThemeProvider>
   </QueryClientProvider>
 );

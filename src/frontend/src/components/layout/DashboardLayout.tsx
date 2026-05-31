@@ -69,7 +69,7 @@ export function DashboardLayout() {
         )}
       >
         <Topbar onMobileMenuClick={openMobileMenu} />
-        <main className="p-4 pb-24 lg:p-6 lg:pb-6">
+        <main id="main-content" className="p-4 pb-24 lg:p-6 lg:pb-6">
           <PullToRefresh>
             <Outlet />
           </PullToRefresh>

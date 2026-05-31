@@ -131,6 +131,7 @@ All data access goes through Supabase's REST API (via Python client).
 | `ADMIN_KEY`           | Admin-only endpoints (e.g., log access)    |
 | `PROJECT_URL`         | Supabase project URL                       |
 | `ANON_KEY`            | Supabase anon key                          |
+| `SERVICE_ROLE_KEY`    | Supabase service role key for account deletion |
 | `SUPABASE_JWT_SECRET` | JWT verification secret                    |
 | `DEVELOPMENT_MODE`    | Flag for dev-specific behavior             |
 
