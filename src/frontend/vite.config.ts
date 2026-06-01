@@ -5,6 +5,20 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const getPackageName = (id: string) => {
+  const normalizedId = id.replace(/\\/g, "/");
+  const nodeModulesIndex = normalizedId.lastIndexOf("/node_modules/");
+
+  if (nodeModulesIndex === -1) {
+    return undefined;
+  }
+
+  const packagePath = normalizedId.slice(nodeModulesIndex + "/node_modules/".length);
+  const segments = packagePath.split("/");
+
+  return packagePath.startsWith("@") ? `${segments[0]}/${segments[1]}` : segments[0];
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
@@ -16,35 +30,48 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes("node_modules")) {
+          if (id.includes("commonjsHelpers")) {
+            return "vendor-common";
+          }
+
+          const packageName = getPackageName(id);
+
+          if (!packageName) {
             return;
           }
 
-          if (id.includes("react") || id.includes("react-dom") || id.includes("react-router-dom")) {
+          if (["react", "react-dom", "react-router-dom", "scheduler"].includes(packageName)) {
             return "vendor-react";
           }
 
-          if (id.includes("@tanstack/react-query")) {
+          if (packageName === "@tanstack/react-query") {
             return "vendor-query";
           }
 
-          if (id.includes("recharts") || id.includes("d3-")) {
+          if (
+            packageName === "recharts" ||
+            packageName === "react-smooth" ||
+            packageName === "react-resize-detector" ||
+            packageName === "recharts-scale" ||
+            packageName === "victory-vendor" ||
+            packageName.startsWith("d3-")
+          ) {
             return "vendor-charts";
           }
 
-          if (id.includes("@radix-ui") || id.includes("cmdk") || id.includes("vaul")) {
+          if (packageName.startsWith("@radix-ui/") || packageName === "cmdk" || packageName === "vaul") {
             return "vendor-radix";
           }
 
-          if (id.includes("framer-motion")) {
+          if (packageName === "framer-motion") {
             return "vendor-motion";
           }
 
-          if (id.includes("lucide-react")) {
+          if (packageName === "lucide-react") {
             return "vendor-icons";
           }
 
-          if (id.includes("date-fns")) {
+          if (packageName === "date-fns") {
             return "vendor-date";
           }
         },
