@@ -56,13 +56,20 @@
     --info: 0 0% 35%;
     --info-foreground: 60 5% 96%;
 
-    /* ---- Chart Colors (Warm palette) ---- */
+    /* ---- Chart Colors (semantic finance palette) ---- */
     --chart-income: 158 64% 52%;
     --chart-expense: 351 95% 71%;
-    --chart-savings: 0 0% 35%;
+    --chart-savings: 199 89% 58%;
     --chart-investment: 38 92% 50%;
-    --chart-blue: 24 95% 53%;
-    --chart-teal: 0 0% 45%;
+    --chart-profit: 158 58% 45%;
+    --chart-cashflow: 185 70% 45%;
+    --chart-core: 24 95% 58%;
+    --chart-necessary: 38 92% 58%;
+    --chart-fun: 330 70% 62%;
+    --chart-future: 199 89% 58%;
+    --chart-neutral: 215 14% 64%;
+    --chart-blue: var(--chart-savings);
+    --chart-teal: var(--chart-cashflow);
 
     /* ---- Border/Input ---- */
     --border: 0 0% 18%;
@@ -139,13 +146,20 @@
     --info: 0 0% 38%;
     --info-foreground: 0 0% 100%;
 
-    /* ---- Chart Colors (Warm palette) ---- */
+    /* ---- Chart Colors (semantic finance palette) ---- */
     --chart-income: 158 58% 38%;
     --chart-expense: 351 84% 52%;
-    --chart-savings: 0 0% 38%;
+    --chart-savings: 199 89% 42%;
     --chart-investment: 38 92% 45%;
-    --chart-blue: 24 95% 48%;
-    --chart-teal: 0 0% 48%;
+    --chart-profit: 158 58% 34%;
+    --chart-cashflow: 185 70% 36%;
+    --chart-core: 24 95% 44%;
+    --chart-necessary: 38 92% 42%;
+    --chart-fun: 330 62% 48%;
+    --chart-future: 199 89% 42%;
+    --chart-neutral: 215 14% 46%;
+    --chart-blue: var(--chart-savings);
+    --chart-teal: var(--chart-cashflow);
 
     /* ---- Border/Input ---- */
     --border: 0 0% 84%;
@@ -212,25 +226,6 @@
     @apply bg-card/80 backdrop-blur-lg border border-border/50 rounded-xl;
   }
 
-  /* ---- Gradient Text ---- */
-  .text-gradient-primary {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(24 95% 53%) 100%);
-  }
-
-  .text-gradient-secondary {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(0 0% 40%) 0%, hsl(0 0% 30%) 100%);
-  }
-
-  /* Legacy alias */
-  .text-gradient-teal {
-    @apply text-gradient-primary;
-  }
-  .text-gradient-blurple {
-    @apply text-gradient-primary;
-  }
-
   /* ---- Hero Typography ---- */
   .text-hero-thin {
     font-weight: 200;
@@ -254,21 +249,6 @@
 
   .glow-primary-sm {
     box-shadow: 0 0 15px hsl(38 92% 50% / 0.15);
-  }
-
-  /* Legacy aliases */
-  .glow-teal {
-    @apply glow-primary;
-  }
-  .glow-teal-sm {
-    @apply glow-primary-sm;
-  }
-  .glow-blurple {
-    @apply glow-primary;
-  }
-
-  .glow-blurple-sm {
-    @apply glow-primary-sm;
   }
 
   /* ---- Card Shadow ---- */
@@ -428,10 +408,6 @@
 .bg-gradient-primary {
   background: var(--gradient-primary);
 }
-.bg-gradient-teal {
-  background: var(--gradient-primary); /* fallback */
-}
-
 .bg-gradient-hero {
   background: var(--gradient-hero);
 }

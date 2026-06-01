@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { UserNav } from '@/components/layout/UserNav';
+import { CHART_COLORS } from '@/lib/chart-colors';
 import {
   PieChart,
   Shield,
@@ -90,17 +91,17 @@ function DashboardPreview() {
   ];
 
   const categories = [
-    { name: 'Rent / Housing', amount: '9 500 Kč', pct: 51 },
-    { name: 'Groceries', amount: '4 200 Kč', pct: 22 },
-    { name: 'Transport', amount: '2 800 Kč', pct: 15 },
-    { name: 'Subscriptions', amount: '1 400 Kč', pct: 7 },
-    { name: 'Other', amount: '800 Kč', pct: 5 },
+    { name: 'Rent / Housing', amount: '9 500 Kč', pct: 51, color: CHART_COLORS.core },
+    { name: 'Groceries', amount: '4 200 Kč', pct: 22, color: CHART_COLORS.necessary },
+    { name: 'Transport', amount: '2 800 Kč', pct: 15, color: CHART_COLORS.future },
+    { name: 'Subscriptions', amount: '1 400 Kč', pct: 7, color: CHART_COLORS.fun },
+    { name: 'Other', amount: '800 Kč', pct: 5, color: CHART_COLORS.neutral },
   ];
 
   return (
     <div className="relative">
       <div className="absolute -inset-4 bg-amber-500/5 blur-[60px] rounded-full pointer-events-none" />
-      <div className="relative rounded-2xl border theme-border-subtle bg-background/90 backdrop-blur-xl overflow-hidden shadow-2xl">
+      <div className="relative rounded-xl border theme-border-subtle bg-background/90 backdrop-blur-xl overflow-hidden shadow-sm">
         {/* Window bar */}
         <div className="flex items-center gap-2 px-4 py-3 border-b theme-border-subtle theme-bg-subtle">
           <div className="flex gap-1.5">
@@ -133,7 +134,7 @@ function DashboardPreview() {
                 <div key={cat.name} className="flex items-center gap-3">
                   <span className="text-[11px] theme-text-muted-50 w-24 truncate">{cat.name}</span>
                   <div className="flex-1 h-1.5 rounded-full theme-bg-chip overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${cat.pct}%` }} />
+                    <div className="h-full rounded-full" style={{ width: `${cat.pct}%`, backgroundColor: cat.color }} />
                   </div>
                   <span className="text-[11px] theme-text-muted-40 w-16 text-right">{cat.amount}</span>
                 </div>
@@ -296,7 +297,7 @@ export default function LandingPage() {
           >
             <h2 className="mb-4 text-3xl font-display sm:text-4xl tracking-tight">
               <span className="text-hero-thin theme-text-strong-90">What the </span>
-              <span className="text-hero-bold text-gradient-primary">instrument</span>
+              <span className="text-hero-bold text-primary">instrument</span>
               <span className="text-hero-thin theme-text-strong-90"> does.</span>
             </h2>
             <p className="theme-text-muted-50 text-lg">
@@ -402,7 +403,7 @@ export default function LandingPage() {
             >
               <motion.h2 variants={fadeInUp} className="text-3xl font-display sm:text-4xl tracking-tight mb-6">
                 <span className="text-hero-thin theme-text-strong-90">The best time to start was </span>
-                <span className="text-hero-bold text-gradient-primary">last month.</span>
+                <span className="text-hero-bold text-primary">last month.</span>
               </motion.h2>
               <motion.p variants={fadeInUp} className="theme-text-muted-50 text-lg leading-relaxed mb-10 max-w-xl">
                 Open a free account. Set up your categories. Log your first

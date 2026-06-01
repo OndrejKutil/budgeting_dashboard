@@ -38,19 +38,7 @@ import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
-
-
-
-const COLORS = [
-  'hsl(185, 70%, 45%)',
-  'hsl(168, 84%, 42%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(280, 67%, 60%)',
-  'hsl(199, 89%, 48%)',
-  'hsl(215, 14%, 64%)',
-  'hsl(0, 84%, 60%)',
-  'hsl(142, 71%, 45%)',
-];
+import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -76,7 +64,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(38, 92%, 50%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: CHART_COLORS.expense, fontSize: '14px', fontWeight: 'bold' }}>
           <SensitiveValue>{formatCurrency(data.value)}</SensitiveValue>
         </p>
       </div>
@@ -240,7 +228,7 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <PiggyBank className="h-3 w-3 text-primary" /> {t('metrics.savings')}
+                  <PiggyBank className="h-3 w-3 text-chart-savings" /> {t('metrics.savings')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
@@ -254,7 +242,7 @@ export default function MonthlyAnalyticsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Briefcase className="h-3 w-3 text-primary" /> {t('metrics.investments')}
+                  <Briefcase className="h-3 w-3 text-chart-investment" /> {t('metrics.investments')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <div className="flex items-baseline gap-1.5">
@@ -272,7 +260,7 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
+                  <DollarSign className="h-3 w-3 text-chart-profit" /> {t('metrics.profit')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
@@ -283,7 +271,7 @@ export default function MonthlyAnalyticsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
+                  <Wallet className="h-3 w-3 text-chart-cashflow" /> {t('metrics.cashFlow')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.cashflow)}</SensitiveValue></p>
@@ -306,8 +294,8 @@ export default function MonthlyAnalyticsPage() {
             <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
+                  <stop offset="0%" stopColor={CHART_COLORS.expense} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={CHART_COLORS.expense} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -344,7 +332,7 @@ export default function MonthlyAnalyticsPage() {
               <Area
                 type="monotone"
                 dataKey="amount"
-                stroke="hsl(38, 92%, 50%)"
+                stroke={CHART_COLORS.expense}
                 strokeWidth={3}
                 fill="url(#spendingGradient)"
                 activeDot={{ r: 6, strokeWidth: 0 }}
@@ -400,7 +388,7 @@ export default function MonthlyAnalyticsPage() {
                       style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
                     />
                     {incomeBarData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill="hsl(var(--primary))" opacity={Math.max(0.3, 0.9 - index * 0.15)} />
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS.income} opacity={Math.max(0.35, 0.9 - index * 0.12)} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -451,7 +439,7 @@ export default function MonthlyAnalyticsPage() {
                       style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
                     />
                     {spendingTypeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill="hsl(var(--muted-foreground))" opacity={Math.max(0.4, 0.9 - index * 0.2)} />
+                      <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={0.9} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -507,7 +495,7 @@ export default function MonthlyAnalyticsPage() {
                       style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
                     />
                     {expenseBarData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill="hsl(var(--muted-foreground))" opacity={Math.max(0.2, 0.8 - index * 0.05)} />
+                      <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={Math.max(0.45, 0.9 - index * 0.05)} />
                     ))}
                   </Bar>
                 </BarChart>

@@ -13,10 +13,8 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen">
       {/* Left side - Branding */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-gradient-hero lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-chart-investment/10" />
-        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-primary/30 blur-3xl" />
-        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-chart-investment/20 blur-3xl" />
+      <div className="relative hidden w-1/2 overflow-hidden border-r border-border bg-background-secondary lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-y-0 right-0 w-px bg-primary/30" />
 
         <div className="relative z-10 p-8">
           <Link to="/" className="flex items-center gap-2">
@@ -32,8 +30,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
             transition={{ delay: 0.2 }}
           >
             <h2 className="mb-4 text-3xl font-bold font-display lg:text-4xl">
-              Your financial journey{' '}
-              <span className="text-gradient-blurple">starts here</span>
+              Your financial workspace starts here
             </h2>
           </motion.div>
 
@@ -69,7 +66,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-saving/10 text-chart-saving">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-savings/10 text-chart-savings">
                   <PiggyBank className="h-5 w-5" />
                 </div>
                 <div>

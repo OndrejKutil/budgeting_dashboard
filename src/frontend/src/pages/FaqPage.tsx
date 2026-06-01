@@ -86,7 +86,7 @@ export default function FaqPage() {
                     <div className="text-center space-y-4">
                         <h1 className="text-4xl tracking-tight font-display">
                             <span className="text-hero-thin theme-text-strong-90">FREQUENTLY ASKED </span>
-                            <span className="text-hero-bold text-gradient-primary">QUESTIONS</span>
+                            <span className="text-hero-bold text-primary">QUESTIONS</span>
                         </h1>
                         <p className="theme-text-muted-60 text-lg">Common questions about the Budgeting Dashboard.</p>
                     </div>

@@ -277,7 +277,8 @@ export default function AccountsPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                aria-label={`${t('common.actions')}: ${account.account_name}`}
+                className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -373,7 +374,7 @@ export default function AccountsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
+        className="rounded-xl border border-border bg-card p-6 shadow-sm"
       >
         <p className="text-sm text-muted-foreground">{t('metrics.totalActiveAccounts')}</p>
         <div className="mt-1 text-3xl font-bold font-display">
