@@ -1,185 +1,199 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { healthApi } from '@/lib/api/endpoints';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { UserNav } from '@/components/layout/UserNav';
+import { CHART_COLORS } from '@/lib/chart-colors';
 import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle,
+  CircleDot,
+  HelpCircle,
   PieChart,
+  PiggyBank,
   Shield,
   Wallet,
-  ArrowRight,
-  PiggyBank,
-  CheckCircle,
   XCircle,
-  HelpCircle,
-  ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
-  DollarSign,
 } from 'lucide-react';
 
-/* ─── Data ─── */
-
-const outcomes = [
-  { num: '01', title: 'Monthly Clarity', desc: 'Know your exact financial position — income, expenses, profit, and cash flow — every single month.' },
-  { num: '02', title: 'Resilience Score', desc: 'How many months could you survive on savings? Get a real answer based on your core expenses.' },
-  { num: '03', title: 'Budget Planning', desc: "Build next month's budget from real historical data, not wishful thinking." },
+const reviewItems = [
+  { label: 'Income and expenses', detail: 'See what came in, what went out, and how the month changed your balance.' },
+  { label: 'Savings and investments', detail: 'Keep savings contributions and investment amounts separate from daily spending.' },
+  { label: 'Net cash flow', detail: 'Review the real monthly difference after spending, saving, and investing.' },
+  { label: 'Category spending', detail: 'Compare housing, groceries, transport, subscriptions, and custom categories.' },
+  { label: 'Budget variance', detail: 'Use past transactions to plan the next month and check planned versus actual totals.' },
+  { label: 'Emergency runway', detail: 'Estimate how long your savings cover core monthly expenses.' },
 ];
 
-const specs = [
-  {
-    icon: BarChart3,
-    label: 'Monthly Breakdown',
-    detail: 'Income, expenses, savings, and net cash flow — broken down by your categories, every single month.',
-  },
-  {
-    icon: PieChart,
-    label: 'Category System',
-    detail: 'Define your own spending categories. See exactly where every koruna goes with visual breakdowns.',
-  },
-  {
-    icon: PiggyBank,
-    label: 'Savings Tracking',
-    detail: 'Create savings funds with targets. Track contributions and withdrawals separately — net savings, not gross.',
-  },
-  {
-    icon: Shield,
-    label: 'Emergency Fund',
-    detail: 'Calculate your runway based on real core expenses. 3-month and 6-month resilience scores.',
-  },
+const workflowSteps = [
+  { title: 'Add transactions', detail: 'Enter records manually or bring data in from CSV when you want more control.' },
+  { title: 'Categorize spending', detail: 'Assign categories and transaction types so the month has a clear structure.' },
+  { title: 'Review the month', detail: 'Check income, costs, savings, investments, profit, and cash flow in one place.' },
+  { title: 'Plan the next budget', detail: 'Use the previous month as the baseline for spending limits and savings goals.' },
 ];
-
-
 
 const forYouPoints = [
-  "You want a clean monthly overview of income, expenses, and net flow",
-  "You're fine with manual entry or CSV import to stay in control",
-  "You want categories + simple analytics that actually explain your spending",
-  "You want savings goals (including an emergency fund analysis) in the same dashboard",
+  'You want a monthly overview of income, expenses, savings, and cash flow.',
+  'You are comfortable with manual entry or CSV import.',
+  'You want categories and budgets based on your own financial structure.',
+  'You want savings funds and emergency fund analysis in the same workspace.',
 ];
 
 const notForYouPoints = [
-  "You need automatic bank sync (not supported right now)",
-  "You want investment/portfolio tracking and performance analytics",
-  "You need receipts, invoices, or business expense workflows",
-  "You want AI recommendations and coaching-style insights",
+  'You need automatic bank sync.',
+  'You want portfolio performance analytics.',
+  'You need receipts, invoices, or business expense workflows.',
+  'You want AI coaching or automated financial recommendations.',
 ];
 
-/* ─── Animations ─── */
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-/* ─── Mini Dashboard Preview ─── */
-
-function DashboardPreview() {
-  const kpis = [
-    { label: 'Income', value: '32 500 Kč', icon: ArrowUpRight, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Expenses', value: '18 700 Kč', icon: ArrowDownRight, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-    { label: 'Savings', value: '8 000 Kč', icon: PiggyBank, color: 'text-zinc-400', bg: 'bg-zinc-500/10' },
-    { label: 'Profit', value: '5 800 Kč', icon: DollarSign, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+function ProductPreview() {
+  const metrics = [
+    { label: 'Income', value: '32 500 Kc', color: CHART_COLORS.income },
+    { label: 'Expenses', value: '18 700 Kc', color: CHART_COLORS.expense },
+    { label: 'Savings', value: '8 000 Kc', color: CHART_COLORS.savings },
+    { label: 'Cash flow', value: '5 800 Kc', color: CHART_COLORS.cashFlow },
   ];
 
   const categories = [
-    { name: 'Rent / Housing', amount: '9 500 Kč', pct: 51 },
-    { name: 'Groceries', amount: '4 200 Kč', pct: 22 },
-    { name: 'Transport', amount: '2 800 Kč', pct: 15 },
-    { name: 'Subscriptions', amount: '1 400 Kč', pct: 7 },
-    { name: 'Other', amount: '800 Kč', pct: 5 },
+    { name: 'Housing', amount: '9 500 Kc', pct: 51, color: CHART_COLORS.core },
+    { name: 'Groceries', amount: '4 200 Kc', pct: 22, color: CHART_COLORS.necessary },
+    { name: 'Transport', amount: '2 800 Kc', pct: 15, color: CHART_COLORS.future },
+    { name: 'Subscriptions', amount: '1 400 Kc', pct: 7, color: CHART_COLORS.fun },
+  ];
+
+  const recent = [
+    { name: 'Rent', type: 'Housing', amount: '-9 500 Kc' },
+    { name: 'Salary', type: 'Income', amount: '+32 500 Kc' },
+    { name: 'Emergency fund', type: 'Savings', amount: '-5 000 Kc' },
   ];
 
   return (
     <div className="relative">
-      <div className="absolute -inset-4 bg-amber-500/5 blur-[60px] rounded-full pointer-events-none" />
-      <div className="relative rounded-2xl border theme-border-subtle bg-background/90 backdrop-blur-xl overflow-hidden shadow-2xl">
-        {/* Window bar */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b theme-border-subtle theme-bg-subtle">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-muted dark:bg-white/10" />
-            <div className="w-2.5 h-2.5 rounded-full bg-muted dark:bg-white/10" />
-            <div className="w-2.5 h-2.5 rounded-full bg-muted dark:bg-white/10" />
-          </div>
-          <span className="text-[10px] theme-text-muted-30 ml-2 font-medium tracking-wide">Monthly Analytics — January 2026</span>
+      <div className="absolute -inset-5 rounded-[2rem] bg-primary/10 blur-3xl" />
+      <div className="absolute inset-x-10 -bottom-8 h-16 rounded-full bg-black/35 blur-2xl" />
+      <div className="relative overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-[0_24px_80px_hsl(0_0%_0%/0.34),0_1px_0_hsl(0_0%_100%/0.06)_inset]">
+      <div className="flex flex-col gap-3 border-b border-border bg-card-elevated/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Monthly review</p>
+          <p className="text-sm text-muted-foreground">January 2026</p>
         </div>
-        <div className="p-4 space-y-4">
-          {/* KPI Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {kpis.map((kpi) => (
-              <div key={kpi.label} className="rounded-lg border theme-border-subtle bg-card/60 dark:bg-white/[0.03] p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] theme-text-muted-40 uppercase tracking-wider">{kpi.label}</span>
-                  <div className={`p-1 rounded-md ${kpi.bg}`}>
-                    <kpi.icon className={`h-3 w-3 ${kpi.color}`} />
-                  </div>
-                </div>
-                <span className="text-sm font-semibold theme-text-strong">{kpi.value}</span>
+        <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground shadow-sm">
+          <CircleDot className="h-3.5 w-3.5 text-primary" />
+          Manual tracking
+        </div>
+      </div>
+
+      <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="border-b border-border p-4 lg:border-b-0 lg:border-r">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="rounded-lg border border-border/80 bg-background/80 p-3 shadow-[0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+                <div className="mb-3 h-1 w-8 rounded-full" style={{ backgroundColor: metric.color }} />
+                <p className="text-xs text-muted-foreground">{metric.label}</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{metric.value}</p>
               </div>
             ))}
           </div>
-          {/* Category breakdown */}
-          <div className="rounded-lg border theme-border-subtle bg-card/60 dark:bg-white/[0.03] p-3">
-            <span className="text-[10px] theme-text-muted-40 uppercase tracking-wider block mb-3">Expense Breakdown</span>
-            <div className="space-y-2">
-              {categories.map((cat) => (
-                <div key={cat.name} className="flex items-center gap-3">
-                  <span className="text-[11px] theme-text-muted-50 w-24 truncate">{cat.name}</span>
-                  <div className="flex-1 h-1.5 rounded-full theme-bg-chip overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${cat.pct}%` }} />
+
+          <div className="mt-5 rounded-lg border border-border/80 bg-background/80 p-4 shadow-[0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Expense categories</p>
+                <p className="text-xs text-muted-foreground">Share of monthly spending</p>
+              </div>
+              <PieChart className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="space-y-3">
+              {categories.map((category) => (
+                <div key={category.name} className="grid grid-cols-[6rem_1fr_5rem] items-center gap-3">
+                  <span className="truncate text-xs text-muted-foreground">{category.name}</span>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${category.pct}%`, backgroundColor: category.color }}
+                    />
                   </div>
-                  <span className="text-[11px] theme-text-muted-40 w-16 text-right">{cat.amount}</span>
+                  <span className="text-right text-xs tabular-nums text-muted-foreground">{category.amount}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
+
+        <div className="bg-background/30 p-4">
+          <div className="rounded-lg border border-border/80 bg-background/80 p-4 shadow-[0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Recent records</p>
+                <p className="text-xs text-muted-foreground">Last updated today</p>
+              </div>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="divide-y divide-border">
+              {recent.map((record) => (
+                <div key={record.name} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{record.name}</p>
+                    <p className="text-xs text-muted-foreground">{record.type}</p>
+                  </div>
+                  <p className="text-sm font-medium tabular-nums text-foreground">{record.amount}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-border/80 bg-background/80 p-4 shadow-[0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+            <div className="mb-3 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-chart-savings" />
+              <p className="text-sm font-medium text-foreground">Emergency fund</p>
+            </div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-2xl font-semibold tabular-nums text-foreground">4.8 months</p>
+                <p className="text-xs text-muted-foreground">Based on core expenses</p>
+              </div>
+              <div className="h-16 w-24 rounded-md border border-border bg-muted p-2">
+                <div className="h-full rounded-sm bg-chart-savings/70" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   );
 }
 
-/* ─── Main Component ─── */
-
 export default function LandingPage() {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Warm up backend
     healthApi.check().catch(() => {
-      // Ignore errors as this is just a warm-up call
+      // Warm-up only.
     });
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
-      {/* Header */}
-      <header className="safe-top fixed left-0 right-0 top-0 z-50 border-b theme-border-subtle bg-background/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="safe-top sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex h-16 w-full items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-2">
-
-            <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
-          </div>
-          <div className="flex items-center gap-3">
+          <Link to="/" className="text-base font-bold sm:text-xl">
+            Budgeting Dashboard
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated ? (
               <UserNav />
             ) : (
               <>
-
-                <Button variant="ghost" asChild className="theme-text-muted-80 hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-white/10">
+                <Button variant="ghost" asChild>
                   <Link to="/auth/login">Log in</Link>
                 </Button>
-                <Button asChild className="border border-amber-500/50 bg-transparent hover:bg-amber-500/10 text-amber-500 transition-all duration-300">
+                <Button asChild>
                   <Link to="/auth/register">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    Create account
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </>
@@ -189,275 +203,206 @@ export default function LandingPage() {
       </header>
 
       <main id="main-content">
-      {/* ─── Hero ─── */}
-      <section className="relative z-10 min-h-screen flex items-center pt-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-16 items-center">
-            <motion.div
-              initial="hidden"
-              animate="show"
-              variants={staggerContainer}
-              className="relative z-10 max-w-2xl"
-            >
-              <motion.p variants={fadeInUp} className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500 mb-6">
-                Personal Finance Tool
-              </motion.p>
-
-              <motion.h1 variants={fadeInUp} className="mb-8 text-5xl font-display sm:text-6xl lg:text-[4.2rem] leading-[1.1] tracking-tight">
-                <span className="font-extrabold theme-text-strong">Know your exact</span>
-                <br />
-                <span className="font-extrabold theme-text-strong">number.</span>
-                <br className="sm:hidden" />
-                {' '}
-                <span className="font-serif italic font-normal text-amber-400/90 tracking-normal">Every month.</span>
-              </motion.h1>
-
-              <motion.p variants={fadeInUp} className="mb-10 max-w-xl text-lg theme-text-muted-50 leading-relaxed">
-                Not a guess. Not an estimate. Your real income minus your real
-                expenses — with savings, investments, and cash flow separated so
-                you actually understand what's happening with your money.
-              </motion.p>
-
-              <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-start gap-4">
+        <section className="relative overflow-hidden border-b border-border pt-24 pb-16 lg:pt-28 lg:pb-20">
+          <div className="container relative mx-auto px-4 lg:px-8">
+            <div className="mx-auto max-w-4xl text-center">
+              <h1 className="text-5xl font-bold tracking-tight text-balance sm:text-6xl lg:text-7xl">
+                Budgeting Dashboard
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                A monthly finance workspace for income, expenses, savings, budgets, and cash flow.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {isAuthenticated ? (
-                  <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
+                  <Button size="lg" asChild className="shadow-[0_12px_30px_hsl(var(--primary)/0.22),0_1px_0_hsl(0_0%_100%/0.24)_inset]">
                     <Link to="/dashboard">
-                      Go to Dashboard
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Open dashboard
+                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 ) : (
                   <>
-                    <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
+                    <Button size="lg" asChild className="shadow-[0_12px_30px_hsl(var(--primary)/0.22),0_1px_0_hsl(0_0%_100%/0.24)_inset]">
                       <Link to="/auth/register">
-                        Start Your Ledger
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        Create account
+                        <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button size="lg" variant="ghost" asChild className="theme-text-muted-60 hover:text-foreground dark:hover:text-white hover:bg-muted/60 dark:hover:bg-white/5 transition-all duration-300">
-                      <Link to="/auth/login">Log in</Link>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      asChild
+                      className="border-border bg-card text-foreground shadow-sm hover:border-primary/70 hover:bg-primary/10 hover:text-foreground"
+                    >
+                      <Link to="/how-it-works">
+                        See how it works
+                        <HelpCircle className="h-4 w-4" />
+                      </Link>
                     </Button>
                   </>
                 )}
-              </motion.div>
-
-              {!isAuthenticated && (
-                <motion.div variants={fadeInUp} className="pt-4">
-                  <Link to="/how-it-works" className="inline-flex items-center gap-1.5 text-sm theme-text-muted-40 hover:text-foreground/70 dark:hover:text-white/70 transition-colors group">
-                    <HelpCircle className="h-3.5 w-3.5" />
-                    See how it works
-                    <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </motion.div>
-              )}
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="hidden lg:block"
-            >
-              <DashboardPreview />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Outcomes Strip ─── */}
-      <section className="relative z-10 border-y theme-border-subtle theme-bg-subtle">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border dark:divide-white/10"
-          >
-            {outcomes.map((o) => (
-              <motion.div key={o.num} variants={fadeInUp} className="py-10 px-0 md:px-10 first:pl-0 last:pr-0">
-                <span className="text-xs font-mono text-amber-500/60 tracking-widest block mb-3">{o.num}</span>
-                <h3 className="text-lg font-semibold font-display theme-text-strong mb-2">{o.title}</h3>
-                <p className="text-sm theme-text-muted-40 leading-relaxed">{o.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─── Features: Spec Rows ─── */}
-      <section className="relative py-24 overflow-hidden z-10">
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16 max-w-2xl"
-          >
-            <h2 className="mb-4 text-3xl font-display sm:text-4xl tracking-tight">
-              <span className="text-hero-thin theme-text-strong-90">What the </span>
-              <span className="text-hero-bold text-gradient-primary">instrument</span>
-              <span className="text-hero-thin theme-text-strong-90"> does.</span>
-            </h2>
-            <p className="theme-text-muted-50 text-lg">
-              Four capabilities for people who want to understand their money — not just see a chart of it.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="border-t theme-border-subtle"
-          >
-            {specs.map((spec, i) => (
-              <motion.div
-                key={i}
-                variants={fadeInUp}
-                className="group grid sm:grid-cols-[250px_1fr] gap-4 sm:gap-12 py-8 px-2 sm:px-4 border-b theme-border-subtle hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors duration-300 items-baseline"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center justify-center rounded-lg theme-bg-chip p-2 text-amber-500 ring-1 theme-ring-subtle group-hover:ring-amber-500/30 transition-all duration-300">
-                    <spec.icon className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-base font-semibold font-display tracking-tight theme-text-strong">{spec.label}</h3>
-                </div>
-                <p className="text-sm theme-text-muted-50 leading-relaxed group-hover:text-foreground/70 dark:group-hover:text-white/70 transition-colors duration-300">{spec.detail}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-
-
-      {/* ─── Is This For You ─── */}
-      <section className="relative z-10 py-24 lg:py-32">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16 max-w-2xl"
-          >
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500 mb-4">Fit Check</p>
-            <h2 className="text-3xl font-display sm:text-4xl tracking-tight theme-text-strong">Is this for you?</h2>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-            className="grid lg:grid-cols-[1.4fr_1fr] gap-16 lg:gap-20"
-          >
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-full bg-emerald-500/10 text-emerald-400">
-                  <CheckCircle className="h-5 w-5" />
-                </div>
-                <h3 className="text-xl font-bold font-display tracking-tight theme-text-strong">Ideally, you are...</h3>
               </div>
-              <ul className="space-y-5">
-                {forYouPoints.map((point, i) => (
-                  <li key={i} className="flex items-start gap-4 group">
-                    <CheckCircle className="mt-1 h-4 w-4 flex-shrink-0 text-emerald-400/60 group-hover:text-emerald-400 transition-colors" />
-                    <span className="text-base theme-text-muted-50 group-hover:text-foreground/80 dark:group-hover:text-white/80 transition-colors leading-relaxed">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeInUp}>
-              <div className="flex items-center gap-3 mb-8 opacity-70">
-                <div className="p-2 rounded-full bg-red-500/10 text-red-400">
-                  <XCircle className="h-5 w-5" />
-                </div>
-                <h3 className="text-xl font-bold font-display tracking-tight theme-text-muted-60">This is NOT for you if...</h3>
-              </div>
-              <ul className="space-y-5">
-                {notForYouPoints.map((point, i) => (
-                  <li key={i} className="flex items-start gap-4 theme-text-muted-35">
-                    <XCircle className="mt-1 h-4 w-4 flex-shrink-0 text-red-400/40" />
-                    <span className="text-base leading-relaxed">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─── Closing CTA ─── */}
-      {!isAuthenticated && (
-        <section className="relative z-10 py-24 lg:py-32 border-t theme-border-subtle">
-          <div className="container mx-auto px-4">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="max-w-2xl"
-            >
-              <motion.h2 variants={fadeInUp} className="text-3xl font-display sm:text-4xl tracking-tight mb-6">
-                <span className="text-hero-thin theme-text-strong-90">The best time to start was </span>
-                <span className="text-hero-bold text-gradient-primary">last month.</span>
-              </motion.h2>
-              <motion.p variants={fadeInUp} className="theme-text-muted-50 text-lg leading-relaxed mb-10 max-w-xl">
-                Open a free account. Set up your categories. Log your first
-                transaction. You'll know more about your money by the end of
-                this month than most people learn in a year.
-              </motion.p>
-              <motion.div variants={fadeInUp}>
-                <Button size="lg" asChild className="border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-8 transition-all duration-300">
-                  <Link to="/auth/register">
-                    Start Your Ledger
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </motion.div>
-            </motion.div>
+            <div className="mx-auto mt-14 max-w-6xl">
+              <ProductPreview />
+            </div>
           </div>
         </section>
-      )}
+
+        <section className="border-b border-border bg-background-secondary/80 py-16 shadow-[0_1px_0_hsl(0_0%_100%/0.03)_inset] lg:py-20">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+                  What you can review each month
+                </h2>
+                <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
+                  The dashboard keeps the recurring finance questions close together, so a monthly review does not turn into a spreadsheet hunt.
+                </p>
+              </div>
+              <div className="divide-y divide-border rounded-xl border border-border bg-card shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+                {reviewItems.map((item) => (
+                  <div key={item.label} className="grid gap-2 p-4 sm:grid-cols-[12rem_1fr] sm:gap-6 sm:p-5">
+                    <p className="font-medium text-foreground">{item.label}</p>
+                    <p className="text-sm leading-6 text-muted-foreground">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-border py-16 lg:py-20">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+                  How a monthly review works
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
+                  The flow is intentionally manual and transparent. You keep control of the records, categories, and interpretation.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="border-border bg-card text-foreground shadow-sm hover:border-primary/70 hover:bg-primary/10 hover:text-foreground"
+              >
+                <Link to="/how-it-works">View details</Link>
+              </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {workflowSteps.map((step, index) => (
+                <div key={step.title} className="rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_hsl(0_0%_0%/0.14),0_1px_0_hsl(0_0%_100%/0.04)_inset]">
+                  <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-sm font-semibold text-primary shadow-[0_1px_0_hsl(0_0%_100%/0.08)_inset]">
+                    {index + 1}
+                  </div>
+                  <h3 className="font-semibold text-foreground">{step.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{step.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-border bg-background-secondary/80 py-16 shadow-[0_1px_0_hsl(0_0%_100%/0.03)_inset] lg:py-20">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-16">
+              <div>
+                <div className="mb-6 flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">Good fit</h2>
+                </div>
+                <ul className="space-y-4">
+                  {forYouPoints.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm leading-6 text-muted-foreground">
+                      <CheckCircle className="mt-1 h-4 w-4 flex-shrink-0 text-success" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <div className="mb-6 flex items-center gap-3">
+                  <XCircle className="h-5 w-5 text-destructive" />
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">Not the right fit</h2>
+                </div>
+                <ul className="space-y-4">
+                  {notForYouPoints.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm leading-6 text-muted-foreground">
+                      <XCircle className="mt-1 h-4 w-4 flex-shrink-0 text-destructive" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {!isAuthenticated && (
+          <section className="relative overflow-hidden border-b border-border py-16 lg:py-20">
+            <div className="absolute inset-y-0 left-0 w-1/2 bg-[radial-gradient(ellipse_at_left,hsl(var(--primary)/0.08),transparent_68%)]" />
+            <div className="container relative mx-auto px-4 lg:px-8">
+              <div className="max-w-2xl">
+                <Wallet className="mb-5 h-8 w-8 text-primary" />
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+                  Start tracking this month
+                </h2>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                  Create an account, set up categories, and log the first transactions you want to review. The dashboard becomes useful as soon as the month has real records in it.
+                </p>
+                <div className="mt-8">
+                  <Button size="lg" asChild className="shadow-[0_12px_30px_hsl(var(--primary)/0.22),0_1px_0_hsl(0_0%_100%/0.24)_inset]">
+                    <Link to="/auth/register">
+                      Create account
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t theme-border-subtle py-10">
-        <div className="container mx-auto grid gap-10 px-4 text-sm theme-text-muted-50 md:grid-cols-[1.4fr_2fr] lg:px-8">
+      <footer className="py-10">
+        <div className="container mx-auto grid gap-8 px-4 text-sm text-muted-foreground md:grid-cols-[1.2fr_2fr] lg:px-8">
           <div className="space-y-3">
-            <Link to="/" className="inline-flex font-display text-lg font-bold theme-text-strong">
+            <Link to="/" className="inline-flex text-base font-bold text-foreground">
               Budgeting Dashboard
             </Link>
-            <p className="max-w-sm text-xs leading-relaxed sm:text-sm">
-              Personal finance analytics for income, expenses, savings, and cash flow.
+            <p className="max-w-sm leading-6">
+              Personal finance analytics for income, expenses, savings, budgets, and cash flow.
             </p>
-            <p className="text-xs sm:text-sm">Built by Ondřej Kutil</p>
+            <p>Built by Ondrej Kutil</p>
           </div>
 
           <nav aria-label="Footer" className="grid gap-8 sm:grid-cols-3">
             <div className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Product</h2>
+              <h2 className="text-sm font-semibold text-primary">Product</h2>
               <div className="flex flex-col gap-2">
-                <Link to="/how-it-works" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">How it works</Link>
-                <Link to="/faq" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">FAQs</Link>
+                <Link to="/how-it-works" className="underline-offset-4 hover:text-foreground hover:underline">How it works</Link>
+                <Link to="/faq" className="underline-offset-4 hover:text-foreground hover:underline">FAQs</Link>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Project</h2>
+              <h2 className="text-sm font-semibold text-primary">Project</h2>
               <div className="flex flex-col gap-2">
-                <Link to="/about" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">About</Link>
-                <a href="https://github.com/OndrejKutil" target="_blank" rel="noreferrer" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">GitHub</a>
+                <Link to="/about" className="underline-offset-4 hover:text-foreground hover:underline">About</Link>
+                <a href="https://github.com/OndrejKutil" target="_blank" rel="noreferrer" className="underline-offset-4 hover:text-foreground hover:underline">GitHub</a>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-500/80">Legal</h2>
+              <h2 className="text-sm font-semibold text-primary">Legal</h2>
               <div className="flex flex-col gap-2">
-                <Link to="/privacy" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">Privacy Policy</Link>
-                <Link to="/terms" className="text-xs sm:text-sm theme-text-muted-50 underline-offset-4 hover:text-foreground dark:hover:text-white hover:underline transition-colors">Terms of Service</Link>
+                <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">Privacy Policy</Link>
+                <Link to="/terms" className="underline-offset-4 hover:text-foreground hover:underline">Terms of Service</Link>
               </div>
             </div>
           </nav>

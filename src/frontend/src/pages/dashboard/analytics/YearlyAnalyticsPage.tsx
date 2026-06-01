@@ -48,27 +48,9 @@ import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
+import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
 
 
-
-// Constants for charts
-const COLORS = [
-  'hsl(239, 84%, 67%)', // Primary Blurple
-  'hsl(168, 84%, 42%)', // Success Green
-  'hsl(38, 92%, 50%)',  // Warning Yellow
-  'hsl(280, 67%, 60%)', // Purple
-  'hsl(215, 14%, 64%)', // Gray
-  'hsl(0, 84%, 60%)',   // Destructive Red
-];
-
-const PIE_COLORS = [
-  'hsl(185, 70%, 45%)', // Primary teal
-  'hsl(175, 70%, 42%)',
-  'hsl(38, 80%, 55%)',
-  'hsl(142, 71%, 45%)',
-  'hsl(195, 20%, 60%)',
-  'hsl(0, 84%, 60%)',
-];
 
 const MONTH_MAP: Record<string, string> = {
   Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
@@ -101,7 +83,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
         <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
           {data.name}
         </p>
-        <p style={{ color: 'hsl(185, 70%, 45%)', fontSize: '14px', fontWeight: 'bold' }}>
+        <p style={{ color: CHART_COLORS.expense, fontSize: '14px', fontWeight: 'bold' }}>
           <SensitiveValue>{formatCurrency(data.value)}</SensitiveValue>
         </p>
       </div>
@@ -172,9 +154,9 @@ export default function YearlyAnalyticsPage() {
     if (!data) return [];
 
     return [
-      { name: t('types.core'), value: data.spending_balance.core_share_pct, color: 'hsl(185, 70%, 45%)' },
-      { name: t('types.fun'), value: data.spending_balance.fun_share_pct, color: 'hsl(340, 65%, 55%)' },
-      { name: t('types.future'), value: data.spending_balance.future_share_pct, color: 'hsl(38, 80%, 55%)' },
+      { name: t('types.core'), value: data.spending_balance.core_share_pct, color: CHART_COLORS.core },
+      { name: t('types.fun'), value: data.spending_balance.fun_share_pct, color: CHART_COLORS.fun },
+      { name: t('types.future'), value: data.spending_balance.future_share_pct, color: CHART_COLORS.future },
     ].filter(d => d.value > 0);
   }, [data, t]);
 
@@ -300,7 +282,7 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <PiggyBank className="h-3 w-3 text-primary" /> {t('metrics.savings')}
+                <PiggyBank className="h-3 w-3 text-chart-savings" /> {t('metrics.savings')}
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
@@ -317,7 +299,7 @@ export default function YearlyAnalyticsPage() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Briefcase className="h-3 w-3 text-primary" /> {t('metrics.investments')}
+                <Briefcase className="h-3 w-3 text-chart-investment" /> {t('metrics.investments')}
               </p>
               <div className="flex flex-col mt-1">
                 <div className="flex items-baseline gap-1.5">
@@ -333,7 +315,7 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <DollarSign className="h-3 w-3 text-primary" /> {t('metrics.profit')}
+                <DollarSign className="h-3 w-3 text-chart-profit" /> {t('metrics.profit')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
@@ -341,7 +323,7 @@ export default function YearlyAnalyticsPage() {
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Wallet className="h-3 w-3 text-primary" /> {t('metrics.cashFlow')}
+                <Wallet className="h-3 w-3 text-chart-cashflow" /> {t('metrics.cashFlow')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.net_cash_flow)}</SensitiveValue></p>
@@ -442,7 +424,7 @@ export default function YearlyAnalyticsPage() {
                     type="monotone"
                     dataKey="income"
                     name={t('metrics.income')}
-                    stroke="hsl(142, 71%, 45%)"
+                    stroke={CHART_COLORS.income}
                     strokeWidth={3}
                     dot={false}
                   />
@@ -450,7 +432,7 @@ export default function YearlyAnalyticsPage() {
                     type="monotone"
                     dataKey="expenses"
                     name={t('metrics.expenses')}
-                    stroke="hsl(0, 84%, 60%)"
+                    stroke={CHART_COLORS.expense}
                     strokeWidth={3}
                     dot={false}
                   />
@@ -515,11 +497,11 @@ export default function YearlyAnalyticsPage() {
                   />
                   <Legend iconType="circle" />
                   <ReferenceLine y={0} yAxisId="left" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.2} />
-                  <Bar yAxisId="left" dataKey="savings" name={t('metrics.savings')} fill="hsl(199, 89%, 48%)" radius={[4, 4, 0, 0]} opacity={0.9} />
-                  <Bar yAxisId="left" dataKey="investments" name={t('metrics.investments')} fill="hsl(280, 67%, 60%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                  <Bar yAxisId="left" dataKey="savings" name={t('metrics.savings')} fill={CHART_COLORS.savings} radius={[4, 4, 0, 0]} opacity={0.9} />
+                  <Bar yAxisId="left" dataKey="investments" name={t('metrics.investments')} fill={CHART_COLORS.investment} radius={[4, 4, 0, 0]} opacity={0.9} />
                   {/* Rate Lines */}
-                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name={t('pages.yearlyAnalytics.savingsRateShort')} stroke="hsl(199, 70%, 68%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
-                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name={t('pages.yearlyAnalytics.investmentRateShort')} stroke="hsl(280, 50%, 75%)" strokeWidth={2.5} dot={false} strokeDasharray="4 4" />
+                  <Line yAxisId="right" type="monotone" dataKey="savingsRate" name={t('pages.yearlyAnalytics.savingsRateShort')} stroke={CHART_COLORS.savings} strokeWidth={2.5} dot={false} strokeDasharray="4 4" opacity={0.75} />
+                  <Line yAxisId="right" type="monotone" dataKey="investmentRate" name={t('pages.yearlyAnalytics.investmentRateShort')} stroke={CHART_COLORS.investment} strokeWidth={2.5} dot={false} strokeDasharray="4 4" opacity={0.75} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -549,7 +531,7 @@ export default function YearlyAnalyticsPage() {
                       strokeWidth={0}
                     >
                       {categoryBreakdownData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
@@ -613,9 +595,9 @@ export default function YearlyAnalyticsPage() {
                         formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                       />
                       <Legend iconType="circle" />
-                      <Bar dataKey="Core" name={t('types.core')} stackId="a" fill="hsl(185, 70%, 45%)" radius={[0, 0, 0, 0]} opacity={0.9} />
-                      <Bar dataKey="Fun" name={t('types.fun')} stackId="a" fill="hsl(340, 65%, 55%)" opacity={0.9} />
-                      <Bar dataKey="Future" name={t('types.future')} stackId="a" fill="hsl(38, 80%, 55%)" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Core" name={t('types.core')} stackId="a" fill={CHART_COLORS.core} radius={[0, 0, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="Fun" name={t('types.fun')} stackId="a" fill={CHART_COLORS.fun} opacity={0.9} />
+                      <Bar dataKey="Future" name={t('types.future')} stackId="a" fill={CHART_COLORS.future} radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

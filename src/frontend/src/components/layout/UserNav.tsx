@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, User, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getProfileAvatarUrl } from '@/lib/user-avatar';
 
 export function UserNav() {
     const { logout, userId } = useAuth();
@@ -25,6 +26,7 @@ export function UserNav() {
 
     const displayName = profile?.user_metadata?.full_name || (userId ? `ID: ${userId.slice(0, 8)}...` : 'User');
     const email = profile?.email;
+    const avatarUrl = getProfileAvatarUrl(profile);
 
     const getInitials = () => {
         if (!profile) return 'U';
@@ -53,8 +55,8 @@ export function UserNav() {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={profile?.user_metadata?.avatar_url} alt={displayName} />
-                        <AvatarFallback className="bg-gradient-blurple text-xs font-bold text-white">
+                        <AvatarImage src={avatarUrl} alt={displayName} referrerPolicy="no-referrer" />
+                        <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
                             {getInitials()}
                         </AvatarFallback>
                     </Avatar>

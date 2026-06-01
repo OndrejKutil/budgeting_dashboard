@@ -357,7 +357,7 @@ export default function CategoriesPage() {
                             variants={fadeIn}
                             layout
                             className={cn(
-                              'group flex items-center gap-4 rounded-xl border bg-card p-4 shadow-card transition-all hover:shadow-glow-sm',
+                              'group flex items-center gap-4 rounded-xl border bg-card p-4 shadow-card transition-colors hover:border-primary/40',
                               category.is_active === false
                                 ? 'border-border/50 opacity-60'
                                 : 'border-border hover:border-primary/50'
@@ -392,7 +392,8 @@ export default function CategoriesPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  aria-label={`${t('common.actions')}: ${category.category_name}`}
+                                  className="h-8 w-8 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>

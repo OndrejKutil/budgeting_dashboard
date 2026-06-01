@@ -132,7 +132,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
                   collapsed ? 'justify-center px-2' : 'px-3',
                   active || isActive(item.href)
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )
               }
@@ -185,7 +185,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                           cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                             active
-                              ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                               : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                           )
                         }
@@ -210,7 +210,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                     cn(
                       'flex items-center gap-3 rounded-lg justify-center px-2 py-2.5 text-sm font-medium transition-all',
                       active
-                        ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )
                   }
@@ -239,7 +239,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
                   collapsed ? 'justify-center px-2' : 'px-3',
                   active || isActive(item.href)
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )
               }
@@ -278,7 +278,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
                   'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
                   collapsed ? 'justify-center px-2' : 'px-3',
                   active || isActive(item.href)
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )
               }
@@ -312,7 +312,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
               'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
               collapsed ? 'justify-center px-2' : 'px-3',
               active
-                ? 'bg-sidebar-primary text-sidebar-primary-foreground glow-blurple-sm'
+                ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                 : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
             )
           }

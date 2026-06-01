@@ -25,16 +25,7 @@ import { summaryApi, analyticsApi } from '@/lib/api/endpoints';
 import type { SummaryData, YearlyAnalyticsData } from '@/lib/api/types';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-
-// Constants for charts - Teal-based palette
-const COLORS = [
-  'hsl(185, 70%, 45%)',   // Primary teal
-  'hsl(175, 70%, 42%)',   // Secondary teal
-  'hsl(38, 80%, 55%)',    // Accent gold
-  'hsl(142, 71%, 45%)',   // Success green
-  'hsl(195, 20%, 60%)',   // Muted
-  'hsl(0, 84%, 60%)',     // Destructive red
-];
+import { CHART_COLORS } from '@/lib/chart-colors';
 
 const getSummaryData = async (fallbackMessage: string) => {
   const response = await summaryApi.get();
@@ -113,7 +104,7 @@ export default function DashboardOverview() {
         icon: TrendingUp,
         delta: data.comparison.income_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_income),
-        color: 'text-emerald-500'
+        color: 'text-chart-income'
       },
       {
         label: t('pages.overview.totalExpenses'),
@@ -121,7 +112,7 @@ export default function DashboardOverview() {
         icon: TrendingDown,
         delta: data.comparison.expense_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_expense),
-        color: 'text-rose-500',
+        color: 'text-chart-expense',
         invert: true
       },
       {
@@ -131,7 +122,7 @@ export default function DashboardOverview() {
         delta: data.comparison.saving_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_saving),
         extra: `${(data.savings_rate * 100).toFixed(1)}% ${t('pages.overview.rate')}`,
-        color: 'text-emerald-500'
+        color: 'text-chart-savings'
       },
       {
         label: t('metrics.investments'),
@@ -140,7 +131,7 @@ export default function DashboardOverview() {
         delta: data.comparison.investment_delta_pct,
         sparkData: toSparkData(yearlyData?.monthly_investment),
         extra: `${(data.investment_rate * 100).toFixed(1)}% ${t('pages.overview.rate')}`,
-        color: 'text-primary'
+        color: 'text-chart-investment'
       },
     ];
   }, [currentMonthNumber, data, t, yearlyData]);
@@ -186,13 +177,13 @@ export default function DashboardOverview() {
       {/* Primary KPI Section (Hero) */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* HERO CARD: Net Cash Flow */}
-        <div className="col-span-2 row-span-1 rounded-2xl border border-border/50 bg-gradient-to-br from-card to-card/50 p-8 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+        <div className="col-span-2 row-span-1 rounded-xl border border-border bg-card p-8 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.06] group-hover:opacity-10 transition-opacity">
             <Wallet className="w-32 h-32" />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netCashFlow')}</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('pages.overview.netCashFlow')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.net_cash_flow >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   <SensitiveValue>{formatCurrency(data.net_cash_flow)}</SensitiveValue>
@@ -210,14 +201,13 @@ export default function DashboardOverview() {
         </div>
 
         {/* SECONDARY CARD: Net Profit */}
-        {/* SECONDARY CARD: Net Profit */}
-        <div className="col-span-2 row-span-1 rounded-2xl border border-border/50 bg-card/50 p-8 shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+        <div className="col-span-2 row-span-1 rounded-xl border border-border bg-card p-8 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity">
             <DollarSign className="w-32 h-32" />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">{t('pages.overview.netProfit')}</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('pages.overview.netProfit')}</h3>
               <div className="flex items-baseline gap-4">
                 <span className={`text-3xl sm:text-5xl font-bold font-display tracking-tight ${data.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   <SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue>
@@ -272,14 +262,14 @@ export default function DashboardOverview() {
                       <AreaChart data={metric.sparkData}>
                         <defs>
                           <linearGradient id={`gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} stopOpacity={0.2} />
-                            <stop offset="100%" stopColor={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'} stopOpacity={0} />
+                            <stop offset="0%" stopColor={isPositive ? CHART_COLORS.income : CHART_COLORS.expense} stopOpacity={0.2} />
+                            <stop offset="100%" stopColor={isPositive ? CHART_COLORS.income : CHART_COLORS.expense} stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <Area
                           type="monotone"
                           dataKey="v"
-                          stroke={isPositive ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)'}
+                          stroke={isPositive ? CHART_COLORS.income : CHART_COLORS.expense}
                           strokeWidth={1.5}
                           fill={`url(#gradient-${i})`}
                           fillOpacity={1}

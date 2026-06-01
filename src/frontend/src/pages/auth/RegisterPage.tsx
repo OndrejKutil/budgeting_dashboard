@@ -120,7 +120,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title="Create an account"
-      subtitle="Start your journey to better financial management"
+      subtitle="Create a workspace for your financial records"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {errors.general && (
@@ -164,8 +164,8 @@ export default function RegisterPage() {
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-border" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-background px-2 text-muted-foreground">Or use email</span>
           </div>
         </div>
 
@@ -267,8 +267,7 @@ export default function RegisterPage() {
 
         {isLongLoading && (
           <p className="text-center text-xs text-muted-foreground animate-pulse">
-            The server is waking up from its nap... 😴 <br />
-            This might take a few seconds!
+            Still connecting. This can take a few seconds.
           </p>
         )}
 

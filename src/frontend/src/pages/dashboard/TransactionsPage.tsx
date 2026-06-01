@@ -731,8 +731,8 @@ export default function TransactionsPage() {
                             <div className={cn(
                               'h-1.5 w-1.5 rounded-full',
                               txType === 'income' ? 'bg-emerald-500' :
-                              txType === 'saving' ? 'bg-sky-500' :
-                              txType === 'investment' ? 'bg-purple-500' : 'bg-rose-500'
+                              txType === 'saving' ? 'bg-chart-savings' :
+                              txType === 'investment' ? 'bg-chart-investment' : 'bg-rose-500'
                             )} />
                             <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                               {category?.category_name || t('common.unknown')}
@@ -762,15 +762,16 @@ export default function TransactionsPage() {
                           <span className={cn(
                             'absolute right-0 top-0 bottom-0 w-[2px]',
                             txType === 'income' ? 'bg-emerald-500' :
-                            txType === 'saving' ? 'bg-sky-500' :
-                            txType === 'investment' ? 'bg-purple-500' : 'bg-rose-500'
+                            txType === 'saving' ? 'bg-chart-savings' :
+                            txType === 'investment' ? 'bg-chart-investment' : 'bg-rose-500'
                           )} />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label={`${t('common.actions')}: ${transaction.notes || t('pages.transactions.noDescription')}`}
+                                className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
                               >
                                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                               </Button>
@@ -805,14 +806,14 @@ export default function TransactionsPage() {
                 const txType = category?.type || 'expense';
                 return (
                   <div key={transaction.id_pk} className={cn(
-                    'p-4 rounded-xl border bg-card shadow-sm space-y-3 border-r-2',
+                    'p-4 rounded-xl border bg-card shadow-sm space-y-3',
                     txType === 'income'
-                      ? 'border-r-emerald-500'
+                      ? 'border-emerald-500/30'
                       : txType === 'saving'
-                      ? 'border-r-sky-500'
+                      ? 'border-chart-savings/30'
                       : txType === 'investment'
-                      ? 'border-r-purple-500'
-                      : 'border-r-rose-500'
+                      ? 'border-chart-investment/35'
+                      : 'border-rose-500/30'
                   )}>
                     <div className="flex justify-between items-start">
                       <div>
@@ -831,8 +832,8 @@ export default function TransactionsPage() {
                         <span className={cn(
                           'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
                           txType === 'income' ? 'bg-emerald-500/10 text-emerald-500' :
-                          txType === 'saving' ? 'bg-sky-500/10 text-sky-500' :
-                          txType === 'investment' ? 'bg-purple-500/10 text-purple-500' :
+                          txType === 'saving' ? 'bg-chart-savings/10 text-chart-savings' :
+                          txType === 'investment' ? 'bg-chart-investment/10 text-chart-investment' :
                           'bg-rose-500/10 text-rose-500'
                         )}>
                           {category?.category_name || t('common.unknown')}
@@ -843,7 +844,12 @@ export default function TransactionsPage() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`${t('common.actions')}: ${transaction.notes || t('pages.transactions.noDescription')}`}
+                            className="h-8 w-8 p-0"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -1185,6 +1191,7 @@ export default function TransactionsPage() {
         onClick={() => setIsCreateModalOpen(true)}
         className="fixed bottom-[6.5rem] right-4 z-40 h-14 w-14 rounded-full shadow-xl sm:hidden"
         size="icon"
+        aria-label={t('pages.transactions.add')}
       >
         <Plus className="h-6 w-6" />
       </Button>

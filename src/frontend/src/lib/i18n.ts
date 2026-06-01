@@ -56,6 +56,7 @@ const dashboardTranslations = {
       description: 'Description',
       requiredFields: 'Please fill in all required fields.',
       changesDiscarded: 'Changes discarded',
+      actions: 'Actions',
     },
     metrics: {
       income: 'Income',
@@ -547,6 +548,7 @@ const dashboardTranslations = {
       description: 'Popis',
       requiredFields: 'Vyplňte prosím všechna povinná pole.',
       changesDiscarded: 'Změny byly zahozeny',
+      actions: 'Akce',
     },
     metrics: {
       income: 'Příjmy',

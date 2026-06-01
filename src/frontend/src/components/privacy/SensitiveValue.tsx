@@ -19,7 +19,7 @@ export function SensitiveValue({
   return (
     <span
       className={cn(
-        'inline-block',
+        'inline-block tabular-nums',
         isHidden && 'select-none blur-[9px]',
         className,
       )}

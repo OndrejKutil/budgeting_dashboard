@@ -74,9 +74,10 @@ const fadeInUp = {
 
 export default function HowItWorksPage() {
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden">
+        <div className="relative min-h-screen overflow-hidden bg-background">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_68%)]" />
             {/* Header */}
-            <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+            <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 shadow-sm backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
 
@@ -99,7 +100,7 @@ export default function HowItWorksPage() {
                     className="space-y-16"
                 >
                     {/* Page Title */}
-                    <div className="space-y-4">
+                    <div className="space-y-4 rounded-xl border border-border bg-card/80 p-6 shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
                         <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-display text-foreground">
                             How It Works
                         </h1>
@@ -110,7 +111,7 @@ export default function HowItWorksPage() {
                         </p>
                     </div>
 
-                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5">
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5 shadow-[0_12px_34px_hsl(var(--primary)/0.08)]">
                         <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-amber-500">
                             Core principle
                         </h2>
@@ -138,7 +139,7 @@ export default function HowItWorksPage() {
                                     className="relative flex items-start gap-6 md:gap-10"
                                 >
                                     {/* Icon Node */}
-                                    <div className={`relative z-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 ${section.border} bg-background shadow-sm`}>
+                                    <div className={`relative z-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 ${section.border} bg-background shadow-[0_10px_24px_hsl(0_0%_0%/0.18)]`}>
                                         <div className={`flex h-full w-full items-center justify-center rounded-full ${section.bg}`}>
                                             <section.icon className={`h-6 w-6 ${section.color}`} />
                                         </div>
@@ -175,7 +176,7 @@ export default function HowItWorksPage() {
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-border bg-card/60 p-5">
+                            <div className="rounded-lg border border-border bg-card/80 p-5 shadow-[0_14px_40px_hsl(0_0%_0%/0.16),0_1px_0_hsl(0_0%_100%/0.04)_inset]">
                                 <div className="space-y-3">
                                     {exampleRows.map((row) => (
                                         <div key={row.label} className="flex items-center justify-between gap-4 text-sm">

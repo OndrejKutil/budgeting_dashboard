@@ -247,7 +247,7 @@ export default function FundsPage() {
         variants={fadeIn}
         layout
         className={cn(
-          'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
+          'group rounded-xl border bg-card p-5 shadow-card transition-colors hover:border-primary/40',
           fund.fund_is_active === false
             ? 'border-border/50 opacity-60'
             : isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
@@ -284,7 +284,8 @@ export default function FundsPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={`${t('common.actions')}: ${fund.fund_name}`}
+                className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -367,7 +368,7 @@ export default function FundsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6"
+        className="rounded-xl border border-border bg-card p-6 shadow-sm"
       >
         {isLoading ? (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

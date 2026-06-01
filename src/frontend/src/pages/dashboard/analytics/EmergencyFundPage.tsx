@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
+import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
 
 export default function EmergencyFundPage() {
   const { formatCurrency, t } = useUser();
@@ -205,8 +206,8 @@ export default function EmergencyFundPage() {
                     barCategoryGap={12}
                     margin={{ left: 20 }}
                   >
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
-                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(215, 14%, 64%)', fontSize: 12 }} width={100} />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
+                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} width={100} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--popover))',
@@ -214,12 +215,12 @@ export default function EmergencyFundPage() {
                         borderRadius: '8px',
                         color: 'hsl(var(--popover-foreground))',
                       }}
-                      itemStyle={{ color: 'hsl(38, 92%, 50%)' }}
+                      itemStyle={{ color: CHART_COLORS.core }}
                       formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.amount')]}
                     />
                     <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                       {coreCategoryBreakdownData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(38, 92%, ${50 - (index % 5) * 5}%)`} />
+                        <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>

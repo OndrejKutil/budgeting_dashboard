@@ -759,7 +759,7 @@ export default function BudgetMaker() {
                             exit={{ y: 100, opacity: 0 }}
                             className="fixed bottom-24 left-4 right-4 lg:bottom-6 lg:right-6 lg:left-auto z-50"
                         >
-                            <Card className="shadow-2xl border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 dark:border-primary/40 dark:shadow-primary/5">
+                            <Card className="border-border bg-card shadow-sm">
                                 <CardHeader className="py-4 px-6 flex flex-row items-center gap-6 space-y-0">
                                     <div>
                                         <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">

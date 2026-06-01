@@ -10,6 +10,7 @@ import { tokenManager } from '@/lib/api/client';
 import { authApi, exportApi, profileApi } from '@/lib/api/endpoints';
 import { LOCALE_LABELS, LOCALES } from '@/lib/i18n';
 import type { AppLocale } from '@/lib/i18n';
+import { getProfileAvatarUrl } from '@/lib/user-avatar';
 import {
   Select,
   SelectContent,
@@ -179,6 +180,7 @@ export default function ProfilePage() {
   const isGoogleConnected = profile?.identities?.some(
     (identity) => identity.provider === 'google'
   );
+  const avatarUrl = getProfileAvatarUrl(profile);
 
   const getInitials = () => {
     if (!profile) return 'U';
@@ -225,7 +227,7 @@ export default function ProfilePage() {
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 pb-12 border-b border-border/50">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
             <Avatar className="h-24 w-24 border-2 border-background shadow-sm ring-1 ring-border">
-              <AvatarImage src={profile?.user_metadata?.avatar_url} />
+              <AvatarImage src={avatarUrl} alt={getDisplayName()} referrerPolicy="no-referrer" />
               <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary">
                 {getInitials()}
               </AvatarFallback>
