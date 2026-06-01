@@ -58,11 +58,12 @@ export default function FaqPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
+        <div className="relative min-h-screen overflow-hidden bg-background">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_68%)]" />
 
 
             {/* Header */}
-            <header className="fixed left-0 right-0 top-0 z-50 border-b theme-border-subtle bg-background/80 backdrop-blur-xl">
+            <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 shadow-sm backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
 
@@ -84,14 +85,14 @@ export default function FaqPage() {
                     className="space-y-8"
                 >
                     <div className="text-center space-y-4">
-                        <h1 className="text-4xl tracking-tight font-display">
-                            <span className="text-hero-thin theme-text-strong-90">FREQUENTLY ASKED </span>
-                            <span className="text-hero-bold text-primary">QUESTIONS</span>
+                        <h1 className="text-4xl font-bold tracking-tight font-display">
+                            <span className="theme-text-strong-90">FREQUENTLY ASKED </span>
+                            <span className="text-primary">QUESTIONS</span>
                         </h1>
                         <p className="theme-text-muted-60 text-lg">Common questions about the Budgeting Dashboard.</p>
                     </div>
 
-                    <div className="rounded-xl border theme-border-subtle theme-bg-panel backdrop-blur-sm p-6 shadow-sm">
+                    <div className="rounded-xl border border-border bg-card/85 p-6 shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset] backdrop-blur-sm">
                         <Accordion type="single" collapsible className="w-full">
                             {faqs.map((faq, index) => (
                                 <AccordionItem key={index} value={`item-${index}`} className="theme-border-subtle">
@@ -104,7 +105,7 @@ export default function FaqPage() {
                         </Accordion>
                     </div>
 
-                    <div className="rounded-xl border theme-border-subtle theme-bg-panel p-8 text-center shadow-sm">
+                    <div className="rounded-xl border border-border bg-card/85 p-8 text-center shadow-[0_12px_36px_hsl(0_0%_0%/0.14),0_1px_0_hsl(0_0%_100%/0.04)_inset]">
                         <h2 className="mb-4 text-2xl font-bold font-display theme-text-strong">Still have questions?</h2>
                         <p className="mb-6 theme-text-muted-60">
                             Feel free to reach out to the developer directly.

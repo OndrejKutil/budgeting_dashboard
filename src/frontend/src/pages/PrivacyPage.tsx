@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_68%)]" />
       {/* Header */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b theme-border-subtle bg-background/80 backdrop-blur-xl">
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 shadow-sm backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
@@ -28,7 +29,7 @@ export default function PrivacyPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-10"
         >
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-xl border border-border bg-card/80 p-6 shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
             <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500">Legal</p>
             <h1 className="text-4xl font-bold font-display tracking-tight theme-text-strong sm:text-5xl">
               Privacy Policy
@@ -36,10 +37,10 @@ export default function PrivacyPage() {
             <p className="text-sm theme-text-muted-60">Last updated: May 31, 2026</p>
           </div>
 
-          <div className="space-y-8 text-foreground/90">
+          <div className="space-y-8 rounded-xl border border-border bg-card/75 p-6 text-foreground/90 shadow-[0_18px_50px_hsl(0_0%_0%/0.16),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
             <section>
               <h2 className="mb-3 text-xl font-semibold text-amber-500">Notice</h2>
-              <div className="border-l-2 border-amber-500/70 bg-amber-500/10 py-3 pl-4 pr-3">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 shadow-[0_10px_28px_hsl(var(--primary)/0.08)]">
                 <p className="text-sm">
                   <strong>This is a personal student project.</strong> While we respect your privacy and utilize secure modern infrastructure, we recommend against storing highly sensitive, irreplaceable financial data here.
                 </p>
@@ -129,7 +130,7 @@ export default function PrivacyPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t theme-border-subtle py-8">
+      <footer className="border-t border-border bg-background-secondary/50 py-8">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-xs text-muted-foreground sm:flex-row sm:text-sm">
           <span>Built by Ondřej Kutil</span>
           <div className="flex items-center gap-6">

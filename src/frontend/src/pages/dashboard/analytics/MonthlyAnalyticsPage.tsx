@@ -378,6 +378,8 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
+                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                     formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -385,7 +387,9 @@ export default function MonthlyAnalyticsPage() {
                       dataKey="value"
                       position="top"
                       formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                      fill="hsl(var(--foreground))"
+                      fontSize={10}
+                      fontWeight={600}
                     />
                     {incomeBarData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={CHART_COLORS.income} opacity={Math.max(0.35, 0.9 - index * 0.12)} />
@@ -429,6 +433,8 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
+                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                     formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -436,7 +442,9 @@ export default function MonthlyAnalyticsPage() {
                       dataKey="value"
                       position="top"
                       formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                      fill="hsl(var(--foreground))"
+                      fontSize={10}
+                      fontWeight={600}
                     />
                     {spendingTypeData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={0.9} />
@@ -485,6 +493,8 @@ export default function MonthlyAnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
+                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
                     formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -492,7 +502,9 @@ export default function MonthlyAnalyticsPage() {
                       dataKey="value"
                       position="top"
                       formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 500 }}
+                      fill="hsl(var(--foreground))"
+                      fontSize={10}
+                      fontWeight={600}
                     />
                     {expenseBarData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={Math.max(0.45, 0.9 - index * 0.05)} />

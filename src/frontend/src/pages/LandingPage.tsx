@@ -53,7 +53,7 @@ function ProductPreview() {
     { label: 'Income', value: '32 500 Kc', color: CHART_COLORS.income },
     { label: 'Expenses', value: '18 700 Kc', color: CHART_COLORS.expense },
     { label: 'Savings', value: '8 000 Kc', color: CHART_COLORS.savings },
-    { label: 'Cash flow', value: '5 800 Kc', color: CHART_COLORS.cashflow },
+    { label: 'Cash flow', value: '5 800 Kc', color: CHART_COLORS.cashFlow },
   ];
 
   const categories = [

@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 
 export default function AboutPage() {
     return (
-        <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
-            <header className="fixed left-0 right-0 top-0 z-50 border-b theme-border-subtle bg-background/80 backdrop-blur-xl">
+        <div className="relative min-h-screen overflow-hidden bg-background">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_68%)]" />
+            <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 shadow-sm backdrop-blur-xl">
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <Link to="/" className="flex items-center gap-2">
                         <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
@@ -31,7 +32,7 @@ export default function AboutPage() {
                     transition={{ duration: 0.5 }}
                     className="space-y-14"
                 >
-                    <section className="space-y-5">
+                    <section className="space-y-5 rounded-xl border border-border bg-card/80 p-6 shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
                         <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500">
                             About
                         </p>
@@ -45,8 +46,8 @@ export default function AboutPage() {
                         </p>
                     </section>
 
-                    <section className="grid gap-12 border-t theme-border-subtle pt-12 lg:grid-cols-2">
-                        <div className="space-y-4">
+                    <section className="grid gap-6 lg:grid-cols-2">
+                        <div className="space-y-4 rounded-xl border border-border bg-card/70 p-6 shadow-card">
                             <h2 className="text-2xl font-display tracking-tight theme-text-strong">Why it exists</h2>
                             <p className="text-base leading-relaxed theme-text-muted-60">
                                 Many budgeting apps never worked the way I wanted. I wanted clearer control over the
@@ -59,7 +60,7 @@ export default function AboutPage() {
                             </p>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 rounded-xl border border-border bg-card/70 p-6 shadow-card">
                             <h2 className="text-2xl font-display tracking-tight theme-text-strong">Project status</h2>
                             <p className="text-base leading-relaxed theme-text-muted-60">
                                 This is a free personal project. It is functional, but it should be treated as an
@@ -68,7 +69,7 @@ export default function AboutPage() {
                         </div>
                     </section>
 
-                    <section className="flex flex-col gap-4 border-t theme-border-subtle pt-10 sm:flex-row sm:items-center sm:justify-between">
+                    <section className="flex flex-col gap-4 rounded-xl border border-border bg-background-secondary/80 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
                             <Link to="/how-it-works" className="text-amber-500 transition-colors hover:text-amber-400 hover:underline">
                                 How it works
