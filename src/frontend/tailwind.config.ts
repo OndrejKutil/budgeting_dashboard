@@ -15,9 +15,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
-        serif: ["Playfair Display", "serif"],
+        sans: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        display: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        serif: ["Georgia", "Cambria", "Times New Roman", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -105,9 +105,7 @@ export default {
         "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        glow: "0 0 20px hsl(var(--primary) / 0.3)",
-        "glow-sm": "0 0 10px hsl(var(--primary) / 0.2)",
-        card: "0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.2)",
+        card: "0 1px 2px hsl(0 0% 0% / 0.16), 0 1px 0 hsl(0 0% 100% / 0.03) inset",
       },
       keyframes: {
         "accordion-down": {
@@ -154,9 +152,7 @@ export default {
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
       backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-card": "linear-gradient(180deg, hsl(var(--card-elevated)) 0%, hsl(var(--card)) 100%)",
-        "gradient-hero": "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(210 40% 12%) 50%, hsl(var(--background)) 100%)",
+        "dotted-pattern": "radial-gradient(hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px)",
       },
     },
   },

@@ -357,7 +357,7 @@ export default function CategoriesPage() {
                             variants={fadeIn}
                             layout
                             className={cn(
-                              'group flex items-center gap-4 rounded-xl border bg-card p-4 shadow-card transition-all hover:shadow-glow-sm',
+                              'group flex items-center gap-4 rounded-xl border bg-card p-4 shadow-card transition-colors hover:border-primary/40',
                               category.is_active === false
                                 ? 'border-border/50 opacity-60'
                                 : 'border-border hover:border-primary/50'

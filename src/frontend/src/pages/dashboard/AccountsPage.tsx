@@ -251,7 +251,7 @@ export default function AccountsPage() {
         key={account.accounts_id_pk}
         variants={fadeIn}
         className={cn(
-          'group rounded-xl border bg-card p-5 shadow-card transition-all hover:shadow-glow-sm',
+          'group rounded-xl border bg-card p-5 shadow-card transition-colors hover:border-primary/40',
           account.account_is_active === false ? 'border-border/50 opacity-60' : 'border-border hover:border-primary/50'
         )}
       >

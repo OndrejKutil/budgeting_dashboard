@@ -65,7 +65,7 @@ export function KPICard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        'rounded-xl border bg-card p-6 shadow-card transition-base hover:shadow-glow-sm',
+        'rounded-xl border bg-card p-6 shadow-card transition-colors hover:border-primary/40',
         variantStyles[variant],
         className
       )}

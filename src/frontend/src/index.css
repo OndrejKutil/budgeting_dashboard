@@ -1,14 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@200;300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   WARM & FRIENDLY THEME - Personal Finance App
-   Primary: Amber/Orange
-   Accent: Soft Violet
-   ============================================ */
+/* Product UI theme: restrained finance workspace, not decorative fintech. */
 
 @layer base {
   :root {
@@ -88,16 +82,7 @@
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 38 92% 50%;
 
-    /* ---- Glass Effects ---- */
-    --glass-bg: 0 0% 14% / 0.85;
-    --glass-border: 0 0% 18% / 0.3;
-
-    /* ---- Gradients ---- */
-    --gradient-primary: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(24 95% 53%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 16%) 0%, hsl(0 0% 14%) 100%);
-    --gradient-hero: radial-gradient(ellipse at 15% 10%, hsl(0 0% 16%) 0%, hsl(0 0% 12%) 35%, hsl(0 0% 10%) 70%, hsl(0 0% 8%) 100%);
-
-    /* ---- Accent Gold (for highlights) ---- */
+    /* ---- Legacy Alias ---- */
     --accent-gold: 38 92% 50%;
   }
 
@@ -176,16 +161,7 @@
     --sidebar-border: 0 0% 84%;
     --sidebar-ring: 38 92% 45%;
 
-    /* ---- Glass Effects ---- */
-    --glass-bg: 0 0% 100% / 0.82;
-    --glass-border: 0 0% 80% / 0.55;
-
-    /* ---- Gradients ---- */
-    --gradient-primary: linear-gradient(135deg, hsl(38 92% 45%) 0%, hsl(24 95% 48%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 100%);
-    --gradient-hero: radial-gradient(ellipse at 15% 10%, hsl(38 92% 93%) 0%, hsl(0 0% 98%) 35%, hsl(0 0% 96%) 70%, hsl(0 0% 94%) 100%);
-
-    /* ---- Accent Gold (for highlights) ---- */
+    /* ---- Legacy Alias ---- */
     --accent-gold: 38 92% 45%;
   }
 }
@@ -201,7 +177,6 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
   }
 
   h1,
@@ -210,66 +185,22 @@
   h4,
   h5,
   h6 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer utilities {
 
-  /* ---- Glass Morphism ---- */
-  .glass {
-    @apply bg-[hsl(var(--glass-bg))] backdrop-blur-xl border border-[hsl(var(--glass-border))];
-  }
-
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-lg border border-border/50 rounded-xl;
-  }
-
-  /* ---- Hero Typography ---- */
-  .text-hero-thin {
-    font-weight: 200;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .text-hero-bold {
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* ---- Glow Effects ---- */
-  .glow-primary {
-    box-shadow:
-      0 0 20px hsl(38 92% 50% / 0.15),
-      0 0 40px hsl(38 92% 50% / 0.1),
-      0 0 60px hsl(38 92% 50% / 0.05);
-  }
-
-  .glow-primary-sm {
-    box-shadow: 0 0 15px hsl(38 92% 50% / 0.15);
-  }
-
   /* ---- Card Shadow ---- */
   .shadow-card {
     box-shadow:
-      0 4px 6px -1px hsl(0 0% 0% / 0.3),
-      0 2px 4px -2px hsl(0 0% 0% / 0.2),
-      inset 0 1px 0 0 hsl(195 30% 25% / 0.1);
+      0 1px 2px hsl(0 0% 0% / 0.16),
+      0 1px 0 hsl(0 0% 100% / 0.03) inset;
   }
 
   /* ---- Focus Ring ---- */
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
-  }
-
-  /* ---- Gradient Border ---- */
-  .border-gradient {
-    position: relative;
-    background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-      linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(24 95% 53%) 100%) border-box;
-    border: 1px solid transparent;
   }
 
   /* ---- Skeleton Animation ---- */
@@ -404,12 +335,12 @@
   }
 }
 
-/* ---- Background Gradient Utility ---- */
+/* ---- Legacy background utilities, kept flat until marketing pages are redesigned. ---- */
 .bg-gradient-primary {
-  background: var(--gradient-primary);
+  background: hsl(var(--primary));
 }
 .bg-gradient-hero {
-  background: var(--gradient-hero);
+  background: hsl(var(--background));
 }
 
 /* ---- iOS Safe Areas ---- */
