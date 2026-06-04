@@ -76,6 +76,19 @@ import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 const ITEMS_PER_PAGE: number = 20;
 const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
 
+function isNegativeAmountInput(value: string): boolean {
+  return value.trim().startsWith('-');
+}
+
+function toggleAmountSign(value: string): string {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) return '-';
+  if (trimmedValue.startsWith('-')) return trimmedValue.slice(1);
+
+  return `-${trimmedValue}`;
+}
+
 function parseDecimalInput(value: string): number | null {
   const compactValue = value.trim().replace(/\s/g, '');
   if (!compactValue) return null;
@@ -460,6 +473,11 @@ export default function TransactionsPage() {
       savings_fund_id_fk: '',
     });
   };
+
+  const isAmountNegative = isNegativeAmountInput(formData.amount);
+  const amountSignActionLabel = isAmountNegative
+    ? t('pages.transactions.setAmountPositive')
+    : t('pages.transactions.setAmountNegative');
 
   if (error && !isLoading && transactions.length === 0) {
     return (
@@ -948,17 +966,40 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="amount">{t('common.amount')}</Label>
-                <Input
-                  id="amount"
-                  type="text"
-                  inputMode="decimal"
-                  pattern={DECIMAL_INPUT_PATTERN}
-                  enterKeyHint="done"
-                  placeholder={formatNumber(0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="text-[16px]"
-                />
+                <div className="flex gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={amountSignActionLabel}
+                        aria-pressed={isAmountNegative}
+                        onClick={() => setFormData(prev => ({ ...prev, amount: toggleAmountSign(prev.amount) }))}
+                        className={cn(
+                          "h-10 w-10 shrink-0 bg-background/50 text-base font-semibold tabular-nums",
+                          isAmountNegative && "border-destructive/60 text-destructive hover:text-destructive"
+                        )}
+                      >
+                        {isAmountNegative ? '-' : '+'}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{amountSignActionLabel}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Input
+                    id="amount"
+                    type="text"
+                    inputMode="decimal"
+                    pattern={DECIMAL_INPUT_PATTERN}
+                    enterKeyHint="done"
+                    placeholder={formatNumber(0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    className="min-w-0 text-[16px] tabular-nums"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">{t('common.date')}</Label>
