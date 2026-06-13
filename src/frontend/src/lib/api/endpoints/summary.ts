@@ -7,7 +7,7 @@ import { apiClient } from '../client';
 import type { SummaryResponse } from '../types/responses';
 
 export const summaryApi = {
-    get: async (params?: { start_date?: string; end_date?: string }) => {
+    get: async (params?: { start_date?: string; end_date?: string; base_currency?: string }) => {
         const response = await apiClient.get<SummaryResponse>(
             '/summary/',
             params as Record<string, string | number | undefined>

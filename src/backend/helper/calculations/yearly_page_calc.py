@@ -90,7 +90,7 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
             TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
         ])
         query = user_supabase_client.table('fct_transactions').select(
-            f"{yearly_fields}, dim_categories_users(type, category_name, spending_type)"
+            f"{yearly_fields}, dim_categories_users(type, category_name, spending_type), dim_accounts(currency)"
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
@@ -115,7 +115,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
             'savings_funds': pl.Series(dtype=pl.Utf8),
             'date_parsed': pl.Series(dtype=pl.Date),
             'month_name': pl.Series(dtype=pl.Utf8),
-            'abs_amount': pl.Series(dtype=pl.Float64)
+            'abs_amount': pl.Series(dtype=pl.Float64),
+            'currency': pl.Series(dtype=pl.Utf8),
         })
 
     df = pl.from_dicts(transactions)
@@ -143,7 +144,12 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
                 pl.col(struct_col).struct.rename_fields(new_names)
             )
         df = df.unnest(struct_col)
-    
+
+    if 'dim_accounts' in df.columns:
+        df = df.with_columns(
+            pl.col('dim_accounts').struct.field('currency').alias('currency')
+        ).drop('dim_accounts')
+
     def safe_with_column(df, name, default, dtype):
         if name not in df.columns:
             return df.with_columns(pl.lit(default).cast(dtype).alias(name))
@@ -154,6 +160,7 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'type', '', pl.Utf8)
     df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
+    df = safe_with_column(df, 'currency', None, pl.Utf8)
     
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
@@ -181,6 +188,19 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     ])
 
     return cast(pl.DataFrame, df)
+
+
+def _apply_currency_conversion(df: pl.DataFrame, base_currency: str) -> pl.DataFrame:
+    """Multiply amount and abs_amount by exchange rates so all values are in base_currency."""
+    if df.is_empty() or 'currency' not in df.columns:
+        return df
+    from ..exchange_rates import get_rate
+    currencies = df['currency'].fill_null(base_currency).to_list()
+    rates = pl.Series('_rate', [get_rate(c, base_currency) for c in currencies], dtype=pl.Float64)
+    return df.with_columns([
+        (pl.col('amount') * rates).alias('amount'),
+        (pl.col('abs_amount') * rates).alias('abs_amount'),
+    ])
 
 
 def _initialize_monthly_data() -> Dict[str, MonthlyDataPoint]:
@@ -484,12 +504,13 @@ def _calculate_spending_balance(totals: YearlyTotals) -> YearlySpendingBalance:
 #                                   Main Analytics Functions
 # ================================================================================================
 
-def _yearly_analytics(access_token: str, year: int) -> YearlyAnalyticsData:
+def _yearly_analytics(access_token: str, year: int, base_currency: str = 'CZK') -> YearlyAnalyticsData:
     """Calculate comprehensive yearly analytics for a specific year."""
     start_date, end_date = _get_year_date_range(year)
     transactions = _fetch_yearly_transactions(access_token, start_date, end_date)
     df = _prepare_transactions_dataframe(transactions)
-    
+    df = _apply_currency_conversion(df, base_currency)
+
     monthly_data = _initialize_monthly_data()
     monthly_data = _calculate_monthly_aggregations(df, monthly_data)
     
@@ -557,7 +578,7 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
             TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
         ])
         query = user_supabase_client.table('fct_transactions').select(
-            f"{emergency_fields}, dim_categories_users(type, category_name, spending_type), dim_savings_funds(fund_name)"
+            f"{emergency_fields}, dim_categories_users(type, category_name, spending_type), dim_savings_funds(fund_name), dim_accounts(currency)"
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
@@ -582,7 +603,8 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
             'savings_funds': pl.Series(dtype=pl.Utf8),
             'date_parsed': pl.Series(dtype=pl.Date),
             'month_key': pl.Series(dtype=pl.Utf8),
-            'abs_amount': pl.Series(dtype=pl.Float64)
+            'abs_amount': pl.Series(dtype=pl.Float64),
+            'currency': pl.Series(dtype=pl.Utf8),
         })
 
     df = pl.from_dicts(transactions)
@@ -619,7 +641,12 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
                 pl.col('dim_savings_funds').struct.rename_fields(new_names)
             )
         df = df.unnest('dim_savings_funds')
-        
+
+    if 'dim_accounts' in df.columns:
+        df = df.with_columns(
+            pl.col('dim_accounts').struct.field('currency').alias('currency')
+        ).drop('dim_accounts')
+
     def safe_with_column(df, name, default, dtype):
         if name not in df.columns:
             return df.with_columns(pl.lit(default).cast(dtype).alias(name))
@@ -630,7 +657,8 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'type', '', pl.Utf8)
     df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
-    
+    df = safe_with_column(df, 'currency', None, pl.Utf8)
+
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
         rename_map['type'] = 'category_type'
@@ -752,12 +780,13 @@ def _calculate_expense_stats(df: pl.DataFrame, spending_types: List[str]) -> tup
     return average_monthly, total_expenses
 
 
-def _emergency_fund_analysis(access_token: str, year: int) -> EmergencyFundData:
+def _emergency_fund_analysis(access_token: str, year: int, base_currency: str = 'CZK') -> EmergencyFundData:
     """Calculate emergency fund requirements based on core expenses."""
     start_date, end_date = _get_year_date_range(year)
     transactions = _fetch_emergency_fund_transactions(access_token, start_date, end_date)
     df = _prepare_emergency_fund_dataframe(transactions)
-    
+    df = _apply_currency_conversion(df, base_currency)
+
     # 1. Fetch Current Savings
     current_savings = _fetch_savings_funds_balance(access_token)
     

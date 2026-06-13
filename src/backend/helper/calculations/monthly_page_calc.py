@@ -77,7 +77,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         ])
 
         query = user_supabase_client.table('fct_transactions').select(
-            f"{monthly_fields}, dim_categories_users(type, category_name, spending_type)"
+            f"{monthly_fields}, dim_categories_users(type, category_name, spending_type), dim_accounts(currency)"
         )
         query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
@@ -105,7 +105,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
             'spending_type': pl.Series(dtype=pl.Utf8),
             'savings_funds': pl.Series(dtype=pl.Utf8),
             'date_parsed': pl.Series(dtype=pl.Date),
-            'abs_amount': pl.Series(dtype=pl.Float64)
+            'abs_amount': pl.Series(dtype=pl.Float64),
+            'currency': pl.Series(dtype=pl.Utf8),
         })
 
     # Polars unnest logic
@@ -134,7 +135,12 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
                 pl.col(struct_col).struct.rename_fields(new_names)
             )
         df = df.unnest(struct_col)
-    
+
+    if 'dim_accounts' in df.columns:
+        df = df.with_columns(
+            pl.col('dim_accounts').struct.field('currency').alias('currency')
+        ).drop('dim_accounts')
+
     # Helper to safe add column if missing
     def safe_with_column(df, name, default, dtype):
         if name not in df.columns:
@@ -147,6 +153,7 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     df = safe_with_column(df, 'category_name', 'Unknown Category', pl.Utf8)
     df = safe_with_column(df, 'spending_type', '', pl.Utf8)
     df = safe_with_column(df, 'savings_fund_id', None, pl.Utf8)
+    df = safe_with_column(df, 'currency', None, pl.Utf8)
     
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
@@ -170,6 +177,19 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     ])
     
     return cast(pl.DataFrame, df)
+
+
+def _apply_currency_conversion(df: pl.DataFrame, base_currency: str) -> pl.DataFrame:
+    """Multiply amount and abs_amount by exchange rates so all values are in base_currency."""
+    if df.is_empty() or 'currency' not in df.columns:
+        return df
+    from ..exchange_rates import get_rate
+    currencies = df['currency'].fill_null(base_currency).to_list()
+    rates = pl.Series('_rate', [get_rate(c, base_currency) for c in currencies], dtype=pl.Float64)
+    return df.with_columns([
+        (pl.col('amount') * rates).alias('amount'),
+        (pl.col('abs_amount') * rates).alias('abs_amount'),
+    ])
 
 
 def _calculate_monthly_totals(df: pl.DataFrame) -> MonthlyTotals:
@@ -431,7 +451,7 @@ def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBre
 #                                   Main Analytics Function
 # ================================================================================================
 
-def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnalyticsData:
+def _monthly_analytics(access_token: str, year: int, month: int, base_currency: str = 'CZK') -> MonthlyAnalyticsData:
     """
     Calculate comprehensive monthly analytics for a specific month and year.
     """
@@ -450,7 +470,11 @@ def _monthly_analytics(access_token: str, year: int, month: int) -> MonthlyAnaly
     # 4. Prepare DFs
     current_df = _prepare_transactions_dataframe(current_transactions)
     previous_df = _prepare_transactions_dataframe(previous_transactions)
-    
+
+    # 4b. Convert amounts to base_currency
+    current_df = _apply_currency_conversion(current_df, base_currency)
+    previous_df = _apply_currency_conversion(previous_df, base_currency)
+
     # 5. Calculate Metrics
     totals = _calculate_monthly_totals(current_df)
     prev_totals = _calculate_monthly_totals(previous_df)

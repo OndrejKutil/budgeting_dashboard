@@ -47,14 +47,15 @@ async def get_yearly_analytics(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    year: int = Query(datetime.now().year, description='Year for analytics')
+    year: int = Query(datetime.now().year, description='Year for analytics'),
+    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
 ) -> YearlyAnalyticsResponse:
     '''
     Get comprehensive yearly analytics including totals, monthly breakdown, and trends.
     '''
         
     try:
-        analytics_data: YearlyAnalyticsData = _yearly_analytics(user['access_token'], year)
+        analytics_data: YearlyAnalyticsData = _yearly_analytics(user['access_token'], year, base_currency)
 
         return YearlyAnalyticsResponse(
             data=analytics_data,
@@ -97,7 +98,8 @@ async def get_emergency_fund_analysis(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    year: int = Query(datetime.now().year, description='Year for emergency fund calculation')
+    year: int = Query(datetime.now().year, description='Year for emergency fund calculation'),
+    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
 ) -> EmergencyFundResponse:
     '''
     Get emergency fund analysis based on core expenses for the specified year.
@@ -106,7 +108,7 @@ async def get_emergency_fund_analysis(
     '''
        
     try:
-        emergency_fund_data: EmergencyFundData = _emergency_fund_analysis(user['access_token'], year)
+        emergency_fund_data: EmergencyFundData = _emergency_fund_analysis(user['access_token'], year, base_currency)
 
         return EmergencyFundResponse(
             data=emergency_fund_data,

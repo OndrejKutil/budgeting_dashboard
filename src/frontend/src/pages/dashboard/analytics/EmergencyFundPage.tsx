@@ -33,7 +33,7 @@ import { usePrivacyMode } from '@/contexts/privacy-context';
 import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
 
 export default function EmergencyFundPage() {
-  const { formatCurrency, t } = useUser();
+  const { formatCurrency, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
@@ -41,9 +41,9 @@ export default function EmergencyFundPage() {
   const years = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear - i + 2), [currentYear]);
 
   const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['emergency-fund', selectedYearNumber],
+    queryKey: ['emergency-fund', selectedYearNumber, currency],
     queryFn: async () => {
-      const response = await analyticsApi.getEmergencyFund({ year: selectedYearNumber });
+      const response = await analyticsApi.getEmergencyFund({ year: selectedYearNumber, base_currency: currency });
       if (response.success && response.data) {
         return response.data;
       }
