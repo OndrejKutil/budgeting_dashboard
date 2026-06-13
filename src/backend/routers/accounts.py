@@ -131,13 +131,12 @@ async def create_account(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data : Dict = account_data.model_dump()
+        data : Dict = account_data.model_dump(exclude_none=True)
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
             data[ACCOUNTS_COLUMNS.USER_ID.value] = user["user_id"]
 
-        
         # Convert datetime to ISO string for JSON serialization
         if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
             data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
@@ -173,7 +172,7 @@ async def update_account(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data = account_data.model_dump()
+        data = account_data.model_dump(exclude_none=True)
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get(ACCOUNTS_COLUMNS.USER_ID.value):

@@ -67,7 +67,9 @@ async def login(
             user_id=response.user.id,
             data=dict(response)
         )
-            
+
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Login failed")
         logger.info(f"Login failed with error: {str(e)}")
@@ -87,10 +89,7 @@ async def register(
     try:
         supabase_client: Client = get_db_client()
 
-        if user_data.full_name == None:
-            full_name = None
-        else:
-            full_name = user_data.full_name
+        full_name = user_data.full_name or None
 
         response = supabase_client.auth.sign_up(
             {"email": user_data.email,
@@ -102,10 +101,17 @@ async def register(
             }}
         )
 
-        if response.session is None or response.user is None:
+        if response.user is None:
             raise fastapi.HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registration failed. Please try again."
+            )
+
+        # Supabase returns session=None when email confirmation is required
+        if response.session is None:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Please check your email to confirm your account before signing in."
             )
 
         return LoginResponse(
@@ -114,7 +120,9 @@ async def register(
             user_id=response.user.id,
             data=dict(response)
         )
-    
+
+    except fastapi.HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Registration failed")
         logger.info(f"Registration failed with error: {str(e)}")
@@ -138,9 +146,7 @@ async def forgot_password(
     try:
         supabase_client: Client = get_db_client()
         
-        # Get the redirect URL from environment or use default
-        redirect_url = env.FRONTEND_URL or "http://localhost:8080"
-        reset_redirect = f"{redirect_url}/auth/reset-password"
+        reset_redirect = f"{_get_frontend_url()}/auth/reset-password"
         
         # Request password reset email from Supabase
         supabase_client.auth.reset_password_email(
@@ -205,14 +211,17 @@ async def reset_password(
 #                                   OAuth Endpoints
 # ================================================================================================
 
+def _get_frontend_url() -> str:
+    urls = env.FRONTEND_URL
+    return urls[0] if urls else "http://localhost:8080"
+
+
 def _get_oauth_callback_url() -> str:
-    redirect_url = env.FRONTEND_URL or "http://localhost:8080"
-    return f"{redirect_url}/auth/callback"
+    return f"{_get_frontend_url()}/auth/callback"
 
 
 def _get_link_callback_url(provider: str) -> str:
-    redirect_url = env.FRONTEND_URL or "http://localhost:8080"
-    return f"{redirect_url}/dashboard/profile?linked={provider}"
+    return f"{_get_frontend_url()}/dashboard/profile?linked={provider}"
 
 
 async def _get_link_identity_url(provider: str, access_token: str) -> str:

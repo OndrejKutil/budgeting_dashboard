@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { authApi } from '@/lib/api/endpoints';
+import { ApiError } from '@/lib/api/client';
 import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -83,7 +84,11 @@ export default function RegisterPage() {
       await register(email, password, fullName || undefined);
       navigate('/dashboard');
     } catch (error) {
-      setErrors({ general: 'Registration failed. Please try again.' });
+      const message =
+        error instanceof ApiError && typeof error.detail === 'string'
+          ? error.detail
+          : 'Registration failed. Please try again.';
+      setErrors({ general: message });
     } finally {
       setIsLoading(false);
     }
