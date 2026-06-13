@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { formatMoney } from '@/lib/currency';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   checking: Wallet,
@@ -85,7 +86,7 @@ const CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'];
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
-  const { locale, t } = useUser();
+  const { locale, t, currency: userCurrency } = useUser();
   // const [accounts, setAccounts] = useState<Account[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
@@ -111,11 +112,8 @@ export default function AccountsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const activeAccounts = accounts.filter(a => a.account_is_active !== false);
   const inactiveAccounts = accounts.filter(a => a.account_is_active === false);
-
-  const formatAccountCurrency = (value: number, currency: string) => new Intl.NumberFormat(currency === 'CZK' ? 'cs-CZ' : locale, {
-    style: 'currency',
-    currency,
-  }).format(value);
+  const nativeAccounts = activeAccounts.filter(a => !a.currency || a.currency === userCurrency);
+  const foreignAccounts = activeAccounts.filter(a => a.currency && a.currency !== userCurrency);
 
   const accountTypeLabel = (type: string) => ({
     cash: t('types.cash'),
@@ -268,6 +266,11 @@ export default function AccountsPage() {
                     {t('states.inactive')}
                   </span>
                 )}
+                {account.currency && (
+                  <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {account.currency}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">{accountTypeLabel(account.type)}</p>
             </div>
@@ -310,7 +313,7 @@ export default function AccountsPage() {
           <div>
             <p className="text-xs text-muted-foreground">{t('metrics.currentBalance')}</p>
             <p className="text-2xl font-bold font-display">
-              <SensitiveValue>{formatAccountCurrency(account.current_balance || 0, account.currency || 'CZK')}</SensitiveValue>
+              <SensitiveValue>{formatMoney(account.current_balance || 0, account.currency || 'CZK')}</SensitiveValue>
             </p>
           </div>
 
@@ -350,7 +353,7 @@ export default function AccountsPage() {
                 }`}
             >
               {(account.net_flow_30d || 0) > 0 ? '+' : ''}
-              <SensitiveValue>{formatAccountCurrency(account.net_flow_30d || 0, account.currency || 'CZK')}</SensitiveValue>
+              <SensitiveValue>{formatMoney(account.net_flow_30d || 0, account.currency || 'CZK')}</SensitiveValue>
             </span>
           </div>
         </div>
@@ -403,14 +406,43 @@ export default function AccountsPage() {
         />
       ) : (
         <div className="space-y-8">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {activeAccounts.map(renderAccountCard)}
-          </motion.div>
+          {foreignAccounts.length === 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {activeAccounts.map(renderAccountCard)}
+            </motion.div>
+          ) : (
+            <div className="space-y-6">
+              {nativeAccounts.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-muted-foreground">{userCurrency}</p>
+                  <motion.div
+                    variants={stagger}
+                    initial="hidden"
+                    animate="show"
+                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {nativeAccounts.map(renderAccountCard)}
+                  </motion.div>
+                </div>
+              )}
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">{t('pages.accounts.foreignCurrencies')}</p>
+                <motion.div
+                  variants={stagger}
+                  initial="hidden"
+                  animate="show"
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {foreignAccounts.map(renderAccountCard)}
+                </motion.div>
+              </div>
+            </div>
+          )}
 
           {inactiveAccounts.length > 0 && (
             <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">

@@ -48,7 +48,8 @@ async def get_monthly_analytics(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     year: int = Query(datetime.now().year, description='Year for analytics'),
-    month: int = Query(datetime.now().month, description='Month for analytics (1-12)')
+    month: int = Query(datetime.now().month, description='Month for analytics (1-12)'),
+    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
 ) -> MonthlyAnalyticsResponse:
     '''
     Get comprehensive monthly analytics including totals, daily spending heatmap, 
@@ -66,7 +67,7 @@ async def get_monthly_analytics(
         )
        
     try:
-        analytics_data: MonthlyAnalyticsData = _monthly_analytics(user['access_token'], year, month)
+        analytics_data: MonthlyAnalyticsData = _monthly_analytics(user['access_token'], year, month, base_currency)
 
         return MonthlyAnalyticsResponse(
             data=analytics_data,

@@ -27,24 +27,24 @@ import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { CHART_COLORS } from '@/lib/chart-colors';
 
-const getSummaryData = async (fallbackMessage: string) => {
-  const response = await summaryApi.get();
+const getSummaryData = async (baseCurrency: string, fallbackMessage: string) => {
+  const response = await summaryApi.get({ base_currency: baseCurrency });
   if (response.success && response.data) {
     return response.data;
   }
   throw new Error(response.message || fallbackMessage);
 };
 
-const getYearlyAnalyticsData = async (year: number, fallbackMessage: string) => {
-  const response = await analyticsApi.getYearly({ year });
+const getYearlyAnalyticsData = async (year: number, baseCurrency: string, fallbackMessage: string) => {
+  const response = await analyticsApi.getYearly({ year, base_currency: baseCurrency });
   if (response.success && response.data) {
     return response.data;
   }
   throw new Error(response.message || fallbackMessage);
 };
 
-const getMonthlyAnalyticsData = async (year: number, month: number, fallbackMessage: string) => {
-  const response = await analyticsApi.getMonthly({ year, month });
+const getMonthlyAnalyticsData = async (year: number, month: number, baseCurrency: string, fallbackMessage: string) => {
+  const response = await analyticsApi.getMonthly({ year, month, base_currency: baseCurrency });
   if (response.success && response.data) {
     return response.data;
   }
@@ -52,7 +52,7 @@ const getMonthlyAnalyticsData = async (year: number, month: number, fallbackMess
 };
 
 export default function DashboardOverview() {
-  const { formatCurrency, formatDate, formatMonth, t } = useUser();
+  const { formatCurrency, formatDate, formatMonth, t, currency } = useUser();
   const queryClient = useQueryClient();
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -71,25 +71,25 @@ export default function DashboardOverview() {
     isLoading: loading,
     error,
   } = useQuery<SummaryData>({
-    queryKey: ['summary'],
-    queryFn: () => getSummaryData(t('pages.overview.loadSummaryFailed')),
+    queryKey: ['summary', currency],
+    queryFn: () => getSummaryData(currency, t('pages.overview.loadSummaryFailed')),
   });
 
   const { data: yearlyData } = useQuery<YearlyAnalyticsData>({
-    queryKey: ['yearly-analytics', currentYear],
-    queryFn: () => getYearlyAnalyticsData(currentYear, t('pages.overview.loadYearlyFailed')),
+    queryKey: ['yearly-analytics', currentYear, currency],
+    queryFn: () => getYearlyAnalyticsData(currentYear, currency, t('pages.overview.loadYearlyFailed')),
   });
 
   useEffect(() => {
     queryClient.prefetchQuery({
-      queryKey: ['monthly-analytics', { year: currentYear, month: currentMonthNumber }],
-      queryFn: () => getMonthlyAnalyticsData(currentYear, currentMonthNumber, t('pages.overview.loadMonthlyFailed')),
+      queryKey: ['monthly-analytics', { year: currentYear, month: currentMonthNumber, currency }],
+      queryFn: () => getMonthlyAnalyticsData(currentYear, currentMonthNumber, currency, t('pages.overview.loadMonthlyFailed')),
     });
     queryClient.prefetchQuery({
-      queryKey: ['yearly-analytics', currentYear],
-      queryFn: () => getYearlyAnalyticsData(currentYear, t('pages.overview.loadYearlyFailed')),
+      queryKey: ['yearly-analytics', currentYear, currency],
+      queryFn: () => getYearlyAnalyticsData(currentYear, currency, t('pages.overview.loadYearlyFailed')),
     });
-  }, [currentMonthNumber, currentYear, queryClient, t]);
+  }, [currentMonthNumber, currentYear, currency, queryClient, t]);
 
   const kpiMetrics = useMemo(() => {
     if (!data) return [];

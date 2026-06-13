@@ -7,7 +7,7 @@ import { apiClient } from '../client';
 import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse } from '../types/responses';
 
 export const analyticsApi = {
-    getMonthly: async (params?: { year?: number; month?: number }) => {
+    getMonthly: async (params?: { year?: number; month?: number; base_currency?: string }) => {
         const response = await apiClient.get<MonthlyAnalyticsResponse>(
             '/monthly/analytics',
             params as Record<string, string | number | undefined>
@@ -15,7 +15,7 @@ export const analyticsApi = {
         return response.data;
     },
 
-    getYearly: async (params?: { year?: number }) => {
+    getYearly: async (params?: { year?: number; base_currency?: string }) => {
         const response = await apiClient.get<YearlyAnalyticsResponse>(
             '/yearly/analytics',
             params as Record<string, string | number | undefined>
@@ -23,7 +23,7 @@ export const analyticsApi = {
         return response.data;
     },
 
-    getEmergencyFund: async (params?: { year?: number }) => {
+    getEmergencyFund: async (params?: { year?: number; base_currency?: string }) => {
         const response = await apiClient.get<EmergencyFundResponse>(
             '/yearly/emergency-fund',
             params as Record<string, string | number | undefined>

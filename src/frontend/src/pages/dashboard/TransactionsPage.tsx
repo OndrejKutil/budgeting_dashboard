@@ -70,6 +70,7 @@ import { transactionsApi, categoriesApi, accountsApi, fundsApi } from '@/lib/api
 import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
+import { formatMoney, getCurrencyFlag } from '@/lib/currency';
 import { useDebounce } from '@/hooks/use-debounce';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
@@ -231,6 +232,7 @@ export default function TransactionsPage() {
   const [isWithdrawal, setIsWithdrawal] = useState(false);
   const [isTransfer, setIsTransfer] = useState(false);
   const [transferToAccountId, setTransferToAccountId] = useState<string>('');
+  const [transferDestAmount, setTransferDestAmount] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -346,11 +348,24 @@ export default function TransactionsPage() {
   const handleSubmit = async () => {
     if (isTransfer) {
       const amount = parseDecimalInput(formData.amount);
+      const sourceCurrency = accountMap[formData.account_id_fk]?.currency;
+      const destCurrency = accountMap[transferToAccountId]?.currency;
+      const isCrossCurrency = sourceCurrency && destCurrency && sourceCurrency !== destCurrency;
+      const destAmount = isCrossCurrency ? parseDecimalInput(transferDestAmount) : null;
 
       if (!formData.account_id_fk || !transferToAccountId || amount === null) {
         toast({
           title: t('common.validationError'),
           description: t('pages.transactions.transferValidation'),
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (isCrossCurrency && (destAmount === null || destAmount <= 0)) {
+        toast({
+          title: t('common.validationError'),
+          description: t('pages.transactions.transferDestAmountRequired'),
           variant: 'destructive',
         });
         return;
@@ -369,7 +384,7 @@ export default function TransactionsPage() {
 
       const categoryId = excludeCategory.categories_id_pk;
 
-      // 1. Outgoing Transaction (Negative)
+      // 1. Outgoing Transaction (Negative) — in source account's currency
       const outgoingPayload = {
         account_id_fk: formData.account_id_fk,
         category_id_fk: categoryId,
@@ -379,11 +394,11 @@ export default function TransactionsPage() {
         savings_fund_id_fk: null,
       };
 
-      // 2. Incoming Transaction (Positive)
+      // 2. Incoming Transaction (Positive) — in destination account's currency
       const incomingPayload = {
         account_id_fk: transferToAccountId,
         category_id_fk: categoryId,
-        amount: Math.abs(amount),
+        amount: isCrossCurrency ? Math.abs(destAmount!) : Math.abs(amount),
         date: formData.date,
         notes: t('pages.transactions.transferFrom', { account: accountMap[formData.account_id_fk]?.account_name || t('common.account'), notes: formData.notes || '' }),
         savings_fund_id_fk: null,
@@ -772,7 +787,7 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell className="text-right pr-6">
                           <span className="font-mono font-medium text-foreground">
-                            <SensitiveValue>{transaction.amount > 0 ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}</SensitiveValue>
+                            <SensitiveValue>{transaction.amount > 0 ? '+' : '-'}{formatMoney(Math.abs(transaction.amount), account?.currency || 'CZK')}</SensitiveValue>
                           </span>
                         </TableCell>
                         <TableCell className="relative pr-0">
@@ -841,7 +856,7 @@ export default function TransactionsPage() {
                         </div>
                       </div>
                       <div className="font-bold text-foreground">
-                        <SensitiveValue>{transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}</SensitiveValue>
+                        <SensitiveValue>{transaction.amount > 0 ? '+' : ''}{formatMoney(transaction.amount, account?.currency || 'CZK')}</SensitiveValue>
                       </div>
                     </div>
 
@@ -1146,7 +1161,7 @@ export default function TransactionsPage() {
                     .sort((a, b) => a.account_name.localeCompare(b.account_name))
                     .map((acc) => (
                     <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
-                      {acc.account_name}
+                      {getCurrencyFlag(acc.currency)} {acc.account_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1158,7 +1173,10 @@ export default function TransactionsPage() {
                 <Label htmlFor="to-account">{t('pages.transactions.toAccount')}</Label>
                 <Select
                   value={transferToAccountId}
-                  onValueChange={setTransferToAccountId}
+                  onValueChange={(value) => {
+                    setTransferToAccountId(value);
+                    setTransferDestAmount('');
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.transactions.selectDestinationAccount')} />
@@ -1169,11 +1187,35 @@ export default function TransactionsPage() {
                       .sort((a, b) => a.account_name.localeCompare(b.account_name))
                       .map((acc) => (
                         <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
-                          {acc.account_name}
+                          {getCurrencyFlag(acc.currency)} {acc.account_name}
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {isTransfer && transferToAccountId && accountMap[formData.account_id_fk]?.currency && accountMap[transferToAccountId]?.currency && accountMap[formData.account_id_fk]?.currency !== accountMap[transferToAccountId]?.currency && (
+              <div className="space-y-2">
+                <Label htmlFor="dest-amount">
+                  {t('pages.transactions.receivedAmount')} ({accountMap[transferToAccountId]?.currency})
+                </Label>
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                  {t('pages.transactions.crossCurrencyNote')}
+                </div>
+                <Input
+                  id="dest-amount"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={transferDestAmount}
+                  onChange={(e) => setTransferDestAmount(e.target.value)}
+                />
+                {transferDestAmount && parseDecimalInput(formData.amount) && parseDecimalInput(transferDestAmount) && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('pages.transactions.impliedRate')}: 1 {accountMap[formData.account_id_fk]?.currency} = {(parseDecimalInput(transferDestAmount)! / Math.abs(parseDecimalInput(formData.amount)!)).toFixed(4)} {accountMap[transferToAccountId]?.currency}
+                  </p>
+                )}
               </div>
             )}
 

@@ -93,7 +93,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 };
 
 export default function YearlyAnalyticsPage() {
-  const { formatCurrency, t } = useUser();
+  const { formatCurrency, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
   const navigate = useNavigate();
   const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
@@ -111,9 +111,9 @@ export default function YearlyAnalyticsPage() {
   const years = useMemo(() => [2028, 2027, 2026, 2025], []);
 
   const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['yearly-analytics', selectedYearNumber],
+    queryKey: ['yearly-analytics', selectedYearNumber, currency],
     queryFn: async () => {
-      const response = await analyticsApi.getYearly({ year: selectedYearNumber });
+      const response = await analyticsApi.getYearly({ year: selectedYearNumber, base_currency: currency });
       if (response.success && response.data) {
         return response.data;
       }
@@ -250,13 +250,13 @@ export default function YearlyAnalyticsPage() {
           <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
+                <TrendingUp className="h-3 w-3 text-chart-income" /> {t('metrics.income')}
               </p>
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_income)}</SensitiveValue></p>
                 <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-blue-400" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-blue-400'}`}>
+                  {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-income" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-chart-income' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-chart-neutral'}`}>
                     {data.trend_directions?.income_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.income_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
@@ -269,8 +269,8 @@ export default function YearlyAnalyticsPage() {
               <div className="flex flex-col mt-1">
                 <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_expense)}</SensitiveValue></p>
                 <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-emerald-500' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-amber-500' : 'text-blue-400'}`}>
+                  {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-chart-income" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-expense" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-chart-income' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-chart-expense' : 'text-chart-neutral'}`}>
                     {data.trend_directions?.core_expense_trend?.direction === 'growing' ? t('states.creeping') : data.trend_directions?.core_expense_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
@@ -290,8 +290,8 @@ export default function YearlyAnalyticsPage() {
                   <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-amber-500" /> : <Minus className="h-3 w-3 text-blue-400" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-emerald-500' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-amber-500' : 'text-blue-400'}`}>
+                  {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-income" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-chart-expense" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
+                  <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-chart-income' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-chart-expense' : 'text-chart-neutral'}`}>
                     {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
                   </span>
                 </div>
@@ -345,7 +345,7 @@ export default function YearlyAnalyticsPage() {
               <div className="mt-1">
                 <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
               </div>
-              <div className="text-sm font-medium text-emerald-500">
+              <div className="text-sm font-medium text-chart-income">
                 <SensitiveValue>+{formatCurrency(data.highlights.highest_cashflow_month.value)}</SensitiveValue>
               </div>
             </div>

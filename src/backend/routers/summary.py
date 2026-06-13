@@ -46,10 +46,11 @@ router = APIRouter()
 @limiter.limit(RATE_LIMITS["heavy"])
 async def get_financial_summary(
     request: Request,
-    api_key: str = Depends(api_key_auth), 
+    api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     start_date: Optional[date] = Query(None, description="Start date for filtering transactions"),
-    end_date: Optional[date] = Query(None, description="End date for filtering transactions")
+    end_date: Optional[date] = Query(None, description="End date for filtering transactions"),
+    base_currency: str = Query('CZK', description="Currency to convert all amounts into"),
 ) -> SummaryResponse:
     """
     Get financial summary including totals by category type.
@@ -59,7 +60,7 @@ async def get_financial_summary(
     """
        
     try:
-        summary_data: SummaryData = _summary_calc(user['access_token'], start_date, end_date)
+        summary_data: SummaryData = _summary_calc(user['access_token'], start_date, end_date, base_currency)
 
         # Build response message
         date_range_msg = ""

@@ -7,6 +7,7 @@ import type { UpdateProfileRequest } from '@/lib/api/types/requests';
 import { DEFAULT_LOCALE, isAppLocale, translate } from '@/lib/i18n';
 import type { AppLocale, DashboardTranslationKey } from '@/lib/i18n';
 import { toast } from '@/hooks/use-toast';
+import { formatMoney } from '@/lib/currency';
 
 // UserContext imported from ./user-context
 
@@ -80,13 +81,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }, [locale]);
 
     const formatCurrency = useCallback((amount: number) => {
-        return new Intl.NumberFormat(currency === 'CZK' ? 'cs-CZ' : locale, {
-            style: 'currency',
-            currency: currency,
-            minimumFractionDigits: currency === 'CZK' ? 2 : 2,
-            maximumFractionDigits: currency === 'CZK' ? 2 : 2,
-        }).format(amount);
-    }, [currency, locale]);
+        return formatMoney(amount, currency);
+    }, [currency]);
 
     const formatNumber = useCallback((value: number, options?: Intl.NumberFormatOptions) => {
         return new Intl.NumberFormat(locale, options).format(value);

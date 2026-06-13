@@ -74,7 +74,7 @@ const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) 
 };
 
 export default function MonthlyAnalyticsPage() {
-  const { formatCurrency, formatDate, formatMonth, t } = useUser();
+  const { formatCurrency, formatDate, formatMonth, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
   const currentDate = useMemo(() => new Date(), []);
   const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
@@ -117,11 +117,12 @@ export default function MonthlyAnalyticsPage() {
   }), [t]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['monthly-analytics', { year: selectedYearNumber, month: selectedMonthNumber }],
+    queryKey: ['monthly-analytics', { year: selectedYearNumber, month: selectedMonthNumber, currency }],
     queryFn: async () => {
       const result = await analyticsApi.getMonthly({
         year: selectedYearNumber,
-        month: selectedMonthNumber
+        month: selectedMonthNumber,
+        base_currency: currency,
       });
       if (result.success) {
         return result.data;
@@ -202,11 +203,11 @@ export default function MonthlyAnalyticsPage() {
             <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <TrendingUp className="h-3 w-3 text-emerald-500" /> {t('metrics.income')}
+                  <TrendingUp className="h-3 w-3 text-chart-income" /> {t('metrics.income')}
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.income)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
@@ -217,7 +218,7 @@ export default function MonthlyAnalyticsPage() {
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.expenses)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
@@ -235,7 +236,7 @@ export default function MonthlyAnalyticsPage() {
                     <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.savings)}</SensitiveValue></p>
                     <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
                   </div>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
@@ -249,7 +250,7 @@ export default function MonthlyAnalyticsPage() {
                     <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.investments)}</SensitiveValue></p>
                     <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.investment_rate.toFixed(1)}%</SensitiveValue></span>
                   </div>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
@@ -264,7 +265,7 @@ export default function MonthlyAnalyticsPage() {
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
@@ -275,7 +276,7 @@ export default function MonthlyAnalyticsPage() {
                 </p>
                 <div className="flex flex-col mt-1">
                   <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.cashflow)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
                 </div>
