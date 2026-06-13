@@ -217,24 +217,13 @@ async def delete_account(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        # Check if any transactions reference this account
-        tx_check = (
-            user_supabase_client.table("fct_transactions")
-            .select("id_pk")
-            .eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
-            .limit(1)
-            .execute()
-        )
-
-        has_transactions = bool(tx_check.data)
-
-        # Additionally check the balance
         tx_amounts = (
             user_supabase_client.table("fct_transactions")
             .select("amount")
             .eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
             .execute()
         )
+        has_transactions = bool(tx_amounts.data)
         current_balance = sum((tx["amount"] for tx in tx_amounts.data)) if tx_amounts.data else 0.0
 
         if round(current_balance, 2) != 0:

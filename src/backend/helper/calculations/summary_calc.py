@@ -499,20 +499,18 @@ def _summary_calc(
 
     prev_start_date, prev_end_date = _get_previous_period_dates(start_date, end_date)
 
-    # 2. Fetch transactions for both periods
-    # We could fetch in one query and split in memory, or two queries.
-    # Two queries is cleaner for now.
-    
-    current_transactions = _fetch_summary_transactions(access_token, start_date, end_date)
-    previous_transactions = _fetch_summary_transactions(access_token, prev_start_date, prev_end_date)
-    
-    # 3. Prepare DataFrames
-    current_df = _prepare_transactions_dataframe(current_transactions)
-    previous_df = _prepare_transactions_dataframe(previous_transactions)
+    # 2. Fetch both periods in one query, then split in memory
+    all_transactions = _fetch_summary_transactions(access_token, prev_start_date, end_date)
+    all_df = _prepare_transactions_dataframe(all_transactions)
+    all_df = _apply_currency_conversion(all_df, base_currency)
 
-    # 4. Convert all amounts to base_currency
-    current_df = _apply_currency_conversion(current_df, base_currency)
-    previous_df = _apply_currency_conversion(previous_df, base_currency)
+    # 3. Split into current and previous periods
+    if all_df.is_empty():
+        current_df = all_df
+        previous_df = all_df
+    else:
+        start_date_str = start_date.isoformat()
+        current_df = all_df.filter(pl.col('date') >= start_date_str)
+        previous_df = all_df.filter(pl.col('date') < start_date_str)
 
-    # 5. Calculate everything
     return _calculate_enriched_summary(current_df, previous_df)
