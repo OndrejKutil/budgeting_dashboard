@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -25,7 +26,42 @@ export default defineConfig({
     host: "::",
     port: 8080,
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'ios_icon.png', 'robots.txt'],
+      manifest: {
+        name: 'Budgeting Dashboard',
+        short_name: 'Budget',
+        description: 'Personal budgeting and expense tracking dashboard',
+        start_url: '/dashboard',
+        display: 'standalone',
+        background_color: '#060d10',
+        theme_color: '#060d10',
+        orientation: 'portrait-primary',
+        icons: [
+          {
+            src: '/ios_icon.png',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/favicon.ico',
+            sizes: '48x48',
+            type: 'image/x-icon',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        navigateFallback: 'index.html',
+        // Don't cache authenticated API responses — SW only handles the app shell
+        runtimeCaching: [],
+      },
+    }),
+  ],
   build: {
     rollupOptions: {
       output: {
