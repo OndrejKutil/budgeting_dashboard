@@ -159,6 +159,32 @@ export interface BudgetPlan {
 }
 
 // ================================================================================================
+//                                   Recurring Requests
+// ================================================================================================
+
+export interface CreateRecurringRequest {
+    account_id_fk: string;
+    category_id_fk: number;
+    savings_fund_id_fk?: string;
+    amount: number;
+    cadence: string;
+    next_date: string;
+    notes?: string;
+    is_active?: boolean;
+}
+
+export interface UpdateRecurringRequest {
+    account_id_fk?: string;
+    category_id_fk?: number;
+    savings_fund_id_fk?: string;
+    amount?: number;
+    cadence?: string;
+    next_date?: string;
+    notes?: string;
+    is_active?: boolean;
+}
+
+// ================================================================================================
 //                                   Dividend Calculator Requests
 // ================================================================================================
 

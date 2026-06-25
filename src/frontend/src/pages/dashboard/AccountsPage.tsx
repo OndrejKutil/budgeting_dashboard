@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, Loader2, RefreshCw } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
-import { accountsApi } from '@/lib/api/endpoints';
+import { accountsApi, netWorthApi } from '@/lib/api/endpoints';
 import { Account, UpdateAccountRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -84,9 +84,66 @@ function AccountSkeleton() {
 const ACCOUNT_TYPES = ['cash', 'checking', 'credit', 'investment', 'savings'];
 const CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'];
 
+type NetWorthRange = '30d' | '90d' | '1y' | 'all';
+
+function getDateRange(range: NetWorthRange): { start: string | undefined; end: string } {
+  const end = new Date();
+  const endStr = end.toISOString().split('T')[0];
+  if (range === 'all') return { start: undefined, end: endStr };
+  const start = new Date();
+  if (range === '30d') start.setDate(start.getDate() - 29);
+  else if (range === '90d') start.setDate(start.getDate() - 89);
+  else start.setFullYear(start.getFullYear() - 1);
+  return { start: start.toISOString().split('T')[0], end: endStr };
+}
+
+function buildXAxisTicks(data: { date: string }[], range: NetWorthRange): string[] {
+  if (range === '30d') return [];  // let Recharts handle it
+  const seen = new Set<string>();
+  return data
+    .filter(d => {
+      const dt = new Date(d.date + 'T12:00:00');
+      // 90d → one tick per month; 1y/all → one tick per quarter
+      const key = range === '90d'
+        ? `${dt.getFullYear()}-${dt.getMonth()}`
+        : `${dt.getFullYear()}-Q${Math.floor(dt.getMonth() / 3)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(d => d.date);
+}
+
+function formatXTick(v: string, range: NetWorthRange, locale: string): string {
+  const d = new Date(v + 'T12:00:00');
+  if (range === '30d') return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  if (range === '90d') return d.toLocaleDateString(locale, { month: 'short' });
+  const q = Math.floor(d.getMonth() / 3) + 1;
+  const yr = String(d.getFullYear()).slice(2);
+  return `${yr}Q${q}`;
+}
+
 export default function AccountsPage() {
   const queryClient = useQueryClient();
-  const { locale, t, currency: userCurrency } = useUser();
+  const { locale, t, currency: userCurrency, formatCurrency } = useUser();
+  const [netWorthRange, setNetWorthRange] = useState<NetWorthRange>('1y');
+
+  const { start: nwStart, end: nwEnd } = getDateRange(netWorthRange);
+  const { data: netWorthData, isLoading: netWorthLoading } = useQuery({
+    queryKey: ['net-worth', netWorthRange, userCurrency],
+    queryFn: async () => {
+      const res = await netWorthApi.getTimeline({
+        ...(nwStart ? { start_date: nwStart } : {}),
+        end_date: nwEnd,
+        base_currency: userCurrency,
+      });
+      return res.data;
+    },
+  });
+
+  const netWorthChartData = netWorthData
+    ? netWorthData.dates.map((d, i) => ({ date: d, value: netWorthData.net_worth[i] }))
+    : [];
   // const [accounts, setAccounts] = useState<Account[]>([]);
   // const [isLoading, setIsLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
@@ -465,6 +522,88 @@ export default function AccountsPage() {
           )}
         </div>
       )}
+
+      <hr className="border-border" />
+
+      {/* Net-worth timeline chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-border bg-card p-6 shadow-sm"
+      >
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium">{t('pages.netWorth.title')}</p>
+          <div className="flex gap-1">
+            {(['30d', '90d', '1y', 'all'] as NetWorthRange[]).map(r => (
+              <button
+                key={r}
+                onClick={() => setNetWorthRange(r)}
+                className={cn(
+                  'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                  netWorthRange === r
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {t(`pages.netWorth.range${r.charAt(0).toUpperCase() + r.slice(1)}` as 'pages.netWorth.range30d')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {netWorthLoading ? (
+          <Skeleton className="h-[280px] w-full" />
+        ) : netWorthChartData.length === 0 ? (
+          <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+            {t('pages.netWorth.noData')}
+          </div>
+        ) : (
+          <>
+            <div className="mb-3">
+              <p className="text-2xl font-bold font-display">
+                <SensitiveValue>
+                  {formatCurrency(netWorthChartData[netWorthChartData.length - 1]?.value ?? 0)}
+                </SensitiveValue>
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={netWorthChartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                <defs>
+                  <linearGradient id="nw-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  tickFormatter={(v: string) => formatXTick(v, netWorthRange, locale)}
+                  {...(netWorthRange !== '30d'
+                    ? { ticks: buildXAxisTicks(netWorthChartData, netWorthRange) }
+                    : { interval: 'preserveStartEnd' }
+                  )}
+                />
+                <YAxis hide domain={['auto', 'auto']} />
+                <Tooltip
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  labelFormatter={(label: string) => new Date(label + 'T12:00:00').toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' })}
+                  formatter={(value: number) => [formatCurrency(value), t('pages.netWorth.title')]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fill="url(#nw-gradient)"
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </>
+        )}
+      </motion.div>
 
       {/* Create/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>

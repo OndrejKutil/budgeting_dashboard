@@ -19,6 +19,7 @@ import {
   Landmark,
   ListChecks,
   CircleDollarSign,
+  Repeat,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/user-context';
@@ -26,6 +27,7 @@ import { useUser } from '@/contexts/user-context';
 const mainNavItems = [
   { labelKey: 'nav.overview', href: '/dashboard', icon: LayoutDashboard },
   { labelKey: 'nav.transactions', href: '/dashboard/transactions', icon: Receipt },
+  { labelKey: 'nav.recurring', href: '/dashboard/recurring', icon: Repeat },
   { labelKey: 'nav.accounts', href: '/dashboard/accounts', icon: Wallet },
   { labelKey: 'nav.categories', href: '/dashboard/categories', icon: Tags },
   { labelKey: 'nav.savingsFunds', href: '/dashboard/funds', icon: PiggyBank },

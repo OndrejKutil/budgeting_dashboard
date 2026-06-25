@@ -194,6 +194,37 @@ class SavingsFundsData(BaseModel):
         }
     )
 
+class RecurringData(BaseModel):
+    """Schema for a recurring transaction template"""
+    recurring_id_pk: Optional[str] = Field(None, description="Recurring template ID")
+    user_id_fk: Optional[str] = Field(None, description="User ID")
+    account_id_fk: str = Field(..., description="Account ID")
+    category_id_fk: int = Field(..., description="Category ID")
+    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID")
+    amount: Decimal = Field(..., description="Transaction amount (signed)")
+    cadence: str = Field(..., description="Recurrence cadence: weekly|biweekly|monthly|quarterly|yearly")
+    next_date: Date = Field(..., description="Next due date")
+    notes: Optional[str] = Field(None, description="Notes")
+    is_active: Optional[bool] = Field(True, description="Whether template is active")
+    created_at: Optional[datetime] = Field(None, description="Created at")
+    updated_at: Optional[datetime] = Field(None, description="Updated at")
+
+    model_config = ConfigDict(json_encoders={Decimal: float})
+
+
+class RecurringSummary(BaseModel):
+    monthly_total: float = Field(..., description="Sum of all active recurring amounts normalized to monthly")
+    annual_total: float = Field(..., description="Sum of all active recurring amounts normalized to yearly")
+    base_currency: str = Field(..., description="Currency used for totals")
+
+
+class NetWorthTimelineData(BaseModel):
+    """Schema for net-worth timeline data point"""
+    dates: List[str] = Field(..., description="ISO date strings")
+    net_worth: List[float] = Field(..., description="Net worth values in base currency")
+    base_currency: str = Field(..., description="Base currency used")
+
+
 class TokenData(BaseModel):
     access_token: str = Field(..., description="Access token")
     refresh_token: str = Field(..., description="Refresh token")

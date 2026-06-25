@@ -1,5 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from 'framer-motion';
 import { healthApi } from '@/lib/api/endpoints';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
@@ -8,11 +15,80 @@ import { CHART_COLORS } from '@/lib/chart-colors';
 import {
   ArrowRight,
   CheckCircle,
-  CircleDot,
-  HelpCircle,
-  PieChart,
   Wallet,
 } from 'lucide-react';
+
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+
+function formatNumber(value: number, decimals = 0) {
+  const fixed = value.toFixed(decimals);
+  const [intPart, decPart] = fixed.split('.');
+  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return decPart ? `${withThousands}.${decPart}` : withThousands;
+}
+
+function AnimatedNumber({
+  value,
+  decimals = 0,
+  suffix = '',
+  className,
+  delay = 0,
+}: {
+  value: number;
+  decimals?: number;
+  suffix?: string;
+  className?: string;
+  delay?: number;
+}) {
+  const reduce = useReducedMotion();
+  const mv = useMotionValue(reduce ? value : 0);
+  const text = useTransform(mv, (v) => `${formatNumber(v, decimals)}${suffix}`);
+
+  useEffect(() => {
+    if (reduce) {
+      mv.set(value);
+      return;
+    }
+    const controls = animate(mv, value, { duration: 1.4, delay, ease: EASE_OUT });
+    return () => controls.stop();
+  }, [value, decimals, delay, reduce, mv]);
+
+  return <motion.span className={className}>{text}</motion.span>;
+}
+
+const donutSegments = [
+  { pct: 51, color: CHART_COLORS.core },
+  { pct: 22, color: CHART_COLORS.necessary },
+  { pct: 15, color: CHART_COLORS.future },
+];
+
+function AnimatedDonut() {
+  let cumulative = 0;
+  return (
+    <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90" aria-hidden="true">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5" opacity={0.5} />
+      {donutSegments.map((seg, i) => {
+        const offset = cumulative / 100;
+        cumulative += seg.pct;
+        return (
+          <motion.circle
+            key={seg.color}
+            cx="18"
+            cy="18"
+            r="15"
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="3.5"
+            pathOffset={offset}
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: seg.pct / 100 }}
+            transition={{ duration: 1, delay: 0.5 + i * 0.15, ease: EASE_OUT }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
 const reviewItems = [
   {
@@ -35,120 +111,201 @@ const workflowSteps = [
   { title: 'Plan from the result', detail: 'Turn the review into the next budget without rebuilding everything manually.' },
 ];
 
+// A bar that fills on load, then a soft highlight drifts across it forever (ambient).
+function BarFill({
+  width,
+  delay = 0,
+  className = '',
+  style,
+}: {
+  width: string;
+  delay?: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <motion.div
+      className={`relative h-full overflow-hidden rounded-full ${className}`}
+      style={style}
+      initial={{ width: 0 }}
+      animate={{ width }}
+      transition={{ duration: 1.1, delay, ease: EASE_OUT }}
+    >
+      <motion.div
+        className="absolute inset-y-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+        initial={{ x: '-180%' }}
+        animate={{ x: '360%' }}
+        transition={{
+          duration: 1.9,
+          delay: delay + 1.4,
+          repeat: Infinity,
+          repeatDelay: 3,
+          ease: 'easeInOut',
+        }}
+      />
+    </motion.div>
+  );
+}
+
 function ProductPreview() {
   const metrics = [
-    { label: 'Income', value: '32 500 Kč', detail: 'salary and refunds', color: CHART_COLORS.income },
-    { label: 'Spent', value: '18 700 Kč', detail: 'regular expenses', color: CHART_COLORS.expense },
-    { label: 'Saved', value: '8 000 Kč', detail: 'funds and investing', color: CHART_COLORS.savings },
+    { label: 'Income', value: 32500, color: CHART_COLORS.income },
+    { label: 'Spent', value: 18700, color: CHART_COLORS.expense },
+    { label: 'Saved', value: 8000, color: CHART_COLORS.savings },
   ];
 
   const categories = [
-    { name: 'Housing', amount: '9 500 Kč', pct: 51, color: CHART_COLORS.core },
-    { name: 'Groceries', amount: '4 200 Kč', pct: 22, color: CHART_COLORS.necessary },
-    { name: 'Transport', amount: '2 800 Kč', pct: 15, color: CHART_COLORS.future },
+    { name: 'Housing', amount: 9500, pct: 51, color: CHART_COLORS.core },
+    { name: 'Groceries', amount: 4200, pct: 22, color: CHART_COLORS.necessary },
+    { name: 'Transport', amount: 2800, pct: 15, color: CHART_COLORS.future },
   ];
 
   return (
-    <div className="relative mx-auto w-full max-w-[820px] lg:mx-0">
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0d0b] shadow-[0_28px_70px_hsl(0_0%_0%/0.34)]">
-        <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-white">Monthly review</p>
-            <p className="text-xs text-white/50">January 2026</p>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
-            <CircleDot className="h-3.5 w-3.5 text-primary" />
-            Manual tracking
-          </div>
-        </div>
-
-        <div className="p-4 sm:p-5">
-          <div className="grid gap-5 border-b border-white/10 pb-5 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <p className="text-xs text-white/50">Cash left this month</p>
-              <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-2">
-                <p className="text-5xl font-semibold tracking-tight text-white">5 800 Kč</p>
-                <p className="pb-1 text-sm text-white/50">after expenses, savings, and investing</p>
-              </div>
-              <div className="mt-5 grid max-w-md grid-cols-2 gap-6 text-sm">
-                <div>
-                  <p className="text-xs text-white/40">Savings rate</p>
-                  <p className="mt-1 font-semibold tabular-nums text-white">24.6%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-white/40">Budget status</p>
-                  <p className="mt-1 font-semibold tabular-nums text-white">1 240 Kč over</p>
-                </div>
-              </div>
+    <div className="relative w-full text-left">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-8 -bottom-10 top-10 -z-10 rounded-full opacity-60 blur-[90px]"
+        style={{ background: 'radial-gradient(closest-side, hsl(var(--primary)/0.22), transparent)' }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.85, delay: 0.15, ease: EASE_OUT }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0c0d0b] shadow-[0_40px_120px_-24px_hsl(var(--primary)/0.28),0_30px_80px_hsl(0_0%_0%/0.5)]">
+          <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-white">Monthly review</p>
+              <p className="mt-0.5 text-xs text-white/50">January 2026</p>
             </div>
+          </div>
 
-            <div className="divide-y divide-white/10 border-y border-white/10 lg:border-y-0">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="grid grid-cols-[1fr_auto] items-center gap-4 py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: metric.color }} />
-                    <div>
-                      <p className="text-sm font-medium text-white">{metric.label}</p>
-                      <p className="text-xs text-white/40">{metric.detail}</p>
-                    </div>
+          <div className="p-4 sm:p-6">
+            <div className="grid gap-x-10 gap-y-8 border-b border-white/10 pb-6 lg:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-white/40">Cash left this month</p>
+                <AnimatedNumber
+                  value={5800}
+                  suffix=" Kč"
+                  delay={0.4}
+                  className="mt-3 block text-4xl font-semibold tracking-tight tabular-nums text-white sm:text-5xl"
+                />
+                <p className="mt-2 text-sm text-white/50">after expenses, savings, and investing</p>
+
+                <div className="mt-6 grid grid-cols-2 gap-6 border-t border-white/10 pt-5">
+                  <div>
+                    <p className="text-xs text-white/40">Savings rate</p>
+                    <AnimatedNumber
+                      value={24.6}
+                      decimals={1}
+                      suffix="%"
+                      delay={0.5}
+                      className="mt-1.5 block text-sm font-semibold tabular-nums text-white"
+                    />
                   </div>
-                  <p className="text-sm font-semibold tabular-nums text-white">{metric.value}</p>
+                  <div>
+                    <p className="text-xs text-white/40">Budget status</p>
+                    <p className="mt-1.5 text-sm font-semibold tabular-nums text-white">
+                      <AnimatedNumber value={1240} suffix=" Kč" delay={0.5} />
+                      <span className="font-normal text-white/50"> over</span>
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-white">Spending by category</p>
-                  <p className="text-xs text-white/50">Largest expense groups</p>
-                </div>
-                <PieChart className="h-4 w-4 text-white/45" />
               </div>
-              <div className="space-y-3">
-                {categories.map((category) => (
-                  <div key={category.name} className="grid grid-cols-[5.75rem_1fr_4.75rem] items-center gap-3">
-                    <span className="truncate text-xs text-white/60">{category.name}</span>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${category.pct}%`, backgroundColor: category.color }}
+
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-white/40">This month</p>
+                <div className="mt-3 divide-y divide-white/10">
+                  {metrics.map((metric, i) => (
+                    <div key={metric.label} className="flex items-center justify-between gap-4 py-2.5 first:pt-0">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: metric.color }} />
+                        <span className="text-sm font-medium text-white">{metric.label}</span>
+                      </div>
+                      <AnimatedNumber
+                        value={metric.value}
+                        suffix=" Kč"
+                        delay={0.45 + i * 0.1}
+                        className="text-sm font-semibold tabular-nums text-white"
                       />
                     </div>
-                  <span className="text-right text-xs tabular-nums text-white/60">{category.amount}</span>
+                  ))}
                 </div>
-              ))}
               </div>
             </div>
 
-            <div className="border-y border-white/10 py-4">
-              <p className="text-sm font-medium text-white">Plan snapshot</p>
-              <div className="mt-4 space-y-4">
-                <div>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <p className="text-xs text-white/50">February baseline</p>
-                    <p className="text-sm font-semibold tabular-nums text-white">23 000 Kč</p>
+            <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+              <div>
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-white">Spending by category</p>
+                    <p className="text-xs text-white/50">Largest expense groups</p>
                   </div>
-                  <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                    <div className="h-full w-[82%] rounded-full bg-primary" />
-                  </div>
+                  <AnimatedDonut />
                 </div>
-                <div>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <p className="text-xs text-white/50">Emergency runway</p>
-                    <p className="text-sm font-semibold tabular-nums text-white">4.8 mo</p>
+                <div className="space-y-3.5">
+                  {categories.map((category, i) => (
+                    <div key={category.name} className="grid grid-cols-[5.5rem_1fr_4.75rem] items-center gap-3">
+                      <span className="truncate text-xs text-white/60">{category.name}</span>
+                      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                        <BarFill
+                          width={`${category.pct}%`}
+                          delay={0.5 + i * 0.12}
+                          style={{ backgroundColor: category.color }}
+                        />
+                      </div>
+                      <AnimatedNumber
+                        value={category.amount}
+                        suffix=" Kč"
+                        delay={0.5 + i * 0.12}
+                        className="text-right text-xs tabular-nums text-white/60"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:border-l lg:border-white/10 lg:pl-8">
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-white">Plan snapshot</p>
+                  <p className="text-xs text-white/50">Next month setup</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <p className="text-xs text-white/50">February baseline</p>
+                      <AnimatedNumber
+                        value={23000}
+                        suffix=" Kč"
+                        delay={0.6}
+                        className="text-sm font-semibold tabular-nums text-white"
+                      />
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <BarFill width="82%" delay={0.65} className="bg-primary" />
+                    </div>
                   </div>
-                  <div className="mt-2 h-1.5 rounded-full bg-white/10">
-                    <div className="h-full w-[68%] rounded-full bg-chart-savings" />
+                  <div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <p className="text-xs text-white/50">Emergency runway</p>
+                      <AnimatedNumber
+                        value={4.8}
+                        decimals={1}
+                        suffix=" mo"
+                        delay={0.7}
+                        className="text-sm font-semibold tabular-nums text-white"
+                      />
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <BarFill width="68%" delay={0.75} className="bg-chart-savings" />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -191,48 +348,64 @@ export default function LandingPage() {
 
       <main id="main-content">
         <section className="relative overflow-hidden border-b border-border bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-secondary))_100%)]">
-          <div className="container mx-auto px-4 pb-32 pt-16 sm:pb-40 sm:pt-20 lg:px-8 lg:pb-48 lg:pt-24">
-            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,0.7fr)_minmax(560px,1.3fr)] xl:grid-cols-[minmax(0,0.62fr)_minmax(680px,1.38fr)] xl:gap-16">
-              <div className="max-w-xl">
-                <h1 className="max-w-[10ch] text-5xl font-bold leading-[0.96] tracking-[-0.035em] text-balance text-foreground sm:text-6xl lg:text-7xl">
-                  One tracker for your finances.
-                </h1>
-                <p className="mt-6 max-w-lg text-base leading-7 text-muted-foreground sm:text-lg">
-                  Transactions, budgets, savings, and cash flow in one monthly view.
-                </p>
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div
+              className="absolute left-1/2 top-[-180px] h-[560px] w-[min(1100px,130vw)] -translate-x-1/2 rounded-full opacity-[0.55] blur-[130px]"
+              style={{ background: 'radial-gradient(closest-side, hsl(var(--primary)/0.42), hsl(24 95% 53%/0.18), transparent)' }}
+            />
+            <div
+              className="absolute left-1/2 top-[140px] h-[320px] w-[760px] -translate-x-1/2 rounded-full opacity-40 blur-[110px]"
+              style={{ background: 'radial-gradient(closest-side, hsl(38 92% 50%/0.3), transparent)' }}
+            />
+          </div>
 
-                <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row">
-                  {isAuthenticated ? (
-                    <Button size="lg" asChild className="shadow-[0_12px_28px_hsl(var(--primary)/0.18)]">
-                      <Link to="/dashboard">
-                        Open dashboard
+          <div className="container relative z-10 mx-auto px-4 pb-20 pt-16 text-center sm:pb-24 sm:pt-20 lg:px-8 lg:pt-24">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EASE_OUT }}
+              className="mx-auto max-w-3xl"
+            >
+              <h1 className="text-balance text-5xl font-bold leading-[0.98] tracking-[-0.035em] text-foreground sm:text-6xl lg:text-7xl">
+                One tracker for your <span className="text-primary">finances.</span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+                Transactions, budgets, savings, and cash flow in one monthly view.
+              </p>
+
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                {isAuthenticated ? (
+                  <Button size="lg" asChild className="shadow-[0_12px_28px_hsl(var(--primary)/0.18)]">
+                    <Link to="/dashboard">
+                      Open dashboard
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="lg" asChild className="shadow-[0_12px_28px_hsl(var(--primary)/0.25)]">
+                      <Link to="/auth/register">
+                        Create account
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>
-                  ) : (
-                    <>
-                      <Button size="lg" asChild className="shadow-[0_12px_28px_hsl(var(--primary)/0.18)]">
-                        <Link to="/auth/register">
-                          Create account
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        asChild
-                        className="border-border bg-card text-foreground shadow-sm hover:border-primary/70 hover:bg-primary/10 hover:text-foreground"
-                      >
-                        <Link to="/how-it-works">
-                          See how it works
-                          <HelpCircle className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </>
-                  )}
-                </div>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      asChild
+                      className="border-border bg-card text-foreground shadow-sm hover:border-primary/70 hover:bg-primary/10 hover:text-foreground"
+                    >
+                      <Link to="/demo">
+                        Try Demo
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
+            </motion.div>
 
+            <div className="relative mx-auto mt-16 max-w-[1000px]">
               <ProductPreview />
             </div>
           </div>
@@ -309,11 +482,16 @@ export default function LandingPage() {
                   <p className="max-w-xl text-sm leading-6 text-muted-foreground">
                     Create an account, set up categories, and log the first transactions you want to review.
                   </p>
-                  <div className="mt-8">
+                  <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                     <Button size="lg" asChild className="shadow-[0_12px_28px_hsl(var(--primary)/0.18)]">
                       <Link to="/auth/register">
                         Create account
                         <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
+                      <Link to="/demo">
+                        or try the demo first
                       </Link>
                     </Button>
                   </div>

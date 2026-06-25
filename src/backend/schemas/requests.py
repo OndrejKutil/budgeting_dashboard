@@ -170,6 +170,20 @@ class CategoryUpdateRequest(BaseModel):
 # ================================================================================================
 
 
+class RecurringRequest(BaseModel):
+    """Schema for creating or updating a recurring template"""
+    account_id_fk: str = Field(..., description="Account ID")
+    category_id_fk: int = Field(..., description="Category ID")
+    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID")
+    amount: Decimal = Field(..., description="Transaction amount (signed)")
+    cadence: str = Field(..., description="weekly|biweekly|monthly|quarterly|yearly")
+    next_date: Date = Field(..., description="Next due date")
+    notes: Optional[str] = Field(None, description="Notes")
+    is_active: Optional[bool] = Field(True, description="Whether template is active")
+
+    model_config = ConfigDict(json_encoders={Decimal: float})
+
+
 class DividendPortfolioRequest(BaseModel):
     """Request schema for saving a user's dividend portfolio"""
     portfolio_value: Decimal = Field(..., ge=Decimal("0"), description="Total portfolio value")

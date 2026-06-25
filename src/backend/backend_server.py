@@ -70,7 +70,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # Include routers
-from .routers import (transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds, budgets, export, dividends)
+from .routers import (transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds, budgets, export, dividends, recurring, net_worth)
 
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh"])
@@ -85,6 +85,8 @@ app.include_router(monthly_analytics.router, prefix="/monthly", tags=["Monthly A
 app.include_router(savings_funds.router, prefix="/funds", tags=["Savings Funds"])
 app.include_router(budgets.router, prefix="/budgets", tags=["Budgets"])
 app.include_router(dividends.router, prefix="/dividends", tags=["Dividends"])
+app.include_router(recurring.router, prefix="/recurring", tags=["Recurring"])
+app.include_router(net_worth.router, prefix="/net-worth", tags=["Net Worth"])
 
 
 # ================================================================================================
