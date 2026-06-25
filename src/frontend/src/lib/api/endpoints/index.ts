@@ -15,3 +15,5 @@ export { healthApi } from './health';
 export { budgetApi } from './budgets';
 export { exportApi } from './export';
 export { dividendApi } from './dividends';
+export { recurringApi } from './recurring';
+export { netWorthApi } from './netWorth';

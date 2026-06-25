@@ -9,7 +9,10 @@ from .base import (
     CategoryType,
     EmergencyFundData,
     MonthlyAnalyticsData,
+    NetWorthTimelineData,
     ProfileData,
+    RecurringData,
+    RecurringSummary,
     SavingsFundsData,
     SpendingType,
     SummaryData,
@@ -480,6 +483,29 @@ class BudgetSuccessResponse(BaseModel):
 # ================================================================================================
 #                                   Dividend Calculator Schemas
 # ================================================================================================
+
+
+class RecurringResponse(BaseModel):
+    """Response schema for recurring templates list endpoint"""
+    data: List[RecurringData] = Field(..., description="List of recurring templates")
+    count: int = Field(..., description="Total templates returned")
+    summary: RecurringSummary = Field(..., description="Monthly/annual totals")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class RecurringSuccessResponse(BaseModel):
+    """Response schema for recurring create/update/delete/post operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: Optional[List[RecurringData]] = Field(None, description="Template data if applicable")
+
+
+class NetWorthResponse(BaseModel):
+    """Response schema for net-worth timeline endpoint"""
+    data: NetWorthTimelineData = Field(..., description="Net-worth timeline data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
 
 class DividendPortfolioResponse(BaseModel):

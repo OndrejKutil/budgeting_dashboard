@@ -16,6 +16,9 @@ import type {
     YearlyAnalyticsData,
     EmergencyFundData,
     DividendCalculationResult,
+    Recurring,
+    RecurringSummary,
+    NetWorthTimeline,
 } from './base';
 
 // ================================================================================================
@@ -252,6 +255,34 @@ export interface BudgetResponse {
  * Budget success response (create/update/delete)
  */
 export interface BudgetSuccessResponse {
+    success: boolean;
+    message: string;
+}
+
+// ================================================================================================
+//                                   Recurring Responses
+// ================================================================================================
+
+export interface RecurringResponse {
+    data: Recurring[];
+    count: number;
+    summary: RecurringSummary;
+    success: boolean;
+    message: string;
+}
+
+export interface RecurringSuccessResponse {
+    success: boolean;
+    message: string;
+    data?: Recurring[];
+}
+
+// ================================================================================================
+//                                   Net Worth Responses
+// ================================================================================================
+
+export interface NetWorthResponse {
+    data: NetWorthTimeline;
     success: boolean;
     message: string;
 }

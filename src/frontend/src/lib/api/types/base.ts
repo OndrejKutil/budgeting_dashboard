@@ -422,6 +422,43 @@ export interface EmergencyFundData {
 }
 
 // ================================================================================================
+//                                   Recurring Transaction Types
+// ================================================================================================
+
+export type RecurringCadence = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export interface Recurring {
+    recurring_id_pk: string;
+    user_id_fk: string | null;
+    account_id_fk: string;
+    category_id_fk: number;
+    savings_fund_id_fk: string | null;
+    amount: number;
+    cadence: RecurringCadence;
+    next_date: string;
+    notes: string | null;
+    is_active: boolean | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+export interface RecurringSummary {
+    monthly_total: number;
+    annual_total: number;
+    base_currency: string;
+}
+
+// ================================================================================================
+//                                   Net Worth Types
+// ================================================================================================
+
+export interface NetWorthTimeline {
+    dates: string[];
+    net_worth: number[];
+    base_currency: string;
+}
+
+// ================================================================================================
 //                                   UI Helper Types
 // ================================================================================================
 
