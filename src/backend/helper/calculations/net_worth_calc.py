@@ -59,7 +59,8 @@ def calculate_net_worth_timeline(
 
     # Auto-detect start from earliest transaction when no explicit start given
     if resolved_start is None:
-        resolved_start = df[TRANSACTIONS_COLUMNS.DATE.value].min()
+        min_val = df[TRANSACTIONS_COLUMNS.DATE.value].min()
+        resolved_start = min_val if isinstance(min_val, date) else end_date
 
     def convert_row(amount: float, account_id: str) -> float:
         currency = account_currency.get(account_id, base_currency)
@@ -91,7 +92,8 @@ def calculate_net_worth_timeline(
 
     # Baseline = cumulative balance strictly before resolved_start
     pre_start = daily.filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) < resolved_start)
-    baseline = float(pre_start["cumulative"].last()) if not pre_start.is_empty() else 0.0
+    last_val = pre_start["cumulative"].last() if not pre_start.is_empty() else None
+    baseline = float(last_val) if last_val is not None else 0.0
 
     result_net_worth: list[float] = []
     running = baseline
