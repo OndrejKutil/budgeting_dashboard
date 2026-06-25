@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const FaqPage = lazy(() => import("./pages/FaqPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
+const DemoPage = lazy(() => import("./pages/DemoPage"));
 
 // Dashboard
 const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
@@ -104,6 +105,7 @@ const AppContent = () => {
               <Route path="/faq" element={withSuspense(<FaqPage />)} />
               <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
               <Route path="/about" element={withSuspense(<AboutPage />)} />
+              <Route path="/demo" element={withSuspense(<DemoPage />)} />
 
               {/* Protected dashboard routes */}
               <Route
