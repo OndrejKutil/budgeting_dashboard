@@ -93,7 +93,7 @@ def calculate_net_worth_timeline(
     # Baseline = cumulative balance strictly before resolved_start
     pre_start = daily.filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) < resolved_start)
     last_val = pre_start["cumulative"].last() if not pre_start.is_empty() else None
-    baseline = float(last_val) if last_val is not None else 0.0
+    baseline = float(last_val) if isinstance(last_val, (int, float)) else 0.0
 
     result_net_worth: list[float] = []
     running = baseline
