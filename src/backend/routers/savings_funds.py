@@ -137,8 +137,10 @@ async def create_savings_fund(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data = fund.model_dump()
-        
+        # exclude_none=True so optional null fields (e.g. fund_is_active) are omitted,
+        # allowing DB column defaults to apply rather than overwriting them with NULL
+        data = fund.model_dump(exclude_none=True)
+
         # Convert datetime to ISO string for JSON serialization
         if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
             data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
@@ -180,15 +182,11 @@ async def update_savings_fund(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data = fund.model_dump()
-        
-        # Convert datetime to ISO string for JSON serialization
-        if data.get(SAVINGS_FUNDS_COLUMNS.CREATED_AT.value) is not None:
+        data = fund.model_dump(exclude_none=True)
+
+        # Convert datetime to ISO string for JSON serialization; omit it entirely on update
+        if SAVINGS_FUNDS_COLUMNS.CREATED_AT.value in data:
             data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value] = data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value].isoformat()
-        else:
-            # For update, do not overwrite created_at with None if not provided
-            if SAVINGS_FUNDS_COLUMNS.CREATED_AT.value in data:
-                del data[SAVINGS_FUNDS_COLUMNS.CREATED_AT.value]
 
         response = user_supabase_client.table("dim_savings_funds").update(data).eq(SAVINGS_FUNDS_COLUMNS.ID.value, fund_id).execute()
 
