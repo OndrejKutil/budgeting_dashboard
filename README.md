@@ -55,7 +55,6 @@ Crucially, the entire backend and database development was performed manually, e
 
 ```bash
 budgeting_dashboard/
-├── CLAUDE.md                       # Project guide (start here — for devs & AI agents)
 ├── src/
 │   ├── backend/                    # FastAPI backend
 │   │   ├── backend_server.py       # Main application (middleware + routers)
@@ -83,7 +82,6 @@ budgeting_dashboard/
 
 ## Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** — project hub: architecture, repo map, commands, and design decisions (for developers and AI agents alike). **Start here.**
 - **[docs/backend](./docs/backend/README.md)** — auth, rate limiting, routers, schemas, DB access.
 - **[docs/frontend](./docs/frontend/README.md)** — state, API client, routing, patterns.
 - **[docs/database](./docs/database/README.md)** — data model + the Supabase migration workflow.
