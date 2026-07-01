@@ -2,10 +2,11 @@
  * Supabase Edge Function: refresh-exchange-rates
  *
  * Fetches current exchange rates from Frankfurter (api.frankfurter.dev)
- * and upserts them into dim_exchange_rates. Triggered daily by the Pi script
+ * and upserts them into dim_exchange_rates. Triggered daily by a scipt running on Raspberry Pi (scripts/refresh_exchange_rates.py)
  * (scripts/refresh_exchange_rates.py) or manually via the Supabase dashboard.
  *
- * Paste this into: Supabase dashboard → Edge Functions → refresh-exchange-rates
+ * Deploy with: supabase functions deploy refresh-exchange-rates
+ * (see docs/database/README.md).
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';

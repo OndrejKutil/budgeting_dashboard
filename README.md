@@ -55,25 +55,39 @@ Crucially, the entire backend and database development was performed manually, e
 
 ```bash
 budgeting_dashboard/
+├── CLAUDE.md                       # Project guide (start here — for devs & AI agents)
 ├── src/
 │   ├── backend/                    # FastAPI backend
-│   │   ├── backend_server.py       # Main application
-│   │   ├── Dockerfile              # Dockerfile for backend
-│   │   ├── auth/                   # Authentication
-│   │   ├── routers/                # API endpoints
-│   │   ├── schemas/                # Data models
-│   │   └── helper/                 # Utilities
-│   ├── frontend/                   # React + Vite frontend
-│   │   ├── src/
-│   │   │   ├── main.tsx            # Application entry point
-│   │   │   ├── components/         # UI components
-│   │   │   ├── pages/              # Application pages
-│   │   │   └── lib/                # Utilities
-│   └── tests/                      # Automated tests
-├── screenshots/                    # Application screenshots
-├── docs/                           # Documentation
+│   │   ├── backend_server.py       # Main application (middleware + routers)
+│   │   ├── Dockerfile              # Container build
+│   │   ├── auth/                   # API-key + JWT authentication
+│   │   ├── routers/                # API endpoints (one file per domain)
+│   │   ├── schemas/                # Pydantic models
+│   │   ├── helper/                 # Utilities + calculations/
+│   │   ├── data/                   # Supabase client factory
+│   │   └── tests/                  # Automated tests
+│   └── frontend/                   # React + Vite frontend
+│       └── src/
+│           ├── main.tsx            # Application entry point
+│           ├── pages/              # Route components
+│           ├── components/         # UI components (ui/, layout/, …)
+│           ├── contexts/           # Auth / User / Privacy
+│           └── lib/api/            # API client, endpoints, types
+├── supabase/                       # Database as code
+│   ├── migrations/                 # Versioned schema migrations
+│   └── functions/                  # Edge Functions
+├── scripts/                        # Ops scripts (e.g. daily FX-rate refresh)
+├── docs/                           # backend / frontend / database docs
 └── README.md
 ```
+
+## Documentation
+
+- **[CLAUDE.md](./CLAUDE.md)** — project hub: architecture, repo map, commands, and design decisions (for developers and AI agents alike). **Start here.**
+- **[docs/backend](./docs/backend/README.md)** — auth, rate limiting, routers, schemas, DB access.
+- **[docs/frontend](./docs/frontend/README.md)** — state, API client, routing, patterns.
+- **[docs/database](./docs/database/README.md)** — data model + the Supabase migration workflow.
+- Live API reference: Swagger at `/docs`, ReDoc at `/redoc` on the running backend.
 
 ### **Real-World Application**
 

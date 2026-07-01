@@ -79,6 +79,9 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+supabase/.temp/
+supabase/.temp/*
+supabase/.gitignore
 
 # Temporary files
 tmp/
@@ -94,3 +97,5 @@ idkk.py
 .mypy_cache/
 .pytest_cache/
 .env.example
+
+CLAUDE.md

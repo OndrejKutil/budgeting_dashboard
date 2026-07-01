@@ -2,7 +2,6 @@
 name = "budgeting-backend"
 version = "0.1.0"
 description = "Budgeting Dashboard Backend API"
-readme = "API_DOCUMENTATION.md"
 requires-python = ">=3.13"
 authors = [
     {name = "Budgeting Dashboard Team"}
