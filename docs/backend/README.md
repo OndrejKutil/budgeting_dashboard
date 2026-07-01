@@ -83,20 +83,29 @@ Uses `slowapi` with in-memory storage (works for single-instance deployment).
 
 ## Routers
 
-Each router handles a domain. All protected endpoints use `Depends(api_key_auth)` and `Depends(get_current_user)`.
+Each router handles a domain and is registered in `backend_server.py`. All protected
+endpoints use `Depends(api_key_auth)` and `Depends(get_current_user)`.
 
 | Router               | Prefix         | Purpose                                    |
 |----------------------|----------------|--------------------------------------------|
 | `transactions`       | `/transactions`| CRUD + filtered listing with pagination    |
 | `login`              | `/auth`        | Login/register via Supabase                |
 | `token_refresh`      | `/refresh`     | Exchange refresh token for new pair        |
+| `export`             | `/export`      | Data export                                |
 | `categories`         | `/categories`  | Category management                        |
 | `accounts`           | `/accounts`    | Account management                         |
-| `profile`            | `/profile`     | User profile CRUD                          |
+| `profile`            | `/profile`     | User profile CRUD (+ account deletion)     |
 | `summary`            | `/summary`     | Dashboard summary data                     |
 | `yearly_analytics`   | `/yearly`      | Year-over-year analytics                   |
 | `monthly_analytics`  | `/monthly`     | Month-by-month analytics                   |
 | `savings_funds`      | `/funds`       | Savings fund tracking                      |
+| `budgets`            | `/budgets`     | Monthly budget plans (`plan_json`)         |
+| `dividends`          | `/dividends`   | Dividend portfolio calculator              |
+| `recurring`          | `/recurring`   | Recurring-transaction templates            |
+| `net_worth`          | `/net-worth`   | Net-worth chart data                       |
+
+> The auto-generated OpenAPI at `/docs` (Swagger) and `/redoc` is the canonical, always
+> up-to-date endpoint reference — there is no hand-maintained endpoint list.
 
 ---
 
@@ -114,11 +123,33 @@ All schemas use Pydantic v2.
 
 ## Database
 
-Supabase client initialized once via `get_db_client()`. Connection uses:
-- `PROJECT_URL` - Supabase project URL
-- `ANON_KEY` - Public anon key for client
+All data access goes through Supabase's REST API via the Python client
+(`data/database.py`). Two factories:
 
-All data access goes through Supabase's REST API (via Python client).
+- **`get_db_client(access_token)`** — creates a client with the anon key, then
+  authenticates it with the **user's JWT** (`client.postgrest.auth(token)`). This is the
+  key decision: every user query runs under that user's identity, so **Postgres Row Level
+  Security enforces per-user isolation** — routers generally don't add manual
+  `where user_id = …` filters; RLS does it. `auto_refresh_token` and `persist_session` are
+  disabled (the frontend owns token refresh).
+- **`get_service_db_client()`** — uses the `SERVICE_ROLE_KEY` (bypasses RLS). Used **only**
+  for account deletion, and only after the user is authenticated at the API layer.
+
+Schema is **not** managed from here — it lives as migrations in `supabase/`. See
+[docs/database](../database/README.md).
+
+---
+
+## Commands
+
+From `src/backend/`:
+
+```powershell
+pip install -e ".[dev,test]"            # install with dev + test extras
+uvicorn backend_server:app --reload     # dev server → http://localhost:8000
+mypy .                                  # type check (config in pyproject.toml)
+pytest                                  # tests + coverage
+```
 
 ---
 

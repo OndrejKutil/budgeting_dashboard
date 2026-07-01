@@ -2,7 +2,16 @@
 
 ## Architecture Overview
 
-React + TypeScript SPA with Vite. Uses React Query for server state and React Router for navigation.
+React + TypeScript SPA with Vite. Uses React Query for server state and React Router for navigation. Forms use `react-hook-form` + `zod`; charts use Recharts; animation via `framer-motion`; PWA via `vite-plugin-pwa`.
+
+### Commands (from `src/frontend/`)
+
+```powershell
+npm install
+npm run dev        # Vite dev server
+npm run lint       # ESLint
+npm run check      # tsc --noEmit && vite build  (what CI runs)
+```
 
 ```
 frontend/src/
@@ -128,20 +137,21 @@ Preserves filters when:
 ## Routing Structure
 
 ### Public Routes
-- `/` - Landing page
-- `/auth/login`, `/auth/register`
+- `/` - Landing page, `/demo` - interactive demo, `/about`
+- `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback` (OAuth)
 - `/terms`, `/privacy`, `/faq`, `/how-it-works`
 
 ### Protected Routes (require auth)
 All under `/dashboard`:
 - `/dashboard` - Overview
-- `/dashboard/transactions` - Transaction list
-- `/dashboard/accounts`, `/categories`, `/funds` - Dimension management
+- `/dashboard/transactions`, `/recurring` - ledger + recurring templates
+- `/dashboard/accounts`, `/categories`, `/funds` - dimension management
 - `/dashboard/analytics/monthly`, `/analytics/yearly`, `/analytics/emergency-fund`
+- `/dashboard/budget-maker`, `/investing-calculator`, `/dividend-calculator` - tools
 - `/dashboard/profile`
-- `/dashboard/budget-maker`, `/investing-calculator`
 
-`RequireAuth` wrapper redirects to login if not authenticated.
+`RequireAuth` wrapper redirects to login if not authenticated. Routes are lazy-loaded
+(`withSuspense` + per-area skeletons).
 
 ---
 
