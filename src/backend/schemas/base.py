@@ -9,6 +9,12 @@ from pydantic import BaseModel, Field, ConfigDict
 #                                   Data Schemas
 # ================================================================================================
 
+class TagData(BaseModel):
+    """Schema for a transaction tag"""
+    tags_id_pk: int = Field(..., description="Tag ID")
+    tag_name: str = Field(..., description="Tag name")
+
+
 class TransactionData(BaseModel):
     """Schema for individual transaction data"""
     id_pk: str | None = Field(None, description="Transaction ID")
@@ -20,6 +26,7 @@ class TransactionData(BaseModel):
     notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
+    tags: Optional[List[TagData]] = Field(None, description="Tags associated with this transaction")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON

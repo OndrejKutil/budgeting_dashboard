@@ -50,6 +50,7 @@ import {
   AlertCircle,
   Loader2,
   Info,
+  Check,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -66,13 +67,34 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ApiError } from '@/lib/api/client';
-import { transactionsApi, categoriesApi, accountsApi, fundsApi } from '@/lib/api/endpoints';
-import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
+import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
+import { Transaction, Category, Account, SavingsFund, Tag, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
 import { formatMoney, getCurrencyFlag } from '@/lib/currency';
 import { useDebounce } from '@/hooks/use-debounce';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { Badge } from '@/components/ui/badge';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { X, Tags } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const ITEMS_PER_PAGE: number = 20;
 const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
@@ -142,14 +164,22 @@ export default function TransactionsPage() {
   const [maxAmount, setMaxAmount] = useUrlState<string>('max', '');
   const [yearFilter, setYearFilter] = useUrlState<string>('year', new Date().getFullYear().toString());
   const [monthFilter, setMonthFilter] = useUrlState<string>('month', 'all');
+  const [tagFilter, setTagFilter] = useUrlState<string>('tag', 'all');
 
   const debouncedSearch = useDebounce(searchQuery, 500);
   const debouncedMin = useDebounce(minAmount, 500);
   const debouncedMax = useDebounce(maxAmount, 500);
 
+  // Tag management state (within modal)
+  const [tagComboOpen, setTagComboOpen] = useState(false);
+  const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
+  const [editingTagId, setEditingTagId] = useState<number | null>(null);
+  const [editingTagName, setEditingTagName] = useState('');
+  const [tagSearchInput, setTagSearchInput] = useState('');
+
   const clearFilters = () => {
     const prefix = `budget-dashboard:${location.pathname}`;
-    const keys = ['q', 'category', 'account', 'fund', 'type', 'min', 'max', 'year', 'month'];
+    const keys = ['q', 'category', 'account', 'fund', 'type', 'min', 'max', 'year', 'month', 'tag'];
     keys.forEach(k => sessionStorage.removeItem(`${prefix}:${k}`));
     setSearchParams(new URLSearchParams());
   };
@@ -182,6 +212,40 @@ export default function TransactionsPage() {
     },
   });
 
+  const { data: tags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => {
+      const res = await tagsApi.getAll();
+      return res.data || [];
+    },
+  });
+
+  // Shared filter params (used by both the list query and the summary query)
+  const commonFilterParams = {
+    search: debouncedSearch || undefined,
+    category_id: categoryFilter === 'all' ? undefined : categoryFilter,
+    account_id: accountFilter === 'all' ? undefined : accountFilter,
+    savings_fund_id: fundFilter === 'all' ? undefined : fundFilter,
+    category_type: typeFilter === 'all' ? undefined : typeFilter,
+    min_amount: parseDecimalInput(debouncedMin) ?? undefined,
+    max_amount: parseDecimalInput(debouncedMax) ?? undefined,
+    tag_id: tagFilter === 'all' ? undefined : tagFilter,
+    start_date: monthFilter === 'all'
+      ? `${yearFilter}-01-01`
+      : `${yearFilter}-${monthFilter.padStart(2, '0')}-01`,
+    end_date: monthFilter === 'all'
+      ? `${yearFilter}-12-31`
+      : `${yearFilter}-${monthFilter.padStart(2, '0')}-${new Date(parseInt(yearFilter), parseInt(monthFilter), 0).getDate()}`,
+  };
+
+  const anyFilterActive = categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery;
+
+  const { data: summaryData } = useQuery({
+    queryKey: ['transactions-summary', commonFilterParams],
+    queryFn: () => transactionsApi.getSummary(commonFilterParams),
+    enabled: !!anyFilterActive,
+  });
+
   const {
     data: transactionsData,
     isLoading: isTransactionsLoading,
@@ -197,24 +261,13 @@ export default function TransactionsPage() {
       min: debouncedMin,
       max: debouncedMax,
       year: yearFilter,
-      month: monthFilter
+      month: monthFilter,
+      tag: tagFilter,
     }],
     queryFn: () => transactionsApi.getAll({
       limit: ITEMS_PER_PAGE,
       offset,
-      search: debouncedSearch || undefined,
-      category_id: categoryFilter === 'all' ? undefined : categoryFilter,
-      account_id: accountFilter === 'all' ? undefined : accountFilter,
-      savings_fund_id: fundFilter === 'all' ? undefined : fundFilter,
-      category_type: typeFilter === 'all' ? undefined : typeFilter,
-      min_amount: parseDecimalInput(debouncedMin) ?? undefined,
-      max_amount: parseDecimalInput(debouncedMax) ?? undefined,
-      start_date: monthFilter === 'all'
-        ? `${yearFilter}-01-01`
-        : `${yearFilter}-${monthFilter.padStart(2, '0')}-01`,
-      end_date: monthFilter === 'all'
-        ? `${yearFilter}-12-31`
-        : `${yearFilter}-${monthFilter.padStart(2, '0')}-${new Date(parseInt(yearFilter), parseInt(monthFilter), 0).getDate()}`,
+      ...commonFilterParams,
     }),
     placeholderData: keepPreviousData,
   });
@@ -242,6 +295,7 @@ export default function TransactionsPage() {
     category_id_fk: '',
     account_id_fk: '',
     savings_fund_id_fk: '',
+    tags: [] as number[],
   });
 
   // Create lookup maps for categories and accounts
@@ -265,6 +319,18 @@ export default function TransactionsPage() {
       return acc;
     }, {} as Record<string, SavingsFund>);
   }, [funds]);
+
+  const tagMap = useMemo(() => {
+    return tags.reduce((acc, tag) => {
+      acc[tag.tags_id_pk] = tag;
+      return acc;
+    }, {} as Record<number, Tag>);
+  }, [tags]);
+
+  // Tags selected in the current form (full Tag objects for display)
+  const selectedTagObjects = useMemo(() => {
+    return formData.tags.map(id => tagMap[id]).filter(Boolean) as Tag[];
+  }, [formData.tags, tagMap]);
 
 
 
@@ -313,6 +379,7 @@ export default function TransactionsPage() {
     mutationFn: (payload: CreateTransactionRequest) => transactionsApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({ title: t('pages.transactions.created') });
       closeModal();
@@ -331,6 +398,7 @@ export default function TransactionsPage() {
     mutationFn: ({ id, payload }: { id: string; payload: UpdateTransactionRequest }) => transactionsApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({ title: t('pages.transactions.updated') });
       closeModal();
@@ -443,6 +511,7 @@ export default function TransactionsPage() {
       date: formData.date,
       notes: formData.notes || null,
       savings_fund_id_fk: formData.savings_fund_id_fk || null,
+      tags: formData.tags,
     };
 
     if (selectedTransaction) {
@@ -469,6 +538,7 @@ export default function TransactionsPage() {
       category_id_fk: transaction.category_id_fk.toString(),
       account_id_fk: transaction.account_id_fk,
       savings_fund_id_fk: transaction.savings_fund_id_fk || '',
+      tags: transaction.tags?.map(t => t.tags_id_pk) || [],
     });
   };
 
@@ -486,6 +556,7 @@ export default function TransactionsPage() {
       category_id_fk: '',
       account_id_fk: '',
       savings_fund_id_fk: '',
+      tags: [],
     });
   };
 
@@ -541,7 +612,7 @@ export default function TransactionsPage() {
               className="pl-10 bg-background/50 border-input/50 focus:bg-background transition-colors"
             />
           </div>
-          {(categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery) && (
+          {!!anyFilterActive && (
             <Button
               variant="outline"
               onClick={clearFilters}
@@ -601,7 +672,7 @@ export default function TransactionsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
           <Select value={yearFilter} onValueChange={setYearFilter}>
             <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.year')} /></SelectTrigger>
             <SelectContent>
@@ -650,7 +721,7 @@ export default function TransactionsPage() {
               {accounts
                 .slice()
                 .sort((a, b) => a.account_name.localeCompare(b.account_name))
-                .map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{a.account_name}</SelectItem>)}
+                .map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{getCurrencyFlag(a.currency)} {a.account_name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -663,6 +734,17 @@ export default function TransactionsPage() {
                 .slice()
                 .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
                 .map(f => <SelectItem key={f.savings_funds_id_pk} value={f.savings_funds_id_pk}>{f.fund_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Tag" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {tags
+                .slice()
+                .sort((a, b) => a.tag_name.localeCompare(b.tag_name))
+                .map(tag => <SelectItem key={tag.tags_id_pk} value={tag.tags_id_pk.toString()}>{tag.tag_name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -687,6 +769,19 @@ export default function TransactionsPage() {
           />
         </div>
       </div>
+
+      {/* Filtered Summary Bar */}
+      {anyFilterActive && summaryData && (
+        <div className="flex items-center gap-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm">
+          <Tags className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{summaryData.count}</span> transactions &nbsp;·&nbsp; total{' '}
+            <span className="font-semibold text-foreground font-mono">
+              <SensitiveValue>{formatCurrency(summaryData.total_amount)}</SensitiveValue>
+            </span>
+          </span>
+        </div>
+      )}
 
       {/* Transactions Table */}
       <motion.div
@@ -757,7 +852,18 @@ export default function TransactionsPage() {
                           {formatDate(transaction.date)}
                         </TableCell>
                         <TableCell>
-                          <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-sm text-foreground">{transaction.notes || '-'}</span>
+                            {transaction.tags && transaction.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {transaction.tags.map(tag => (
+                                  <Badge key={tag.tags_id_pk} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                                    {tag.tag_name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <div className="flex items-center gap-2">
@@ -854,6 +960,15 @@ export default function TransactionsPage() {
                         <div className="text-xs text-muted-foreground mt-1">
                           {formatDate(transaction.date)}
                         </div>
+                        {transaction.tags && transaction.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {transaction.tags.map(tag => (
+                              <Badge key={tag.tags_id_pk} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                                {tag.tag_name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="font-bold text-foreground">
                         <SensitiveValue>{transaction.amount > 0 ? '+' : ''}{formatMoney(transaction.amount, account?.currency || 'CZK')}</SensitiveValue>
@@ -1253,6 +1368,103 @@ export default function TransactionsPage() {
                 </Select>
               </div>
             )}
+            {!isTransfer && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Tags</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground hover:text-foreground px-2"
+                    onClick={() => setIsManageTagsOpen(true)}
+                  >
+                    Manage tags
+                  </Button>
+                </div>
+                <Popover open={tagComboOpen} onOpenChange={(open) => { setTagComboOpen(open); if (!open) setTagSearchInput(''); }}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-start h-auto min-h-10 flex-wrap gap-1 px-3 py-2"
+                    >
+                      {selectedTagObjects.length > 0 ? (
+                        selectedTagObjects.map(tag => (
+                          <span
+                            key={tag.tags_id_pk}
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground text-xs px-2 py-0.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormData(prev => ({ ...prev, tags: prev.tags.filter(id => id !== tag.tags_id_pk) }));
+                            }}
+                          >
+                            {tag.tag_name}
+                            <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm font-normal">Add tags…</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search or create tag…"
+                        value={tagSearchInput}
+                        onValueChange={setTagSearchInput}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {tagSearchInput.trim() ? (
+                            <button
+                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-accent"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                const name = tagSearchInput.trim();
+                                tagsApi.create({ tag_name: name }).then(res => {
+                                  if (res.data?.[0]) {
+                                    const newTag = res.data[0];
+                                    queryClient.invalidateQueries({ queryKey: ['tags'] });
+                                    setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag.tags_id_pk] }));
+                                    setTagSearchInput('');
+                                    setTagComboOpen(false);
+                                  }
+                                }).catch(() => {
+                                  toast({ title: 'Failed to create tag', variant: 'destructive' });
+                                });
+                              }}
+                            >
+                              Create tag "<span className="font-medium">{tagSearchInput.trim()}</span>"
+                            </button>
+                          ) : 'No tags found.'}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {tags.map(tag => (
+                            <CommandItem
+                              key={tag.tags_id_pk}
+                              value={tag.tag_name}
+                              onSelect={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  tags: prev.tags.includes(tag.tags_id_pk)
+                                    ? prev.tags.filter(id => id !== tag.tags_id_pk)
+                                    : [...prev.tags, tag.tags_id_pk],
+                                }));
+                              }}
+                            >
+                              <Check className={cn('mr-2 h-4 w-4', formData.tags.includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
+                              {tag.tag_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
@@ -1266,6 +1478,104 @@ export default function TransactionsPage() {
               {selectedTransaction ? t('common.save') : t('pages.transactions.add')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Tags Dialog */}
+      <Dialog open={isManageTagsOpen} onOpenChange={(open) => {
+        setIsManageTagsOpen(open);
+        if (!open) { setEditingTagId(null); setEditingTagName(''); }
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Manage Tags</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-72 overflow-y-auto pr-1">
+            {tags.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No tags yet.</p>
+            )}
+            {tags.map(tag => (
+              <div key={tag.tags_id_pk} className="flex items-center gap-2 group">
+                {editingTagId === tag.tags_id_pk ? (
+                  <>
+                    <Input
+                      value={editingTagName}
+                      onChange={(e) => setEditingTagName(e.target.value)}
+                      className="h-8 flex-1 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const name = editingTagName.trim();
+                          if (!name) return;
+                          tagsApi.update(tag.tags_id_pk, { tag_name: name }).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['tags'] });
+                            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                            setEditingTagId(null);
+                            setEditingTagName('');
+                          }).catch(() => toast({ title: 'Failed to rename tag', variant: 'destructive' }));
+                        }
+                        if (e.key === 'Escape') { setEditingTagId(null); setEditingTagName(''); }
+                      }}
+                    />
+                    <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => {
+                      const name = editingTagName.trim();
+                      if (!name) return;
+                      tagsApi.update(tag.tags_id_pk, { tag_name: name }).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['tags'] });
+                        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                        setEditingTagId(null);
+                        setEditingTagName('');
+                      }).catch(() => toast({ title: 'Failed to rename tag', variant: 'destructive' }));
+                    }}>Save</Button>
+                    <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setEditingTagId(null); setEditingTagName(''); }}>Cancel</Button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm truncate">{tag.tag_name}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground"
+                      onClick={() => { setEditingTagId(tag.tags_id_pk); setEditingTagName(tag.tag_name); }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete tag "{tag.tag_name}"?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove the tag from all transactions. Transactions themselves are not deleted.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => {
+                              tagsApi.delete(tag.tags_id_pk).then(() => {
+                                queryClient.invalidateQueries({ queryKey: ['tags'] });
+                                queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                                queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+                                setFormData(prev => ({ ...prev, tags: prev.tags.filter(id => id !== tag.tags_id_pk) }));
+                              }).catch(() => toast({ title: 'Failed to delete tag', variant: 'destructive' }));
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 

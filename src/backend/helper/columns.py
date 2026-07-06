@@ -99,3 +99,22 @@ class DIVIDEND_PORTFOLIO_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+
+
+class TAGS_COLUMNS(Enum):
+    ID = "tags_id_pk"
+    USER_ID = "user_id_fk"
+    NAME = "tag_name"
+    CREATED_AT = "created_at"
+
+    def __str__(self):
+        return self.value
+
+
+class TRANSACTION_TAGS_COLUMNS(Enum):
+    TRANSACTION_ID = "transaction_id_fk"
+    TAG_ID = "tag_id_fk"
+    USER_ID = "user_id_fk"
+
+    def __str__(self):
+        return self.value

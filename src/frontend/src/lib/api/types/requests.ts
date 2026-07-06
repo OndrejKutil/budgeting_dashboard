@@ -50,8 +50,9 @@ export interface CreateTransactionRequest {
     category_id_fk: number;
     amount: number;
     date: string;
-    notes?: string;
-    savings_fund_id_fk?: string;
+    notes?: string | null;
+    savings_fund_id_fk?: string | null;
+    tags?: number[];
 }
 
 /**
@@ -62,8 +63,21 @@ export interface UpdateTransactionRequest {
     category_id_fk?: number;
     amount?: number;
     date?: string;
-    notes?: string;
-    savings_fund_id_fk?: string;
+    notes?: string | null;
+    savings_fund_id_fk?: string | null;
+    tags?: number[];
+}
+
+// ================================================================================================
+//                                   Tag Requests
+// ================================================================================================
+
+export interface CreateTagRequest {
+    tag_name: string;
+}
+
+export interface UpdateTagRequest {
+    tag_name: string;
 }
 
 // ================================================================================================

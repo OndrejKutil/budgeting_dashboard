@@ -16,6 +16,7 @@ from .base import (
     SavingsFundsData,
     SpendingType,
     SummaryData,
+    TagData,
     TransactionData,
     YearlyAnalyticsData,
     TokenData,
@@ -532,3 +533,26 @@ class DividendPortfolioSuccessResponse(BaseModel):
             }
         }
     )
+
+
+class TagsResponse(BaseModel):
+    """Response schema for tags list endpoint"""
+    data: List[TagData] = Field(..., description="List of tag records")
+    count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class TagSuccessResponse(BaseModel):
+    """Response schema for tag create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: Optional[List[TagData]] = Field(None, description="Tag data if applicable")
+
+
+class TransactionSummaryResponse(BaseModel):
+    """Response schema for transaction summary (filtered total) endpoint"""
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+    count: int = Field(..., description="Number of matching transactions")
+    total_amount: float = Field(..., description="Sum of amounts for matching transactions")

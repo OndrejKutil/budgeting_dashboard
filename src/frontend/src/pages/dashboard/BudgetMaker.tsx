@@ -60,8 +60,9 @@ import {
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 // Types for local state
-interface LocalBudgetRow extends BudgetPlanRow {
+interface LocalBudgetRow extends Omit<BudgetPlanRow, 'amount'> {
     id: string; // Internal ID for React keys
+    amount: number | string;
     actual?: number | null;
     diff?: number | null;
 }
@@ -417,7 +418,7 @@ export default function BudgetMaker() {
                                                         <Input
                                                             type="number"
                                                             value={row.amount}
-                                                            onChange={(e) => updateRow(group, row.id, 'amount', parseFloat(e.target.value) || 0)}
+                                                            onChange={(e) => updateRow(group, row.id, 'amount', e.target.value)}
                                                             className="h-9 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (
@@ -532,7 +533,7 @@ export default function BudgetMaker() {
                                                         <Input
                                                             type="number"
                                                             value={row.amount}
-                                                            onChange={(e) => updateRow(group, row.id, 'amount', parseFloat(e.target.value) || 0)}
+                                                            onChange={(e) => updateRow(group, row.id, 'amount', e.target.value)}
                                                             className="h-9 w-28 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
                                                         />
                                                     ) : (

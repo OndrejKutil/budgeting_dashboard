@@ -75,6 +75,15 @@ export interface ProfileData {
 // ================================================================================================
 
 /**
+ * Transaction tag
+ * Matches backend TagData schema
+ */
+export interface Tag {
+    tags_id_pk: number;
+    tag_name: string;
+}
+
+/**
  * Individual transaction record
  * Matches backend TransactionData schema
  */
@@ -88,6 +97,7 @@ export interface Transaction {
     notes: string | null;
     created_at: string | null;
     savings_fund_id_fk: string | null;
+    tags?: Tag[];
 }
 
 // ================================================================================================
