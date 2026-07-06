@@ -225,7 +225,8 @@ export interface BudgetRowResponse {
     amount: number;
     actual_amount: number | null;
     difference_pct: number | null;
-    category_id: number | null;
+    category_ids?: number[];
+    tags?: number[];
     include_in_total: boolean;
 }
 

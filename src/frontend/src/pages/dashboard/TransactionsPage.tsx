@@ -12,7 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -1249,14 +1251,36 @@ export default function TransactionsPage() {
                     <SelectValue placeholder={t('pages.transactions.selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories
-                      .filter(c => c.is_active !== false)
-                      .sort((a, b) => a.category_name.localeCompare(b.category_name))
-                      .map((cat) => (
-                      <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
-                        {cat.category_name}
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
+                      const TYPE_LABEL: Record<string, string> = {
+                        expense: 'Expenses', income: 'Income', saving: 'Saving',
+                        investment: 'Investments', exclude: 'Exclude', transfer: 'Transfer',
+                      };
+                      return TYPE_ORDER
+                        .map(type => ({
+                          type,
+                          cats: categories
+                            .filter(c => c.is_active !== false && c.type === type)
+                            .sort((a, b) => a.category_name.localeCompare(b.category_name)),
+                        }))
+                        .filter(g => g.cats.length > 0)
+                        .map((g, i) => (
+                          <SelectGroup key={g.type}>
+                            <SelectLabel className={cn(
+                              "px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2",
+                              i > 0 && "mt-1 pt-2 border-t border-border/40"
+                            )}>
+                              {TYPE_LABEL[g.type]}
+                            </SelectLabel>
+                            {g.cats.map(cat => (
+                              <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
+                                {cat.category_name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ));
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
@@ -1441,7 +1465,7 @@ export default function TransactionsPage() {
                           ) : 'No tags found.'}
                         </CommandEmpty>
                         <CommandGroup>
-                          {tags.map(tag => (
+                          {[...tags].sort((a, b) => a.tag_name.localeCompare(b.tag_name)).map(tag => (
                             <CommandItem
                               key={tag.tags_id_pk}
                               value={tag.tag_name}
