@@ -1,6 +1,6 @@
 from datetime import date as Date, datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -16,6 +16,7 @@ class TransactionRequest(BaseModel):
     notes: Optional[str] = Field(None, description="Transaction description")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
+    tags: Optional[List[int]] = Field(None, description="Tag IDs to associate with this transaction")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -29,10 +30,21 @@ class TransactionRequest(BaseModel):
                 "date": "2025-01-15",
                 "notes": "",
                 "created_at": "2025-01-15T10:30:00Z",
-                "savings_fund_id_fk": None
+                "savings_fund_id_fk": None,
+                "tags": []
             }
         }
     )
+
+
+class TagRequest(BaseModel):
+    """Schema for creating a new tag"""
+    tag_name: str = Field(..., min_length=1, max_length=100, description="Name of the tag")
+
+
+class TagUpdateRequest(BaseModel):
+    """Schema for updating an existing tag"""
+    tag_name: str = Field(..., min_length=1, max_length=100, description="New name for the tag")
 
 
 class AccountRequest(BaseModel):
