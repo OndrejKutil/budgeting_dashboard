@@ -27,10 +27,12 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { ApiError } from '@/lib/api/client';
-import { categoriesApi, budgetApi } from '@/lib/api/endpoints';
+import { categoriesApi, budgetApi, tagsApi } from '@/lib/api/endpoints';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { BudgetPlan, BudgetPlanRow } from '@/lib/api/types/requests';
 import { BudgetRowResponse } from '@/lib/api/types/responses';
 import { toast } from '@/hooks/use-toast';
@@ -60,11 +62,13 @@ import {
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 // Types for local state
-interface LocalBudgetRow extends Omit<BudgetPlanRow, 'amount'> {
+interface LocalBudgetRow extends Omit<BudgetPlanRow, 'amount' | 'category_ids' | 'tags'> {
     id: string; // Internal ID for React keys
     amount: number | string;
     actual?: number | null;
     diff?: number | null;
+    category_ids: number[];
+    tags: number[];
 }
 
 const MONTHS = [
@@ -102,11 +106,26 @@ export default function BudgetMaker() {
     const [savingsRows, setSavingsRows] = useState<LocalBudgetRow[]>([]);
     const [investmentRows, setInvestmentRows] = useState<LocalBudgetRow[]>([]);
 
+    // Per-row popover open state
+    const [catPopoverOpen, setCatPopoverOpen] = useState<Record<string, boolean>>({});
+    const [tagPopoverOpen, setTagPopoverOpen] = useState<Record<string, boolean>>({});
+    const [catSearchInput, setCatSearchInput] = useState<Record<string, string>>({});
+    const [tagSearchInput, setTagSearchInput] = useState<Record<string, string>>({});
+
     // Fetch Categories
     const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
         queryFn: async () => {
             const res = await categoriesApi.getAll();
+            return res.data || [];
+        },
+    });
+
+    // Fetch Tags
+    const { data: tags = [] } = useQuery({
+        queryKey: ['tags'],
+        queryFn: async () => {
+            const res = await tagsApi.getAll();
             return res.data || [];
         },
     });
@@ -132,7 +151,8 @@ export default function BudgetMaker() {
                     name: r.name,
                     amount: r.amount,
                     include_in_total: r.include_in_total,
-                    category_id: r.category_id,
+                    category_ids: r.category_ids ?? [],
+                    tags: r.tags ?? [],
                     actual: r.actual_amount,
                     diff: r.difference_pct,
                 }));
@@ -169,7 +189,8 @@ export default function BudgetMaker() {
         name: '',
         amount: 0,
         include_in_total: true,
-        category_id: null,
+        category_ids: [],
+        tags: [],
     });
 
     const addRow = (group: string) => {
@@ -187,7 +208,7 @@ export default function BudgetMaker() {
         if (group === 'investment') setInvestmentRows(investmentRows.filter(r => r.id !== id));
     };
 
-    const updateRow = (group: string, id: string, field: keyof LocalBudgetRow, value: string | number | boolean | null) => {
+    const updateRow = (group: string, id: string, field: keyof LocalBudgetRow, value: string | number | boolean | null | number[]) => {
         const update = (rows: LocalBudgetRow[]) =>
             rows.map(r => r.id === id ? { ...r, [field]: value } : r);
 
@@ -359,8 +380,8 @@ export default function BudgetMaker() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="hover:bg-transparent border-b border-border/50">
-                                            <TableHead className="w-[30%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.name')}</TableHead>
-                                            <TableHead className="w-[20%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.category')}</TableHead>
+                                            <TableHead className="w-[25%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.name')}</TableHead>
+                                            <TableHead className="w-[25%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Filters</TableHead>
                                             <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.planned')}</TableHead>
                                             <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.actual')}</TableHead>
                                             <TableHead className="w-[10%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.diff')}</TableHead>
@@ -385,32 +406,117 @@ export default function BudgetMaker() {
                                                 </TableCell>
                                                 <TableCell className="py-2">
                                                     {isEditing ? (
-                                                        <Select
-                                                            value={row.category_id !== null ? row.category_id.toString() : "none"}
-                                                            onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
-                                                        >
-                                                            <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
-                                                                <SelectValue placeholder={t('pages.budgetMaker.selectCategory')} />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="none">{t('common.none')}</SelectItem>
-                                                                {categories.filter(c => {
-                                                                    if (group === 'income') return c.type === 'income';
-                                                                    if (group === 'expense') return c.type === 'expense';
-                                                                    if (group === 'saving') return c.type === 'saving';
-                                                                    if (group === 'investment') return c.type === 'investment';
-                                                                    return true;
-                                                                }).map(c => (
-                                                                    <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>
-                                                                        {c.category_name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {/* Category multi-select */}
+                                                            <Popover
+                                                                open={!!catPopoverOpen[row.id]}
+                                                                onOpenChange={(open) => {
+                                                                    setCatPopoverOpen(prev => ({ ...prev, [row.id]: open }));
+                                                                    if (!open) setCatSearchInput(prev => ({ ...prev, [row.id]: '' }));
+                                                                }}
+                                                            >
+                                                                <PopoverTrigger asChild>
+                                                                    <Button variant="outline" className="h-auto min-h-8 w-full justify-start flex-wrap gap-1 px-2 py-1 text-xs bg-background/50 border-input/50">
+                                                                        {(row.category_ids ?? []).length > 0 ? (
+                                                                            (row.category_ids ?? []).map(cid => {
+                                                                                const cat = categories.find(c => c.categories_id_pk === cid);
+                                                                                return cat ? (
+                                                                                    <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
+                                                                                        {cat.category_name}
+                                                                                        <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
+                                                                                    </span>
+                                                                                ) : null;
+                                                                            })
+                                                                        ) : (
+                                                                            <span className="text-muted-foreground">Categories…</span>
+                                                                        )}
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-56 p-0" align="start">
+                                                                    <Command>
+                                                                        <CommandInput placeholder="Search categories…" value={catSearchInput[row.id] ?? ''} onValueChange={(v) => setCatSearchInput(prev => ({ ...prev, [row.id]: v }))} />
+                                                                        <CommandList>
+                                                                            <CommandEmpty>No categories found.</CommandEmpty>
+                                                                            <CommandGroup>
+                                                                                {categories.filter(c => {
+                                                                                    if (c.is_active === false) return false;
+                                                                                    if (group === 'income') return c.type === 'income';
+                                                                                    if (group === 'expense') return c.type === 'expense';
+                                                                                    if (group === 'saving') return c.type === 'saving';
+                                                                                    if (group === 'investment') return c.type === 'investment';
+                                                                                    return true;
+                                                                                }).sort((a, b) => a.category_name.localeCompare(b.category_name)).map(c => (
+                                                                                    <CommandItem key={c.categories_id_pk} value={c.category_name} onSelect={() => {
+                                                                                        const current = row.category_ids ?? [];
+                                                                                        updateRow(group, row.id, 'category_ids', current.includes(c.categories_id_pk) ? current.filter(id => id !== c.categories_id_pk) : [...current, c.categories_id_pk]);
+                                                                                    }}>
+                                                                                        <Check className={cn('mr-2 h-3.5 w-3.5', (row.category_ids ?? []).includes(c.categories_id_pk) ? 'opacity-100' : 'opacity-0')} />
+                                                                                        {c.category_name}
+                                                                                    </CommandItem>
+                                                                                ))}
+                                                                            </CommandGroup>
+                                                                        </CommandList>
+                                                                    </Command>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                            {/* Tag multi-select */}
+                                                            <Popover
+                                                                open={!!tagPopoverOpen[row.id]}
+                                                                onOpenChange={(open) => {
+                                                                    setTagPopoverOpen(prev => ({ ...prev, [row.id]: open }));
+                                                                    if (!open) setTagSearchInput(prev => ({ ...prev, [row.id]: '' }));
+                                                                }}
+                                                            >
+                                                                <PopoverTrigger asChild>
+                                                                    <Button variant="outline" className="h-auto min-h-8 w-full justify-start flex-wrap gap-1 px-2 py-1 text-xs bg-background/50 border-input/50">
+                                                                        {(row.tags ?? []).length > 0 ? (
+                                                                            (row.tags ?? []).map(tid => {
+                                                                                const tag = tags.find(t => t.tags_id_pk === tid);
+                                                                                return tag ? (
+                                                                                    <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
+                                                                                        {tag.tag_name}
+                                                                                        <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
+                                                                                    </span>
+                                                                                ) : null;
+                                                                            })
+                                                                        ) : (
+                                                                            <span className="text-muted-foreground">Tags…</span>
+                                                                        )}
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-48 p-0" align="start">
+                                                                    <Command>
+                                                                        <CommandInput placeholder="Search tags…" value={tagSearchInput[row.id] ?? ''} onValueChange={(v) => setTagSearchInput(prev => ({ ...prev, [row.id]: v }))} />
+                                                                        <CommandList>
+                                                                            <CommandEmpty>{tags.length === 0 ? 'No tags. Create them in Transactions.' : 'No tags found.'}</CommandEmpty>
+                                                                            <CommandGroup>
+                                                                                {[...tags].sort((a, b) => a.tag_name.localeCompare(b.tag_name)).map(tag => (
+                                                                                    <CommandItem key={tag.tags_id_pk} value={tag.tag_name} onSelect={() => {
+                                                                                        const current = row.tags ?? [];
+                                                                                        updateRow(group, row.id, 'tags', current.includes(tag.tags_id_pk) ? current.filter(id => id !== tag.tags_id_pk) : [...current, tag.tags_id_pk]);
+                                                                                    }}>
+                                                                                        <Check className={cn('mr-2 h-3.5 w-3.5', (row.tags ?? []).includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
+                                                                                        {tag.tag_name}
+                                                                                    </CommandItem>
+                                                                                ))}
+                                                                            </CommandGroup>
+                                                                        </CommandList>
+                                                                    </Command>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {row.category_id && categories.find(c => c.categories_id_pk === row.category_id)?.category_name || '-'}
-                                                        </span>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {(row.category_ids ?? []).map(cid => {
+                                                                const cat = categories.find(c => c.categories_id_pk === cid);
+                                                                return cat ? <span key={cid} className="text-xs rounded bg-secondary/60 text-secondary-foreground px-1.5 py-0.5">{cat.category_name}</span> : null;
+                                                            })}
+                                                            {(row.tags ?? []).map(tid => {
+                                                                const tag = tags.find(t => t.tags_id_pk === tid);
+                                                                return tag ? <span key={tid} className="text-xs rounded bg-muted text-muted-foreground px-1.5 py-0.5">{tag.tag_name}</span> : null;
+                                                            })}
+                                                            {(row.category_ids ?? []).length === 0 && (row.tags ?? []).length === 0 && <span className="text-sm text-muted-foreground">-</span>}
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right py-2 font-mono">
@@ -501,29 +607,117 @@ export default function BudgetMaker() {
                                                 )}
                                             </div>
 
-                                            {isEditing && (
-                                                <Select
-                                                    value={row.category_id !== null ? row.category_id.toString() : "none"}
-                                                    onValueChange={(val) => updateRow(group, row.id, 'category_id', val === "none" ? null : parseInt(val))}
-                                                >
-                                                    <SelectTrigger className="h-9 bg-background/50 border-input/50 focus:bg-background">
-                                                        <SelectValue placeholder={t('pages.budgetMaker.categoryPlaceholder')} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">{t('common.none')}</SelectItem>
-                                                        {categories.filter(c => {
-                                                            if (group === 'income') return c.type === 'income';
-                                                            if (group === 'expense') return c.type === 'expense';
-                                                            if (group === 'saving') return c.type === 'saving';
-                                                            if (group === 'investment') return c.type === 'investment';
-                                                            return true;
-                                                        }).map(c => (
-                                                            <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>
-                                                                {c.category_name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                            {isEditing ? (
+                                                <div className="flex flex-col gap-1.5">
+                                                    {/* Category multi-select (mobile) */}
+                                                    <Popover
+                                                        open={!!catPopoverOpen[`m-${row.id}`]}
+                                                        onOpenChange={(open) => {
+                                                            setCatPopoverOpen(prev => ({ ...prev, [`m-${row.id}`]: open }));
+                                                            if (!open) setCatSearchInput(prev => ({ ...prev, [`m-${row.id}`]: '' }));
+                                                        }}
+                                                    >
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="outline" className="h-auto min-h-9 w-full justify-start flex-wrap gap-1 px-3 py-1.5 text-sm bg-background/50 border-input/50">
+                                                                {(row.category_ids ?? []).length > 0 ? (
+                                                                    (row.category_ids ?? []).map(cid => {
+                                                                        const cat = categories.find(c => c.categories_id_pk === cid);
+                                                                        return cat ? (
+                                                                            <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
+                                                                                {cat.category_name}
+                                                                                <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
+                                                                            </span>
+                                                                        ) : null;
+                                                                    })
+                                                                ) : (
+                                                                    <span className="text-muted-foreground text-sm font-normal">Categories…</span>
+                                                                )}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-56 p-0" align="start">
+                                                            <Command>
+                                                                <CommandInput placeholder="Search categories…" value={catSearchInput[`m-${row.id}`] ?? ''} onValueChange={(v) => setCatSearchInput(prev => ({ ...prev, [`m-${row.id}`]: v }))} />
+                                                                <CommandList>
+                                                                    <CommandEmpty>No categories found.</CommandEmpty>
+                                                                    <CommandGroup>
+                                                                        {categories.filter(c => {
+                                                                            if (c.is_active === false) return false;
+                                                                            if (group === 'income') return c.type === 'income';
+                                                                            if (group === 'expense') return c.type === 'expense';
+                                                                            if (group === 'saving') return c.type === 'saving';
+                                                                            if (group === 'investment') return c.type === 'investment';
+                                                                            return true;
+                                                                        }).sort((a, b) => a.category_name.localeCompare(b.category_name)).map(c => (
+                                                                            <CommandItem key={c.categories_id_pk} value={c.category_name} onSelect={() => {
+                                                                                const current = row.category_ids ?? [];
+                                                                                updateRow(group, row.id, 'category_ids', current.includes(c.categories_id_pk) ? current.filter(id => id !== c.categories_id_pk) : [...current, c.categories_id_pk]);
+                                                                            }}>
+                                                                                <Check className={cn('mr-2 h-3.5 w-3.5', (row.category_ids ?? []).includes(c.categories_id_pk) ? 'opacity-100' : 'opacity-0')} />
+                                                                                {c.category_name}
+                                                                            </CommandItem>
+                                                                        ))}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    {/* Tag multi-select (mobile) */}
+                                                    <Popover
+                                                        open={!!tagPopoverOpen[`m-${row.id}`]}
+                                                        onOpenChange={(open) => {
+                                                            setTagPopoverOpen(prev => ({ ...prev, [`m-${row.id}`]: open }));
+                                                            if (!open) setTagSearchInput(prev => ({ ...prev, [`m-${row.id}`]: '' }));
+                                                        }}
+                                                    >
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="outline" className="h-auto min-h-9 w-full justify-start flex-wrap gap-1 px-3 py-1.5 text-sm bg-background/50 border-input/50">
+                                                                {(row.tags ?? []).length > 0 ? (
+                                                                    (row.tags ?? []).map(tid => {
+                                                                        const tag = tags.find(t => t.tags_id_pk === tid);
+                                                                        return tag ? (
+                                                                            <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
+                                                                                {tag.tag_name}
+                                                                                <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
+                                                                            </span>
+                                                                        ) : null;
+                                                                    })
+                                                                ) : (
+                                                                    <span className="text-muted-foreground text-sm font-normal">Tags…</span>
+                                                                )}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-48 p-0" align="start">
+                                                            <Command>
+                                                                <CommandInput placeholder="Search tags…" value={tagSearchInput[`m-${row.id}`] ?? ''} onValueChange={(v) => setTagSearchInput(prev => ({ ...prev, [`m-${row.id}`]: v }))} />
+                                                                <CommandList>
+                                                                    <CommandEmpty>{tags.length === 0 ? 'No tags. Create them in Transactions.' : 'No tags found.'}</CommandEmpty>
+                                                                    <CommandGroup>
+                                                                        {tags.map(tag => (
+                                                                            <CommandItem key={tag.tags_id_pk} value={tag.tag_name} onSelect={() => {
+                                                                                const current = row.tags ?? [];
+                                                                                updateRow(group, row.id, 'tags', current.includes(tag.tags_id_pk) ? current.filter(id => id !== tag.tags_id_pk) : [...current, tag.tags_id_pk]);
+                                                                            }}>
+                                                                                <Check className={cn('mr-2 h-3.5 w-3.5', (row.tags ?? []).includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
+                                                                                {tag.tag_name}
+                                                                            </CommandItem>
+                                                                        ))}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(row.category_ids ?? []).map(cid => {
+                                                        const cat = categories.find(c => c.categories_id_pk === cid);
+                                                        return cat ? <span key={cid} className="text-xs rounded bg-secondary/60 text-secondary-foreground px-1.5 py-0.5">{cat.category_name}</span> : null;
+                                                    })}
+                                                    {(row.tags ?? []).map(tid => {
+                                                        const tag = tags.find(t => t.tags_id_pk === tid);
+                                                        return tag ? <span key={tid} className="text-xs rounded bg-muted text-muted-foreground px-1.5 py-0.5">{tag.tag_name}</span> : null;
+                                                    })}
+                                                </div>
                                             )}
 
                                             <div className="flex items-center justify-between gap-4">

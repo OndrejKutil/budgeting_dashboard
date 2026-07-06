@@ -1,9 +1,9 @@
 from datetime import date as Date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 # ================================================================================================
 #                                   Data Schemas
@@ -619,7 +619,8 @@ class IncomeRowResponse(BaseModel):
     amount: Decimal = Field(..., description="Amount allocated for this income source")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount received for this income source")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class ExpenseRowResponse(BaseModel):
@@ -627,7 +628,8 @@ class ExpenseRowResponse(BaseModel):
     amount: Decimal = Field(..., description="Amount allocated for this expense category")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount spent for this expense category")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class SavingsRowResponse(BaseModel):
@@ -635,7 +637,8 @@ class SavingsRowResponse(BaseModel):
     amount: Decimal = Field(..., description="Amount allocated for this savings goal")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount saved for this savings goal")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class InvestmentRowResponse(BaseModel):
@@ -643,7 +646,8 @@ class InvestmentRowResponse(BaseModel):
     amount: Decimal = Field(..., description="Amount allocated for this investment")
     actual_amount: Optional[Decimal] = Field(None, description="Actual amount invested")
     difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_id: Optional[int] = Field(None, description="Linked category ID used for actuals calculation")
+    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class BudgetSummaryResponse(BaseModel):
@@ -663,7 +667,17 @@ class BudgetPlanRow(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Name of the budget item")
     amount: Decimal = Field(..., ge=0, description="Planned amount")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
-    category_id: Optional[int] = Field(None, description="Linked category ID (if any)")
+    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs for actuals (replaces category_id)")
+    tags: Optional[List[int]] = Field(None, description="Linked tag IDs for actuals filtering")
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_category_id(cls, data: Any) -> Any:
+        if isinstance(data, dict) and 'category_id' in data and 'category_ids' not in data:
+            cat_id = data.pop('category_id')
+            if cat_id is not None:
+                data['category_ids'] = [cat_id]
+        return data
 
 class BudgetPlan(BaseModel):
     """Schema for the entire budget plan JSON structure"""

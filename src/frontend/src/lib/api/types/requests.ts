@@ -162,7 +162,8 @@ export interface BudgetPlanRow {
     name: string;
     amount: number;
     include_in_total: boolean;
-    category_id: number | null;
+    category_ids?: number[];
+    tags?: number[];
 }
 
 /**
