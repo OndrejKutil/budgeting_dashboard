@@ -307,9 +307,12 @@ export interface MonthlyAnalytics {
     day_split: DaySplit;
     category_concentration: CategoryConcentration;
     comparison: MonthlyPeriodComparison;
+    yoy_comparison: MonthlyPeriodComparison | null;
     daily_spending_heatmap: DailySpendingData[];
     income_breakdown: CategoryBreakdownData[];
     expenses_breakdown: CategoryBreakdownData[];
+    saving_breakdown: CategoryBreakdownData[];
+    investment_breakdown: CategoryBreakdownData[];
     spending_type_breakdown: SpendingTypeBreakdownData[];
 }
 
@@ -394,6 +397,8 @@ export interface YearlyAnalyticsData {
     core_categories: Record<string, number>;
     income_by_category: Record<string, number>;
     expense_by_category: Record<string, number>;
+    saving_by_category: Record<string, number>;
+    investment_by_category: Record<string, number>;
 }
 
 // ================================================================================================
@@ -428,6 +433,46 @@ export interface EmergencyFundData {
 
     // Current State
     current_savings_amount: number;
+    months_analyzed: number;
+}
+
+// ================================================================================================
+//                                   FIRE Types
+// ================================================================================================
+
+/**
+ * FIRE (Financial Independence / Retire Early) analysis data
+ * Matches backend FIREData schema
+ */
+export interface FIREData {
+    year: number;
+    base_currency: string;
+
+    // FI target numbers (25× annual spending)
+    fi_number: number;
+    lean_fi_number: number;
+    fat_fi_number: number;
+
+    // Current state
+    current_net_worth: number;
+    annual_income: number;
+    annual_savings: number;
+    savings_rate: number;
+
+    // Progress
+    fi_progress_pct: number;
+    lean_progress_pct: number;
+    fat_progress_pct: number;
+
+    // Projections (null when not enough data)
+    years_to_fi: number | null;
+    projected_fi_year: number | null;
+    coast_fi_years: number | null;
+
+    // Monthly expenses
+    monthly_core_expenses: number;
+    monthly_core_necessary_expenses: number;
+    monthly_all_expenses: number;
     months_analyzed: number;
 }
 

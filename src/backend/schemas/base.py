@@ -336,17 +336,20 @@ class MonthlyAnalyticsData(BaseModel):
     cashflow: float = Field(..., description="Calculated cashflow (income + expenses + investments + savings)")
     savings_rate: float = Field(..., description="Savings rate as percentage of income")
     investment_rate: float = Field(..., description="Investment rate as percentage of income")
-    
+
     # New fields
     run_rate: RunRateForecast = Field(..., description="Run-rate and forecast data")
     day_split: DaySplit = Field(..., description="Weekday vs Weekend spending split")
     category_concentration: CategoryConcentration = Field(..., description="Category concentration insights")
     comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
-    
+    yoy_comparison: Optional[MonthlyPeriodComparison] = Field(None, description="Year-over-year comparison (vs same month last year)")
+
     daily_spending_heatmap: List[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
     # breakdown: List[CategoryBreakdownData] # REMOVED
     income_breakdown: List[CategoryBreakdownData] = Field(..., description="Income breakdown by category")
     expenses_breakdown: List[CategoryBreakdownData] = Field(..., description="Expenses breakdown by category")
+    saving_breakdown: List[CategoryBreakdownData] = Field(default_factory=list, description="Saving breakdown by category")
+    investment_breakdown: List[CategoryBreakdownData] = Field(default_factory=list, description="Investment breakdown by category")
     spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
 
     model_config = ConfigDict(
@@ -446,6 +449,8 @@ class YearlyAnalyticsData(BaseModel):
     core_categories: dict[str, float] = Field(..., description="Core category breakdown")
     income_by_category: dict[str, float] = Field(..., description="Income breakdown by category")
     expense_by_category: dict[str, float] = Field(..., description="Expense breakdown by category")
+    saving_by_category: dict[str, float] = Field(default_factory=dict, description="Saving breakdown by category")
+    investment_by_category: dict[str, float] = Field(default_factory=dict, description="Investment breakdown by category")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -537,6 +542,39 @@ class EmergencyFundData(BaseModel):
             }
         }
     )
+
+
+class FIREData(BaseModel):
+    """Schema for FIRE (Financial Independence / Retire Early) dashboard data"""
+    year: int = Field(..., description="Reference year for expense calculations")
+    base_currency: str = Field(..., description="Base currency for all amounts")
+
+    # FI target numbers (25× annual spending — 4% rule)
+    fi_number: float = Field(..., description="Standard FI number: 25× annual Core+Necessary expenses")
+    lean_fi_number: float = Field(..., description="Lean FI number: 25× annual Core-only expenses")
+    fat_fi_number: float = Field(..., description="Fat FI number: 25× annual Core+Necessary+Fun expenses")
+
+    # Current state
+    current_net_worth: float = Field(..., description="Current net worth in base currency")
+    annual_income: float = Field(..., description="Trailing-12-month income")
+    annual_savings: float = Field(..., description="Trailing-12-month savings (income − expenses − investments)")
+    savings_rate: float = Field(..., description="Trailing-12-month savings rate as % of income")
+
+    # Progress (capped at 100 for display)
+    fi_progress_pct: float = Field(..., description="Progress towards standard FI number (%)")
+    lean_progress_pct: float = Field(..., description="Progress towards Lean FI number (%)")
+    fat_progress_pct: float = Field(..., description="Progress towards Fat FI number (%)")
+
+    # Projections (None when not enough data)
+    years_to_fi: Optional[float] = Field(None, description="Estimated years to standard FI at 7% annual growth + current savings rate")
+    projected_fi_year: Optional[int] = Field(None, description="Calendar year of estimated FI achievement")
+    coast_fi_years: Optional[float] = Field(None, description="Years until current NW alone grows to FI number at 7% (Coast FI)")
+
+    # Monthly expense breakdowns (for display)
+    monthly_core_expenses: float = Field(..., description="Average monthly Core-only expenses")
+    monthly_core_necessary_expenses: float = Field(..., description="Average monthly Core+Necessary expenses")
+    monthly_all_expenses: float = Field(..., description="Average monthly Core+Necessary+Fun expenses")
+    months_analyzed: int = Field(..., description="Number of months with expense data")
 
 
 # ================================================================================================

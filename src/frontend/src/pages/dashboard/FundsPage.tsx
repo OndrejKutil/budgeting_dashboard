@@ -13,6 +13,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -35,6 +42,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/contexts/user-context';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+
+type FundSortKey = 'created' | 'name' | 'progress' | 'target' | 'activity';
+const FUND_SORT_STORAGE_KEY = 'funds-sort';
+
+function sortFunds(funds: SavingsFund[], sort: FundSortKey): SavingsFund[] {
+  return [...funds].sort((a, b) => {
+    switch (sort) {
+      case 'name':
+        return a.fund_name.localeCompare(b.fund_name);
+      case 'progress': {
+        const pA = a.target_amount > 0 ? (a.current_amount || 0) / a.target_amount : 0;
+        const pB = b.target_amount > 0 ? (b.current_amount || 0) / b.target_amount : 0;
+        return pB - pA;
+      }
+      case 'target':
+        return b.target_amount - a.target_amount;
+      case 'activity':
+        return Math.abs(b.net_flow_30d || 0) - Math.abs(a.net_flow_30d || 0);
+      case 'created':
+      default:
+        return (a.created_at ?? '').localeCompare(b.created_at ?? '');
+    }
+  });
+}
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -61,6 +92,15 @@ export default function FundsPage() {
     },
   });
 
+  const [sortKey, setSortKey] = useState<FundSortKey>(
+    () => (localStorage.getItem(FUND_SORT_STORAGE_KEY) as FundSortKey | null) ?? 'created'
+  );
+
+  const handleSortChange = (value: FundSortKey) => {
+    setSortKey(value);
+    localStorage.setItem(FUND_SORT_STORAGE_KEY, value);
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFund, setSelectedFund] = useState<SavingsFund | null>(null);
 
@@ -71,8 +111,8 @@ export default function FundsPage() {
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const activeFunds = funds.filter(f => f.fund_is_active !== false);
-  const inactiveFunds = funds.filter(f => f.fund_is_active === false);
+  const activeFunds = sortFunds(funds.filter(f => f.fund_is_active !== false), sortKey);
+  const inactiveFunds = sortFunds(funds.filter(f => f.fund_is_active === false), sortKey);
   const totalTarget = activeFunds.reduce((sum, f) => sum + f.target_amount, 0);
   const totalCurrent = activeFunds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
 
@@ -357,10 +397,24 @@ export default function FundsPage() {
         title={t('pages.funds.title')}
         description={t('pages.funds.description')}
         actions={
-          <Button onClick={() => handleOpenModal()}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('pages.funds.create')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Select value={sortKey} onValueChange={handleSortChange}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created">{t('pages.funds.sortCreated')}</SelectItem>
+                <SelectItem value="name">{t('pages.funds.sortName')}</SelectItem>
+                <SelectItem value="progress">{t('pages.funds.sortProgress')}</SelectItem>
+                <SelectItem value="target">{t('pages.funds.sortTarget')}</SelectItem>
+                <SelectItem value="activity">{t('pages.funds.sortActivity')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('pages.funds.create')}
+            </Button>
+          </div>
         }
       />
 

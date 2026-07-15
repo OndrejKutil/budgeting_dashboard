@@ -64,7 +64,7 @@ export function DashboardLayout() {
       {/* Main content */}
       <div
         className={cn(
-          'min-h-screen transition-all duration-300',
+          'dashboard-content min-h-screen transition-all duration-300',
           sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
         )}
       >

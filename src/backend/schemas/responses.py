@@ -7,7 +7,9 @@ from .base import (
     AccountData,
     CategoryData,
     CategoryType,
+    DailySpendingData,
     EmergencyFundData,
+    FIREData,
     MonthlyAnalyticsData,
     NetWorthTimelineData,
     ProfileData,
@@ -271,6 +273,20 @@ class YearlyAnalyticsResponse(BaseModel):
 class EmergencyFundResponse(BaseModel):
     """Response schema for emergency fund analysis endpoint"""
     data: EmergencyFundData = Field(..., description="Emergency fund analysis data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class FIREResponse(BaseModel):
+    """Response schema for FIRE dashboard endpoint"""
+    data: FIREData = Field(..., description="FIRE analysis data")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class HeatmapResponse(BaseModel):
+    """Response schema for yearly spending heatmap endpoint"""
+    data: List[DailySpendingData] = Field(..., description="Daily spending data for the full year")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 

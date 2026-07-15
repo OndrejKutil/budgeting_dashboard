@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/ui/page-header';
 import { KPICard } from '@/components/ui/kpi-card';
 import { AnalyticsSkeleton } from '@/components/skeletons';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
   Briefcase,
   DollarSign,
   Wallet,
+  FileDown,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -39,6 +41,8 @@ import { DeferredRender } from '@/components/performance/DeferredRender';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
+import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
+import type { CategoryBreakdownData } from '@/lib/api/types/base';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -158,13 +162,35 @@ export default function MonthlyAnalyticsPage() {
   if (!data) {
     return <div className="p-8 text-center text-muted-foreground">{t('states.noDataForMonth')}</div>;
   }
+
+  const buildTable = (title: string, rows: CategoryBreakdownData[]): StatementTable => {
+    const sorted = rows.slice().sort((a, b) => b.total - a.total);
+    return {
+      title,
+      rows: sorted.map((r) => ({ label: r.category, value: formatCurrency(r.total) })),
+      total: { label: t('statement.total'), value: formatCurrency(rows.reduce((s, r) => s + r.total, 0)) },
+    };
+  };
+
+  const statementTables: StatementTable[] = [
+    buildTable(t('statement.incomeByCategory'), data.income_breakdown),
+    buildTable(t('statement.expensesByCategory'), data.expenses_breakdown),
+    buildTable(t('statement.savingsByCategory'), data.saving_breakdown),
+    buildTable(t('statement.investmentsByCategory'), data.investment_breakdown),
+  ];
+
   return (
-    <div className="space-y-6">
+    <>
+    <div className="screen-content space-y-6">
       <PageHeader
         title={t('pages.monthlyAnalytics.title')}
         description={t('pages.monthlyAnalytics.description', { month: selectedMonth, year: selectedYear })}
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 no-print">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <FileDown className="h-4 w-4 mr-2" />
+              {t('pages.monthlyAnalytics.exportPdf')}
+            </Button>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder={t('common.month')} />
@@ -210,6 +236,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.income_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.income_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
               <div>
@@ -221,6 +252,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.expenses_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -239,6 +275,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.savings_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
               <div>
@@ -253,6 +294,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.investments_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -268,6 +314,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.profit_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
               <div>
@@ -279,6 +330,11 @@ export default function MonthlyAnalyticsPage() {
                   <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
                     <SensitiveValue>{data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
                   </span>
+                  {data.yoy_comparison && (
+                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      <SensitiveValue>{data.yoy_comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -520,5 +576,23 @@ export default function MonthlyAnalyticsPage() {
         </div>
       </DeferredRender>
     </div>
+
+    <div className="print-statement">
+      <StatementDocument
+        brand={t('appName')}
+        title={t('statement.monthlyTitle')}
+        period={`${formatMonth(selectedMonthNumber - 1, 'long')} ${selectedYear}`}
+        summary={[
+          { label: t('metrics.income'), value: formatCurrency(data.income), tone: 'income' },
+          { label: t('metrics.expenses'), value: formatCurrency(data.expenses), tone: 'expense' },
+          { label: t('metrics.savings'), value: formatCurrency(data.savings) },
+          { label: t('metrics.investments'), value: formatCurrency(data.investments) },
+          { label: t('metrics.profit'), value: formatCurrency(data.profit), emphasis: true, tone: data.profit >= 0 ? 'income' : 'expense' },
+          { label: t('metrics.cashFlow'), value: formatCurrency(data.cashflow) },
+        ]}
+        tables={statementTables}
+      />
+    </div>
+    </>
   );
 }

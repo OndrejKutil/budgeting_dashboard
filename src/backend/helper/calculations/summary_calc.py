@@ -372,15 +372,18 @@ def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> O
         pl.col('curr_total').fill_null(0.0),
         pl.col('prev_total').fill_null(0.0)
     ])
-    
+
     # Calculate delta
     joined = joined.with_columns(
         (pl.col('curr_total') - pl.col('prev_total')).alias('delta')
     )
-    
+
+    # Only consider categories with actual spending this month
+    joined = joined.filter(pl.col('curr_total') > 0)
+
     if joined.is_empty():
         return None
-        
+
     # Find max absolute delta
     # Sort by absolute delta desc
     biggest = joined.sort(pl.col('delta').abs(), descending=True).row(0, named=True)
@@ -410,7 +413,7 @@ def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> List[Transact
         return []
         
     # Filter out income? Typically largest transactions of interest are expenses.
-    outgoing = df.filter(pl.col('category_type').is_in(['expense', 'saving', 'investment']))
+    outgoing = df.filter(pl.col('category_type').is_in(['expense', 'investment']))
     
     if outgoing.is_empty():
         return []
