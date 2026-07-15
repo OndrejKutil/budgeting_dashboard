@@ -39,7 +39,6 @@ const analyticsItems = [
   { labelKey: 'nav.monthly', href: '/dashboard/analytics/monthly', icon: Calendar },
   { labelKey: 'nav.yearly', href: '/dashboard/analytics/yearly', icon: TrendingUp },
   { labelKey: 'nav.emergencyFund', href: '/dashboard/analytics/emergency-fund', icon: ShieldCheck },
-  { labelKey: 'nav.fire', href: '/dashboard/analytics/fire', icon: Flame },
   { labelKey: 'nav.cashFlow', href: '/dashboard/analytics/cashflow', icon: GitFork },
 ] as const;
 
@@ -48,6 +47,7 @@ const toolsItems = [
 ] as const;
 
 const calculatorsItems = [
+  { labelKey: 'nav.fire', href: '/dashboard/fire-calculator', icon: Flame },
   { labelKey: 'nav.investingCalculator', href: '/dashboard/investing-calculator', icon: Landmark },
   { labelKey: 'nav.dividendCalculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
 ] as const;

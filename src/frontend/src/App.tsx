@@ -130,9 +130,9 @@ const AppContent = () => {
                 <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
-                <Route path="analytics/fire" element={withSuspense(<FIREPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/cashflow" element={withSuspense(<CashFlowPage />, <AnalyticsSkeleton />)} />
                 <Route path="budget-maker" element={withSuspense(<BudgetMaker />, <BudgetMakerSkeleton />)} />
+                <Route path="fire-calculator" element={withSuspense(<FIREPage />, <AnalyticsSkeleton />)} />
                 <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
                 <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
               </Route>
