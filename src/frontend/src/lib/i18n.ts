@@ -225,6 +225,11 @@ const dashboardTranslations = {
         deleteDescription: 'Are you sure you want to delete this fund? If it has existing transactions, it will be deactivated instead of permanently deleted.',
         activeTarget: 'active target',
         of: 'of',
+        sortCreated: 'Date Created',
+        sortName: 'Name (A–Z)',
+        sortProgress: 'Progress',
+        sortTarget: 'Target Amount',
+        sortActivity: 'Recent Activity',
       },
       transactions: {
         title: 'Transactions',
@@ -823,6 +828,11 @@ const dashboardTranslations = {
         deleteDescription: 'Opravdu chcete tento fond smazat? Pokud má existující transakce, bude deaktivován místo trvalého smazání.',
         activeTarget: 'aktivní cíl',
         of: 'z',
+        sortCreated: 'Datum vytvoření',
+        sortName: 'Název (A–Z)',
+        sortProgress: 'Pokrok',
+        sortTarget: 'Cílová částka',
+        sortActivity: 'Nedávná aktivita',
       },
       transactions: {
         title: 'Transakce',
