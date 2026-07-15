@@ -20,6 +20,8 @@ import {
   ListChecks,
   CircleDollarSign,
   Repeat,
+  Flame,
+  GitFork,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/user-context';
@@ -37,6 +39,8 @@ const analyticsItems = [
   { labelKey: 'nav.monthly', href: '/dashboard/analytics/monthly', icon: Calendar },
   { labelKey: 'nav.yearly', href: '/dashboard/analytics/yearly', icon: TrendingUp },
   { labelKey: 'nav.emergencyFund', href: '/dashboard/analytics/emergency-fund', icon: ShieldCheck },
+  { labelKey: 'nav.fire', href: '/dashboard/analytics/fire', icon: Flame },
+  { labelKey: 'nav.cashFlow', href: '/dashboard/analytics/cashflow', icon: GitFork },
 ] as const;
 
 const toolsItems = [

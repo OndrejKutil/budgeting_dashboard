@@ -42,6 +42,8 @@ const BudgetMaker = lazy(() => import("./pages/dashboard/BudgetMaker"));
 const InvestingCalculator = lazy(() => import("./pages/dashboard/InvestingCalculator"));
 const DividendCalculator = lazy(() => import("./pages/dashboard/DividendCalculator"));
 const RecurringPage = lazy(() => import("./pages/dashboard/RecurringPage"));
+const FIREPage = lazy(() => import("./pages/dashboard/analytics/FIREPage"));
+const CashFlowPage = lazy(() => import("./pages/dashboard/analytics/CashFlowPage"));
 
 const STALE_TIME: number = 1000 * 60 * 5; // 5 minutes
 
@@ -128,6 +130,8 @@ const AppContent = () => {
                 <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/fire" element={withSuspense(<FIREPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/cashflow" element={withSuspense(<CashFlowPage />, <AnalyticsSkeleton />)} />
                 <Route path="budget-maker" element={withSuspense(<BudgetMaker />, <BudgetMakerSkeleton />)} />
                 <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
                 <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />

@@ -15,6 +15,8 @@ import type {
     MonthlyAnalytics,
     YearlyAnalyticsData,
     EmergencyFundData,
+    FIREData,
+    DailySpendingData,
     DividendCalculationResult,
     Recurring,
     RecurringSummary,
@@ -212,6 +214,24 @@ export interface YearlyAnalyticsResponse {
  */
 export interface EmergencyFundResponse {
     data: EmergencyFundData;
+    success: boolean;
+    message: string;
+}
+
+/**
+ * FIRE analysis response
+ */
+export interface FIREResponse {
+    data: FIREData;
+    success: boolean;
+    message: string;
+}
+
+/**
+ * Yearly spending heatmap response
+ */
+export interface HeatmapResponse {
+    data: DailySpendingData[];
     success: boolean;
     message: string;
 }

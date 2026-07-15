@@ -26,6 +26,7 @@ import {
   Info,
   Minus,
   DollarSign,
+  FileDown,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,6 +47,8 @@ import {
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
+import { YearlyHeatmap } from '@/components/analytics/YearlyHeatmap';
+import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
@@ -118,6 +121,16 @@ export default function YearlyAnalyticsPage() {
         return response.data;
       }
       throw new Error(response.message || t('common.unknownError'));
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const { data: heatmapData } = useQuery({
+    queryKey: ['yearly-heatmap', selectedYearNumber, currency],
+    queryFn: async () => {
+      const response = await analyticsApi.getYearlyHeatmap({ year: selectedYearNumber, base_currency: currency });
+      if (response.success) return response.data;
+      return [];
     },
     placeholderData: keepPreviousData,
   });
@@ -222,24 +235,47 @@ export default function YearlyAnalyticsPage() {
     );
   }
 
+  const buildTable = (title: string, rec: Record<string, number>): StatementTable => {
+    const entries = Object.entries(rec).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a);
+    return {
+      title,
+      rows: entries.map(([label, v]) => ({ label, value: formatCurrency(v) })),
+      total: { label: t('statement.total'), value: formatCurrency(entries.reduce((s, [, v]) => s + v, 0)) },
+    };
+  };
+
+  const statementTables: StatementTable[] = [
+    buildTable(t('statement.incomeByCategory'), data.income_by_category),
+    buildTable(t('statement.expensesByCategory'), data.expense_by_category),
+    buildTable(t('statement.savingsByCategory'), data.saving_by_category),
+    buildTable(t('statement.investmentsByCategory'), data.investment_by_category),
+  ];
+
   return (
-    <div className="space-y-6">
+    <>
+    <div className="screen-content space-y-6">
       <PageHeader
         title={t('pages.yearlyAnalytics.title')}
         description={t('pages.yearlyAnalytics.description', { year: selectedYear })}
         actions={
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={y.toString()}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 no-print">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <FileDown className="h-4 w-4 mr-2" />
+              {t('pages.yearlyAnalytics.exportPdf')}
+            </Button>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
@@ -605,7 +641,43 @@ export default function YearlyAnalyticsPage() {
             </div>
           </div>
         </DeferredRender>
+
+        {/* Yearly Spending Heatmap */}
+        <DeferredRender
+          className="mt-12 pt-8"
+          fallback={<div className="min-h-[160px] rounded-xl border border-border/50 bg-card" />}
+        >
+          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-2">{t('pages.yearlyAnalytics.yearlyHeatmap')}</h2>
+          <p className="text-muted-foreground text-sm mb-6">{t('pages.yearlyAnalytics.heatmapDescription')}</p>
+          <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
+            {heatmapData && heatmapData.length > 0 ? (
+              <YearlyHeatmap data={heatmapData} year={selectedYearNumber} />
+            ) : (
+              <div className="flex h-24 items-center justify-center text-muted-foreground text-sm">
+                {t('pages.yearlyAnalytics.heatmapNoData')}
+              </div>
+            )}
+          </div>
+        </DeferredRender>
       </div>
     </div>
+
+    <div className="print-statement">
+      <StatementDocument
+        brand={t('appName')}
+        title={t('statement.yearlyTitle')}
+        period={selectedYear}
+        summary={[
+          { label: t('metrics.income'), value: formatCurrency(data.total_income), tone: 'income' },
+          { label: t('metrics.expenses'), value: formatCurrency(data.total_expense), tone: 'expense' },
+          { label: t('metrics.savings'), value: formatCurrency(data.total_saving) },
+          { label: t('metrics.investments'), value: formatCurrency(data.total_investment) },
+          { label: t('metrics.profit'), value: formatCurrency(data.profit), emphasis: true, tone: data.profit >= 0 ? 'income' : 'expense' },
+          { label: t('metrics.cashFlow'), value: formatCurrency(data.net_cash_flow) },
+        ]}
+        tables={statementTables}
+      />
+    </div>
+    </>
   );
 }

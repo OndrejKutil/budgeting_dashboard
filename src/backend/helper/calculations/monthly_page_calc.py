@@ -457,38 +457,48 @@ def _monthly_analytics(access_token: str, year: int, month: int, base_currency: 
     """
     # 1. Get dates for current month
     start_date, end_date = _get_month_date_range(year, month)
-    
+
     # 2. Get dates for previous month
     prev_date = start_date - relativedelta(months=1)
     prev_year, prev_month = prev_date.year, prev_date.month
     prev_start_date, prev_end_date = _get_month_date_range(prev_year, prev_month)
-    
-    # 3. Fetch data
+
+    # 3. Get dates for same month last year (YoY comparison)
+    yoy_start_date, yoy_end_date = _get_month_date_range(year - 1, month)
+
+    # 4. Fetch data
     current_transactions = _fetch_monthly_transactions(access_token, start_date, end_date)
     previous_transactions = _fetch_monthly_transactions(access_token, prev_start_date, prev_end_date)
-    
-    # 4. Prepare DFs
+    yoy_transactions = _fetch_monthly_transactions(access_token, yoy_start_date, yoy_end_date)
+
+    # 5. Prepare DFs
     current_df = _prepare_transactions_dataframe(current_transactions)
     previous_df = _prepare_transactions_dataframe(previous_transactions)
+    yoy_df = _prepare_transactions_dataframe(yoy_transactions)
 
-    # 4b. Convert amounts to base_currency
+    # 5b. Convert amounts to base_currency
     current_df = _apply_currency_conversion(current_df, base_currency)
     previous_df = _apply_currency_conversion(previous_df, base_currency)
+    yoy_df = _apply_currency_conversion(yoy_df, base_currency)
 
-    # 5. Calculate Metrics
+    # 6. Calculate Metrics
     totals = _calculate_monthly_totals(current_df)
     prev_totals = _calculate_monthly_totals(previous_df)
-    
+    yoy_totals = _calculate_monthly_totals(yoy_df)
+
     run_rate = _calculate_run_rate(current_df, year, month)
     day_split = _calculate_day_split(current_df)
     concentration = _calculate_concentration(current_df)
     comparison = _calculate_comparison(totals, prev_totals)
-    
+    yoy_comparison = _calculate_comparison(totals, yoy_totals) if not yoy_df.is_empty() else None
+
     daily_heatmap = _calculate_daily_spending_heatmap(current_df)
-    
+
     income_breakdown = _calculate_category_breakdown(current_df, 'income')
     expenses_breakdown = _calculate_category_breakdown(current_df, 'expense')
-    
+    saving_breakdown = _calculate_category_breakdown(current_df, 'saving')
+    investment_breakdown = _calculate_category_breakdown(current_df, 'investment')
+
     spending_type_breakdown = _calculate_spending_type_breakdown(current_df)
 
     # Calculate rates
@@ -511,8 +521,11 @@ def _monthly_analytics(access_token: str, year: int, month: int, base_currency: 
         day_split=day_split,
         category_concentration=concentration,
         comparison=comparison,
+        yoy_comparison=yoy_comparison,
         daily_spending_heatmap=daily_heatmap,
         income_breakdown=income_breakdown,
         expenses_breakdown=expenses_breakdown,
-        spending_type_breakdown=spending_type_breakdown
+        saving_breakdown=saving_breakdown,
+        investment_breakdown=investment_breakdown,
+        spending_type_breakdown=spending_type_breakdown,
     )

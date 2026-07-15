@@ -355,3 +355,37 @@
     font-size: 16px !important;
   }
 }
+
+/* ---- Sankey collapse/expand animation ---- */
+@keyframes sankeyFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sankey-fade { animation: sankeyFade 300ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .sankey-fade { animation: none; }
+}
+
+/* ---- Print / PDF export ---- */
+
+/* Statement document: hidden on screen, shown only when printing. */
+.print-statement { display: none; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  .no-print { display: none !important; }
+  .print-break { page-break-before: always; }
+
+  /* Hide app chrome and the on-screen dashboard content */
+  aside, header, nav, [role="navigation"], .screen-content { display: none !important; }
+
+  /* Reset the dashboard layout offsets so the statement flows from the top-left */
+  .dashboard-content { padding: 0 !important; }
+  #main-content { padding: 0 !important; margin: 0 !important; }
+
+  body { background: white !important; color: black !important; }
+
+  /* Reveal the statement */
+  .print-statement { display: block !important; }
+}

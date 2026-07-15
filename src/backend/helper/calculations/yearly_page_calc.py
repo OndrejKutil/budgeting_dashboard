@@ -62,6 +62,8 @@ class CategoryBreakdowns(BaseModel):
     core_categories: Dict[str, float] = Field(default_factory=dict)
     income_by_category: Dict[str, float] = Field(default_factory=dict)
     expense_by_category: Dict[str, float] = Field(default_factory=dict)
+    saving_by_category: Dict[str, float] = Field(default_factory=dict)
+    investment_by_category: Dict[str, float] = Field(default_factory=dict)
 
 
 # ================================================================================================
@@ -362,12 +364,16 @@ def _calculate_category_breakdowns(df: pl.DataFrame) -> CategoryBreakdowns:
     core_categories = group_to_dict((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core'), 'abs_amount')
     income_by_category = group_to_dict(pl.col('category_type') == 'income', 'amount')
     expense_by_category = group_to_dict(pl.col('category_type') == 'expense', 'abs_amount')
+    saving_by_category = group_to_dict(pl.col('category_type') == 'saving', 'abs_amount')
+    investment_by_category = group_to_dict(pl.col('category_type') == 'investment', 'abs_amount')
 
     return CategoryBreakdowns(
         by_category=by_category,
         core_categories=core_categories,
         income_by_category=income_by_category,
-        expense_by_category=expense_by_category
+        expense_by_category=expense_by_category,
+        saving_by_category=saving_by_category,
+        investment_by_category=investment_by_category
     )
 
 def _prepare_monthly_arrays(monthly_data: Dict[str, MonthlyDataPoint]) -> dict:
@@ -555,7 +561,9 @@ def _yearly_analytics(access_token: str, year: int, base_currency: str = 'CZK') 
         by_category=breakdowns.by_category,
         core_categories=breakdowns.core_categories,
         income_by_category=breakdowns.income_by_category,
-        expense_by_category=breakdowns.expense_by_category
+        expense_by_category=breakdowns.expense_by_category,
+        saving_by_category=breakdowns.saving_by_category,
+        investment_by_category=breakdowns.investment_by_category
     )
 
 
@@ -778,6 +786,34 @@ def _calculate_expense_stats(df: pl.DataFrame, spending_types: List[str]) -> tup
     average_monthly = total_expenses / months_with_data if months_with_data > 0 else 0.0
     
     return average_monthly, total_expenses
+
+
+def _yearly_heatmap(access_token: str, year: int, base_currency: str = 'CZK') -> list:
+    """Return daily spending totals for every day in year that has expense transactions."""
+    from ...schemas.base import DailySpendingData
+    start_date, end_date = _get_year_date_range(year)
+    transactions = _fetch_emergency_fund_transactions(access_token, start_date, end_date)
+    df = _prepare_emergency_fund_dataframe(transactions)
+    df = _apply_currency_conversion(df, base_currency)
+
+    if df.is_empty():
+        return []
+
+    daily = (
+        df.filter(pl.col('category_type') == 'expense')
+          .group_by('date_parsed')
+          .agg(pl.col('abs_amount').sum())
+          .sort('date_parsed')
+    )
+
+    result = []
+    for row in daily.iter_rows(named=True):
+        if row['date_parsed']:
+            result.append(DailySpendingData(
+                day=row['date_parsed'].isoformat(),
+                amount=round(row['abs_amount'], 2),
+            ))
+    return result
 
 
 def _emergency_fund_analysis(access_token: str, year: int, base_currency: str = 'CZK') -> EmergencyFundData:

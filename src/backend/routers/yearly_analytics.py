@@ -10,11 +10,12 @@ from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # Load environment variables
 from ..helper import environment as env
-from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis
+from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis, _yearly_heatmap
+from ..helper.calculations.fire_calc import _fire_analysis
 
 # schemas
-from ..schemas.base import EmergencyFundData, YearlyAnalyticsData
-from ..schemas.responses import EmergencyFundResponse, YearlyAnalyticsResponse
+from ..schemas.base import DailySpendingData, EmergencyFundData, FIREData, YearlyAnalyticsData
+from ..schemas.responses import EmergencyFundResponse, FIREResponse, HeatmapResponse, YearlyAnalyticsResponse
 
 # logging
 import logging
@@ -138,8 +139,74 @@ async def get_emergency_fund_analysis(
         logger.error(f'Database query failed for get_emergency_fund_analysis: {str(e)}')
         logger.info(f'Query parameters - year: {year}')
         logger.error('Failed to fetch emergency fund analysis from database')
-        
+
         raise fastapi.HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to generate emergency fund analysis'
         )
+
+
+@router.get('/fire', response_model=FIREResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
+async def get_fire_analysis(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user),
+    year: int = Query(datetime.now().year, description='Reference year for expense calculations'),
+    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
+) -> FIREResponse:
+    '''
+    Get FIRE (Financial Independence / Retire Early) analysis.
+
+    Returns FI numbers for Lean / Standard / Fat FIRE, current progress, projected FI date,
+    and Coast FIRE metrics. Expenses are sourced from the given year; income/savings from
+    the trailing 12 months; net worth from all-time transaction history.
+    '''
+    try:
+        fire_data: FIREData = _fire_analysis(user['access_token'], year, base_currency)
+        return FIREResponse(
+            data=fire_data,
+            success=True,
+            message=f'FIRE analysis for {year} retrieved successfully',
+        )
+    except ValueError as e:
+        logger.warning(f'Invalid parameters for get_fire_analysis: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid year parameter')
+    except ConnectionError as e:
+        logger.error(f'Database connection failed: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Database connection failed. Please try again later.')
+    except Exception as e:
+        logger.error(f'Unexpected error in get_fire_analysis: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to generate FIRE analysis')
+
+
+@router.get('/heatmap', response_model=HeatmapResponse)
+@limiter.limit(RATE_LIMITS["heavy"])
+async def get_yearly_heatmap(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user),
+    year: int = Query(datetime.now().year, description='Year for heatmap data'),
+    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
+) -> HeatmapResponse:
+    '''
+    Get daily spending totals for every day in the year that has expense transactions.
+    Returns a flat list of { day: "YYYY-MM-DD", amount: float } used to render a
+    GitHub-style full-year contribution heatmap.
+    '''
+    try:
+        daily_data: list[DailySpendingData] = _yearly_heatmap(user['access_token'], year, base_currency)
+        return HeatmapResponse(
+            data=daily_data,
+            success=True,
+            message=f'Yearly heatmap for {year} retrieved successfully',
+        )
+    except ValueError as e:
+        logger.warning(f'Invalid parameters for get_yearly_heatmap: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid year parameter')
+    except ConnectionError as e:
+        logger.error(f'Database connection failed: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Database connection failed. Please try again later.')
+    except Exception as e:
+        logger.error(f'Unexpected error in get_yearly_heatmap: {str(e)}')
+        raise fastapi.HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to generate yearly heatmap')
