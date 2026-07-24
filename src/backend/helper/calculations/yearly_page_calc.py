@@ -292,7 +292,7 @@ def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: Dict[str, Mo
                 
     # 8. Future
     future_rows = (
-        df.filter(pl.col('category_type').is_in(['saving', 'investment']) & (pl.col('spending_type') == 'Future'))
+        df.filter(pl.col('spending_type') == 'Future')
           .group_by('month_name')
           .agg(pl.col('abs_amount').sum())
     )
@@ -323,7 +323,7 @@ def _calculate_yearly_totals(df: pl.DataFrame) -> YearlyTotals:
     
     total_core_expense = get_sum((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Core'))
     total_fun_expense = get_sum((pl.col('category_type') == 'expense') & (pl.col('spending_type') == 'Fun'))
-    total_future_expense = get_sum(pl.col('category_type').is_in(['saving', 'investment']) & (pl.col('spending_type') == 'Future'))
+    total_future_expense = get_sum(pl.col('spending_type') == 'Future')
 
     profit = total_income_wo_savings_funds - total_expense - total_investment
     
