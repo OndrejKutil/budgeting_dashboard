@@ -1,30 +1,26 @@
 # fastapi
-import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
-
-# auth dependencies
-from ..auth.auth import api_key_auth, get_current_user
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
-# Load environment variables
-from ..helper import environment as env
-
 # logging
 import logging
 
-from ..data.database import get_db_client
-
-# helper
-from ..helper.columns import TRANSACTIONS_COLUMNS, TRANSACTION_TAGS_COLUMNS
-from ..schemas.base import TransactionData, TagData
-from ..schemas.requests import TransactionRequest
-from ..schemas.responses import TransactionsResponse, TransactionSuccessResponse, TransactionSummaryResponse
-
 # other
 from datetime import date
-from typing import Optional, List
+
+import fastapi
+from fastapi import APIRouter, Depends, Query, Request, status
+
+# auth dependencies
+from ..auth.auth import api_key_auth, get_current_user
+from ..data.database import get_db_client
+
+# Load environment variables
+# helper
+from ..helper.columns import TRANSACTION_TAGS_COLUMNS, TRANSACTIONS_COLUMNS
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+from ..schemas.base import TagData, TransactionData
+from ..schemas.requests import TransactionRequest
+from ..schemas.responses import TransactionsResponse, TransactionSuccessResponse, TransactionSummaryResponse
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -85,16 +81,16 @@ async def get_transactions_summary(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    category_id: Optional[str] = Query(None),
-    account_id: Optional[str] = Query(None),
-    savings_fund_id: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    category_type: Optional[str] = Query(None),
-    min_amount: Optional[float] = Query(None),
-    max_amount: Optional[float] = Query(None),
-    tag_id: Optional[str] = Query(None),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    category_id: str | None = Query(None),
+    account_id: str | None = Query(None),
+    savings_fund_id: str | None = Query(None),
+    search: str | None = Query(None),
+    category_type: str | None = Query(None),
+    min_amount: float | None = Query(None),
+    max_amount: float | None = Query(None),
+    tag_id: str | None = Query(None),
 ) -> TransactionSummaryResponse:
     """
     Return count and total_amount for all transactions matching the given filters.
@@ -144,19 +140,19 @@ async def get_all_data(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    start_date: Optional[date] = Query(None, description="Starting date for filtering transactions"),
-    end_date: Optional[date] = Query(None, description="Ending date for filtering transactions"),
-    category_id: Optional[str] = Query(None, description="Category for filtering transactions"),
-    account_id: Optional[str] = Query(None, description="Account for filtering transactions"),
-    transaction_id: Optional[str] = Query(None, description="Transaction ID for filtering transactions"),
-    savings_fund_id: Optional[str] = Query(None, description="Savings Fund ID for filtering transactions"),
-    search: Optional[str] = Query(None, description="Search term for filtering transactions by notes"),
-    category_type: Optional[str] = Query(None, description="Filter by category type (income, expense, etc)"),
-    min_amount: Optional[float] = Query(None, description="Filter by minimum amount value"),
-    max_amount: Optional[float] = Query(None, description="Filter by maximum amount value"),
-    tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
-    limit: Optional[int] = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
-    offset: Optional[int] = Query(0, ge=0, description="Number of items to skip")
+    start_date: date | None = Query(None, description="Starting date for filtering transactions"),
+    end_date: date | None = Query(None, description="Ending date for filtering transactions"),
+    category_id: str | None = Query(None, description="Category for filtering transactions"),
+    account_id: str | None = Query(None, description="Account for filtering transactions"),
+    transaction_id: str | None = Query(None, description="Transaction ID for filtering transactions"),
+    savings_fund_id: str | None = Query(None, description="Savings Fund ID for filtering transactions"),
+    search: str | None = Query(None, description="Search term for filtering transactions by notes"),
+    category_type: str | None = Query(None, description="Filter by category type (income, expense, etc)"),
+    min_amount: float | None = Query(None, description="Filter by minimum amount value"),
+    max_amount: float | None = Query(None, description="Filter by maximum amount value"),
+    tag_id: str | None = Query(None, description="Filter by tag ID"),
+    limit: int | None = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
+    offset: int | None = Query(0, ge=0, description="Number of items to skip")
 ) -> TransactionsResponse:
     """
     Get all transactions with optional filtering and pagination.
@@ -229,7 +225,7 @@ async def get_all_data(
         )
 
 
-def _sync_transaction_tags(client, transaction_id: str, tag_ids: List[int], user_id: str) -> None:
+def _sync_transaction_tags(client, transaction_id: str, tag_ids: list[int], user_id: str) -> None:
     """Replace junction rows for a transaction with the given tag_ids."""
     client.table("fct_transaction_tags").delete().eq(
         TRANSACTION_TAGS_COLUMNS.TRANSACTION_ID.value, transaction_id
@@ -263,7 +259,7 @@ async def create_transaction(
         user_supabase_client = get_db_client(user["access_token"])
 
         data = transaction_data.model_dump()
-        tag_ids: List[int] = data.pop("tags") or []
+        tag_ids: list[int] = data.pop("tags") or []
         data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
 
         # Convert Decimal to float for JSON serialization
@@ -317,7 +313,7 @@ async def update_transaction(
         user_supabase_client = get_db_client(user["access_token"])
 
         data = transaction_data.model_dump()
-        tag_ids: List[int] = data.pop("tags") or []
+        tag_ids: list[int] = data.pop("tags") or []
         data[TRANSACTIONS_COLUMNS.USER_ID.value] = user["user_id"]
 
         # Convert Decimal to float for JSON serialization

@@ -1,28 +1,30 @@
 # fastapi
-import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
-
-# auth dependencies
-from ..auth.auth import api_key_auth, get_current_user
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
-# Load environment variables
-from ..helper import environment as env
-from ..helper.calculations.yearly_page_calc import _yearly_analytics, _emergency_fund_analysis, _yearly_heatmap
-from ..helper.calculations.fire_calc import _fire_analysis
-
-# schemas
-from ..schemas.base import DailySpendingData, EmergencyFundData, FIREData, YearlyAnalyticsData
-from ..schemas.responses import EmergencyFundResponse, FIREResponse, HeatmapResponse, YearlyAnalyticsResponse
-
 # logging
 import logging
 
 # other
 from datetime import datetime
 
+import fastapi
+from fastapi import APIRouter, Depends, Query, Request, status
+
+# auth dependencies
+from ..auth.auth import api_key_auth, get_current_user
+
+# Load environment variables
+from ..helper.calculations.fire_calc import _fire_analysis
+from ..helper.calculations.yearly_page_calc import (
+    _emergency_fund_analysis,
+    _yearly_analytics,
+    _yearly_heatmap,
+)
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+
+# schemas
+from ..schemas.base import DailySpendingData, EmergencyFundData, FIREData, YearlyAnalyticsData
+from ..schemas.responses import EmergencyFundResponse, FIREResponse, HeatmapResponse, YearlyAnalyticsResponse
 
 # ================================================================================================
 #                                   Settings and Configuration

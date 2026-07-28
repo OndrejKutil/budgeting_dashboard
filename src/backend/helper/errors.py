@@ -6,7 +6,8 @@ Used by the global exception handlers in `backend_server.py` to give every error
 shape that the frontend's `ApiError` expects.
 """
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 from uuid import uuid4
 
 

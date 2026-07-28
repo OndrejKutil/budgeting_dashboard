@@ -1,27 +1,25 @@
 # fastapi
-import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
-
-# auth dependencies
-from ..auth.auth import api_key_auth, get_current_user
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
-# Load environment variables
-from ..helper import environment as env
-from ..helper.calculations.monthly_page_calc import _monthly_analytics
-
-# schemas
-from ..schemas.base import MonthlyAnalyticsData
-from ..schemas.responses import MonthlyAnalyticsResponse
-
 # logging
 import logging
 
 # other
 from datetime import datetime
 
+import fastapi
+from fastapi import APIRouter, Depends, Query, Request, status
+
+# auth dependencies
+from ..auth.auth import api_key_auth, get_current_user
+
+# Load environment variables
+from ..helper.calculations.monthly_page_calc import _monthly_analytics
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+
+# schemas
+from ..schemas.base import MonthlyAnalyticsData
+from ..schemas.responses import MonthlyAnalyticsResponse
 
 # ================================================================================================
 #                                   Settings and Configuration

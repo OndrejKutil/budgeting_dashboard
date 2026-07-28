@@ -1,10 +1,9 @@
 import logging
 from datetime import date, timedelta
-from typing import Optional
 
 import polars as pl
 
-from ..columns import TRANSACTIONS_COLUMNS, ACCOUNTS_COLUMNS
+from ..columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ def calculate_net_worth_timeline(
     db_client,
     end_date: date,
     base_currency: str,
-    start_date: Optional[date] = None,
+    start_date: date | None = None,
 ) -> dict:
     """
     Reconstruct daily net-worth from fct_transactions, converted to base_currency.

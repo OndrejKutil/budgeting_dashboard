@@ -2,28 +2,26 @@
 # imports
 import calendar
 import logging
-from datetime import date, timedelta
-from typing import List, Tuple, Dict, Any, cast
-from pydantic import BaseModel, Field
+from datetime import date
+from typing import Any, cast
 
-from ..columns import TRANSACTIONS_COLUMNS
 # from data.database import get_db_client # Moved inside function
 import polars as pl
 from dateutil.relativedelta import relativedelta
+from pydantic import BaseModel, Field
 
 # schemas
 from ...schemas.base import (
-    TransactionData,
-    MonthlyAnalyticsData,
-    DailySpendingData,
     CategoryBreakdownData,
-    SpendingTypeBreakdownData,
-    RunRateForecast,
-    DaySplit,
     CategoryConcentration,
-    MonthlyPeriodComparison
+    DailySpendingData,
+    DaySplit,
+    MonthlyAnalyticsData,
+    MonthlyPeriodComparison,
+    RunRateForecast,
+    SpendingTypeBreakdownData,
 )
-
+from ..columns import TRANSACTIONS_COLUMNS
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -57,7 +55,7 @@ def _get_month_date_range(year: int, month: int) -> tuple[date, date]:
     return start_date, end_date
 
 
-def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: date) -> List[dict]:
+def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: date) -> list[dict]:
     """
     Fetch transactions from the database for a specific date range.
     """
@@ -84,7 +82,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         response = query.execute()
-        return cast(List[dict[Any, Any]], response.data)
+        return cast(list[dict[Any, Any]], response.data)
 
     except Exception as e:
         logger.error(f'Database query failed for monthly transactions: {str(e)}')
@@ -92,7 +90,7 @@ def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: d
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
+def _prepare_transactions_dataframe(transactions: list[dict]) -> pl.DataFrame:
     """
     Convert raw transaction data to a prepared polars DataFrame.
     """
@@ -158,7 +156,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
         rename_map['type'] = 'category_type'
-    if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
+    if 'savings_fund_id' in df.columns:
+        rename_map['savings_fund_id'] = 'savings_funds'
     
     df = df.rename(rename_map)
     
@@ -292,7 +291,8 @@ def _calculate_day_split(df: pl.DataFrame) -> DaySplit:
     # Actually, simpler metrics are usually just average of spend days.
     
     def calc_avg(sub_df):
-        if sub_df.is_empty(): return 0.0
+        if sub_df.is_empty():
+            return 0.0
         total = sub_df.select(pl.col('abs_amount').sum()).item() or 0.0
         # Count unique days
         n_days = sub_df.select(pl.col('date_parsed').n_unique()).item()
@@ -366,7 +366,7 @@ def _calculate_comparison(current: MonthlyTotals, previous: MonthlyTotals) -> Mo
         cashflow_delta_pct=delta_pct(current.cashflow, previous.cashflow)
     )
 
-def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingData]:
+def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> list[DailySpendingData]:
     """
     Calculate daily spending amounts for heatmap visualization.
     """
@@ -393,7 +393,7 @@ def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> List[DailySpendingDat
 
 
 
-def _calculate_category_breakdown(df: pl.DataFrame, cat_type: str = 'expense') -> List[CategoryBreakdownData]:
+def _calculate_category_breakdown(df: pl.DataFrame, cat_type: str = 'expense') -> list[CategoryBreakdownData]:
     """
     Calculate spending/income breakdown by category.
     """
@@ -418,7 +418,7 @@ def _calculate_category_breakdown(df: pl.DataFrame, cat_type: str = 'expense') -
     ]
 
 
-def _calculate_spending_type_breakdown(df: pl.DataFrame) -> List[SpendingTypeBreakdownData]:
+def _calculate_spending_type_breakdown(df: pl.DataFrame) -> list[SpendingTypeBreakdownData]:
     """
     Calculate spending breakdown by spending type (Core, Necessary, Fun, Future).
     """

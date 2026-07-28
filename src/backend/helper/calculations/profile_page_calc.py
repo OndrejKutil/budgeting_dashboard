@@ -1,11 +1,6 @@
-from ...auth.auth import api_key_auth, get_current_user
-from ...helper import environment as env
-from ...schemas.base import (
-    IdentityData,
-    ProfileData
-)
-
 from typing import Any
+
+from ...schemas.base import IdentityData, ProfileData
 
 
 def _extract_identity_data(user_data: Any) -> list[IdentityData]:

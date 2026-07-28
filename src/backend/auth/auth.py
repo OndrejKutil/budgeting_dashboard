@@ -1,16 +1,10 @@
-from fastapi import HTTPException, Depends, status
-from fastapi.security import APIKeyHeader
-
-from ..schemas.base import UserData
-
-from typing import Dict
-
 import logging
+import pprint
 
 import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import APIKeyHeader
 from jwt import PyJWTError
-
-import pprint
 
 from ..helper import environment as env
 
@@ -127,7 +121,7 @@ async def get_current_user(
         )
 
     except jwt.ExpiredSignatureError as e:
-        logger.error(f"JWT token expired")
+        logger.error("JWT token expired")
         logger.info(f"Error details: {e}")
         raise HTTPException(
             status_code=498,  # Custom status code for token expired
@@ -135,7 +129,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer", "X-Token-Status": "expired"}
         )
     except (PyJWTError, jwt.InvalidTokenError) as e:
-        logger.error(f"JWT validation error")
+        logger.error("JWT validation error")
         logger.info(f"Error details: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -150,7 +144,7 @@ async def get_current_user(
             "access_token": access_token
         }
     except Exception as e:
-        logger.error(f"Error decoding JWT payload")
+        logger.error("Error decoding JWT payload")
         logger.info(f"Error details: {e}\n Payload: {pprint.pformat(payload)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error decoding supabase JWT payload")
 

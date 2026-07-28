@@ -1,32 +1,30 @@
 # fastapi
+# logging
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
+
+# other
+import polars as pl
+from fastapi import APIRouter, Depends, Query, Request, status
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
 
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
-# Load environment variables
-from ..helper import environment as env
-
-# logging
-import logging
-
 # supabase client
 from ..data.database import get_db_client
 
+# Load environment variables
+from ..helper.calculations import accounts_calc
+
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..schemas.base import AccountData
 from ..schemas.requests import AccountRequest
 from ..schemas.responses import AccountsResponse, AccountSuccessResponse
-from ..helper.calculations import accounts_calc
-
-# other
-import polars as pl
-from typing import Optional, Dict, List
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -51,8 +49,8 @@ async def get_all_accounts(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    account_id: Optional[int] = Query(None, description="Optional filtering for only the given account for getting its name"),
-    account_name: Optional[str] = Query(None, description="Optional filtering for only the given account for getting its name")
+    account_id: int | None = Query(None, description="Optional filtering for only the given account for getting its name"),
+    account_name: str | None = Query(None, description="Optional filtering for only the given account for getting its name")
 ) -> AccountsResponse:
     
     try:
@@ -131,7 +129,7 @@ async def create_account(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data : Dict = account_data.model_dump(exclude_none=True)
+        data : dict = account_data.model_dump(exclude_none=True)
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get("user_id"):
@@ -141,7 +139,7 @@ async def create_account(
         if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
             data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
 
-        response = user_supabase_client.table("dim_accounts").insert(data).execute()
+        user_supabase_client.table("dim_accounts").insert(data).execute()
 
         return AccountSuccessResponse(
             success=True,
@@ -182,7 +180,7 @@ async def update_account(
         if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
             data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
             
-        response = user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
+        user_supabase_client.table("dim_accounts").update(data).eq(ACCOUNTS_COLUMNS.ID.value, account_id).execute()
 
         return AccountSuccessResponse(
             success=True,
@@ -224,7 +222,7 @@ async def delete_account(
             .execute()
         )
         has_transactions = bool(tx_amounts.data)
-        current_balance = sum((tx["amount"] for tx in tx_amounts.data)) if tx_amounts.data else 0.0
+        current_balance = sum(tx["amount"] for tx in tx_amounts.data) if tx_amounts.data else 0.0
 
         if round(current_balance, 2) != 0:
             raise fastapi.HTTPException(
@@ -234,7 +232,7 @@ async def delete_account(
 
         if has_transactions:
             # Soft delete: deactivate
-            response = (
+            (
                 user_supabase_client.table("dim_accounts")
                 .update({ACCOUNTS_COLUMNS.IS_ACTIVE.value: False})
                 .eq(ACCOUNTS_COLUMNS.ID.value, account_id)
@@ -246,7 +244,7 @@ async def delete_account(
             )
         else:
             # Hard delete: safe, no references
-            response = (
+            (
                 user_supabase_client.table("dim_accounts")
                 .delete()
                 .eq(ACCOUNTS_COLUMNS.ID.value, account_id)

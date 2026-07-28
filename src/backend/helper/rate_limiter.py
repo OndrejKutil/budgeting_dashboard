@@ -5,10 +5,11 @@ This module provides rate limiting functionality using slowapi to protect
 the API from abuse and ensure fair usage across all clients.
 """
 
+import logging
+
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from fastapi import Request
-import logging
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

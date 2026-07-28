@@ -2,23 +2,17 @@
 # imports
 import logging
 from datetime import date, timedelta
-from typing import List, Dict, Optional, Tuple, Any, cast
 from decimal import Decimal
-from pydantic import BaseModel, Field
+from typing import Any, cast
 
-from ..columns import TRANSACTIONS_COLUMNS
 # from data.database import get_db_client # Moved inside function
 import polars as pl
 from dateutil.relativedelta import relativedelta
+from pydantic import BaseModel, Field
 
 # schemas
-from ...schemas.base import (
-    TransactionData,
-    SummaryData,
-    PeriodComparison,
-    CategoryInsight
-)
-
+from ...schemas.base import CategoryInsight, PeriodComparison, SummaryData, TransactionData
+from ..columns import TRANSACTIONS_COLUMNS
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -42,7 +36,7 @@ class SummaryTotals(BaseModel):
 #                                   Helper Functions
 # ================================================================================================
 
-def _get_previous_period_dates(start_date: Optional[date], end_date: Optional[date]) -> Tuple[date, date]:
+def _get_previous_period_dates(start_date: date | None, end_date: date | None) -> tuple[date, date]:
     """
     Calculate the start and end dates for the previous period.
     Defaults to previous month if dates are not provided.
@@ -94,9 +88,9 @@ def _get_previous_period_dates(start_date: Optional[date], end_date: Optional[da
 
 def _fetch_summary_transactions(
     access_token: str, 
-    start_date: Optional[date], 
-    end_date: Optional[date]
-) -> List[dict]:
+    start_date: date | None, 
+    end_date: date | None
+) -> list[dict]:
     """
     Fetch transactions from the database with optional date filtering.
     """
@@ -128,7 +122,7 @@ def _fetch_summary_transactions(
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         
         response = query.execute()
-        return cast(List[dict[Any, Any]], response.data)
+        return cast(list[dict[Any, Any]], response.data)
 
     except Exception as e:
         logger.error(f'Database query failed for summary transactions: {str(e)}')
@@ -136,7 +130,7 @@ def _fetch_summary_transactions(
         raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
+def _prepare_transactions_dataframe(transactions: list[dict]) -> pl.DataFrame:
     """
     Convert raw transaction data to a prepared polars DataFrame.
     """
@@ -206,7 +200,8 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
         rename_map['type'] = 'category_type'
-    if 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
+    if 'savings_fund_id' in df.columns:
+        rename_map['savings_fund_id'] = 'savings_funds'
     
     df = df.rename(rename_map)
     
@@ -299,7 +294,7 @@ def _calculate_period_comparison(current: SummaryTotals, previous: SummaryTotals
         cashflow_delta_pct=calc_pct(current.net_cash_flow, previous.net_cash_flow)
     )
 
-def _get_top_expenses(df: pl.DataFrame) -> List[CategoryInsight]:
+def _get_top_expenses(df: pl.DataFrame) -> list[CategoryInsight]:
     """
     Get top 3 expense categories by total amount.
     """
@@ -333,7 +328,7 @@ def _get_top_expenses(df: pl.DataFrame) -> List[CategoryInsight]:
         
     return results
 
-def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> Optional[CategoryInsight]:
+def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> CategoryInsight | None:
     """
     Identify the category with the largest absolute change in spending (increase or decrease).
     """
@@ -405,7 +400,7 @@ def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> O
         share_of_total=round(share, 1)
     )
 
-def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> List[TransactionData]:
+def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> list[TransactionData]:
     """
     Get list of largest transactions by amount.
     """
@@ -483,8 +478,8 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
 
 def _summary_calc(
     access_token: str,
-    start_date: Optional[date],
-    end_date: Optional[date],
+    start_date: date | None,
+    end_date: date | None,
     base_currency: str = 'CZK',
 ) -> SummaryData:
     """

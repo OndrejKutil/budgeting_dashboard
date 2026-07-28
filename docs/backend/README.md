@@ -190,6 +190,7 @@ From `src/backend/`:
 ```powershell
 pip install -e ".[dev,test]"            # install with dev + test extras
 uvicorn backend_server:app --reload     # dev server → http://localhost:8000
+ruff check .                            # lint (config in pyproject.toml)
 mypy .                                  # type check (config in pyproject.toml)
 pytest                                  # tests + coverage
 ```

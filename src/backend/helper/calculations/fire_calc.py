@@ -1,13 +1,17 @@
 import logging
 import math
-from datetime import date, timedelta
-from typing import Optional
+from datetime import date
 
 from dateutil.relativedelta import relativedelta
 
 from ...schemas.base import FIREData
+from .summary_calc import (
+    _apply_currency_conversion,
+    _calculate_summary_totals,
+    _fetch_summary_transactions,
+    _prepare_transactions_dataframe,
+)
 from .yearly_page_calc import _emergency_fund_analysis
-from .summary_calc import _fetch_summary_transactions, _prepare_transactions_dataframe, _apply_currency_conversion, _calculate_summary_totals
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +27,7 @@ def _get_current_net_worth(access_token: str, base_currency: str) -> float:
     return float(nw_list[-1]) if nw_list else 0.0
 
 
-def _project_years_to_fi(current_nw: float, fi_number: float, annual_savings: float, annual_return: float = 0.07) -> Optional[float]:
+def _project_years_to_fi(current_nw: float, fi_number: float, annual_savings: float, annual_return: float = 0.07) -> float | None:
     """
     Iterative projection: how many years until NW crosses fi_number
     assuming annual_return compounding plus annual_savings added each year.
@@ -42,7 +46,7 @@ def _project_years_to_fi(current_nw: float, fi_number: float, annual_savings: fl
     return None
 
 
-def _coast_fi_years(current_nw: float, fi_number: float, annual_return: float = 0.07) -> Optional[float]:
+def _coast_fi_years(current_nw: float, fi_number: float, annual_return: float = 0.07) -> float | None:
     """
     Years of pure compounding at annual_return until current_nw reaches fi_number
     (no new contributions needed after this point = Coast FI).
@@ -106,7 +110,7 @@ def _fire_analysis(access_token: str, year: int, base_currency: str = 'CZK') -> 
 
     # 6. Years-to-FI projection
     years_to_fi = _project_years_to_fi(current_nw, fi_number, annual_savings)
-    projected_fi_year: Optional[int] = None
+    projected_fi_year: int | None = None
     if years_to_fi is not None:
         projected_fi_year = today.year + math.ceil(years_to_fi)
 

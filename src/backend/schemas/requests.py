@@ -1,8 +1,8 @@
-from datetime import date as Date, datetime
+from datetime import date as Date
+from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # ================================================================================================
 #                                   Insert Schemas
@@ -13,10 +13,10 @@ class TransactionRequest(BaseModel):
     category_id_fk: int = Field(..., description="Transaction category ID")
     amount: Decimal = Field(..., description="Transaction amount")
     date: Date = Field(..., description="Transaction date")
-    notes: Optional[str] = Field(None, description="Transaction description")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
-    tags: Optional[List[int]] = Field(None, description="Tag IDs to associate with this transaction")
+    notes: str | None = Field(None, description="Transaction description")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+    savings_fund_id_fk: str | None = Field(None, description="Savings fund ID associated with the transaction")
+    tags: list[int] | None = Field(None, description="Tag IDs to associate with this transaction")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -51,9 +51,9 @@ class AccountRequest(BaseModel):
     """Schema for creating a new account"""
     account_name: str = Field(..., description="Name of the account")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
-    currency: Optional[str] = Field(..., description="Currency of the account")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    account_is_active: Optional[bool] = Field(None, description="Whether the account is active")
+    currency: str | None = Field(..., description="Currency of the account")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+    account_is_active: bool | None = Field(None, description="Whether the account is active")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -80,8 +80,8 @@ class SavingsFundsRequest(BaseModel):
     user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp of the savings fund")
-    fund_is_active: Optional[bool] = Field(None, description="Whether the savings fund is active")
+    created_at: datetime | None = Field(None, description="Creation timestamp of the savings fund")
+    fund_is_active: bool | None = Field(None, description="Whether the savings fund is active")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -96,9 +96,9 @@ class SavingsFundsRequest(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     """Schema for updating user profile"""
-    full_name: Optional[str] = Field(None, description="User full name")
-    currency: Optional[str] = Field(None, description="User preferred currency (e.g., USD, CZK)")
-    locale: Optional[str] = Field(None, description="User preferred locale (e.g., en-US, cs-CZ)")
+    full_name: str | None = Field(None, description="User full name")
+    currency: str | None = Field(None, description="User preferred currency (e.g., USD, CZK)")
+    locale: str | None = Field(None, description="User preferred locale (e.g., en-US, cs-CZ)")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -120,8 +120,8 @@ class DeleteAccountRequest(BaseModel):
     no password to give, so they confirm by typing their own email address instead. Exactly one
     of the two is required — which one is decided server-side from the user's linked identities.
     """
-    password: Optional[str] = Field(None, description="Current password (accounts with an email/password identity)")
-    email_confirmation: Optional[str] = Field(None, description="The account's own email address, typed to confirm (OAuth-only accounts)")
+    password: str | None = Field(None, description="Current password (accounts with an email/password identity)")
+    email_confirmation: str | None = Field(None, description="The account's own email address, typed to confirm (OAuth-only accounts)")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -165,7 +165,7 @@ class CategoryRequest(BaseModel):
     category_name: str = Field(..., min_length=1, max_length=100, description="Name of the category")
     type: str = Field(..., description="Category type (expense, income, saving, investment, exclude)")
     spending_type: str = Field(..., description="Spending type (Core, Necessary, Fun, Future, Income)")
-    is_active: Optional[bool] = Field(True, description="Whether the category is active")
+    is_active: bool | None = Field(True, description="Whether the category is active")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -181,10 +181,10 @@ class CategoryRequest(BaseModel):
 
 class CategoryUpdateRequest(BaseModel):
     """Schema for updating an existing category"""
-    category_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Name of the category")
-    type: Optional[str] = Field(None, description="Category type (expense, income, saving, investment, exclude)")
-    spending_type: Optional[str] = Field(None, description="Spending type (Core, Necessary, Fun, Future, Income)")
-    is_active: Optional[bool] = Field(None, description="Whether the category is active")
+    category_name: str | None = Field(None, min_length=1, max_length=100, description="Name of the category")
+    type: str | None = Field(None, description="Category type (expense, income, saving, investment, exclude)")
+    spending_type: str | None = Field(None, description="Spending type (Core, Necessary, Fun, Future, Income)")
+    is_active: bool | None = Field(None, description="Whether the category is active")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -207,12 +207,12 @@ class RecurringRequest(BaseModel):
     """Schema for creating or updating a recurring template"""
     account_id_fk: str = Field(..., description="Account ID")
     category_id_fk: int = Field(..., description="Category ID")
-    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID")
+    savings_fund_id_fk: str | None = Field(None, description="Savings fund ID")
     amount: Decimal = Field(..., description="Transaction amount (signed)")
     cadence: str = Field(..., description="weekly|biweekly|monthly|quarterly|yearly")
     next_date: Date = Field(..., description="Next due date")
-    notes: Optional[str] = Field(None, description="Notes")
-    is_active: Optional[bool] = Field(True, description="Whether template is active")
+    notes: str | None = Field(None, description="Notes")
+    is_active: bool | None = Field(True, description="Whether template is active")
 
     model_config = ConfigDict(json_encoders={Decimal: float})
 
@@ -220,7 +220,7 @@ class RecurringRequest(BaseModel):
 class DividendPortfolioRequest(BaseModel):
     """Request schema for saving a user's dividend portfolio"""
     portfolio_value: Decimal = Field(..., ge=Decimal("0"), description="Total portfolio value")
-    portfolio: List[dict] = Field(..., description="Array of DividendStockRow objects")
+    portfolio: list[dict] = Field(..., description="Array of DividendStockRow objects")
 
     model_config = ConfigDict(
         json_encoders={Decimal: float},

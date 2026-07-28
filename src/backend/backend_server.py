@@ -1,15 +1,14 @@
 # fastapi
-import fastapi
-from fastapi import FastAPI, Depends, Request
+# logging
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-
-# logging
-import logging
 
 # import env configuration
 from .helper import environment as env
@@ -38,11 +37,8 @@ root_logger.addHandler(console_handler)
 logger: logging.Logger = logging.getLogger(__name__)
 logger.info("Starting backend server...")
 
-# Import auth functions after logging is configured
-from .auth.auth import api_key_auth, admin_key_auth
-
-# Import rate limiter
-from .helper.rate_limiter import limiter, RATE_LIMITS
+# Import rate limiter (deliberately after logging setup above)
+from .helper.rate_limiter import RATE_LIMITS, limiter  # noqa: E402
 
 PROJECT_URL: str = env.PROJECT_URL
 ANON_KEY: str = env.ANON_KEY
@@ -112,8 +108,25 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         status_code=500,
     )
 
-# Include routers
-from .routers import (transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds, budgets, export, dividends, recurring, net_worth, tags)
+# Include routers (deliberately imported here, after the exception handlers they rely on)
+from .routers import (  # noqa: E402
+    accounts,
+    budgets,
+    categories,
+    dividends,
+    export,
+    login,
+    monthly_analytics,
+    net_worth,
+    profile,
+    recurring,
+    savings_funds,
+    summary,
+    tags,
+    token_refresh,
+    transactions,
+    yearly_analytics,
+)
 
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(tags.router, prefix="/tags", tags=["Tags"])

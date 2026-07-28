@@ -1,19 +1,18 @@
 import logging
 import time
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-_cache: Dict[tuple, float] = {}
+_cache: dict[tuple, float] = {}
 _cache_fetched_at: float = 0.0
 _CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
-def _load_rates() -> Dict[tuple, float]:
+def _load_rates() -> dict[tuple, float]:
     from ..data.database import get_service_db_client
     client = get_service_db_client()
     response = client.table('dim_exchange_rates').select('base_currency, target_currency, rate').execute()
-    rates: Dict[tuple, float] = {}
+    rates: dict[tuple, float] = {}
     for row in response.data:
         key = (row['base_currency'], row['target_currency'])
         rates[key] = float(row['rate'])
@@ -34,7 +33,7 @@ def _ensure_cache() -> None:
             _cache = {}
 
 
-def get_rate(from_currency: Optional[str], to_currency: Optional[str]) -> float:
+def get_rate(from_currency: str | None, to_currency: str | None) -> float:
     """
     Return the exchange rate to convert one unit of from_currency into to_currency.
     Falls back to 1.0 (no conversion) if the pair is missing, with a warning.

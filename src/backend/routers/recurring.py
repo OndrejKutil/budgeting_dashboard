@@ -1,15 +1,13 @@
 import calendar
 import logging
 from datetime import date, timedelta
-from decimal import Decimal
-from typing import Optional
 
 import fastapi
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from ..auth.auth import api_key_auth, get_current_user
 from ..data.database import get_db_client
-from ..helper.columns import RECURRING_COLUMNS, TRANSACTIONS_COLUMNS, ACCOUNTS_COLUMNS
+from ..helper.columns import ACCOUNTS_COLUMNS, RECURRING_COLUMNS, TRANSACTIONS_COLUMNS
 from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..schemas.base import RecurringData, RecurringSummary
 from ..schemas.requests import RecurringRequest
@@ -97,8 +95,8 @@ async def get_all_recurring(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    base_currency: Optional[str] = Query("CZK", description="Base currency for totals"),
-    include_inactive: Optional[bool] = Query(False, description="Include inactive templates"),
+    base_currency: str | None = Query("CZK", description="Base currency for totals"),
+    include_inactive: bool | None = Query(False, description="Include inactive templates"),
 ) -> RecurringResponse:
     try:
         db = get_db_client(user["access_token"])

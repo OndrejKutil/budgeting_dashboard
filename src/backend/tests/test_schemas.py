@@ -3,16 +3,13 @@ Unit tests for Pydantic schemas.
 Tests validation rules, correct types, and required fields.
 """
 
-import pytest
-from pydantic import ValidationError
 from datetime import date
 from decimal import Decimal
 
-from schemas.requests import (
-    TransactionRequest,
-    AccountRequest
-)
+from pydantic import ValidationError
+
 from schemas.base import UserData
+from schemas.requests import AccountRequest, TransactionRequest
 
 # ================================================================================================
 #                                   Transaction Schema Tests

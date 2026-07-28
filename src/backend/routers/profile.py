@@ -1,32 +1,32 @@
 # fastapi
+# logging
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, status, Request
+import httpx
+from fastapi import APIRouter, Depends, Request, status
+
+# supabase client
+from supabase.client import Client
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
+from ..data.database import get_db_client, get_service_db_client
 
 # Load environment variables
 from ..helper import environment as env
 
-# logging
-import logging
-import httpx
-
-# supabase client
-from supabase.client import Client
-from ..data.database import get_db_client, get_service_db_client
-
-# schemas
-from ..schemas.base import ProfileData
-from ..schemas.responses import MessageResponse, ProfileResponse
-from ..schemas.requests import DeleteAccountRequest, UpdateProfileRequest
-
 # helper
 from ..helper.calculations.profile_page_calc import _build_profile_data
 from ..helper.identity import has_password_identity
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+
+# schemas
+from ..schemas.base import ProfileData
+from ..schemas.requests import DeleteAccountRequest, UpdateProfileRequest
+from ..schemas.responses import MessageResponse, ProfileResponse
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -329,7 +329,7 @@ async def delete_my_account(
             message="Account and associated data deleted successfully"
         )
 
-    except EnvironmentError:
+    except OSError:
         logger.error("Account deletion requested but SERVICE_ROLE_KEY is not configured")
         raise fastapi.HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
