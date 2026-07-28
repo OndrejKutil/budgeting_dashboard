@@ -4,12 +4,13 @@ These tests do NOT depend on a database or API.
 They test the financial math and data transformation logic directly.
 """
 
-import pytest
+import os
+import sys
 from datetime import date
 from decimal import Decimal
+
 import polars as pl
-import sys
-import os
+import pytest
 
 # Add 'src' to sys.path to allow importing 'backend' as a package
 # This assumes the file structure: src/backend/tests/test_unit_calculations.py
@@ -19,19 +20,19 @@ src_path = os.path.abspath(os.path.join(current_dir, "../../"))
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
-# Import calculation modules using the full package path
-from backend.helper.calculations.summary_calc import (
-    _prepare_transactions_dataframe as summary_prepare_df,
-    _calculate_summary_totals,
-    _calculate_period_comparison,
-    SummaryTotals
-)
-
-from backend.helper.calculations.monthly_page_calc import (
-    _calculate_monthly_totals,
-    _calculate_run_rate,
+# Import calculation modules using the full package path.
+# These must come after the sys.path insertion above, hence `noqa: E402` throughout.
+from backend.helper.calculations.monthly_page_calc import (  # noqa: E402
     _calculate_day_split,
-    MonthlyTotals
+    _calculate_run_rate,
+)
+from backend.helper.calculations.summary_calc import (  # noqa: E402
+    SummaryTotals,
+    _calculate_period_comparison,
+    _calculate_summary_totals,
+)
+from backend.helper.calculations.summary_calc import (  # noqa: E402
+    _prepare_transactions_dataframe as summary_prepare_df,
 )
 
 # ================================================================================================
@@ -193,7 +194,6 @@ def test_calculate_run_rate(sample_dataframe):
     # Analyzing Jan 2026 (assuming it's in the past relative to the code or fully elapsed logic)
     # If we pass a past date, days_remaining should be 0, projected = actual.
     
-    from datetime import date
     current_year = date.today().year
     past_year = current_year - 1
     
@@ -223,8 +223,9 @@ def test_calculate_day_split(sample_dataframe):
 #                                   Budget Calculation Tests
 # ================================================================================================
 
-from backend.schemas.base import BudgetPlanRow
-from backend.helper.calculations.budgets_calc import _calculate_budget_view
+from backend.helper.calculations.budgets_calc import _calculate_budget_view  # noqa: E402
+from backend.schemas.base import BudgetPlanRow  # noqa: E402
+
 
 @pytest.fixture
 def sample_budget_plan_rows():

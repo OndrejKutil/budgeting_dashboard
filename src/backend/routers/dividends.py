@@ -1,12 +1,15 @@
 # fastapi
+import datetime
+
+# stdlib
+import logging
+from decimal import Decimal
+
 import fastapi
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, Request, status
 
 # auth
 from ..auth.auth import api_key_auth, get_current_user
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
 
 # database
 from ..data.database import get_db_client
@@ -14,16 +17,13 @@ from ..data.database import get_db_client
 # helpers
 from ..helper.columns import DIVIDEND_PORTFOLIO_COLUMNS
 
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+
 # schemas
-from ..schemas.base import DividendStockRow, DividendYieldFrequency, DividendCalculationResult
+from ..schemas.base import DividendCalculationResult, DividendStockRow, DividendYieldFrequency
 from ..schemas.requests import DividendPortfolioRequest
 from ..schemas.responses import DividendPortfolioResponse, DividendPortfolioSuccessResponse
-
-# stdlib
-import logging
-import datetime
-from decimal import Decimal
-from typing import List
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -52,7 +52,7 @@ def _annual_yield(row: DividendStockRow) -> Decimal:
     return yld
 
 
-def _calculate(portfolio_value: Decimal, rows: List[DividendStockRow]) -> DividendCalculationResult:
+def _calculate(portfolio_value: Decimal, rows: list[DividendStockRow]) -> DividendCalculationResult:
     """Compute weighted average yield and income figures."""
     if not rows or portfolio_value <= 0:
         zero = Decimal("0")
@@ -80,12 +80,12 @@ def _calculate(portfolio_value: Decimal, rows: List[DividendStockRow]) -> Divide
     )
 
 
-def _parse_rows(raw_rows: list) -> List[DividendStockRow]:
+def _parse_rows(raw_rows: list) -> list[DividendStockRow]:
     """Parse and validate a list of raw dicts into DividendStockRow objects."""
     return [DividendStockRow(**r) for r in raw_rows]
 
 
-def _validate_weights(rows: List[DividendStockRow]) -> None:
+def _validate_weights(rows: list[DividendStockRow]) -> None:
     """Raise 422 if portfolio weights do not sum to 100."""
     if not rows:
         return
@@ -245,7 +245,7 @@ async def update_dividend_portfolio(
         data = {
             DIVIDEND_PORTFOLIO_COLUMNS.PORTFOLIO_VALUE.value: float(payload.portfolio_value),
             DIVIDEND_PORTFOLIO_COLUMNS.PORTFOLIO_JSON.value: [r.model_dump(mode="json") for r in rows],
-            DIVIDEND_PORTFOLIO_COLUMNS.UPDATED_AT.value: datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            DIVIDEND_PORTFOLIO_COLUMNS.UPDATED_AT.value: datetime.datetime.now(datetime.UTC).isoformat(),
         }
 
         (

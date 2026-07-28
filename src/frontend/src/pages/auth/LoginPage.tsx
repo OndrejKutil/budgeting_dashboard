@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { authApi } from '@/lib/api/endpoints';
+import { getErrorMessage } from '@/lib/api/client';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -77,7 +78,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/dashboard');
     } catch (error) {
-      setErrors({ general: 'Invalid email or password. Please try again.' });
+      setErrors({ general: getErrorMessage(error, 'Invalid email or password. Please try again.') });
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +94,7 @@ export default function LoginPage() {
       sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
       window.location.href = response.url;
     } catch (error) {
-      setErrors({ general: 'Failed to connect to GitHub. Please try again.' });
+      setErrors({ general: getErrorMessage(error, 'Failed to connect to GitHub. Please try again.') });
       setIsGitHubLoading(false);
     }
   };
@@ -107,7 +108,7 @@ export default function LoginPage() {
       sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
       window.location.href = response.url;
     } catch (error) {
-      setErrors({ general: 'Failed to connect to Google. Please try again.' });
+      setErrors({ general: getErrorMessage(error, 'Failed to connect to Google. Please try again.') });
       setIsGoogleLoading(false);
     }
   };

@@ -1,15 +1,18 @@
 
-import polars as pl
 from datetime import date, timedelta
-from typing import Dict, TypedDict
+from typing import TypedDict
+
+import polars as pl
+
 from ..columns import TRANSACTIONS_COLUMNS
+
 
 class AccountMetrics(TypedDict):
     current_balance: float
     net_flow_30d: float
     history_30d: list[dict]
 
-def calculate_account_metrics(transactions_df: pl.DataFrame) -> Dict[str, AccountMetrics]:
+def calculate_account_metrics(transactions_df: pl.DataFrame) -> dict[str, AccountMetrics]:
     """
     Calculate current balance and 30-day net flow for each account.
     
@@ -56,7 +59,7 @@ def calculate_account_metrics(transactions_df: pl.DataFrame) -> Dict[str, Accoun
         .fill_null(0.0)
     )
 
-    metrics: Dict[str, AccountMetrics] = {}
+    metrics: dict[str, AccountMetrics] = {}
     
     # Pre-calculate history for all accounts
     # This loop might differ based on performance needs, but per-account filtering is clear.
@@ -67,7 +70,6 @@ def calculate_account_metrics(transactions_df: pl.DataFrame) -> Dict[str, Accoun
             
             # Calculate daily history
             # Start from current balance and work backwards
-            history: list[dict[str, object]] = []
             running_balance = current_balance
             
             # Sort transactions for this account by date descending

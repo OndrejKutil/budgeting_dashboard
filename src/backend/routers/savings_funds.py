@@ -1,33 +1,30 @@
 # fastapi
+# logging
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, status, Query, Request
+
+# other
+import polars as pl
+from fastapi import APIRouter, Depends, Query, Request, status
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
 
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
-# Load environment variables
-from ..helper import environment as env
-
-# logging
-import logging
-
 # supabase client
 from ..data.database import get_db_client
 
+# Load environment variables
+from ..helper.calculations import savings_funds_calc
+
 # schemas
 from ..helper.columns import SAVINGS_FUNDS_COLUMNS, TRANSACTIONS_COLUMNS
+
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..schemas.base import SavingsFundsData
 from ..schemas.requests import SavingsFundsRequest
 from ..schemas.responses import SavingsFundsResponse, SavingsFundSuccessResponse
-from ..helper.calculations import savings_funds_calc
-
-# other
-import polars as pl
-from typing import Optional
-
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -53,8 +50,8 @@ async def get_savings_funds(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    fund_id: Optional[str] = Query(None, description="ID of the savings fund to retrieve"),
-    fund_name: Optional[str] = Query(None, description="Name of the savings fund to retrieve")
+    fund_id: str | None = Query(None, description="ID of the savings fund to retrieve"),
+    fund_name: str | None = Query(None, description="Name of the savings fund to retrieve")
 ) -> SavingsFundsResponse:
     """
     Get all savings funds for the current user with optional filtering.
@@ -241,12 +238,12 @@ async def delete_savings_fund(
             .eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, fund_id)
             .execute()
         )
-        current_amount = sum((tx["amount"] for tx in tx_amounts.data)) if tx_amounts.data else 0.0
+        current_amount = sum(tx["amount"] for tx in tx_amounts.data) if tx_amounts.data else 0.0
 
         if round(current_amount, 2) != 0:
             raise fastapi.HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete or deactivate a fund with a non-zero balance. Please transfer the funds out first."
+                detail="Cannot delete or deactivate a fund with a non-zero balance. Please transfer the funds out first."
             )
 
         if has_transactions:

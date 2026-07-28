@@ -1,18 +1,17 @@
-from decimal import Decimal
-from typing import List, Optional
 import datetime
 import logging
+from decimal import Decimal
 
+from ...helper.columns import BUDGET_COLUMNS, TRANSACTION_TAGS_COLUMNS, TRANSACTIONS_COLUMNS
 from ...schemas.base import BudgetPlan, BudgetPlanRow
 from ...schemas.responses import (
     BudgetResponse,
     BudgetSummaryResponse,
-    IncomeRowResponse,
     ExpenseRowResponse,
+    IncomeRowResponse,
+    InvestmentRowResponse,
     SavingsRowResponse,
-    InvestmentRowResponse
 )
-from ...helper.columns import BUDGET_COLUMNS, TRANSACTIONS_COLUMNS, TRANSACTION_TAGS_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ def get_month_budget_view(
             .execute()
         )
 
-        plan_rows: List[BudgetPlanRow] = []
+        plan_rows: list[BudgetPlanRow] = []
         if plan_response.data and len(plan_response.data) > 0:
             raw_plan = plan_response.data[0].get(BUDGET_COLUMNS.PLAN_JSON.value)
             if raw_plan:
@@ -118,20 +117,20 @@ def get_month_budget_view(
 
 
 def _calculate_budget_view(
-    plan_rows: List[BudgetPlanRow],
+    plan_rows: list[BudgetPlanRow],
     actuals_map: dict[int, Decimal],
     month: int,
     year: int,
-    tx_data: Optional[list[dict]] = None,
-    tx_tag_map: Optional[dict[str, set[int]]] = None,
+    tx_data: list[dict] | None = None,
+    tx_tag_map: dict[str, set[int]] | None = None,
 ) -> BudgetResponse:
     """
     Pure calculation function for budget view.
     """
-    income_rows: List[IncomeRowResponse] = []
-    expense_rows: List[ExpenseRowResponse] = []
-    savings_rows: List[SavingsRowResponse] = []
-    investment_rows: List[InvestmentRowResponse] = []
+    income_rows: list[IncomeRowResponse] = []
+    expense_rows: list[ExpenseRowResponse] = []
+    savings_rows: list[SavingsRowResponse] = []
+    investment_rows: list[InvestmentRowResponse] = []
 
     total_income_planned = Decimal(0)
     total_expense_planned = Decimal(0)
@@ -141,8 +140,8 @@ def _calculate_budget_view(
     category_id_col = TRANSACTIONS_COLUMNS.CATEGORY_ID.value
 
     for row in plan_rows:
-        actual: Optional[Decimal] = None
-        diff_pct: Optional[Decimal] = None
+        actual: Decimal | None = None
+        diff_pct: Decimal | None = None
 
         group_key = row.group.lower().strip()
 

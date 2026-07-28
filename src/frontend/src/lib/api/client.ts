@@ -54,6 +54,8 @@ export const tokenManager = {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     if (userId) localStorage.setItem(USER_ID_KEY, userId);
+    // A live session again — re-arm the expiry notification for next time.
+    sessionExpiryAnnounced = false;
   },
 
   clearTokens: () => {
@@ -66,13 +68,42 @@ export const tokenManager = {
 };
 
 // ============================================
+// Session Expiry Notification
+// ============================================
+
+/**
+ * Dispatched when the session is dead and cannot be recovered — refresh failed, or there was
+ * nothing left to refresh with. `AuthProvider` listens for it and tears down auth state.
+ *
+ * A DOM event rather than a registered callback so this module stays free of React imports and
+ * any number of listeners can react.
+ */
+export const SESSION_EXPIRED_EVENT = 'finance:session-expired';
+
+/**
+ * Guards against a burst of failing requests firing the event (and its toast) repeatedly.
+ * Reset whenever tokens are stored again, i.e. on the next successful login or refresh.
+ */
+let sessionExpiryAnnounced = false;
+
+function announceSessionExpired(): void {
+  if (sessionExpiryAnnounced) return;
+  sessionExpiryAnnounced = true;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+  }
+}
+
+// ============================================
 // Error Types
 // ============================================
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public detail?: unknown
+    public detail?: unknown,
+    public errorId?: string
   ) {
     super(message);
     this.name = 'ApiError';
@@ -84,6 +115,30 @@ export class TokenExpiredError extends ApiError {
     super('Token expired', 498, 'Token expired');
     this.name = 'TokenExpiredError';
   }
+}
+
+/**
+ * Turns any error caught from `apiClient`/`request()` into copy safe to show a user.
+ *
+ * The backend guarantees `detail` is a human-readable string for every response it controls
+ * (business errors, validation, rate limiting, unexpected 500s), so that's used verbatim when
+ * present. A 500 additionally carries an `errorId` — surfaced so a user can quote it back and
+ * the matching backend log line can be found without an error-tracking service. Anything that
+ * isn't an `ApiError` (network down, `fetch` itself throwing) falls back to a generic
+ * connectivity message rather than `fallback`, since `fallback` is usually action-specific
+ * ("Failed to save transaction") and would misleadingly imply the server rejected the request.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const base = typeof err.detail === 'string' ? err.detail : fallback;
+    return err.status >= 500 && err.errorId ? `${base} (ref: ${err.errorId})` : base;
+  }
+
+  if (err instanceof TypeError) {
+    return 'Could not reach the server. Check your connection and try again.';
+  }
+
+  return fallback;
 }
 
 // ============================================
@@ -120,6 +175,7 @@ async function refreshAccessToken(): Promise<boolean> {
         }
 
         tokenManager.clearTokens();
+        announceSessionExpired();
         return false;
       }
 
@@ -139,6 +195,7 @@ async function refreshAccessToken(): Promise<boolean> {
       }
 
       tokenManager.clearTokens();
+      announceSessionExpired();
       return false;
     } finally {
       refreshPromise = null;
@@ -171,6 +228,9 @@ async function request<T>(
   if (retryOnExpired && tokenManager.shouldRefreshAccessToken()) {
     const refreshed = await refreshAccessToken();
     if (!refreshed) {
+      // Covers the case where there was no refresh token to begin with; the refresh-failure
+      // paths announce for themselves, and the announcement is idempotent.
+      announceSessionExpired();
       throw new TokenExpiredError();
     }
   }
@@ -203,16 +263,14 @@ async function request<T>(
     if (refreshed) {
       return request<T>(endpoint, options, false);
     }
+    announceSessionExpired();
     throw new TokenExpiredError();
   }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new ApiError(
-      errorData.detail || 'Request failed',
-      response.status,
-      errorData.detail
-    );
+    const message = typeof errorData.detail === 'string' ? errorData.detail : 'Request failed';
+    throw new ApiError(message, response.status, errorData.detail, errorData.error_id ?? undefined);
   }
 
   const data = await response.json();

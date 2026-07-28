@@ -6,7 +6,10 @@ export interface AuthContextType {
     userId: string | null;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, fullName?: string) => Promise<void>;
-    logout: () => void;
+    /** Revokes the session server-side, then clears local state. Never rejects. */
+    logout: () => Promise<void>;
+    /** Clears the local session only — for when there is no server session left to revoke. */
+    clearLocalSession: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

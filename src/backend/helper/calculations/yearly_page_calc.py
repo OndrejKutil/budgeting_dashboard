@@ -1,26 +1,26 @@
 
 # imports
 import calendar
+import logging
 from datetime import date
-from typing import List, Dict, Optional, Any, cast
+from typing import Any, cast
+
+import polars as pl
 from pydantic import BaseModel, Field
 
-from ..columns import TRANSACTIONS_COLUMNS
 from ...data.database import get_db_client
-import logging
-import polars as pl
 
 # schemas
 from ...schemas.base import (
-    YearlyAnalyticsData, 
     EmergencyFundData,
-    YearlyHighlights,
-    TrendDirectionMetrics,
+    MonthMetric,
     TrendDirectionItem,
+    TrendDirectionMetrics,
+    YearlyAnalyticsData,
+    YearlyHighlights,
     YearlySpendingBalance,
-    MonthMetric
 )
-
+from ..columns import TRANSACTIONS_COLUMNS
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -58,12 +58,12 @@ class MonthlyDataPoint(BaseModel):
     
 class CategoryBreakdowns(BaseModel):
     """Internal data class for category breakdowns"""
-    by_category: Dict[str, float] = Field(default_factory=dict)
-    core_categories: Dict[str, float] = Field(default_factory=dict)
-    income_by_category: Dict[str, float] = Field(default_factory=dict)
-    expense_by_category: Dict[str, float] = Field(default_factory=dict)
-    saving_by_category: Dict[str, float] = Field(default_factory=dict)
-    investment_by_category: Dict[str, float] = Field(default_factory=dict)
+    by_category: dict[str, float] = Field(default_factory=dict)
+    core_categories: dict[str, float] = Field(default_factory=dict)
+    income_by_category: dict[str, float] = Field(default_factory=dict)
+    expense_by_category: dict[str, float] = Field(default_factory=dict)
+    saving_by_category: dict[str, float] = Field(default_factory=dict)
+    investment_by_category: dict[str, float] = Field(default_factory=dict)
 
 
 # ================================================================================================
@@ -77,7 +77,7 @@ def _get_year_date_range(year: int) -> tuple[date, date]:
     return start_date, end_date
 
 
-def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: date) -> List[dict]:
+def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: date) -> list[dict]:
     """Fetch transactions from the database for a specific date range."""
     try:
         user_supabase_client = get_db_client(access_token)
@@ -98,14 +98,14 @@ def _fetch_yearly_transactions(access_token: str, start_date: date, end_date: da
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         response = query.execute()
-        return cast(List[dict[Any, Any]], response.data)
+        return cast(list[dict[Any, Any]], response.data)
     except Exception as e:
         logger.error(f'Database query failed for yearly transactions: {str(e)}')
         logger.info(f'Query parameters - start_date: {start_date}, end_date: {end_date}')
         raise ConnectionError('Failed to fetch transactions from database.')
 
 
-def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
+def _prepare_transactions_dataframe(transactions: list[dict]) -> pl.DataFrame:
     """Convert raw transaction data to a prepared polars DataFrame."""
     if not transactions:
         return pl.DataFrame({
@@ -167,8 +167,10 @@ def _prepare_transactions_dataframe(transactions: List[dict]) -> pl.DataFrame:
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
         rename_map['type'] = 'category_type'
-    if 'savings_fund_id_fk' in df.columns: rename_map['savings_fund_id_fk'] = 'savings_funds'
-    elif 'savings_fund_id' in df.columns: rename_map['savings_fund_id'] = 'savings_funds'
+    if 'savings_fund_id_fk' in df.columns:
+        rename_map['savings_fund_id_fk'] = 'savings_funds'
+    elif 'savings_fund_id' in df.columns:
+        rename_map['savings_fund_id'] = 'savings_funds'
     
     df = df.rename(rename_map)
     df = safe_with_column(df, 'savings_funds', None, pl.Utf8)
@@ -205,7 +207,7 @@ def _apply_currency_conversion(df: pl.DataFrame, base_currency: str) -> pl.DataF
     ])
 
 
-def _initialize_monthly_data() -> Dict[str, MonthlyDataPoint]:
+def _initialize_monthly_data() -> dict[str, MonthlyDataPoint]:
     """Initialize the monthly data structure for all 12 months."""
     monthly_data = {}
     for month in range(1, 13):
@@ -214,7 +216,7 @@ def _initialize_monthly_data() -> Dict[str, MonthlyDataPoint]:
     return monthly_data
 
 
-def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: Dict[str, MonthlyDataPoint]) -> Dict[str, MonthlyDataPoint]:
+def _calculate_monthly_aggregations(df: pl.DataFrame, monthly_data: dict[str, MonthlyDataPoint]) -> dict[str, MonthlyDataPoint]:
     """Calculate monthly aggregations from the transactions DataFrame."""
     if df.is_empty():
         return monthly_data
@@ -376,7 +378,7 @@ def _calculate_category_breakdowns(df: pl.DataFrame) -> CategoryBreakdowns:
         investment_by_category=investment_by_category
     )
 
-def _prepare_monthly_arrays(monthly_data: Dict[str, MonthlyDataPoint]) -> dict:
+def _prepare_monthly_arrays(monthly_data: dict[str, MonthlyDataPoint]) -> dict:
     """Prepare monthly data arrays for chart visualization."""
     months = list(monthly_data.keys())
     
@@ -401,7 +403,7 @@ def _prepare_monthly_arrays(monthly_data: Dict[str, MonthlyDataPoint]) -> dict:
         ]
     }
 
-def _calculate_highlights(monthly_data: Dict[str, MonthlyDataPoint]) -> YearlyHighlights:
+def _calculate_highlights(monthly_data: dict[str, MonthlyDataPoint]) -> YearlyHighlights:
     """Calculate best/worst months highlights."""
     
     best_cashflow = MonthMetric(month="N/A", value=0.0)
@@ -460,7 +462,7 @@ def _calculate_trend_directions(monthly_metrics: dict) -> TrendDirectionMetrics:
         # Simple linear regression: slope = (n*Σxy - Σx*Σy) / (n*Σx² - (Σx)²)
         sum_x = sum(xs)
         sum_y = sum(ys)
-        sum_xy = sum(x * y for x, y in zip(xs, ys))
+        sum_xy = sum(x * y for x, y in zip(xs, ys, strict=True))
         sum_x2 = sum(x * x for x in xs)
         
         denom = n * sum_x2 - sum_x * sum_x
@@ -571,7 +573,7 @@ def _yearly_analytics(access_token: str, year: int, base_currency: str = 'CZK') 
 #                                   Emergency Fund Analysis
 # ================================================================================================
 
-def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_date: date) -> List[dict]:
+def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_date: date) -> list[dict]:
     """Fetch transactions for emergency fund analysis."""
     try:
         user_supabase_client = get_db_client(access_token)
@@ -592,14 +594,14 @@ def _fetch_emergency_fund_transactions(access_token: str, start_date: date, end_
         query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
         response = query.execute()
-        return cast(List[dict[Any, Any]], response.data)
+        return cast(list[dict[Any, Any]], response.data)
     except Exception as e:
         logger.error(f'Database query failed for emergency fund analysis: {str(e)}')
         logger.info(f'Query parameters - start_date: {start_date}, end_date: {end_date}')
         raise ConnectionError('Failed to fetch transactions from database.')
 
 
-def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
+def _prepare_emergency_fund_dataframe(transactions: list[dict]) -> pl.DataFrame:
     """Prepare DataFrame for emergency fund analysis."""
     if not transactions:
         return pl.DataFrame({
@@ -670,7 +672,8 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     rename_map = {}
     if 'type' in df.columns and 'category_type' not in df.columns:
         rename_map['type'] = 'category_type'
-    if 'fund_name' in df.columns: rename_map['fund_name'] = 'savings_funds'
+    if 'fund_name' in df.columns:
+        rename_map['fund_name'] = 'savings_funds'
     
     df = df.rename(rename_map)
     df = safe_with_column(df, 'savings_funds', None, pl.Utf8)
@@ -694,7 +697,7 @@ def _prepare_emergency_fund_dataframe(transactions: List[dict]) -> pl.DataFrame:
     return cast(pl.DataFrame, df)
 
 
-def _calculate_core_expenses(df: pl.DataFrame) -> tuple[Dict[str, float], Dict[str, float]]:
+def _calculate_core_expenses(df: pl.DataFrame) -> tuple[dict[str, float], dict[str, float]]:
     """Calculate core expenses by month and category."""
     if df.is_empty():
         return {}, {}
@@ -765,7 +768,7 @@ def _fetch_savings_funds_balance(access_token: str) -> float:
         return 0.0
 
 
-def _calculate_expense_stats(df: pl.DataFrame, spending_types: List[str]) -> tuple[float, float]:
+def _calculate_expense_stats(df: pl.DataFrame, spending_types: list[str]) -> tuple[float, float]:
     """Calculate average monthly and total expenses for given spending types."""
     if df.is_empty():
         return 0.0, 0.0

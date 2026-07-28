@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Target, MoreHorizontal, Pencil, Trash2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Target, MoreHorizontal, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -34,9 +34,10 @@ import {
 } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { tokenManager, ApiError } from '@/lib/api/client';
+import { tokenManager, ApiError, getErrorMessage } from '@/lib/api/client';
 import { fundsApi } from '@/lib/api/endpoints';
 import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from '@/lib/api/types';
+import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/contexts/user-context';
@@ -142,56 +143,72 @@ export default function FundsPage() {
     });
   };
 
+  const optimisticCreate = optimisticList<SavingsFund, CreateSavingsFundRequest & { user_id_fk: string }>(
+    queryClient,
+    ['funds'],
+    (prev, payload) => [
+      ...prev,
+      markOptimistic<SavingsFund>({
+        savings_funds_id_pk: tempUuid(),
+        user_id_fk: payload.user_id_fk,
+        fund_name: payload.fund_name,
+        target_amount: payload.target_amount,
+        fund_is_active: true,
+        current_amount: 0,
+        net_flow_30d: 0,
+        created_at: null,
+      }),
+    ]
+  );
+
+  const optimisticUpdate = optimisticList<SavingsFund, { id: string; data: UpdateSavingsFundRequest }>(
+    queryClient,
+    ['funds'],
+    (prev, vars) => patchById(prev, 'savings_funds_id_pk', vars.id, vars.data)
+  );
+
+  // Funds are conditionally soft-deleted server-side (fund_is_active = false) when transactions
+  // reference them; dropping the row is right for the active list in both branches.
+  const optimisticDelete = optimisticList<SavingsFund, string>(
+    queryClient,
+    ['funds'],
+    (prev, id) => withoutId(prev, 'savings_funds_id_pk', id)
+  );
+
   const createMutation = useMutation({
     mutationFn: fundsApi.create,
+    onMutate: optimisticCreate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['funds'] });
       toast({ title: t('pages.funds.created') });
-      handleCloseModal();
     },
-    onError: (err: Error | ApiError) => {
-      let message = t('pages.funds.createFailed');
-      if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
-        } else if (typeof err.detail === 'object' && err.detail !== null) {
-          message = JSON.stringify(err.detail);
-        }
-      }
+    onError: (err: Error | ApiError, _payload, context) => {
+      optimisticCreate.rollback(context);
+      const message = getErrorMessage(err, t('pages.funds.createFailed'));
       toast({
         title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+    onSettled: optimisticCreate.onSettled,
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: { id: string; data: UpdateSavingsFundRequest }) => fundsApi.update(data.id, data.data),
+    onMutate: optimisticUpdate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['funds'] });
       toast({ title: t('pages.funds.updated') });
-      handleCloseModal();
     },
-    onError: (err: Error | ApiError) => {
-      let message = t('pages.funds.updateFailed');
-      if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
-        } else if (typeof err.detail === 'object' && err.detail !== null) {
-          message = JSON.stringify(err.detail);
-        }
-      }
+    onError: (err: Error | ApiError, _vars, context) => {
+      optimisticUpdate.rollback(context);
+      const message = getErrorMessage(err, t('pages.funds.updateFailed'));
       toast({
         title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+    onSettled: optimisticUpdate.onSettled,
   });
 
   const handleSubmit = async () => {
@@ -225,26 +242,33 @@ export default function FundsPage() {
     } else {
       createMutation.mutate(payload);
     }
+
+    // Optimistic write is already in the cache — close rather than hold a spinner.
+    handleCloseModal();
   };
 
   const deleteMutation = useMutation({
     mutationFn: fundsApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['funds'] });
+    onMutate: (fundId: string) => {
       setDeleteConfirmId(null);
+      return optimisticDelete.onMutate(fundId);
+    },
+    onSuccess: () => {
       toast({
         title: t('pages.funds.deleted'),
         description: t('pages.funds.deletedDescription'),
       });
     },
-    onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.funds.deleteFailed');
+    onError: (err: Error | ApiError, _fundId, context) => {
+      optimisticDelete.rollback(context);
+      const message = getErrorMessage(err, t('pages.funds.deleteFailed'));
       toast({
         title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+    onSettled: optimisticDelete.onSettled,
   });
 
   const handleDelete = (fundId: string) => {
@@ -280,6 +304,8 @@ export default function FundsPage() {
     const current = fund.current_amount || 0;
     const progress = fund.target_amount > 0 ? (current / fund.target_amount) * 100 : 0;
     const isComplete = progress >= 100;
+    // Temp id until the server row arrives — actions would 404, so disable them.
+    const pending = isOptimistic(fund);
 
     return (
       <motion.div
@@ -290,7 +316,8 @@ export default function FundsPage() {
           'group rounded-xl border bg-card p-5 shadow-card transition-colors hover:border-primary/40',
           fund.fund_is_active === false
             ? 'border-border/50 opacity-60'
-            : isComplete ? 'border-success/30' : 'border-border hover:border-primary/50'
+            : isComplete ? 'border-success/30' : 'border-border hover:border-primary/50',
+          pending && 'opacity-60'
         )}
       >
         <div className="flex items-start justify-between">
@@ -324,6 +351,7 @@ export default function FundsPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                disabled={pending}
                 aria-label={`${t('common.actions')}: ${fund.fund_name}`}
                 className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
               >
@@ -561,11 +589,8 @@ export default function FundsPage() {
             <Button variant="outline" onClick={handleCloseModal}>
               {t('common.cancel')}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {/* Optimistic write + immediate close, so no pending gate is needed. */}
+            <Button onClick={handleSubmit}>
               {selectedFund ? t('common.save') : t('pages.funds.create')}
             </Button>
           </DialogFooter>
@@ -588,9 +613,7 @@ export default function FundsPage() {
             <Button
               variant="destructive"
               onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('common.delete')}
             </Button>
           </DialogFooter>

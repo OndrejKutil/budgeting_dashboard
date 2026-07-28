@@ -1,6 +1,5 @@
 import logging
-from datetime import date, timedelta
-from typing import Optional
+from datetime import date
 
 import fastapi
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -23,9 +22,9 @@ async def get_net_worth(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    start_date: Optional[date] = Query(None, description="Start date (default: 30 days ago)"),
-    end_date: Optional[date] = Query(None, description="End date (default: today)"),
-    base_currency: Optional[str] = Query("CZK", description="Currency for aggregation"),
+    start_date: date | None = Query(None, description="Start date (default: 30 days ago)"),
+    end_date: date | None = Query(None, description="End date (default: today)"),
+    base_currency: str | None = Query("CZK", description="Currency for aggregation"),
 ) -> NetWorthResponse:
     try:
         today = date.today()

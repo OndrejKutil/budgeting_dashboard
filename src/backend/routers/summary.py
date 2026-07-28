@@ -1,29 +1,26 @@
 # fastapi
+# logging
+import logging
+
+# other
+from datetime import date
+
 import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
 
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
-
 # Load environment variables
-from ..helper import environment as env
+# helper
+from ..helper.calculations.summary_calc import _summary_calc
 
-# logging
-import logging
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
 
 # schemas
 from ..schemas.base import SummaryData
 from ..schemas.responses import SummaryResponse
-
-# helper
-from ..helper.calculations.summary_calc import _summary_calc
-
-# other
-from datetime import date
-from typing import Optional
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -48,8 +45,8 @@ async def get_financial_summary(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    start_date: Optional[date] = Query(None, description="Start date for filtering transactions"),
-    end_date: Optional[date] = Query(None, description="End date for filtering transactions"),
+    start_date: date | None = Query(None, description="Start date for filtering transactions"),
+    end_date: date | None = Query(None, description="End date for filtering transactions"),
     base_currency: str = Query('CZK', description="Currency to convert all amounts into"),
 ) -> SummaryResponse:
     """

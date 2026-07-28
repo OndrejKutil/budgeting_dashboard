@@ -1,9 +1,10 @@
-from datetime import date as Date, datetime
+from datetime import date as Date
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # ================================================================================================
 #                                   Data Schemas
@@ -23,10 +24,10 @@ class TransactionData(BaseModel):
     category_id_fk: int = Field(..., description="Transaction category id")
     amount: Decimal = Field(..., description="Transaction amount")
     date: Date = Field(..., description="Transaction date")
-    notes: Optional[str] = Field(None, description="Transaction description")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
-    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID associated with the transaction")
-    tags: Optional[List[TagData]] = Field(None, description="Tags associated with this transaction")
+    notes: str | None = Field(None, description="Transaction description")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+    savings_fund_id_fk: str | None = Field(None, description="Savings fund ID associated with the transaction")
+    tags: list[TagData] | None = Field(None, description="Tags associated with this transaction")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -77,29 +78,29 @@ class CategoryData(BaseModel):
     categories_id_pk: int = Field(..., description="Category ID")
     category_name: str = Field(..., description="Category name")
     type: CategoryType = Field(..., description="Category type (expense, income, etc.)")
-    is_active: Optional[bool] = Field(True, description="Indicates if the category is active")
-    spending_type: Optional[SpendingType] = Field(None, description="Type of spending associated with the category")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+    is_active: bool | None = Field(True, description="Indicates if the category is active")
+    spending_type: SpendingType | None = Field(None, description="Type of spending associated with the category")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
 
 
 class AccountData(BaseModel):
     """Schema for individual account data"""
     accounts_id_pk: str = Field(..., description="Account ID")
-    user_id_fk: Optional[str] = Field(None, description="User ID who owns this account")
+    user_id_fk: str | None = Field(None, description="User ID who owns this account")
     account_name: str = Field(..., description="Account name")
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
-    currency: Optional[str] = Field(..., description="Currency of the account")
-    account_is_active: Optional[bool] = Field(True, description="Whether the account is active")
-    current_balance: Optional[float] = Field(0.0, description="Current balance of the account")
-    net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the account in the last 30 days")
-    history_30d: Optional[List[dict]] = Field(None, description="Daily balance history for the last 30 days")
-    created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
+    currency: str | None = Field(..., description="Currency of the account")
+    account_is_active: bool | None = Field(True, description="Whether the account is active")
+    current_balance: float | None = Field(0.0, description="Current balance of the account")
+    net_flow_30d: float | None = Field(0.0, description="Net flow of the account in the last 30 days")
+    history_30d: list[dict] | None = Field(None, description="Daily balance history for the last 30 days")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
 
 class UserData(BaseModel):
     """Schema for user registration data"""
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password (min 8 characters)")
-    full_name: Optional[str] = Field(None, description="User full name")
+    full_name: str | None = Field(None, description="User full name")
 
 class CategoryInsight(BaseModel):
     """Schema for category insight data"""
@@ -133,9 +134,9 @@ class SummaryData(BaseModel):
     comparison: PeriodComparison = Field(..., description="Period-over-period comparison metrics")
     savings_rate: float = Field(..., description="Savings rate as percentage of income")
     investment_rate: float = Field(..., description="Investment rate as percentage of income")
-    top_expenses: List[CategoryInsight] = Field(..., description="Top 3 expense categories")
-    biggest_mover: Optional[CategoryInsight] = Field(None, description="Category with largest absolute spending change vs previous period")
-    largest_transactions: List[TransactionData] = Field(..., description="List of top 5 largest transactions")
+    top_expenses: list[CategoryInsight] = Field(..., description="Top 3 expense categories")
+    biggest_mover: CategoryInsight | None = Field(None, description="Category with largest absolute spending change vs previous period")
+    largest_transactions: list[TransactionData] = Field(..., description="List of top 5 largest transactions")
     
 
     
@@ -184,10 +185,10 @@ class SavingsFundsData(BaseModel):
     user_id_fk: str = Field(..., description="ID of the user who owns the savings fund")
     fund_name: str = Field(..., description="Name of the savings fund")
     target_amount: int = Field(..., description="Target amount for the savings fund")
-    fund_is_active: Optional[bool] = Field(True, description="Whether the fund is active")
-    current_amount: Optional[float] = Field(0.0, description="Current amount in the savings fund")
-    net_flow_30d: Optional[float] = Field(0.0, description="Net flow of the savings fund in the last 30 days")
-    created_at: Optional[str] = Field(..., description="Creation timestamp of the savings fund")
+    fund_is_active: bool | None = Field(True, description="Whether the fund is active")
+    current_amount: float | None = Field(0.0, description="Current amount in the savings fund")
+    net_flow_30d: float | None = Field(0.0, description="Net flow of the savings fund in the last 30 days")
+    created_at: str | None = Field(..., description="Creation timestamp of the savings fund")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -203,18 +204,18 @@ class SavingsFundsData(BaseModel):
 
 class RecurringData(BaseModel):
     """Schema for a recurring transaction template"""
-    recurring_id_pk: Optional[str] = Field(None, description="Recurring template ID")
-    user_id_fk: Optional[str] = Field(None, description="User ID")
+    recurring_id_pk: str | None = Field(None, description="Recurring template ID")
+    user_id_fk: str | None = Field(None, description="User ID")
     account_id_fk: str = Field(..., description="Account ID")
     category_id_fk: int = Field(..., description="Category ID")
-    savings_fund_id_fk: Optional[str] = Field(None, description="Savings fund ID")
+    savings_fund_id_fk: str | None = Field(None, description="Savings fund ID")
     amount: Decimal = Field(..., description="Transaction amount (signed)")
     cadence: str = Field(..., description="Recurrence cadence: weekly|biweekly|monthly|quarterly|yearly")
     next_date: Date = Field(..., description="Next due date")
-    notes: Optional[str] = Field(None, description="Notes")
-    is_active: Optional[bool] = Field(True, description="Whether template is active")
-    created_at: Optional[datetime] = Field(None, description="Created at")
-    updated_at: Optional[datetime] = Field(None, description="Updated at")
+    notes: str | None = Field(None, description="Notes")
+    is_active: bool | None = Field(True, description="Whether template is active")
+    created_at: datetime | None = Field(None, description="Created at")
+    updated_at: datetime | None = Field(None, description="Updated at")
 
     model_config = ConfigDict(json_encoders={Decimal: float})
 
@@ -227,8 +228,8 @@ class RecurringSummary(BaseModel):
 
 class NetWorthTimelineData(BaseModel):
     """Schema for net-worth timeline data point"""
-    dates: List[str] = Field(..., description="ISO date strings")
-    net_worth: List[float] = Field(..., description="Net worth values in base currency")
+    dates: list[str] = Field(..., description="ISO date strings")
+    net_worth: list[float] = Field(..., description="Net worth values in base currency")
     base_currency: str = Field(..., description="Base currency used")
 
 
@@ -304,7 +305,7 @@ class DaySplit(BaseModel):
 class CategoryConcentration(BaseModel):
     """Schema for category concentration insights"""
     top_3_share_pct: float = Field(..., description="Percentage share of expenses from top 3 categories")
-    top_3_categories: List[CategoryBreakdownData] = Field(..., description="Top 3 categories by spending")
+    top_3_categories: list[CategoryBreakdownData] = Field(..., description="Top 3 categories by spending")
 
 
 class MonthlyPeriodComparison(BaseModel):
@@ -342,15 +343,15 @@ class MonthlyAnalyticsData(BaseModel):
     day_split: DaySplit = Field(..., description="Weekday vs Weekend spending split")
     category_concentration: CategoryConcentration = Field(..., description="Category concentration insights")
     comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
-    yoy_comparison: Optional[MonthlyPeriodComparison] = Field(None, description="Year-over-year comparison (vs same month last year)")
+    yoy_comparison: MonthlyPeriodComparison | None = Field(None, description="Year-over-year comparison (vs same month last year)")
 
-    daily_spending_heatmap: List[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
+    daily_spending_heatmap: list[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
     # breakdown: List[CategoryBreakdownData] # REMOVED
-    income_breakdown: List[CategoryBreakdownData] = Field(..., description="Income breakdown by category")
-    expenses_breakdown: List[CategoryBreakdownData] = Field(..., description="Expenses breakdown by category")
-    saving_breakdown: List[CategoryBreakdownData] = Field(default_factory=list, description="Saving breakdown by category")
-    investment_breakdown: List[CategoryBreakdownData] = Field(default_factory=list, description="Investment breakdown by category")
-    spending_type_breakdown: List[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
+    income_breakdown: list[CategoryBreakdownData] = Field(..., description="Income breakdown by category")
+    expenses_breakdown: list[CategoryBreakdownData] = Field(..., description="Expenses breakdown by category")
+    saving_breakdown: list[CategoryBreakdownData] = Field(default_factory=list, description="Saving breakdown by category")
+    investment_breakdown: list[CategoryBreakdownData] = Field(default_factory=list, description="Investment breakdown by category")
+    spending_type_breakdown: list[SpendingTypeBreakdownData] = Field(..., description="Breakdown by spending type")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -435,16 +436,16 @@ class YearlyAnalyticsData(BaseModel):
     trend_directions: TrendDirectionMetrics = Field(..., description="Trend direction metrics")
     spending_balance: YearlySpendingBalance = Field(..., description="Spending balance summary")
     
-    months: List[str] = Field(..., description="Month names")
-    monthly_income: List[float] = Field(..., description="Monthly income amounts")
-    monthly_expense: List[float] = Field(..., description="Monthly expense amounts")
-    monthly_saving: List[float] = Field(..., description="Monthly saving amounts")
-    monthly_investment: List[float] = Field(..., description="Monthly investment amounts")
-    monthly_core_expense: List[float] = Field(..., description="Monthly core expense amounts")
-    monthly_fun_expense: List[float] = Field(..., description="Monthly fun expense amounts")
-    monthly_future_expense: List[float] = Field(..., description="Monthly future expense amounts")
-    monthly_savings_rate: List[float] = Field(..., description="Monthly savings rate percentages")
-    monthly_investment_rate: List[float] = Field(..., description="Monthly investment rate percentages")
+    months: list[str] = Field(..., description="Month names")
+    monthly_income: list[float] = Field(..., description="Monthly income amounts")
+    monthly_expense: list[float] = Field(..., description="Monthly expense amounts")
+    monthly_saving: list[float] = Field(..., description="Monthly saving amounts")
+    monthly_investment: list[float] = Field(..., description="Monthly investment amounts")
+    monthly_core_expense: list[float] = Field(..., description="Monthly core expense amounts")
+    monthly_fun_expense: list[float] = Field(..., description="Monthly fun expense amounts")
+    monthly_future_expense: list[float] = Field(..., description="Monthly future expense amounts")
+    monthly_savings_rate: list[float] = Field(..., description="Monthly savings rate percentages")
+    monthly_investment_rate: list[float] = Field(..., description="Monthly investment rate percentages")
     by_category: dict[str, float] = Field(..., description="Breakdown by category")
     core_categories: dict[str, float] = Field(..., description="Core category breakdown")
     income_by_category: dict[str, float] = Field(..., description="Income breakdown by category")
@@ -566,9 +567,9 @@ class FIREData(BaseModel):
     fat_progress_pct: float = Field(..., description="Progress towards Fat FI number (%)")
 
     # Projections (None when not enough data)
-    years_to_fi: Optional[float] = Field(None, description="Estimated years to standard FI at 7% annual growth + current savings rate")
-    projected_fi_year: Optional[int] = Field(None, description="Calendar year of estimated FI achievement")
-    coast_fi_years: Optional[float] = Field(None, description="Years until current NW alone grows to FI number at 7% (Coast FI)")
+    years_to_fi: float | None = Field(None, description="Estimated years to standard FI at 7% annual growth + current savings rate")
+    projected_fi_year: int | None = Field(None, description="Calendar year of estimated FI achievement")
+    coast_fi_years: float | None = Field(None, description="Years until current NW alone grows to FI number at 7% (Coast FI)")
 
     # Monthly expense breakdowns (for display)
     monthly_core_expenses: float = Field(..., description="Average monthly Core-only expenses")
@@ -583,52 +584,52 @@ class FIREData(BaseModel):
 
 class IdentityData(BaseModel):
     """Schema for user identity provider data"""
-    id: Optional[str] = Field(None, description="Identity ID")
-    identity_id: Optional[str] = Field(None, description="Provider identity ID")
-    user_id: Optional[str] = Field(None, description="Associated user ID")
-    provider: Optional[str] = Field(None, description="Identity provider name")
-    identity_data: Optional[dict] = Field(None, description="Provider-specific identity data")
-    created_at: Optional[datetime] = Field(None, description="Identity creation timestamp")
-    last_sign_in_at: Optional[datetime] = Field(None, description="Last sign in timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Identity update timestamp")
+    id: str | None = Field(None, description="Identity ID")
+    identity_id: str | None = Field(None, description="Provider identity ID")
+    user_id: str | None = Field(None, description="Associated user ID")
+    provider: str | None = Field(None, description="Identity provider name")
+    identity_data: dict | None = Field(None, description="Provider-specific identity data")
+    created_at: datetime | None = Field(None, description="Identity creation timestamp")
+    last_sign_in_at: datetime | None = Field(None, description="Last sign in timestamp")
+    updated_at: datetime | None = Field(None, description="Identity update timestamp")
 
 
 class ProfileData(BaseModel):
     """Schema for user profile data"""
     # Core identity
-    id: Optional[str] = Field(None, description="User ID")
-    aud: Optional[str] = Field(None, description="Audience claim")
-    role: Optional[str] = Field(None, description="User role")
+    id: str | None = Field(None, description="User ID")
+    aud: str | None = Field(None, description="Audience claim")
+    role: str | None = Field(None, description="User role")
     is_anonymous: bool = Field(False, description="Whether user is anonymous")
     
     # Email information
-    email: Optional[str] = Field(None, description="User email address")
-    email_confirmed_at: Optional[datetime] = Field(None, description="Email confirmation timestamp")
-    email_change_sent_at: Optional[datetime] = Field(None, description="Email change request timestamp")
-    new_email: Optional[str] = Field(None, description="Pending new email address")
+    email: str | None = Field(None, description="User email address")
+    email_confirmed_at: datetime | None = Field(None, description="Email confirmation timestamp")
+    email_change_sent_at: datetime | None = Field(None, description="Email change request timestamp")
+    new_email: str | None = Field(None, description="Pending new email address")
     
     # Phone information
-    phone: Optional[str] = Field(None, description="User phone number")
-    phone_confirmed_at: Optional[datetime] = Field(None, description="Phone confirmation timestamp")
-    new_phone: Optional[str] = Field(None, description="Pending new phone number")
+    phone: str | None = Field(None, description="User phone number")
+    phone_confirmed_at: datetime | None = Field(None, description="Phone confirmation timestamp")
+    new_phone: str | None = Field(None, description="Pending new phone number")
     
     # Authentication timestamps
-    created_at: Optional[datetime] = Field(None, description="Account creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Profile update timestamp")
-    last_sign_in_at: Optional[datetime] = Field(None, description="Last sign in timestamp")
-    confirmed_at: Optional[datetime] = Field(None, description="Account confirmation timestamp")
-    confirmation_sent_at: Optional[datetime] = Field(None, description="Confirmation email sent timestamp")
-    recovery_sent_at: Optional[datetime] = Field(None, description="Recovery email sent timestamp")
-    invited_at: Optional[datetime] = Field(None, description="Invitation sent timestamp")
+    created_at: datetime | None = Field(None, description="Account creation timestamp")
+    updated_at: datetime | None = Field(None, description="Profile update timestamp")
+    last_sign_in_at: datetime | None = Field(None, description="Last sign in timestamp")
+    confirmed_at: datetime | None = Field(None, description="Account confirmation timestamp")
+    confirmation_sent_at: datetime | None = Field(None, description="Confirmation email sent timestamp")
+    recovery_sent_at: datetime | None = Field(None, description="Recovery email sent timestamp")
+    invited_at: datetime | None = Field(None, description="Invitation sent timestamp")
     
     # Metadata
-    app_metadata: Optional[dict] = Field(None, description="Application-specific metadata")
-    user_metadata: Optional[dict] = Field(None, description="User-specific metadata")
+    app_metadata: dict | None = Field(None, description="Application-specific metadata")
+    user_metadata: dict | None = Field(None, description="User-specific metadata")
     
     # Identity and security
-    identities: Optional[List[IdentityData]] = Field(None, description="User identity providers")
-    factors: Optional[List[dict]] = Field(None, description="MFA factors")
-    action_link: Optional[str] = Field(None, description="Pending action link")
+    identities: list[IdentityData] | None = Field(None, description="User identity providers")
+    factors: list[dict] | None = Field(None, description="MFA factors")
+    action_link: str | None = Field(None, description="Pending action link")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -655,37 +656,37 @@ class ProfileData(BaseModel):
 class IncomeRowResponse(BaseModel):
     name: str = Field(..., description="Name of the income source")
     amount: Decimal = Field(..., description="Amount allocated for this income source")
-    actual_amount: Optional[Decimal] = Field(None, description="Actual amount received for this income source")
-    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
-    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
+    actual_amount: Decimal | None = Field(None, description="Actual amount received for this income source")
+    difference_pct: Decimal | None = Field(None, description="Difference between allocated and actual amount")
+    category_ids: list[int] | None = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: list[int] | None = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class ExpenseRowResponse(BaseModel):
     name: str = Field(..., description="Name of the expense category")
     amount: Decimal = Field(..., description="Amount allocated for this expense category")
-    actual_amount: Optional[Decimal] = Field(None, description="Actual amount spent for this expense category")
-    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
-    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
+    actual_amount: Decimal | None = Field(None, description="Actual amount spent for this expense category")
+    difference_pct: Decimal | None = Field(None, description="Difference between allocated and actual amount")
+    category_ids: list[int] | None = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: list[int] | None = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class SavingsRowResponse(BaseModel):
     name: str = Field(..., description="Name of the savings goal")
     amount: Decimal = Field(..., description="Amount allocated for this savings goal")
-    actual_amount: Optional[Decimal] = Field(None, description="Actual amount saved for this savings goal")
-    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
-    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
+    actual_amount: Decimal | None = Field(None, description="Actual amount saved for this savings goal")
+    difference_pct: Decimal | None = Field(None, description="Difference between allocated and actual amount")
+    category_ids: list[int] | None = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: list[int] | None = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class InvestmentRowResponse(BaseModel):
     name: str = Field(..., description="Name of the investment")
     amount: Decimal = Field(..., description="Amount allocated for this investment")
-    actual_amount: Optional[Decimal] = Field(None, description="Actual amount invested")
-    difference_pct: Optional[Decimal] = Field(None, description="Difference between allocated and actual amount")
-    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs used for actuals calculation")
-    tags: Optional[List[int]] = Field(None, description="Linked tag IDs used for actuals calculation")
+    actual_amount: Decimal | None = Field(None, description="Actual amount invested")
+    difference_pct: Decimal | None = Field(None, description="Difference between allocated and actual amount")
+    category_ids: list[int] | None = Field(None, description="Linked category IDs used for actuals calculation")
+    tags: list[int] | None = Field(None, description="Linked tag IDs used for actuals calculation")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
 
 class BudgetSummaryResponse(BaseModel):
@@ -705,8 +706,8 @@ class BudgetPlanRow(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Name of the budget item")
     amount: Decimal = Field(..., ge=0, description="Planned amount")
     include_in_total: bool = Field(True, description="Whether to include this row in the total calculations")
-    category_ids: Optional[List[int]] = Field(None, description="Linked category IDs for actuals (replaces category_id)")
-    tags: Optional[List[int]] = Field(None, description="Linked tag IDs for actuals filtering")
+    category_ids: list[int] | None = Field(None, description="Linked category IDs for actuals (replaces category_id)")
+    tags: list[int] | None = Field(None, description="Linked tag IDs for actuals filtering")
 
     @model_validator(mode='before')
     @classmethod
@@ -719,7 +720,7 @@ class BudgetPlanRow(BaseModel):
 
 class BudgetPlan(BaseModel):
     """Schema for the entire budget plan JSON structure"""
-    rows: List[BudgetPlanRow] = Field(..., description="List of budget plan rows")
+    rows: list[BudgetPlanRow] = Field(..., description="List of budget plan rows")
 
 
 # ================================================================================================
@@ -759,7 +760,7 @@ class DividendStockRow(BaseModel):
 
 class DividendPortfolio(BaseModel):
     """Schema for the full portfolio stored as JSON"""
-    rows: List[DividendStockRow] = Field(..., description="List of stock rows")
+    rows: list[DividendStockRow] = Field(..., description="List of stock rows")
 
 
 class DividendCalculationResult(BaseModel):
@@ -768,7 +769,7 @@ class DividendCalculationResult(BaseModel):
     annual_income: Decimal = Field(..., description="Estimated annual dividend income")
     monthly_income: Decimal = Field(..., description="Estimated monthly dividend income (annual / 12)")
     portfolio_value: Decimal = Field(..., description="Total portfolio value used in calculations")
-    rows: List[DividendStockRow] = Field(..., description="Stock rows as saved")
+    rows: list[DividendStockRow] = Field(..., description="Stock rows as saved")
 
     model_config = ConfigDict(
         json_encoders={Decimal: float}

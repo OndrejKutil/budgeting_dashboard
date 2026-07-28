@@ -1,16 +1,15 @@
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, Query, status, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from ..auth.auth import api_key_auth, get_current_user
-from ..helper.rate_limiter import limiter, RATE_LIMITS
 from ..data.database import get_db_client
 from ..helper.columns import TAGS_COLUMNS
+from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..schemas.base import TagData
 from ..schemas.requests import TagRequest, TagUpdateRequest
 from ..schemas.responses import TagsResponse, TagSuccessResponse
-
-import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ async def get_tags(
     request: Request,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
-    tag_id: Optional[int] = Query(None, description="Filter by tag ID"),
+    tag_id: int | None = Query(None, description="Filter by tag ID"),
 ) -> TagsResponse:
     """Get all tags for the current user."""
     try:

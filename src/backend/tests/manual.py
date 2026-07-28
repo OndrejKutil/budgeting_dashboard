@@ -1,9 +1,9 @@
+import os
 import pathlib
 import sys
 
-import requests
 import dotenv
-import os
+import requests
 
 try:
     # Works when executed as a module: `python -m backend.tests.manual`

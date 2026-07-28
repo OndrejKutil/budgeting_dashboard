@@ -51,18 +51,25 @@ dependencies = [
     "types-python-dateutil"
 ]
 
+# Install (from src/backend/):
+#   Production, runtime deps only:
+#     pip install .                    (or: uv pip install .)
+#   Development — adds mypy, ruff, pytest below:
+#     pip install -e ".[dev,test]"     (or: uv pip install -e ".[dev,test]")
+#   `-e` (editable) is what lets mypy/pytest import this package's modules straight from
+#   source, so a code change is picked up without reinstalling.
 [project.optional-dependencies]
 dev = [
-    # Type checking
+    # Type checking & linting
     "mypy>=1.8.0",
+    "ruff>=0.16.0",
     "lxml>=6.0.2",
 
     "requests>=2.31.0",
-    
+
     # Type stubs for third-party packages
     "types-requests>=2.31.0",
 
-    
     # Testing
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -99,22 +106,18 @@ include = ["auth*", "helper*", "routers*", "schemas*"]
 #                              Tool Configuration
 # =============================================================================
 
+# mypy: run with `mypy .` from src/backend/. Gradually-strict config — the `disallow_*`
+# flags are off for now (see README/CLAUDE.md); flip them on module-by-module as the
+# codebase earns it rather than all at once.
 [tool.mypy]
-# Import discovery
 python_version = "3.13"
 files = ["**/*.py"]
-exclude = [
-    "__pycache__",
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-]
-
-# Platform configuration
+exclude = ["__pycache__", "\\.venv", "venv", "build", "dist"]
 platform = "linux"
 
-# Strictness settings
+namespace_packages = true
+explicit_package_bases = true
+
 strict = false
 warn_return_any = true
 warn_unused_configs = true
@@ -123,26 +126,21 @@ warn_unused_ignores = false
 warn_no_return = true
 warn_unreachable = true
 check_untyped_defs = true
-
-# Disallow dynamic typing
-disallow_any_unimported = false
-disallow_any_expr = false
-disallow_any_decorated = false
-disallow_any_explicit = false
-disallow_any_generics = false
-disallow_subclassing_any = false
-
-# Untyped definitions and calls
-disallow_untyped_calls = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_decorators = false
-
-# None and Optional handling
 no_implicit_optional = true
 strict_optional = true
+allow_redefinition = false
+implicit_reexport = true
+strict_equality = true
 
-# Error messages
+# Runtime always loads this code as the "backend" package (PYTHONPATH set one level up —
+# see Dockerfile), so internal relative imports like "from ...auth.auth import x" resolve
+# only under that root. Run from src/backend/, mypy has no way to see that root, so it
+# can't resolve those (or third-party libs without stubs, e.g. supabase) — hence the
+# blanket ignore_missing_imports. This does NOT disable type-checking within a file, only
+# "can't find this import" errors; genuinely misspelled imports will slip through unnoticed.
+ignore_missing_imports = true
+
+# Error output
 show_error_context = true
 show_column_numbers = true
 show_error_codes = true
@@ -150,21 +148,10 @@ pretty = true
 color_output = true
 error_summary = true
 
-# Miscellaneous
-allow_redefinition = false
-local_partial_types = false
-implicit_reexport = true
-strict_equality = true
-
-# Ignore missing imports for third-party libraries without stubs
-[[tool.mypy.overrides]]
-module = [
-    "supabase.*",
-    "dotenv.*",
-    "jose.*",
-]
-ignore_missing_imports = true
-
+# pytest: run with `pytest` (or `pytest -k <name>` for a single test) from src/backend/.
+# Coverage (below) reports against the whole package, not just tests/ — 0% on a router
+# file means "no test imports it yet", not "broken", since most coverage here comes
+# from the pure-logic unit tests in tests/, not from hitting the live API.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
@@ -198,4 +185,29 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "@abstractmethod",
+]
+
+# ruff: run `ruff check .` (lint) or `ruff check --fix .` (autofix) from src/backend/.
+# Separate from mypy — mypy checks types, ruff checks everything else (unused
+# imports/variables, import order, obvious bugs, outdated syntax).
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+extend-exclude = ["htmlcov"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (unused imports/variables, undefined names)
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade (modernize syntax for the pinned Python version)
+    "B",   # flake8-bugbear (common footguns, e.g. mutable default arguments)
+]
+# Deliberately deferred rather than fixed — each below is pre-existing debt found the
+# first time ruff ever ran here, not something a config change should silently paper over:
+ignore = [
+    "B008",  # FastAPI's own Depends()/Query() as a default argument value; not a bug
+    "B904",  # raise-without-from-inside-except — ~74 sites; needs its own exception-handling pass
+    "E501",  # line too long — ~130 pre-existing long lines scattered across the app
+    "UP042", # str+Enum -> StrEnum changes str()/f-string output; needs a deliberate check first
 ]

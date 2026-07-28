@@ -1,36 +1,34 @@
 from decimal import Decimal
-from typing import Any, List, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .base import (
     AccountData,
+    BudgetSummaryResponse,
     CategoryData,
     CategoryType,
     DailySpendingData,
+    DividendCalculationResult,
     EmergencyFundData,
+    ExpenseRowResponse,
     FIREData,
+    IncomeRowResponse,
+    InvestmentRowResponse,
     MonthlyAnalyticsData,
     NetWorthTimelineData,
     ProfileData,
     RecurringData,
     RecurringSummary,
     SavingsFundsData,
+    SavingsRowResponse,
     SpendingType,
     SummaryData,
     TagData,
+    TokenData,
     TransactionData,
     YearlyAnalyticsData,
-    TokenData,
-    IncomeRowResponse,
-    ExpenseRowResponse,
-    SavingsRowResponse,
-    InvestmentRowResponse,
-    BudgetSummaryResponse,
-    DividendCalculationResult,
-    DividendStockRow,
 )
-
 
 # ================================================================================================
 #                                        Get Schemas
@@ -66,7 +64,7 @@ class OAuthUrlResponse(BaseModel):
     )
 
 class AllDataResponse(BaseModel):
-    data: List[TransactionData] = Field(..., description="List of transaction records")
+    data: list[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")
     
     model_config = ConfigDict(
@@ -105,14 +103,14 @@ class AllDataResponse(BaseModel):
 class RefreshTokenResponse(BaseModel):
     """Response schema for token refresh endpoint"""
     data: TokenData = Field(..., description="Token data after refresh")
-    user: Optional[dict] = Field(None, description="User information after refresh")
-    session: Optional[dict] = Field(None, description="Session information after refresh")
+    user: dict | None = Field(None, description="User information after refresh")
+    session: dict | None = Field(None, description="Session information after refresh")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
 
 class CategoriesResponse(BaseModel):
-    data: List[CategoryData] = Field(..., description="List of category records")
+    data: list[CategoryData] = Field(..., description="List of category records")
     count: int = Field(..., description="Total number of records returned")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
@@ -141,7 +139,7 @@ class CategorySuccessResponse(BaseModel):
     """Response schema for category create/update/delete operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
-    data: Optional[List[CategoryData]] = Field(None, description="Category data if applicable")
+    data: list[CategoryData] | None = Field(None, description="Category data if applicable")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -165,7 +163,7 @@ class CategorySuccessResponse(BaseModel):
 
 class AccountsResponse(BaseModel):
     """Response schema for accounts endpoint"""
-    data: List[AccountData] = Field(..., description="List of account records")
+    data: list[AccountData] = Field(..., description="List of account records")
     count: int = Field(..., description="Total number of records returned")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
@@ -286,7 +284,7 @@ class FIREResponse(BaseModel):
 
 class HeatmapResponse(BaseModel):
     """Response schema for yearly spending heatmap endpoint"""
-    data: List[DailySpendingData] = Field(..., description="Daily spending data for the full year")
+    data: list[DailySpendingData] = Field(..., description="Daily spending data for the full year")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
@@ -335,7 +333,7 @@ class LoginResponse(BaseModel):
 
 class TransactionsResponse(BaseModel):
     """Response schema for transactions list endpoint"""
-    data: List[TransactionData] = Field(..., description="List of transaction records")
+    data: list[TransactionData] = Field(..., description="List of transaction records")
     count: int = Field(..., description="Total number of records returned")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
@@ -368,7 +366,7 @@ class TransactionSuccessResponse(BaseModel):
     """Response schema for transaction create/update/delete operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
-    data: Optional[List[TransactionData]] = Field(None, description="Transaction data if applicable")
+    data: list[TransactionData] | None = Field(None, description="Transaction data if applicable")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -395,7 +393,7 @@ class TransactionSuccessResponse(BaseModel):
 
 class SavingsFundsResponse(BaseModel):
     """Response schema for savings funds list endpoint"""
-    data: List[SavingsFundsData] = Field(..., description="List of savings fund records")
+    data: list[SavingsFundsData] = Field(..., description="List of savings fund records")
     count: int = Field(..., description="Total number of records returned")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
@@ -424,7 +422,7 @@ class SavingsFundSuccessResponse(BaseModel):
     """Response schema for savings fund create/update/delete operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
-    data: Optional[List[SavingsFundsData]] = Field(None, description="Savings fund data if applicable")
+    data: list[SavingsFundsData] | None = Field(None, description="Savings fund data if applicable")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -471,10 +469,10 @@ class ProfileResponse(BaseModel):
 
 class BudgetResponse(BaseModel):
     summary: BudgetSummaryResponse = Field(..., description="Summary of the budget")
-    income_rows: List[IncomeRowResponse] = Field(..., description="List of income budget rows")
-    expense_rows: List[ExpenseRowResponse] = Field(..., description="List of expense budget rows")
-    savings_rows: List[SavingsRowResponse] = Field(..., description="List of savings budget rows")
-    investment_rows: List[InvestmentRowResponse] = Field(..., description="List of investment budget rows")
+    income_rows: list[IncomeRowResponse] = Field(..., description="List of income budget rows")
+    expense_rows: list[ExpenseRowResponse] = Field(..., description="List of expense budget rows")
+    savings_rows: list[SavingsRowResponse] = Field(..., description="List of savings budget rows")
+    investment_rows: list[InvestmentRowResponse] = Field(..., description="List of investment budget rows")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
@@ -504,7 +502,7 @@ class BudgetSuccessResponse(BaseModel):
 
 class RecurringResponse(BaseModel):
     """Response schema for recurring templates list endpoint"""
-    data: List[RecurringData] = Field(..., description="List of recurring templates")
+    data: list[RecurringData] = Field(..., description="List of recurring templates")
     count: int = Field(..., description="Total templates returned")
     summary: RecurringSummary = Field(..., description="Monthly/annual totals")
     success: bool = Field(..., description="Indicates if the request was successful")
@@ -515,7 +513,7 @@ class RecurringSuccessResponse(BaseModel):
     """Response schema for recurring create/update/delete/post operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
-    data: Optional[List[RecurringData]] = Field(None, description="Template data if applicable")
+    data: list[RecurringData] | None = Field(None, description="Template data if applicable")
 
 
 class NetWorthResponse(BaseModel):
@@ -553,7 +551,7 @@ class DividendPortfolioSuccessResponse(BaseModel):
 
 class TagsResponse(BaseModel):
     """Response schema for tags list endpoint"""
-    data: List[TagData] = Field(..., description="List of tag records")
+    data: list[TagData] = Field(..., description="List of tag records")
     count: int = Field(..., description="Total number of records returned")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
@@ -563,7 +561,7 @@ class TagSuccessResponse(BaseModel):
     """Response schema for tag create/update/delete operations"""
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
-    data: Optional[List[TagData]] = Field(None, description="Tag data if applicable")
+    data: list[TagData] | None = Field(None, description="Tag data if applicable")
 
 
 class TransactionSummaryResponse(BaseModel):

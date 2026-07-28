@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { dividendApi } from "@/lib/api/endpoints/dividends"
 import type { DividendStockRow, DividendYieldFrequency } from "@/lib/api/types/base"
 import type { DividendPortfolioRequest } from "@/lib/api/types/requests"
-import { ApiError } from "@/lib/api/client"
+import { getErrorMessage } from "@/lib/api/client"
 
 import {
     Card,
@@ -184,7 +184,7 @@ export default function DividendCalculator() {
             toast({ title: t('pages.dividendCalculator.saved'), description: res.data.message })
         },
         onError: (err) => {
-            const msg = err instanceof ApiError ? err.message : t('pages.dividendCalculator.saveFailed')
+            const msg = getErrorMessage(err, t('pages.dividendCalculator.saveFailed'))
             toast({ title: t('common.error'), description: msg, variant: "destructive" })
         },
     })
@@ -200,7 +200,7 @@ export default function DividendCalculator() {
             toast({ title: t('pages.dividendCalculator.deleted'), description: t('pages.dividendCalculator.cleared') })
         },
         onError: (err) => {
-            const msg = err instanceof ApiError ? err.message : t('pages.dividendCalculator.deleteFailed')
+            const msg = getErrorMessage(err, t('pages.dividendCalculator.deleteFailed'))
             toast({ title: t('common.error'), description: msg, variant: "destructive" })
         },
     })

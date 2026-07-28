@@ -42,9 +42,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { ApiError } from '@/lib/api/client';
+import { getErrorMessage } from '@/lib/api/client';
 import { recurringApi, accountsApi, categoriesApi, fundsApi } from '@/lib/api/endpoints';
-import type { Recurring, CreateRecurringRequest } from '@/lib/api/types';
+import type { Recurring, CreateRecurringRequest, RecurringResponse } from '@/lib/api/types';
+import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { formatMoney } from '@/lib/currency';
@@ -143,28 +144,98 @@ export default function RecurringPage() {
     queryClient.invalidateQueries({ queryKey: ['net-worth'] });
   };
 
+  // Only the template list itself is written optimistically. The other four query families the
+  // shared `invalidate()` touches (transactions, accounts, summary, net-worth) are derived
+  // aggregates and stay pessimistic. The cached value here is the whole RecurringResponse, so
+  // these go through optimisticQuery rather than optimisticList.
+  const recurringKey = ['recurring', userCurrency];
+
+  const optimisticCreate = optimisticQuery<RecurringResponse, CreateRecurringRequest>(
+    queryClient,
+    recurringKey,
+    (prev, payload) => prev && {
+      ...prev,
+      count: prev.count + 1,
+      data: [
+        ...prev.data,
+        markOptimistic<Recurring>({
+          recurring_id_pk: tempUuid(),
+          user_id_fk: null,
+          account_id_fk: payload.account_id_fk,
+          category_id_fk: payload.category_id_fk,
+          savings_fund_id_fk: payload.savings_fund_id_fk ?? null,
+          amount: payload.amount,
+          cadence: payload.cadence as Recurring['cadence'],
+          next_date: payload.next_date,
+          notes: payload.notes ?? null,
+          is_active: payload.is_active ?? true,
+          created_at: null,
+          updated_at: null,
+        }),
+      ],
+    }
+  );
+
+  const optimisticUpdate = optimisticQuery<RecurringResponse, { id: string; data: CreateRecurringRequest }>(
+    queryClient,
+    recurringKey,
+    (prev, vars) => prev && {
+      ...prev,
+      data: patchById(prev.data, 'recurring_id_pk', vars.id, vars.data as Partial<Recurring>),
+    }
+  );
+
+  // Recurring templates are hard-deleted server-side, so removal is unconditional.
+  const optimisticDelete = optimisticQuery<RecurringResponse, string>(
+    queryClient,
+    recurringKey,
+    (prev, id) => prev && {
+      ...prev,
+      count: Math.max(0, prev.count - 1),
+      data: withoutId(prev.data, 'recurring_id_pk', id),
+    }
+  );
+
   const createMutation = useMutation({
     mutationFn: recurringApi.create,
-    onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.created') }); closeModal(); },
-    onError: (err) => toast({ title: t('common.error'), description: err instanceof ApiError ? String(err.detail) : t('pages.recurring.createFailed'), variant: 'destructive' }),
+    onMutate: optimisticCreate.onMutate,
+    onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.created') }); },
+    onError: (err, _payload, context) => {
+      optimisticCreate.rollback(context);
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.createFailed')), variant: 'destructive' });
+    },
+    onSettled: optimisticCreate.onSettled,
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: CreateRecurringRequest }) => recurringApi.update(id, data),
-    onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.updated') }); closeModal(); },
-    onError: (err) => toast({ title: t('common.error'), description: err instanceof ApiError ? String(err.detail) : t('pages.recurring.updateFailed'), variant: 'destructive' }),
+    onMutate: optimisticUpdate.onMutate,
+    onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.updated') }); },
+    onError: (err, _vars, context) => {
+      optimisticUpdate.rollback(context);
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.updateFailed')), variant: 'destructive' });
+    },
+    onSettled: optimisticUpdate.onSettled,
   });
 
   const deleteMutation = useMutation({
     mutationFn: recurringApi.delete,
-    onSuccess: () => { invalidate(); setDeleteConfirmId(null); toast({ title: t('pages.recurring.deleted'), description: t('pages.recurring.deletedDescription') }); },
-    onError: () => toast({ title: t('common.error'), description: t('pages.recurring.deleteFailed'), variant: 'destructive' }),
+    onMutate: (recurringId: string) => {
+      setDeleteConfirmId(null);
+      return optimisticDelete.onMutate(recurringId);
+    },
+    onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.deleted'), description: t('pages.recurring.deletedDescription') }); },
+    onError: (err, _recurringId, context) => {
+      optimisticDelete.rollback(context);
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.deleteFailed')), variant: 'destructive' });
+    },
+    onSettled: optimisticDelete.onSettled,
   });
 
   const postMutation = useMutation({
     mutationFn: recurringApi.post,
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.posted'), description: t('pages.recurring.postedDescription') }); },
-    onError: () => toast({ title: t('common.error'), description: t('pages.recurring.postFailed'), variant: 'destructive' }),
+    onError: (err) => toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.postFailed')), variant: 'destructive' }),
   });
 
   const closeModal = () => { setIsModalOpen(false); setSelected(null); setForm(EMPTY_FORM); setCalendarOpen(false); };
@@ -205,6 +276,9 @@ export default function RecurringPage() {
     } else {
       createMutation.mutate(payload);
     }
+
+    // Optimistic write is already in the cache — close rather than hold a spinner.
+    closeModal();
   };
 
   const templates = recurringData?.data ?? [];
@@ -233,6 +307,8 @@ export default function RecurringPage() {
     const isDue = diff <= 0;
     const account = accounts.find(a => a.accounts_id_pk === r.account_id_fk);
     const isPosting = postMutation.isPending && postMutation.variables === r.recurring_id_pk;
+    // Temp id until the server row arrives — edit/delete/post would 404, so disable them.
+    const pending = isOptimistic(r);
 
     return (
       <motion.div
@@ -240,7 +316,8 @@ export default function RecurringPage() {
         variants={fadeIn}
         className={cn(
           'group rounded-xl border bg-card p-4 shadow-sm transition-colors',
-          isDue ? 'border-primary/40 hover:border-primary/70' : 'border-border hover:border-border/80'
+          isDue ? 'border-primary/40 hover:border-primary/70' : 'border-border hover:border-border/80',
+          pending && 'opacity-60'
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -261,7 +338,7 @@ export default function RecurringPage() {
             </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+                <Button variant="ghost" size="icon" disabled={pending} className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -282,7 +359,7 @@ export default function RecurringPage() {
               size="sm"
               className="w-full"
               onClick={() => postMutation.mutate(r.recurring_id_pk)}
-              disabled={isPosting}
+              disabled={isPosting || pending}
             >
               {isPosting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
               {isPosting ? t('pages.recurring.posting') : t('pages.recurring.post')}
@@ -493,8 +570,8 @@ export default function RecurringPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>{t('common.cancel')}</Button>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {/* Optimistic write + immediate close, so no pending gate is needed. */}
+            <Button onClick={handleSubmit}>
               {selected ? t('common.save') : t('common.create')}
             </Button>
           </DialogFooter>
@@ -510,8 +587,7 @@ export default function RecurringPage() {
           <p className="text-sm text-muted-foreground py-2">{t('pages.recurring.deleteDescription')}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>{t('common.cancel')}</Button>
-            <Button variant="destructive" onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button variant="destructive" onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}>
               {t('common.delete')}
             </Button>
           </DialogFooter>

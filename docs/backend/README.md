@@ -41,6 +41,49 @@ Token expires (detected by 498 status) → Frontend calls /refresh/ with refresh
 Backend exchanges refresh_token with Supabase → Returns new token pair
 ```
 
+The frontend also refreshes *proactively*, before the token expires — see the
+[frontend docs](../frontend/README.md#auto-token-refresh).
+
+### Session Lifetime
+
+| Lifetime | Value | Set in |
+|---|---|---|
+| Access token (JWT) | 1 hour | `jwt_expiry` in `supabase/config.toml` |
+| Refresh token | rotates on each use | `enable_refresh_token_rotation` |
+| Absolute session cap | 30 days | `[auth.sessions] timebox` |
+| Idle timeout | 7 days | `[auth.sessions] inactivity_timeout` |
+
+The session settings bound how long a stolen refresh token stays useful. **`config.toml` drives
+the local stack only** — the deployed project runs on Supabase Cloud, so the same values must be
+set in the hosted dashboard under Authentication → Sessions.
+
+### Logout
+
+`POST /auth/logout` revokes the caller's session with Supabase (GoTrue `/auth/v1/logout` with
+`scope=local`, so other devices stay signed in). Without it, clearing browser storage left the
+refresh token valid server-side indefinitely.
+
+It is called through GoTrue's REST API rather than `client.auth.sign_out()` because
+`get_db_client` authenticates only the PostgREST layer — the Python client has no GoTrue session
+to sign out of. The endpoint always returns success: a client that has decided to log out must
+never be blocked by a failure here.
+
+### Re-authentication for Destructive Actions
+
+`POST /profile/delete-account` requires proof of identity beyond the ambient JWT, verified
+*before* anything is deleted:
+
+- Accounts with an `email` identity send their current `password`, checked with
+  `sign_in_with_password` on a throwaway client.
+- OAuth-only accounts (GitHub/Google) have no password, so they type their own email address into
+  `email_confirmation` instead.
+
+Which one is demanded is decided server-side from the user's linked identities
+(`helper/identity.py::has_password_identity`) — never from a client-supplied flag. A wrong
+credential returns `401`, a missing one `400`.
+
+This replaced the old `DELETE /profile/me`; POST because the confirmation travels in the body.
+
 ### Custom Status Code
 
 - **498** - Token expired (not standard HTTP, chosen to differentiate from 401 which means "invalid token")
@@ -147,6 +190,7 @@ From `src/backend/`:
 ```powershell
 pip install -e ".[dev,test]"            # install with dev + test extras
 uvicorn backend_server:app --reload     # dev server → http://localhost:8000
+ruff check .                            # lint (config in pyproject.toml)
 mypy .                                  # type check (config in pyproject.toml)
 pytest                                  # tests + coverage
 ```

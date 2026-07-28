@@ -1,26 +1,23 @@
 # fastapi
+# logging
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, Request, status
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_supabase_refresh_token
 
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
+# supabase client
+from ..data.database import Client, get_db_client
 
 # Load environment variables
-from ..helper import environment as env
-
-# logging
-import logging
-
-# supabase client
-from ..data.database import get_db_client, Client
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+from ..schemas.base import TokenData
 
 # schemas
 from ..schemas.responses import RefreshTokenResponse
-from ..schemas.base import TokenData
-
 
 # ================================================================================================
 #                                   Settings and Configuration

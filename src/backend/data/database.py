@@ -1,12 +1,13 @@
-from supabase.client import create_client, Client, ClientOptions
-from typing import Optional
-from ..helper import environment as env
 import logging
+
+from supabase.client import Client, ClientOptions, create_client
+
+from ..helper import environment as env
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
 
-def get_db_client(access_token: Optional[str] = None) -> Client:
+def get_db_client(access_token: str | None = None) -> Client:
     """
     Create and return a Supabase client.
     
@@ -26,7 +27,7 @@ def get_db_client(access_token: Optional[str] = None) -> Client:
     
     if not project_url or not anon_key:
         logger.error('Environment variables PROJECT_URL or ANON_KEY are not set.')
-        raise EnvironmentError('Missing environment variables for database connection.')
+        raise OSError('Missing environment variables for database connection.')
     
     # Disable auto_refresh_token - the frontend is responsible for token refresh
     # This prevents the backend from rotating tokens without the frontend knowing
@@ -68,7 +69,7 @@ def get_service_db_client() -> Client:
 
     if not project_url or not service_role_key:
         logger.error('Environment variables PROJECT_URL or SERVICE_ROLE_KEY are not set.')
-        raise EnvironmentError('Missing environment variables for service database connection.')
+        raise OSError('Missing environment variables for service database connection.')
 
     options = ClientOptions(
         auto_refresh_token=False,

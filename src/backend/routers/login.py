@@ -1,26 +1,26 @@
 # fastapi
+# logging
+import logging
+
 import fastapi
-from fastapi import APIRouter, Depends, status, Request
+import httpx
+from fastapi import APIRouter, Depends, Request, status
+
+# supabase client
+from supabase.client import Client
 
 # auth dependencies
 from ..auth.auth import api_key_auth, get_current_user
-from ..schemas.base import UserData
-from ..schemas.requests import LoginRequest, ForgotPasswordRequest, ResetPasswordRequest
-from ..schemas.responses import LoginResponse, MessageResponse, OAuthUrlResponse
-
-# rate limiting
-from ..helper.rate_limiter import limiter, RATE_LIMITS
+from ..data.database import get_db_client
 
 # Load environment variables
 from ..helper import environment as env
-from ..data.database import get_db_client
 
-# logging
-import logging
-import httpx
-
-# supabase client
-from supabase.client import create_client, Client
+# rate limiting
+from ..helper.rate_limiter import RATE_LIMITS, limiter
+from ..schemas.base import UserData
+from ..schemas.requests import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest
+from ..schemas.responses import LoginResponse, MessageResponse, OAuthUrlResponse
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -71,11 +71,11 @@ async def login(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Login failed")
+        logger.error("Login failed")
         logger.info(f"Login failed with error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Server error: {str(e)}"
+            detail="Server error"
         )
 
 @router.post("/register", response_model=LoginResponse)
@@ -124,7 +124,7 @@ async def register(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Registration failed")
+        logger.error("Registration failed")
         logger.info(f"Registration failed with error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -161,7 +161,7 @@ async def forgot_password(
         )
         
     except Exception as e:
-        logger.error(f"Forgot password request failed")
+        logger.error("Forgot password request failed")
         logger.info(f"Forgot password failed with error: {str(e)}")
         # Still return success to prevent email enumeration
         return MessageResponse(
@@ -199,12 +199,56 @@ async def reset_password(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Password reset failed")
+        logger.error("Password reset failed")
         logger.info(f"Password reset failed with error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to reset password. The reset link may have expired."
         )
+
+
+@router.post("/logout", response_model=MessageResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def logout(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user)
+) -> MessageResponse:
+    """
+    Revoke the caller's Supabase session so the refresh token stops working server-side.
+
+    Without this, "logging out" only cleared tokens from the browser and the refresh token
+    stayed valid indefinitely.
+
+    Called through GoTrue's REST API rather than `client.auth.sign_out()`: `get_db_client`
+    authenticates only the PostgREST layer, so the Python client has no GoTrue session to sign
+    out of. `scope=local` revokes just this session, leaving the user's other devices alone.
+
+    Always reports success — a client that has decided to log out must never be blocked by a
+    failure here, and it clears its tokens regardless.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{env.PROJECT_URL}/auth/v1/logout",
+                params={"scope": "local"},
+                headers={
+                    "apikey": env.ANON_KEY,
+                    "Authorization": f"Bearer {user['access_token']}",
+                },
+            )
+
+        if response.status_code >= 400:
+            logger.warning(f"Supabase logout returned {response.status_code} for user_id: {user['user_id']}")
+
+    except Exception as e:
+        logger.warning(f"Logout call to Supabase failed for user_id: {user['user_id']}")
+        logger.info(f"Logout failed with error: {str(e)}")
+
+    return MessageResponse(
+        success=True,
+        message="Logged out successfully"
+    )
 
 
 # ================================================================================================
@@ -288,7 +332,7 @@ async def get_github_oauth_url(
         )
         
     except Exception as e:
-        logger.error(f"Failed to get GitHub OAuth URL")
+        logger.error("Failed to get GitHub OAuth URL")
         logger.info(f"GitHub OAuth URL error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -322,7 +366,7 @@ async def get_google_oauth_url(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get Google OAuth URL")
+        logger.error("Failed to get Google OAuth URL")
         logger.info(f"Google OAuth URL error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -352,7 +396,7 @@ async def link_github_account(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get GitHub link URL")
+        logger.error("Failed to get GitHub link URL")
         logger.info(f"GitHub link error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -382,7 +426,7 @@ async def link_google_account(
     except fastapi.HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get Google link URL")
+        logger.error("Failed to get Google link URL")
         logger.info(f"Google link error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -38,6 +38,19 @@ export interface UpdateProfileRequest {
     locale?: string;
 }
 
+/**
+ * Account deletion confirmation payload.
+ *
+ * Deletion is irreversible, so it needs proof of identity beyond the ambient JWT. Accounts with
+ * an email/password identity send `password`; OAuth-only accounts have no password and instead
+ * type their own email address into `email_confirmation`. The backend decides which one it
+ * requires from the user's linked identities.
+ */
+export interface DeleteAccountRequest {
+    password?: string;
+    email_confirmation?: string;
+}
+
 // ================================================================================================
 //                                   Transaction Requests
 // ================================================================================================

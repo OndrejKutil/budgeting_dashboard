@@ -1,14 +1,17 @@
 
-import polars as pl
 from datetime import date, timedelta
-from typing import Dict, TypedDict
+from typing import TypedDict
+
+import polars as pl
+
 from ..columns import TRANSACTIONS_COLUMNS
+
 
 class FundMetrics(TypedDict):
     current_amount: float
     net_flow_30d: float
 
-def calculate_fund_metrics(transactions_df: pl.DataFrame) -> Dict[str, FundMetrics]:
+def calculate_fund_metrics(transactions_df: pl.DataFrame) -> dict[str, FundMetrics]:
     """
     Calculate current amount and 30-day net flow for each savings fund.
     
@@ -56,7 +59,7 @@ def calculate_fund_metrics(transactions_df: pl.DataFrame) -> Dict[str, FundMetri
         .fill_null(0.0)
     )
 
-    metrics: Dict[str, FundMetrics] = {}
+    metrics: dict[str, FundMetrics] = {}
     
     for row in result_df.iter_rows(named=True):
         fund_id = row[TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value]

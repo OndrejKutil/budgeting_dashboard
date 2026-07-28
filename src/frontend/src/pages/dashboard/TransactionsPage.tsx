@@ -68,7 +68,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ApiError } from '@/lib/api/client';
+import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
 import { Transaction, Category, Account, SavingsFund, Tag, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
@@ -100,6 +100,13 @@ import {
 
 const ITEMS_PER_PAGE: number = 20;
 const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
+
+/**
+ * A transfer writes two ledger rows. When the second create fails the first is already posted,
+ * so the error message has to say that rather than implying nothing happened. Declared at module
+ * scope so `instanceof` stays valid across re-renders.
+ */
+class PartialTransferError extends Error {}
 
 function isNegativeAmountInput(value: string): boolean {
   return value.trim().startsWith('-');
@@ -283,7 +290,6 @@ export default function TransactionsPage() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWithdrawal, setIsWithdrawal] = useState(false);
   const [isTransfer, setIsTransfer] = useState(false);
   const [transferToAccountId, setTransferToAccountId] = useState<string>('');
@@ -364,7 +370,7 @@ export default function TransactionsPage() {
       });
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.deleteFailed');
+      const message = getErrorMessage(err, t('pages.transactions.deleteFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -387,7 +393,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
+      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -406,7 +412,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
+      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -414,6 +420,45 @@ export default function TransactionsPage() {
       });
     }
   });
+
+  const transferMutation = useMutation({
+    mutationFn: async ({ outgoing, incoming }: { outgoing: CreateTransactionRequest; incoming: CreateTransactionRequest }) => {
+      await transactionsApi.create(outgoing);
+      try {
+        await transactionsApi.create(incoming);
+      } catch (err) {
+        throw new PartialTransferError(getErrorMessage(err, String(err)));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Update account balances
+      toast({ title: t('pages.transactions.transferCompleted') });
+      closeModal();
+    },
+    onError: (err: Error | ApiError) => {
+      // One leg may have landed — refetch so the list reflects whatever actually posted.
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+
+      const message = err instanceof PartialTransferError
+        ? t('pages.transactions.transferPartialFailed')
+        : getErrorMessage(err, t('pages.transactions.transferFailed'));
+      toast({
+        title: t('common.error'),
+        description: message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Covers all three write paths the save button can trigger. This previously read a dead
+  // `isSubmitting` state that was never set, so the button stayed enabled during a create and
+  // a double-click posted the transaction twice.
+  const isSaving = createMutation.isPending || updateMutation.isPending || transferMutation.isPending;
 
   const handleSubmit = async () => {
     if (isTransfer) {
@@ -474,24 +519,7 @@ export default function TransactionsPage() {
         savings_fund_id_fk: null,
       };
 
-      try {
-        await transactionsApi.create(outgoingPayload);
-        await transactionsApi.create(incomingPayload);
-
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['summary'] });
-        queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Update account balances
-
-        toast({ title: t('pages.transactions.transferCompleted') });
-        closeModal();
-      } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.transferFailed');
-        toast({
-          title: t('common.error'),
-          description: message,
-          variant: 'destructive',
-        });
-      }
+      transferMutation.mutate({ outgoing: outgoingPayload, incoming: incomingPayload });
       return;
     }
 
@@ -1496,9 +1524,9 @@ export default function TransactionsPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSaving}
             >
-              {createMutation.isPending || updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {selectedTransaction ? t('common.save') : t('pages.transactions.add')}
             </Button>
           </DialogFooter>
