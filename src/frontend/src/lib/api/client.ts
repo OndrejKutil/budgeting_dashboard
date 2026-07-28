@@ -102,7 +102,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public detail?: unknown
+    public detail?: unknown,
+    public errorId?: string
   ) {
     super(message);
     this.name = 'ApiError';
@@ -114,6 +115,30 @@ export class TokenExpiredError extends ApiError {
     super('Token expired', 498, 'Token expired');
     this.name = 'TokenExpiredError';
   }
+}
+
+/**
+ * Turns any error caught from `apiClient`/`request()` into copy safe to show a user.
+ *
+ * The backend guarantees `detail` is a human-readable string for every response it controls
+ * (business errors, validation, rate limiting, unexpected 500s), so that's used verbatim when
+ * present. A 500 additionally carries an `errorId` — surfaced so a user can quote it back and
+ * the matching backend log line can be found without an error-tracking service. Anything that
+ * isn't an `ApiError` (network down, `fetch` itself throwing) falls back to a generic
+ * connectivity message rather than `fallback`, since `fallback` is usually action-specific
+ * ("Failed to save transaction") and would misleadingly imply the server rejected the request.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const base = typeof err.detail === 'string' ? err.detail : fallback;
+    return err.status >= 500 && err.errorId ? `${base} (ref: ${err.errorId})` : base;
+  }
+
+  if (err instanceof TypeError) {
+    return 'Could not reach the server. Check your connection and try again.';
+  }
+
+  return fallback;
 }
 
 // ============================================
@@ -244,11 +269,8 @@ async function request<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new ApiError(
-      errorData.detail || 'Request failed',
-      response.status,
-      errorData.detail
-    );
+    const message = typeof errorData.detail === 'string' ? errorData.detail : 'Request failed';
+    throw new ApiError(message, response.status, errorData.detail, errorData.error_id ?? undefined);
   }
 
   const data = await response.json();

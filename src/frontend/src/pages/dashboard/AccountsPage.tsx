@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, RefreshCw } from 'lucide-react';
-import { ApiError } from '@/lib/api/client';
+import { getErrorMessage } from '@/lib/api/client';
 import { accountsApi, netWorthApi } from '@/lib/api/endpoints';
 import { Account, CreateAccountRequest, UpdateAccountRequest } from '@/lib/api/types';
 import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
@@ -234,7 +234,7 @@ export default function AccountsPage() {
     },
     onError: (err, _accountId, context) => {
       optimisticDelete.rollback(context);
-      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.deleteFailed');
+      const message = getErrorMessage(err, t('pages.accounts.deleteFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -256,7 +256,7 @@ export default function AccountsPage() {
     },
     onError: (err, _payload, context) => {
       optimisticCreate.rollback(context);
-      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.createFailed');
+      const message = getErrorMessage(err, t('pages.accounts.createFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -274,7 +274,7 @@ export default function AccountsPage() {
     },
     onError: (err, _vars, context) => {
       optimisticUpdate.rollback(context);
-      const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.updateFailed');
+      const message = getErrorMessage(err, t('pages.accounts.updateFailed'));
       toast({
         title: t('common.error'),
         description: message,

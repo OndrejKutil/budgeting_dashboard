@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/card';
 import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
-import { ApiError } from '@/lib/api/client';
+import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { categoriesApi, budgetApi, tagsApi } from '@/lib/api/endpoints';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -261,7 +261,7 @@ export default function BudgetMaker() {
             setIsEditing(false); // Exit edit mode
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.saveFailed');
+            const message = getErrorMessage(err, t('pages.budgetMaker.saveFailed'));
             toast({
                 title: t('common.error'),
                 description: message,
@@ -280,7 +280,7 @@ export default function BudgetMaker() {
             // Reset to empty state manually or let useEffect handle it after refetch
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.deleteFailed');
+            const message = getErrorMessage(err, t('pages.budgetMaker.deleteFailed'));
             toast({
                 title: t('common.error'),
                 description: message,
@@ -322,7 +322,7 @@ export default function BudgetMaker() {
             setIsCopyOpen(false);
         },
         onError: (err: Error | ApiError) => {
-            const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.budgetMaker.copyFailed');
+            const message = getErrorMessage(err, t('pages.budgetMaker.copyFailed'));
             toast({
                 title: t('common.error'),
                 description: message,

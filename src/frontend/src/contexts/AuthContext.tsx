@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AuthContext } from './auth-context';
-import { ensureFreshAccessToken, tokenManager, ApiError, SESSION_EXPIRED_EVENT } from '@/lib/api/client';
+import { ensureFreshAccessToken, tokenManager, getErrorMessage, SESSION_EXPIRED_EVENT } from '@/lib/api/client';
 import { authApi } from '@/lib/api/endpoints';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: 'You have successfully logged in.',
       });
     } catch (error) {
-      const message = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : 'Login failed';
+      const message = getErrorMessage(error, 'Login failed');
       toast({
         title: 'Login failed',
         description: message,
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: 'Welcome to your personal finance dashboard.',
       });
     } catch (error) {
-      const message = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : 'Registration failed';
+      const message = getErrorMessage(error, 'Registration failed');
       toast({
         title: 'Registration failed',
         description: message,

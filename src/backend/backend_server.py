@@ -1,9 +1,10 @@
 # fastapi
 import fastapi
 from fastapi import FastAPI, Depends, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from slowapi import _rate_limit_exceeded_handler
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -12,6 +13,7 @@ import logging
 
 # import env configuration
 from .helper import environment as env
+from .helper.errors import flatten_validation_errors, generate_error_id
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -66,8 +68,49 @@ app.add_middleware(
 
 # Configure rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+
+# ================================================================================================
+#                                   Error Handling
+# ================================================================================================
+# Every error response — known business errors raised as HTTPException, validation failures,
+# rate limiting, and truly unexpected exceptions — is normalized to the same
+# {"detail": str, "error_id": str | None} shape so the frontend only has one field to read.
+# `error_id` is set only for unexpected 500s: it's what a user can quote back so the matching
+# `logger.error(...)` line can be found without needing an external error-tracking service.
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    response = JSONResponse(
+        {"detail": f"Rate limit exceeded: {exc.detail}. Please try again later.", "error_id": None},
+        status_code=429,
+    )
+    limiter._inject_headers(response, request.state.view_rate_limit)
+    return response
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.warning(f"Validation failed for {request.method} {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        {"detail": flatten_validation_errors(exc.errors()), "error_id": None},
+        status_code=422,
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    error_id = generate_error_id()
+    logger.error(
+        f"Unhandled error [{error_id}] on {request.method} {request.url.path}: {exc}",
+        exc_info=True,
+    )
+    return JSONResponse(
+        {"detail": "Something went wrong on our end.", "error_id": error_id},
+        status_code=500,
+    )
 
 # Include routers
 from .routers import (transactions, token_refresh, categories, accounts, profile, summary, login, yearly_analytics, monthly_analytics, savings_funds, budgets, export, dividends, recurring, net_worth, tags)

@@ -75,7 +75,7 @@ async def login(
         logger.info(f"Login failed with error: {str(e)}")
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Server error: {str(e)}"
+            detail="Server error"
         )
 
 @router.post("/register", response_model=LoginResponse)

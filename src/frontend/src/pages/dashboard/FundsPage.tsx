@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { tokenManager, ApiError } from '@/lib/api/client';
+import { tokenManager, ApiError, getErrorMessage } from '@/lib/api/client';
 import { fundsApi } from '@/lib/api/endpoints';
 import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from '@/lib/api/types';
 import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
@@ -183,16 +183,7 @@ export default function FundsPage() {
     },
     onError: (err: Error | ApiError, _payload, context) => {
       optimisticCreate.rollback(context);
-      let message = t('pages.funds.createFailed');
-      if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
-        } else if (typeof err.detail === 'object' && err.detail !== null) {
-          message = JSON.stringify(err.detail);
-        }
-      }
+      const message = getErrorMessage(err, t('pages.funds.createFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -210,16 +201,7 @@ export default function FundsPage() {
     },
     onError: (err: Error | ApiError, _vars, context) => {
       optimisticUpdate.rollback(context);
-      let message = t('pages.funds.updateFailed');
-      if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          message = err.detail.map((e: { msg: string }) => e.msg).join(', ');
-        } else if (typeof err.detail === 'object' && err.detail !== null) {
-          message = JSON.stringify(err.detail);
-        }
-      }
+      const message = getErrorMessage(err, t('pages.funds.updateFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -279,7 +261,7 @@ export default function FundsPage() {
     },
     onError: (err: Error | ApiError, _fundId, context) => {
       optimisticDelete.rollback(context);
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.funds.deleteFailed');
+      const message = getErrorMessage(err, t('pages.funds.deleteFailed'));
       toast({
         title: t('common.error'),
         description: message,

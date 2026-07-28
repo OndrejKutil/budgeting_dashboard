@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
-import { ApiError, tokenManager } from '@/lib/api/client';
+import { getErrorMessage, tokenManager } from '@/lib/api/client';
 import { authApi, exportApi, profileApi } from '@/lib/api/endpoints';
 import { LOCALE_LABELS, LOCALES } from '@/lib/i18n';
 import type { AppLocale } from '@/lib/i18n';
@@ -179,10 +179,9 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Account deletion failed:', error);
       // A rejected password or mismatched email comes back as 400/401 with a usable message.
-      const detail = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : null;
       toast({
         title: t('profile.deleteAccountFailed'),
-        description: detail ?? t('profile.deleteAccountFailedDescription'),
+        description: getErrorMessage(error, t('profile.deleteAccountFailedDescription')),
         variant: 'destructive',
       });
       setDeleteConfirmation('');

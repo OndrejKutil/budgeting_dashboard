@@ -68,7 +68,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ApiError } from '@/lib/api/client';
+import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
 import { Transaction, Category, Account, SavingsFund, Tag, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
@@ -370,7 +370,7 @@ export default function TransactionsPage() {
       });
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.deleteFailed');
+      const message = getErrorMessage(err, t('pages.transactions.deleteFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -393,7 +393,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
+      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -412,7 +412,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : t('pages.transactions.saveFailed');
+      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -427,7 +427,7 @@ export default function TransactionsPage() {
       try {
         await transactionsApi.create(incoming);
       } catch (err) {
-        throw new PartialTransferError(err instanceof ApiError && typeof err.detail === 'string' ? err.detail : String(err));
+        throw new PartialTransferError(getErrorMessage(err, String(err)));
       }
     },
     onSuccess: () => {
@@ -446,9 +446,7 @@ export default function TransactionsPage() {
 
       const message = err instanceof PartialTransferError
         ? t('pages.transactions.transferPartialFailed')
-        : err instanceof ApiError && typeof err.detail === 'string'
-          ? err.detail
-          : t('pages.transactions.transferFailed');
+        : getErrorMessage(err, t('pages.transactions.transferFailed'));
       toast({
         title: t('common.error'),
         description: message,

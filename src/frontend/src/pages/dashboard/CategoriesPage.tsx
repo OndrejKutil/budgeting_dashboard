@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { cn } from '@/lib/utils';
-import { ApiError } from '@/lib/api/client';
+import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { categoriesApi } from '@/lib/api/endpoints';
 import { Category, CreateCategoryRequest } from '@/lib/api/types';
 import { isOptimistic, markOptimistic, optimisticList, patchById, tempNumericId, withoutId } from '@/lib/optimistic';
@@ -225,8 +225,7 @@ export default function CategoriesPage() {
     },
     onError: (err: Error | ApiError, _payload, context) => {
       optimisticCreate.rollback(context);
-      const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : t('pages.categories.createFailed');
+      const message = getErrorMessage(err, t('pages.categories.createFailed'));
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
     onSettled: optimisticCreate.onSettled,
@@ -241,8 +240,7 @@ export default function CategoriesPage() {
     },
     onError: (err: Error | ApiError, _vars, context) => {
       optimisticUpdate.rollback(context);
-      const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : t('pages.categories.updateFailed');
+      const message = getErrorMessage(err, t('pages.categories.updateFailed'));
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
     onSettled: optimisticUpdate.onSettled,
@@ -260,8 +258,7 @@ export default function CategoriesPage() {
     },
     onError: (err: Error | ApiError, _categoryId, context) => {
       optimisticDelete.rollback(context);
-      const message = err instanceof ApiError && typeof err.detail === 'string'
-        ? err.detail : t('pages.categories.deleteFailed');
+      const message = getErrorMessage(err, t('pages.categories.deleteFailed'));
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
     onSettled: optimisticDelete.onSettled,

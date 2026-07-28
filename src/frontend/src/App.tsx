@@ -12,6 +12,7 @@ import { PrivacyModeProvider } from "@/contexts/PrivacyContext";
 import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -154,7 +155,9 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AppContent />
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
         </TooltipProvider>
       </MotionConfig>
     </ThemeProvider>

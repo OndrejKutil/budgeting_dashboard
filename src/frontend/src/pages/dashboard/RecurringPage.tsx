@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { ApiError } from '@/lib/api/client';
+import { getErrorMessage } from '@/lib/api/client';
 import { recurringApi, accountsApi, categoriesApi, fundsApi } from '@/lib/api/endpoints';
 import type { Recurring, CreateRecurringRequest, RecurringResponse } from '@/lib/api/types';
 import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, withoutId } from '@/lib/optimistic';
@@ -202,7 +202,7 @@ export default function RecurringPage() {
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.created') }); },
     onError: (err, _payload, context) => {
       optimisticCreate.rollback(context);
-      toast({ title: t('common.error'), description: err instanceof ApiError ? String(err.detail) : t('pages.recurring.createFailed'), variant: 'destructive' });
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.createFailed')), variant: 'destructive' });
     },
     onSettled: optimisticCreate.onSettled,
   });
@@ -213,7 +213,7 @@ export default function RecurringPage() {
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.updated') }); },
     onError: (err, _vars, context) => {
       optimisticUpdate.rollback(context);
-      toast({ title: t('common.error'), description: err instanceof ApiError ? String(err.detail) : t('pages.recurring.updateFailed'), variant: 'destructive' });
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.updateFailed')), variant: 'destructive' });
     },
     onSettled: optimisticUpdate.onSettled,
   });
@@ -225,9 +225,9 @@ export default function RecurringPage() {
       return optimisticDelete.onMutate(recurringId);
     },
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.deleted'), description: t('pages.recurring.deletedDescription') }); },
-    onError: (_err, _recurringId, context) => {
+    onError: (err, _recurringId, context) => {
       optimisticDelete.rollback(context);
-      toast({ title: t('common.error'), description: t('pages.recurring.deleteFailed'), variant: 'destructive' });
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.deleteFailed')), variant: 'destructive' });
     },
     onSettled: optimisticDelete.onSettled,
   });
@@ -235,7 +235,7 @@ export default function RecurringPage() {
   const postMutation = useMutation({
     mutationFn: recurringApi.post,
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.posted'), description: t('pages.recurring.postedDescription') }); },
-    onError: () => toast({ title: t('common.error'), description: t('pages.recurring.postFailed'), variant: 'destructive' }),
+    onError: (err) => toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.postFailed')), variant: 'destructive' }),
   });
 
   const closeModal = () => { setIsModalOpen(false); setSelected(null); setForm(EMPTY_FORM); setCalendarOpen(false); };

@@ -9,6 +9,18 @@ import type { MessageResponse } from '../types/responses';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
+/**
+ * These auth calls run before there's a token to authenticate with, so they can't go through
+ * `apiClient`/`request()` — this mirrors that function's error handling (string-`detail`
+ * guard, `error_id` passthrough) so `getErrorMessage` behaves the same for auth failures as
+ * for every other endpoint.
+ */
+async function parseAuthError(response: Response, fallback: string): Promise<ApiError> {
+    const errorData = await response.json().catch(() => ({ detail: fallback }));
+    const message = typeof errorData.detail === 'string' ? errorData.detail : fallback;
+    return new ApiError(message, response.status, errorData.detail, errorData.error_id ?? undefined);
+}
+
 export const authApi = {
     login: async (email: string, password: string) => {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -21,8 +33,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Login failed' }));
-            throw new ApiError(errorData.detail || 'Login failed', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Login failed');
         }
 
         const data = await response.json();
@@ -41,8 +52,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Registration failed' }));
-            throw new ApiError(errorData.detail || 'Registration failed', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Registration failed');
         }
 
         const data = await response.json();
@@ -78,8 +88,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Request failed' }));
-            throw new ApiError(errorData.detail || 'Request failed', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Request failed');
         }
 
         return await response.json();
@@ -96,8 +105,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Password reset failed' }));
-            throw new ApiError(errorData.detail || 'Password reset failed', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Password reset failed');
         }
 
         return await response.json();
@@ -112,8 +120,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Failed to get OAuth URL' }));
-            throw new ApiError(errorData.detail || 'Failed to get OAuth URL', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Failed to get OAuth URL');
         }
 
         return await response.json();
@@ -128,8 +135,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Failed to get OAuth URL' }));
-            throw new ApiError(errorData.detail || 'Failed to get OAuth URL', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Failed to get OAuth URL');
         }
 
         return await response.json();
@@ -145,8 +151,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Failed to link GitHub' }));
-            throw new ApiError(errorData.detail || 'Failed to link GitHub', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Failed to link GitHub');
         }
 
         return await response.json();
@@ -162,8 +167,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Failed to link Google' }));
-            throw new ApiError(errorData.detail || 'Failed to link Google', response.status, errorData.detail);
+            throw await parseAuthError(response, 'Failed to link Google');
         }
 
         return await response.json();
