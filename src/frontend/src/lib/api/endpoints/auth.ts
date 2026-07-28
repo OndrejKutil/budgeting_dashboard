@@ -3,7 +3,8 @@
  * Handles login, registration, and logout
  */
 
-import { tokenManager, ApiError } from '../client';
+import { apiClient, tokenManager, ApiError } from '../client';
+import type { MessageResponse } from '../types/responses';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
@@ -49,8 +50,21 @@ export const authApi = {
         return data;
     },
 
-    logout: () => {
-        tokenManager.clearTokens();
+    /**
+     * Revokes the session server-side, then clears local tokens.
+     *
+     * The server call is best-effort: whatever happens, the tokens are dropped in `finally` so
+     * a network failure can never trap the user in a logged-in state. Routed through
+     * `apiClient` so an access token that is about to expire gets refreshed first.
+     */
+    logout: async () => {
+        try {
+            await apiClient.post<MessageResponse>('/auth/logout');
+        } catch (error) {
+            console.warn('Server-side logout failed; clearing local session anyway', error);
+        } finally {
+            tokenManager.clearTokens();
+        }
     },
 
     forgotPassword: async (email: string) => {

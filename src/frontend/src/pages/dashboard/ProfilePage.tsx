@@ -4,9 +4,11 @@ import { useTheme } from 'next-themes';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useUser } from '@/contexts/user-context';
-import { tokenManager } from '@/lib/api/client';
+import { ApiError, tokenManager } from '@/lib/api/client';
 import { authApi, exportApi, profileApi } from '@/lib/api/endpoints';
 import { LOCALE_LABELS, LOCALES } from '@/lib/i18n';
 import type { AppLocale } from '@/lib/i18n';
@@ -53,7 +55,7 @@ const CURRENCIES = ['CZK', 'USD', 'EUR', 'GBP'];
 const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 
 export default function ProfilePage() {
-  const { logout, userId } = useAuth();
+  const { logout, clearLocalSession, userId } = useAuth();
   const { profile, currency, locale, updateProfile, isLoading, t } = useUser();
   const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -62,14 +64,20 @@ export default function ProfilePage() {
   const [isGoogleLinking, setIsGoogleLinking] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [themeMounted, setThemeMounted] = useState(false);
+
+  // Accounts created through GitHub/Google have no password, so they cannot re-authenticate with
+  // one; they confirm deletion by typing their email instead. Mirrors the backend's own check.
+  const usesPasswordAuth = profile?.identities?.some((identity) => identity.provider === 'email') ?? false;
 
   useEffect(() => {
     setThemeMounted(true);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -155,20 +163,29 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
     try {
-      await profileApi.deleteAccount();
+      await profileApi.deleteAccount(
+        usesPasswordAuth
+          ? { password: deleteConfirmation }
+          : { email_confirmation: deleteConfirmation }
+      );
       toast({
         title: t('profile.deleteAccountComplete'),
         description: t('profile.deleteAccountCompleteDescription'),
       });
-      logout();
+      // The account no longer exists, so there is no session left to revoke server-side —
+      // just drop the local one.
+      clearLocalSession();
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Account deletion failed:', error);
+      // A rejected password or mismatched email comes back as 400/401 with a usable message.
+      const detail = error instanceof ApiError && typeof error.detail === 'string' ? error.detail : null;
       toast({
         title: t('profile.deleteAccountFailed'),
-        description: t('profile.deleteAccountFailedDescription'),
+        description: detail ?? t('profile.deleteAccountFailedDescription'),
         variant: 'destructive',
       });
+      setDeleteConfirmation('');
     } finally {
       setIsDeletingAccount(false);
     }
@@ -527,7 +544,13 @@ export default function ProfilePage() {
             </div>
 
             <div className="md:col-span-2 max-w-md">
-              <AlertDialog>
+              <AlertDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={(open) => {
+                  setIsDeleteDialogOpen(open);
+                  if (!open) setDeleteConfirmation('');
+                }}
+              >
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
@@ -544,6 +567,31 @@ export default function ProfilePage() {
                       {t('profile.deleteAccountDescription')}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+
+                  {/* Deletion is irreversible, so it requires proof of identity. OAuth-only
+                      accounts have no password and confirm with their email address instead. */}
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-confirmation">
+                      {usesPasswordAuth
+                        ? t('profile.deleteAccountPasswordLabel')
+                        : t('profile.deleteAccountEmailLabel')}
+                    </Label>
+                    <Input
+                      id="delete-confirmation"
+                      type={usesPasswordAuth ? 'password' : 'email'}
+                      autoComplete={usesPasswordAuth ? 'current-password' : 'off'}
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      placeholder={usesPasswordAuth ? undefined : profile?.email ?? undefined}
+                      disabled={isDeletingAccount}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {usesPasswordAuth
+                        ? t('profile.deleteAccountPasswordHint')
+                        : t('profile.deleteAccountEmailHint')}
+                    </p>
+                  </div>
+
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={isDeletingAccount}>
                       {t('common.cancel')}
@@ -553,7 +601,7 @@ export default function ProfilePage() {
                         event.preventDefault();
                         void handleDeleteAccount();
                       }}
-                      disabled={isDeletingAccount}
+                      disabled={isDeletingAccount || deleteConfirmation.trim().length === 0}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       {isDeletingAccount ? (

@@ -111,6 +111,27 @@ class UpdateProfileRequest(BaseModel):
     )
 
 
+class DeleteAccountRequest(BaseModel):
+    """
+    Schema for confirming account deletion.
+
+    Deletion is irreversible, so it requires proof of identity beyond the ambient JWT.
+    Password-based accounts send their password; accounts that only have an OAuth identity have
+    no password to give, so they confirm by typing their own email address instead. Exactly one
+    of the two is required — which one is decided server-side from the user's linked identities.
+    """
+    password: Optional[str] = Field(None, description="Current password (accounts with an email/password identity)")
+    email_confirmation: Optional[str] = Field(None, description="The account's own email address, typed to confirm (OAuth-only accounts)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "password": "current-password"
+            }
+        }
+    )
+
+
 class ForgotPasswordRequest(BaseModel):
     """Schema for requesting password reset email"""
     email: str = Field(..., description="User email address")

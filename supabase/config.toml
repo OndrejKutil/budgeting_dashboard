@@ -269,11 +269,19 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+#
+# Without these, sessions never end: refresh tokens rotate indefinitely and a stolen one stays
+# usable forever. A 30-day cap plus a 7-day idle window bounds that without making regular users
+# re-enter their password.
+#
+# NOTE: this file configures the *local* stack only. The deployed project runs on Supabase Cloud,
+# so these same values must be set in the hosted dashboard under Authentication → Sessions —
+# editing here alone changes nothing in production.
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "720h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "168h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]

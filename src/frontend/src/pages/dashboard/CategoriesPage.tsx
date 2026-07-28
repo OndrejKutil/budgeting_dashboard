@@ -5,7 +5,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
 import { categoriesApi } from '@/lib/api/endpoints';
-import { Category } from '@/lib/api/types';
+import { Category, CreateCategoryRequest } from '@/lib/api/types';
+import { isOptimistic, markOptimistic, optimisticList, patchById, tempNumericId, withoutId } from '@/lib/optimistic';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,6 @@ import {
   TrendingUp,
   Zap,
   CreditCard,
-  Loader2,
   AlertCircle,
   ChevronDown,
   Plus,
@@ -184,50 +184,87 @@ export default function CategoriesPage() {
     setFormData(initialFormData);
   };
 
+  // ─── Optimistic cache writes ────────────────────────────────
+  const optimisticCreate = optimisticList<Category, CreateCategoryRequest>(
+    queryClient,
+    ['categories'],
+    (prev, payload) => [
+      ...prev,
+      markOptimistic<Category>({
+        // Real PKs are positive serials, so a negative id can never collide.
+        categories_id_pk: tempNumericId(),
+        category_name: payload.category_name,
+        type: payload.type as Category['type'],
+        spending_type: (payload.spending_type ?? null) as Category['spending_type'],
+        is_active: payload.is_active ?? true,
+        created_at: null,
+      }),
+    ]
+  );
+
+  const optimisticUpdate = optimisticList<Category, { id: number; data: Record<string, unknown> }>(
+    queryClient,
+    ['categories'],
+    (prev, vars) => patchById(prev, 'categories_id_pk', vars.id, vars.data as Partial<Category>)
+  );
+
+  // Categories are conditionally soft-deleted server-side when transactions reference them;
+  // either way the row leaves this list, and a soft-deleted one returns marked inactive.
+  const optimisticDelete = optimisticList<Category, number>(
+    queryClient,
+    ['categories'],
+    (prev, id) => withoutId(prev, 'categories_id_pk', id)
+  );
+
   // ─── Mutations ──────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: categoriesApi.create,
+    onMutate: optimisticCreate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({ title: t('pages.categories.created') });
-      handleCloseModal();
     },
-    onError: (err: Error | ApiError) => {
+    onError: (err: Error | ApiError, _payload, context) => {
+      optimisticCreate.rollback(context);
       const message = err instanceof ApiError && typeof err.detail === 'string'
         ? err.detail : t('pages.categories.createFailed');
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
+    onSettled: optimisticCreate.onSettled,
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: { id: number; data: Record<string, unknown> }) =>
       categoriesApi.update(data.id, data.data),
+    onMutate: optimisticUpdate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({ title: t('pages.categories.updated') });
-      handleCloseModal();
     },
-    onError: (err: Error | ApiError) => {
+    onError: (err: Error | ApiError, _vars, context) => {
+      optimisticUpdate.rollback(context);
       const message = err instanceof ApiError && typeof err.detail === 'string'
         ? err.detail : t('pages.categories.updateFailed');
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
     },
+    onSettled: optimisticUpdate.onSettled,
   });
 
   const deleteMutation = useMutation({
     mutationFn: categoriesApi.delete,
-    onSuccess: (_data) => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    onMutate: (categoryId: number) => {
+      setDeleteConfirmId(null);
+      return optimisticDelete.onMutate(categoryId);
+    },
+    onSuccess: () => {
       // The backend response message tells us whether it was soft-deleted or hard-deleted
       toast({ title: t('pages.categories.removed') });
-      setDeleteConfirmId(null);
     },
-    onError: (err: Error | ApiError) => {
+    onError: (err: Error | ApiError, _categoryId, context) => {
+      optimisticDelete.rollback(context);
       const message = err instanceof ApiError && typeof err.detail === 'string'
         ? err.detail : t('pages.categories.deleteFailed');
       toast({ title: t('common.error'), description: message, variant: 'destructive' });
-      setDeleteConfirmId(null);
     },
+    onSettled: optimisticDelete.onSettled,
   });
 
   // ─── Form Submit ────────────────────────────────────────────
@@ -249,6 +286,9 @@ export default function CategoriesPage() {
     } else {
       createMutation.mutate(payload);
     }
+
+    // Optimistic write is already in the cache — close rather than hold a spinner.
+    handleCloseModal();
   };
 
   // ─── Group categories by type ───────────────────────────────
@@ -351,6 +391,8 @@ export default function CategoriesPage() {
                     <AnimatePresence mode="popLayout">
                       {cats.map((category) => {
                         const Icon = iconMap[category.category_name] || CreditCard;
+                        // Temp id until the server row arrives — actions would 404, so disable them.
+                        const pending = isOptimistic(category);
                         return (
                           <motion.div
                             key={category.categories_id_pk}
@@ -360,7 +402,8 @@ export default function CategoriesPage() {
                               'group flex items-center gap-4 rounded-xl border bg-card p-4 shadow-card transition-colors hover:border-primary/40',
                               category.is_active === false
                                 ? 'border-border/50 opacity-60'
-                                : 'border-border hover:border-primary/50'
+                                : 'border-border hover:border-primary/50',
+                              pending && 'opacity-60'
                             )}
                           >
                             <div className="rounded-lg bg-primary/10 p-3 text-primary">
@@ -392,6 +435,7 @@ export default function CategoriesPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  disabled={pending}
                                   aria-label={`${t('common.actions')}: ${category.category_name}`}
                                   className="h-8 w-8 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
                                 >
@@ -491,11 +535,8 @@ export default function CategoriesPage() {
             <Button variant="outline" onClick={handleCloseModal}>
               {t('common.cancel')}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {/* Optimistic write + immediate close, so no pending gate is needed. */}
+            <Button onClick={handleSubmit}>
               {selectedCategory ? t('common.save') : t('pages.categories.add')}
             </Button>
           </DialogFooter>
@@ -518,9 +559,7 @@ export default function CategoriesPage() {
             <Button
               variant="destructive"
               onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('common.delete')}
             </Button>
           </DialogFooter>

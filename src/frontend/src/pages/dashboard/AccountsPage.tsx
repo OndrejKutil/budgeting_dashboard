@@ -28,10 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, RefreshCw } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
 import { accountsApi, netWorthApi } from '@/lib/api/endpoints';
-import { Account, UpdateAccountRequest } from '@/lib/api/types';
+import { Account, CreateAccountRequest, UpdateAccountRequest } from '@/lib/api/types';
+import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -182,17 +183,57 @@ export default function AccountsPage() {
 
 
 
+  // Accounts are conditionally soft-deleted server-side (kept, account_is_active = false) when
+  // transactions reference them. Dropping the row is correct for the active list either way;
+  // a soft-deleted account simply reappears under "inactive" once the refetch lands.
+  const optimisticDelete = optimisticList<Account, string>(
+    queryClient,
+    ['accounts'],
+    (prev, id) => withoutId(prev, 'accounts_id_pk', id)
+  );
+
+  const optimisticCreate = optimisticList<Account, CreateAccountRequest>(
+    queryClient,
+    ['accounts'],
+    (prev, payload) => [
+      ...prev,
+      markOptimistic<Account>({
+        accounts_id_pk: tempUuid(),
+        user_id_fk: null,
+        account_name: payload.account_name,
+        type: payload.type,
+        currency: payload.currency ?? userCurrency,
+        account_is_active: true,
+        current_balance: payload.current_balance ?? 0,
+        net_flow_30d: 0,
+        history_30d: [],
+        created_at: null,
+      }),
+    ]
+  );
+
+  const optimisticUpdate = optimisticList<Account, { id: string; data: UpdateAccountRequest }>(
+    queryClient,
+    ['accounts'],
+    (prev, vars) => patchById(prev, 'accounts_id_pk', vars.id, vars.data)
+  );
+
   const deleteMutation = useMutation({
     mutationFn: accountsApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    onMutate: (accountId: string) => {
+      // Close the confirm dialog alongside the optimistic removal rather than after the
+      // round-trip, so the whole interaction resolves in one frame.
       setDeleteConfirmId(null);
+      return optimisticDelete.onMutate(accountId);
+    },
+    onSuccess: () => {
       toast({
         title: t('pages.accounts.deleted'),
         description: t('pages.accounts.deletedDescription'),
       });
     },
-    onError: (err) => {
+    onError: (err, _accountId, context) => {
+      optimisticDelete.rollback(context);
       const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.deleteFailed');
       toast({
         title: t('common.error'),
@@ -200,6 +241,7 @@ export default function AccountsPage() {
         variant: 'destructive',
       });
     },
+    onSettled: optimisticDelete.onSettled,
   });
 
   const handleDelete = (accountId: string) => {
@@ -208,36 +250,38 @@ export default function AccountsPage() {
 
   const createMutation = useMutation({
     mutationFn: accountsApi.create,
+    onMutate: optimisticCreate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: t('pages.accounts.created') });
-      closeModal();
     },
-    onError: (err) => {
+    onError: (err, _payload, context) => {
+      optimisticCreate.rollback(context);
       const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.createFailed');
       toast({
         title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+    onSettled: optimisticCreate.onSettled,
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: { id: string; data: UpdateAccountRequest }) => accountsApi.update(data.id, data.data),
+    onMutate: optimisticUpdate.onMutate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: t('pages.accounts.updated') });
-      closeModal();
     },
-    onError: (err) => {
+    onError: (err, _vars, context) => {
+      optimisticUpdate.rollback(context);
       const message = err instanceof ApiError ? String(err.detail) : t('pages.accounts.updateFailed');
       toast({
         title: t('common.error'),
         description: message,
         variant: 'destructive',
       });
-    }
+    },
+    onSettled: optimisticUpdate.onSettled,
   });
 
   const handleSubmit = async () => {
@@ -255,6 +299,10 @@ export default function AccountsPage() {
     } else {
       createMutation.mutate(formData);
     }
+
+    // The optimistic write already landed in the cache, so the modal can close immediately
+    // instead of holding a spinner for the round-trip.
+    closeModal();
   };
 
   const openEditModal = (account: Account) => {
@@ -301,13 +349,17 @@ export default function AccountsPage() {
 
   const renderAccountCard = (account: Account) => {
     const Icon = iconMap[account.type.toLowerCase()] || Wallet;
+    // Optimistic rows hold a temporary id — acting on one would send a request for an account
+    // that does not exist yet, so the whole actions menu stays disabled until the server row lands.
+    const pending = isOptimistic(account);
     return (
       <motion.div
         key={account.accounts_id_pk}
         variants={fadeIn}
         className={cn(
           'group rounded-xl border bg-card p-5 shadow-card transition-colors hover:border-primary/40',
-          account.account_is_active === false ? 'border-border/50 opacity-60' : 'border-border hover:border-primary/50'
+          account.account_is_active === false ? 'border-border/50 opacity-60' : 'border-border hover:border-primary/50',
+          pending && 'opacity-60'
         )}
       >
         <div className="flex items-start justify-between">
@@ -337,6 +389,7 @@ export default function AccountsPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                disabled={pending}
                 aria-label={`${t('common.actions')}: ${account.account_name}`}
                 className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
               >
@@ -664,11 +717,9 @@ export default function AccountsPage() {
             <Button variant="outline" onClick={closeModal}>
               {t('common.cancel')}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {/* The write is optimistic and the modal closes on click, so no pending gate is
+                needed here — gating on isPending would only block a quick second create. */}
+            <Button onClick={handleSubmit}>
               {selectedAccount ? t('common.save') : t('pages.accounts.add')}
             </Button>
           </DialogFooter>
@@ -691,9 +742,7 @@ export default function AccountsPage() {
             <Button
               variant="destructive"
               onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('common.delete')}
             </Button>
           </DialogFooter>

@@ -73,17 +73,49 @@ Tokens stored in `localStorage` with keys:
 
 ### Auto Token Refresh
 
-The `request()` function handles 498 (token expired) automatically:
+Refresh happens two ways.
+
+**Proactively**, before a request goes out: `shouldRefreshAccessToken()` decodes the JWT's `exp`
+client-side and refreshes when it is within 60s of expiring, so most requests never see a 498 at
+all. `AuthProvider` runs the same check on page load before routing resolves.
+
+**Reactively**, when a 498 comes back anyway:
 
 1. Intercepts 498 response
 2. Calls `/refresh/` with stored refresh token
 3. Stores new token pair
-4. Retries original request with new token
-5. If refresh fails → clears tokens, throws `TokenExpiredError`
+4. Retries original request with new token (exactly once — no retry loop)
+5. If refresh fails → clears tokens, emits `finance:session-expired`, throws `TokenExpiredError`
+
+### Session Expiry
+
+`client.ts` cannot touch React state, so when a session is unrecoverable it dispatches a
+`SESSION_EXPIRED_EVENT` (`finance:session-expired`) on `window`. `AuthProvider` listens and tears
+down auth state, clears the React Query cache, and toasts — `RequireAuth` then redirects to login.
+
+Without this the dashboard kept rendering after the tokens were gone, sending unauthenticated
+requests until the user reloaded by hand. The event fires once per transition, re-armed the next
+time tokens are stored.
+
+Clearing the query cache on teardown matters: otherwise the next account to log in on the same
+browser briefly renders the previous user's data from cache.
+
+### Logout
+
+`authApi.logout()` calls `POST /auth/logout` to revoke the session server-side, then clears local
+tokens in a `finally` — a network failure can never trap the user in a logged-in state.
+`AuthContext.logout` is async; it drops React state first so the UI responds immediately, while
+the tokens stay in storage just long enough to authenticate the revocation call.
+
+`clearLocalSession()` is the no-server variant, for when there is nothing left to revoke (after
+the account itself has been deleted).
 
 ### Multi-Tab Resilience
 
 When refresh fails (e.g., "Already Used" error), client checks if `refreshToken` changed in localStorage since the request started. If another tab already refreshed successfully, considers it a success.
+
+`AuthProvider` also listens for `storage` events on `finance_access_token`: when the key is
+removed, that tab tears down its own session too, so logging out in one tab logs out all of them.
 
 ### Request Headers
 
@@ -115,6 +147,51 @@ const queryClient = new QueryClient({
 - **No refetchOnWindowFocus**: Users tab-switch often. Refetching every time is wasteful and causes UI flicker.
 
 Individual queries can override these defaults when needed.
+
+---
+
+## Optimistic Mutations
+
+`lib/optimistic.ts` wraps the standard React Query optimistic recipe — `cancelQueries` →
+snapshot → `setQueryData` → rollback on error → invalidate on settle. Use `optimisticList` when
+the cached value is a flat array, `optimisticQuery` when it is a wrapper object (e.g. the
+recurring response, which carries `data` alongside `count` and `summary`).
+
+It returns handlers to *compose* into a mutation rather than a `useMutation` wrapper, so pages
+keep their own toasts:
+
+```typescript
+const optimistic = optimisticList<Account, string>(queryClient, ['accounts'],
+  (prev, id) => withoutId(prev, 'accounts_id_pk', id));
+
+useMutation({
+  mutationFn: accountsApi.delete,
+  onMutate: optimistic.onMutate,
+  onSuccess: () => toast({ ... }),
+  onError: (err, _vars, ctx) => { optimistic.rollback(ctx); toast({ ... }); },
+  onSettled: optimistic.onSettled,
+});
+```
+
+**Applied to:** accounts, categories, funds, recurring — flat lists where the cache shape is
+simple. Transactions, budgets and dividends stay pessimistic: that list is paginated, filtered and
+sorted with a separate summary aggregate, so an optimistic insert needs filter-matching logic and
+visibly misplaces rows.
+
+Two rules when adding more:
+
+- **Creates must build a complete entity, not a partial.** These pages derive buckets
+  (active/inactive, native/foreign currency) from the list; a partial object lands in the wrong
+  bucket and jumps when the server row arrives.
+- **Optimistic rows must not be actionable.** They carry a temp id (`tempUuid()` for uuid PKs,
+  `tempNumericId()` — always negative — for integer PKs), so acting on one would send a request
+  for a row that does not exist yet. Guard with `isOptimistic(item)`: dim the row and disable its
+  actions menu.
+
+Note that accounts, categories and funds are *conditionally* soft-deleted server-side when
+transactions reference them. Removing the row optimistically is right for the list the user is
+looking at either way; a soft-deleted one reappears under inactive/archived on reconcile. Only
+recurring templates are hard-deleted unconditionally.
 
 ---
 

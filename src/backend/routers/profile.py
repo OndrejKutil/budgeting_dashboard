@@ -16,15 +16,17 @@ import logging
 import httpx
 
 # supabase client
+from supabase.client import Client
 from ..data.database import get_db_client, get_service_db_client
 
 # schemas
 from ..schemas.base import ProfileData
 from ..schemas.responses import MessageResponse, ProfileResponse
-from ..schemas.requests import UpdateProfileRequest
+from ..schemas.requests import DeleteAccountRequest, UpdateProfileRequest
 
 # helper
 from ..helper.calculations.profile_page_calc import _build_profile_data
+from ..helper.identity import has_password_identity
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -212,18 +214,98 @@ async def update_profile(
         )
 
 
-@router.delete("/me", response_model=MessageResponse)
+async def _verify_deletion_credentials(
+    user: dict[str, str],
+    body: DeleteAccountRequest
+) -> None:
+    """
+    Prove the caller is who the JWT says before anything is deleted.
+
+    Raises 401 if the supplied credential does not check out, and 400 if none was supplied.
+    Returns silently on success.
+    """
+    email = user.get("email")
+    if not email:
+        logger.error(f"Account deletion blocked: no email on token for user_id: {user['user_id']}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not verify your identity. Please log in again and retry."
+        )
+
+    # Ask Supabase which identities are linked rather than trusting anything from the client.
+    user_client = get_db_client(user["access_token"])
+    user_profile = user_client.auth.get_user(user["access_token"])
+    if user_profile is None or user_profile.user is None:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found"
+        )
+
+    if has_password_identity(user_profile.user):
+        if not body.password:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Your password is required to delete this account"
+            )
+
+        try:
+            # A throwaway client so verifying the password cannot disturb the caller's session.
+            #
+            # This does mint a second session as a side effect. It is deliberately not signed
+            # out here: supabase-py's `sign_out` defaults to global scope, which would revoke the
+            # caller's own sessions too. Deleting the auth user moments later invalidates it.
+            verify_client: Client = get_db_client()
+            verify_response = verify_client.auth.sign_in_with_password(
+                {"email": email, "password": body.password}
+            )
+            password_ok = verify_response.session is not None
+        except Exception:
+            # Never log the password or the underlying auth error detail.
+            password_ok = False
+
+        if not password_ok:
+            logger.warning(f"Account deletion rejected: bad password for user_id: {user['user_id']}")
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password"
+            )
+        return
+
+    # OAuth-only account: no password exists, so confirm by typing the account's own email.
+    if not body.email_confirmation:
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Type your email address to confirm deletion"
+        )
+
+    if body.email_confirmation.strip().lower() != email.strip().lower():
+        logger.warning(f"Account deletion rejected: email mismatch for user_id: {user['user_id']}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="The email address does not match this account"
+        )
+
+
+@router.post("/delete-account", response_model=MessageResponse)
 @limiter.limit(RATE_LIMITS["write"])
 async def delete_my_account(
     request: Request,
+    body: DeleteAccountRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> MessageResponse:
     """
     Permanently delete the current user's application data and Supabase Auth account.
+
+    POST rather than DELETE because the confirmation credential travels in the body, which not
+    every HTTP client sends on a DELETE.
+
     Requires SERVICE_ROLE_KEY because Supabase Auth users cannot self-delete with an anon token.
     """
     try:
+        # Verify first: nothing is deleted unless the caller proves who they are.
+        await _verify_deletion_credentials(user, body)
+
         service_client = get_service_db_client()
         user_id = user["user_id"]
 

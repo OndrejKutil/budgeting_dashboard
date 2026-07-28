@@ -19,8 +19,8 @@ export function UserNav() {
     const { profile, t } = useUser();
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/');
     };
 

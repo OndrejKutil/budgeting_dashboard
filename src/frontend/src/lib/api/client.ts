@@ -54,6 +54,8 @@ export const tokenManager = {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     if (userId) localStorage.setItem(USER_ID_KEY, userId);
+    // A live session again — re-arm the expiry notification for next time.
+    sessionExpiryAnnounced = false;
   },
 
   clearTokens: () => {
@@ -64,6 +66,34 @@ export const tokenManager = {
 
   isAuthenticated: () => !!localStorage.getItem(ACCESS_TOKEN_KEY),
 };
+
+// ============================================
+// Session Expiry Notification
+// ============================================
+
+/**
+ * Dispatched when the session is dead and cannot be recovered — refresh failed, or there was
+ * nothing left to refresh with. `AuthProvider` listens for it and tears down auth state.
+ *
+ * A DOM event rather than a registered callback so this module stays free of React imports and
+ * any number of listeners can react.
+ */
+export const SESSION_EXPIRED_EVENT = 'finance:session-expired';
+
+/**
+ * Guards against a burst of failing requests firing the event (and its toast) repeatedly.
+ * Reset whenever tokens are stored again, i.e. on the next successful login or refresh.
+ */
+let sessionExpiryAnnounced = false;
+
+function announceSessionExpired(): void {
+  if (sessionExpiryAnnounced) return;
+  sessionExpiryAnnounced = true;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+  }
+}
 
 // ============================================
 // Error Types
@@ -120,6 +150,7 @@ async function refreshAccessToken(): Promise<boolean> {
         }
 
         tokenManager.clearTokens();
+        announceSessionExpired();
         return false;
       }
 
@@ -139,6 +170,7 @@ async function refreshAccessToken(): Promise<boolean> {
       }
 
       tokenManager.clearTokens();
+      announceSessionExpired();
       return false;
     } finally {
       refreshPromise = null;
@@ -171,6 +203,9 @@ async function request<T>(
   if (retryOnExpired && tokenManager.shouldRefreshAccessToken()) {
     const refreshed = await refreshAccessToken();
     if (!refreshed) {
+      // Covers the case where there was no refresh token to begin with; the refresh-failure
+      // paths announce for themselves, and the announcement is idempotent.
+      announceSessionExpired();
       throw new TokenExpiredError();
     }
   }
@@ -203,6 +238,7 @@ async function request<T>(
     if (refreshed) {
       return request<T>(endpoint, options, false);
     }
+    announceSessionExpired();
     throw new TokenExpiredError();
   }
 

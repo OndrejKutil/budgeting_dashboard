@@ -207,6 +207,50 @@ async def reset_password(
         )
 
 
+@router.post("/logout", response_model=MessageResponse)
+@limiter.limit(RATE_LIMITS["auth"])
+async def logout(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user)
+) -> MessageResponse:
+    """
+    Revoke the caller's Supabase session so the refresh token stops working server-side.
+
+    Without this, "logging out" only cleared tokens from the browser and the refresh token
+    stayed valid indefinitely.
+
+    Called through GoTrue's REST API rather than `client.auth.sign_out()`: `get_db_client`
+    authenticates only the PostgREST layer, so the Python client has no GoTrue session to sign
+    out of. `scope=local` revokes just this session, leaving the user's other devices alone.
+
+    Always reports success — a client that has decided to log out must never be blocked by a
+    failure here, and it clears its tokens regardless.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{env.PROJECT_URL}/auth/v1/logout",
+                params={"scope": "local"},
+                headers={
+                    "apikey": env.ANON_KEY,
+                    "Authorization": f"Bearer {user['access_token']}",
+                },
+            )
+
+        if response.status_code >= 400:
+            logger.warning(f"Supabase logout returned {response.status_code} for user_id: {user['user_id']}")
+
+    except Exception as e:
+        logger.warning(f"Logout call to Supabase failed for user_id: {user['user_id']}")
+        logger.info(f"Logout failed with error: {str(e)}")
+
+    return MessageResponse(
+        success=True,
+        message="Logged out successfully"
+    )
+
+
 # ================================================================================================
 #                                   OAuth Endpoints
 # ================================================================================================

@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '../client';
-import type { UpdateProfileRequest } from '../types/requests';
+import type { DeleteAccountRequest, UpdateProfileRequest } from '../types/requests';
 import type { MessageResponse, ProfileResponse } from '../types/responses';
 
 export const profileApi = {
@@ -18,8 +18,13 @@ export const profileApi = {
         return response.data;
     },
 
-    deleteAccount: async () => {
-        const response = await apiClient.delete<MessageResponse>('/profile/me');
+    /**
+     * Permanently deletes the account. Requires re-authentication: a password for accounts with
+     * an email identity, or the account's own email typed out for OAuth-only accounts.
+     * POST rather than DELETE because the confirmation travels in the body.
+     */
+    deleteAccount: async (confirmation: DeleteAccountRequest) => {
+        const response = await apiClient.post<MessageResponse>('/profile/delete-account', confirmation);
         return response.data;
     },
 };
