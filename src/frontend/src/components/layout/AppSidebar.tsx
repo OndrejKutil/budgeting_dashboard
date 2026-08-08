@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { recurringApi } from '@/lib/api/endpoints';
+import { daysDiff } from '@/lib/dates';
 import {
   LayoutDashboard,
   Receipt,
@@ -62,7 +65,14 @@ interface SidebarProps {
 export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarProps) {
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const location = useLocation();
-  const { t } = useUser();
+  const { t, currency: userCurrency } = useUser();
+
+  const { data: recurringData } = useQuery({
+    queryKey: ['recurring', userCurrency],
+    queryFn: async () => recurringApi.getAll({ base_currency: userCurrency }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const dueRecurringCount = (recurringData?.data ?? []).filter((r) => daysDiff(r.next_date) <= 0).length;
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return location.pathname === href;
@@ -126,38 +136,58 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {/* Main nav */}
         <div className="space-y-1">
-          {mainNavItems.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              end={item.href === '/dashboard'}
-              onClick={handleNavClick}
-              aria-label={collapsed ? t(item.labelKey) : undefined}
-              className={({ isActive: active }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
-                  collapsed ? 'justify-center px-2' : 'px-3',
-                  active || isActive(item.href)
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )
-              }
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="overflow-hidden whitespace-nowrap"
-                  >
-                    {t(item.labelKey)}
-                  </motion.span>
+          {mainNavItems.map((item) => {
+            const showDueBadge = item.href === '/dashboard/recurring' && dueRecurringCount > 0;
+            const dueLabel = dueRecurringCount > 9 ? '9+' : String(dueRecurringCount);
+            return (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                end={item.href === '/dashboard'}
+                onClick={handleNavClick}
+                aria-label={
+                  collapsed
+                    ? `${t(item.labelKey)}${showDueBadge ? ` (${dueRecurringCount})` : ''}`
+                    : undefined
+                }
+                className={({ isActive: active }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all',
+                    collapsed ? 'justify-center px-2' : 'px-3',
+                    active || isActive(item.href)
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  )
+                }
+              >
+                <span className="relative flex-shrink-0">
+                  <item.icon className="h-5 w-5" />
+                  {showDueBadge && collapsed && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-semibold leading-none text-destructive-foreground">
+                      {dueLabel}
+                    </span>
+                  )}
+                </span>
+                <AnimatePresence mode="wait">
+                  {!collapsed && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="overflow-hidden whitespace-nowrap"
+                    >
+                      {t(item.labelKey)}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                {showDueBadge && !collapsed && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold leading-none text-destructive-foreground">
+                    {dueLabel}
+                  </span>
                 )}
-              </AnimatePresence>
-            </NavLink>
-          ))}
+              </NavLink>
+            );
+          })}
         </div>
 
         {/* Analytics section */}
