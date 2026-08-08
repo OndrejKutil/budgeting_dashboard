@@ -49,6 +49,7 @@ import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, wit
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { formatMoney } from '@/lib/currency';
+import { daysDiff, toLocalDateString } from '@/lib/dates';
 
 const DECIMAL_INPUT_PATTERN = '-?[0-9]*([.,][0-9]*)?';
 
@@ -66,14 +67,6 @@ function parseDecimalInput(value: string): number | null {
   if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(normalized)) return null;
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
-}
-
-function daysDiff(dateStr: string): number {
-  const target = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
 
 const stagger = {
@@ -267,7 +260,7 @@ export default function RecurringPage() {
       savings_fund_id_fk: form.savings_fund_id_fk || undefined,
       amount,
       cadence: form.cadence,
-      next_date: form.next_date.toISOString().split('T')[0],
+      next_date: toLocalDateString(form.next_date),
       notes: form.notes || undefined,
       is_active: form.is_active,
     };
