@@ -22,33 +22,25 @@ dependencies = [
     # FastAPI and server dependencies
     "fastapi==0.104.1",
     "uvicorn[standard]==0.24.0",
-    
     # Rate limiting
     "slowapi>=0.1.9",
-    
     # Environment variable management
     "python-dotenv==1.0.0",
-    
     # JWT token handling
     "PyJWT==2.8.0",
-    
     # Supabase client for database operations
     "supabase==1.0.4",
-    
     # Data validation and serialization
     "pydantic>=2.0.0",
-    
     # HTTP client (dependency of supabase)
     "httpx>=0.24.0",
-    
     # Form data handling
     "python-multipart==0.0.6",
-    
     # Data manipulation
     "polars>=0.20.0",
-
     # Fix the missing type hints in some dependencies
-    "types-python-dateutil"
+    "types-python-dateutil",
+    "groq>=1.6.0",
 ]
 
 # Install (from src/backend/):

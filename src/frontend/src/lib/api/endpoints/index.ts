@@ -18,3 +18,5 @@ export { dividendApi } from './dividends';
 export { recurringApi } from './recurring';
 export { netWorthApi } from './netWorth';
 export { tagsApi } from './tags';
+export { featuresApi } from './features';
+export { screenshotImportApi } from './screenshotImport';

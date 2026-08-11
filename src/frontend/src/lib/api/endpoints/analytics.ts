@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '../client';
-import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse, FIREResponse, HeatmapResponse } from '../types/responses';
+import type { MonthlyAnalyticsResponse, YearlyAnalyticsResponse, EmergencyFundResponse, HeatmapResponse } from '../types/responses';
 
 export const analyticsApi = {
     getMonthly: async (params?: { year?: number; month?: number; base_currency?: string }) => {
@@ -26,14 +26,6 @@ export const analyticsApi = {
     getEmergencyFund: async (params?: { year?: number; base_currency?: string }) => {
         const response = await apiClient.get<EmergencyFundResponse>(
             '/yearly/emergency-fund',
-            params as Record<string, string | number | undefined>
-        );
-        return response.data;
-    },
-
-    getFIRE: async (params?: { year?: number; base_currency?: string }) => {
-        const response = await apiClient.get<FIREResponse>(
-            '/yearly/fire',
             params as Record<string, string | number | undefined>
         );
         return response.data;

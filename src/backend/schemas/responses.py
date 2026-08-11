@@ -12,7 +12,8 @@ from .base import (
     DividendCalculationResult,
     EmergencyFundData,
     ExpenseRowResponse,
-    FIREData,
+    ExtractionData,
+    FeatureFlagData,
     IncomeRowResponse,
     InvestmentRowResponse,
     MonthlyAnalyticsData,
@@ -271,13 +272,6 @@ class YearlyAnalyticsResponse(BaseModel):
 class EmergencyFundResponse(BaseModel):
     """Response schema for emergency fund analysis endpoint"""
     data: EmergencyFundData = Field(..., description="Emergency fund analysis data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-
-class FIREResponse(BaseModel):
-    """Response schema for FIRE dashboard endpoint"""
-    data: FIREData = Field(..., description="FIRE analysis data")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 
@@ -570,3 +564,18 @@ class TransactionSummaryResponse(BaseModel):
     message: str = Field(..., description="Response message")
     count: int = Field(..., description="Number of matching transactions")
     total_amount: float = Field(..., description="Sum of amounts for matching transactions")
+
+
+class FeatureFlagsResponse(BaseModel):
+    """Response schema for the feature flags endpoint"""
+    data: list[FeatureFlagData] = Field(..., description="Every active feature, with this user's state")
+    count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class ExtractionResponse(BaseModel):
+    """Response schema for the screenshot extraction endpoint"""
+    success: bool = Field(..., description="Indicates if the extraction succeeded")
+    message: str = Field(..., description="Response message")
+    data: ExtractionData | None = Field(None, description="Extracted drafts and provenance")

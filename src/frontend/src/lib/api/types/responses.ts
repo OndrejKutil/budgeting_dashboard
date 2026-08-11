@@ -15,9 +15,10 @@ import type {
     MonthlyAnalytics,
     YearlyAnalyticsData,
     EmergencyFundData,
-    FIREData,
     DailySpendingData,
     DividendCalculationResult,
+    FeatureFlag,
+    ExtractionData,
     Recurring,
     RecurringSummary,
     NetWorthTimeline,
@@ -219,15 +220,6 @@ export interface EmergencyFundResponse {
 }
 
 /**
- * FIRE analysis response
- */
-export interface FIREResponse {
-    data: FIREData;
-    success: boolean;
-    message: string;
-}
-
-/**
  * Yearly spending heatmap response
  */
 export interface HeatmapResponse {
@@ -339,4 +331,32 @@ export interface DividendPortfolioResponse {
 export interface DividendPortfolioSuccessResponse {
     success: boolean;
     message: string;
+}
+
+// ================================================================================================
+//                                   Feature Flags
+// ================================================================================================
+
+/**
+ * Every active feature, with the calling user's enabled state.
+ * Features with no row for the user are reported disabled rather than omitted.
+ */
+export interface FeatureFlagsResponse {
+    data: FeatureFlag[];
+    count: number;
+    success: boolean;
+    message: string;
+}
+
+// ================================================================================================
+//                                   Screenshot Import
+// ================================================================================================
+
+/**
+ * Screenshot extraction response
+ */
+export interface ExtractionResponse {
+    success: boolean;
+    message: string;
+    data: ExtractionData | null;
 }

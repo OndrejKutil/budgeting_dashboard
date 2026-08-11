@@ -437,46 +437,6 @@ export interface EmergencyFundData {
 }
 
 // ================================================================================================
-//                                   FIRE Types
-// ================================================================================================
-
-/**
- * FIRE (Financial Independence / Retire Early) analysis data
- * Matches backend FIREData schema
- */
-export interface FIREData {
-    year: number;
-    base_currency: string;
-
-    // FI target numbers (25× annual spending)
-    fi_number: number;
-    lean_fi_number: number;
-    fat_fi_number: number;
-
-    // Current state
-    current_net_worth: number;
-    annual_income: number;
-    annual_savings: number;
-    savings_rate: number;
-
-    // Progress
-    fi_progress_pct: number;
-    lean_progress_pct: number;
-    fat_progress_pct: number;
-
-    // Projections (null when not enough data)
-    years_to_fi: number | null;
-    projected_fi_year: number | null;
-    coast_fi_years: number | null;
-
-    // Monthly expenses
-    monthly_core_expenses: number;
-    monthly_core_necessary_expenses: number;
-    monthly_all_expenses: number;
-    months_analyzed: number;
-}
-
-// ================================================================================================
 //                                   Recurring Transaction Types
 // ================================================================================================
 
@@ -555,4 +515,60 @@ export interface DividendCalculationResult {
     monthly_income: number;
     portfolio_value: number;
     rows: DividendStockRow[];
+}
+
+// ================================================================================================
+//                                   Feature Flags
+// ================================================================================================
+
+/**
+ * A single feature and whether it is enabled for the current user
+ * Matches backend FeatureFlagData schema
+ */
+export interface FeatureFlag {
+    feature_key: string;
+    feature_name: string;
+    feature_description: string | null;
+    is_enabled: boolean;
+}
+
+// ================================================================================================
+//                                   Screenshot Import
+// ================================================================================================
+
+/**
+ * Where a draft field's value came from.
+ * Matches backend FieldSource enum — drives the per-field provenance badges in the review UI.
+ */
+export type FieldSource = 'rule' | 'model' | 'default' | 'none';
+
+/**
+ * One proposed transaction extracted from a screenshot.
+ * Nothing here is final: the category is a best guess. There is no separate merchant field --
+ * the app doesn't store one on a real transaction, so the merchant name is prefilled into
+ * `notes` instead.
+ * Matches backend DraftTransactionData schema
+ */
+export interface DraftTransaction {
+    amount: number | null;
+    currency: string | null;
+    date: string | null;
+    account_id_fk: string | null;
+    category_id_fk: number | null;
+    notes: string | null;
+    confidence: number;
+    field_sources: Partial<Record<keyof DraftTransaction, FieldSource>>;
+    warnings: string[];
+}
+
+/**
+ * Result of one screenshot extraction, plus how it was produced
+ * Matches backend ExtractionData schema
+ */
+export interface ExtractionData {
+    drafts: DraftTransaction[];
+    inference_model: string | null;
+    inference_called: boolean;
+    rules_hit: number;
+    raw_text: string | null;
 }

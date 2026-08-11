@@ -146,6 +146,8 @@ endpoints use `Depends(api_key_auth)` and `Depends(get_current_user)`.
 | `dividends`          | `/dividends`   | Dividend portfolio calculator              |
 | `recurring`          | `/recurring`   | Recurring-transaction templates            |
 | `net_worth`          | `/net-worth`   | Net-worth chart data                       |
+| `features`           | `/features`    | Per-user feature flags (read-only)         |
+| `screenshot_import`  | `/screenshot-import` | Screenshot → draft transactions (flag-gated) |
 
 > The auto-generated OpenAPI at `/docs` (Swagger) and `/redoc` is the canonical, always
 > up-to-date endpoint reference — there is no hand-maintained endpoint list.
@@ -209,6 +211,9 @@ pytest                                  # tests + coverage
 | `SERVICE_ROLE_KEY`    | Supabase service role key for account deletion |
 | `SUPABASE_JWT_SECRET` | JWT verification secret                    |
 | `DEVELOPMENT_MODE`    | Flag for dev-specific behavior             |
+| `INFERENCE_API_KEY`   | Vision-model API key for `/screenshot-import` |
+| `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` |
+| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` |
 
 ---
 

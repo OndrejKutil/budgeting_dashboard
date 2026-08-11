@@ -19,35 +19,51 @@ Deno.serve(async (_req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  const rows: { base_currency: string; target_currency: string; rate: number; fetched_at: string }[] = [];
   const now = new Date().toISOString();
 
-  for (const base of CURRENCIES) {
-    const symbols = CURRENCIES.filter(c => c !== base).join(',');
-    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${base}&symbols=${symbols}`);
+  // Fetch all bases in parallel — Frankfurter's per-request latency varies wildly
+  // (sub-second to 20s+), and sequential requests were pushing total runtime past
+  // the caller's timeout, which aborted the function before the upsert ever ran.
+  const results = await Promise.allSettled(
+    CURRENCIES.map(async (base) => {
+      const symbols = CURRENCIES.filter(c => c !== base).join(',');
+      const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${base}&symbols=${symbols}`);
+      if (!res.ok) {
+        throw new Error(`Frankfurter API error for ${base}: ${await res.text()}`);
+      }
+      const data = await res.json() as { rates: Record<string, number> };
+      return Object.entries(data.rates).map(([target, rate]) => ({
+        base_currency: base,
+        target_currency: target,
+        rate,
+        fetched_at: now,
+      }));
+    })
+  );
 
-    if (!res.ok) {
-      const text = await res.text();
-      return new Response(JSON.stringify({ error: `Frankfurter API error for ${base}: ${text}` }), { status: 502 });
-    }
+  const rows = results
+    .filter((r): r is PromiseFulfilledResult<{ base_currency: string; target_currency: string; rate: number; fetched_at: string }[]> => r.status === 'fulfilled')
+    .flatMap(r => r.value);
 
-    const data = await res.json() as { rates: Record<string, number> };
+  const failures = results
+    .map((r, i) => ({ r, base: CURRENCIES[i] }))
+    .filter(({ r }) => r.status === 'rejected')
+    .map(({ r, base }) => `${base}: ${(r as PromiseRejectedResult).reason}`);
 
-    for (const [target, rate] of Object.entries(data.rates)) {
-      rows.push({ base_currency: base, target_currency: target, rate, fetched_at: now });
+  // Persist whatever succeeded even if some bases failed — a partial refresh
+  // beats none, and previously-good rows for the failed bases are left untouched.
+  if (rows.length > 0) {
+    const { error } = await supabase
+      .from('dim_exchange_rates')
+      .upsert(rows, { onConflict: 'base_currency,target_currency' });
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message, failures }), { status: 500 });
     }
   }
 
-  const { error } = await supabase
-    .from('dim_exchange_rates')
-    .upsert(rows, { onConflict: 'base_currency,target_currency' });
-
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-
-  return new Response(JSON.stringify({ updated: rows.length, fetched_at: now }), {
-    status: 200,
+  return new Response(JSON.stringify({ updated: rows.length, fetched_at: now, failures }), {
+    status: failures.length > 0 ? 207 : 200,
     headers: { 'Content-Type': 'application/json' },
   });
 });

@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from ..auth.auth import api_key_auth, get_current_user
 
 # Load environment variables
-from ..helper.calculations.fire_calc import _fire_analysis
 from ..helper.calculations.yearly_page_calc import (
     _emergency_fund_analysis,
     _yearly_analytics,
@@ -23,8 +22,8 @@ from ..helper.calculations.yearly_page_calc import (
 from ..helper.rate_limiter import RATE_LIMITS, limiter
 
 # schemas
-from ..schemas.base import DailySpendingData, EmergencyFundData, FIREData, YearlyAnalyticsData
-from ..schemas.responses import EmergencyFundResponse, FIREResponse, HeatmapResponse, YearlyAnalyticsResponse
+from ..schemas.base import DailySpendingData, EmergencyFundData, YearlyAnalyticsData
+from ..schemas.responses import EmergencyFundResponse, HeatmapResponse, YearlyAnalyticsResponse
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -146,40 +145,6 @@ async def get_emergency_fund_analysis(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to generate emergency fund analysis'
         )
-
-
-@router.get('/fire', response_model=FIREResponse)
-@limiter.limit(RATE_LIMITS["heavy"])
-async def get_fire_analysis(
-    request: Request,
-    api_key: str = Depends(api_key_auth),
-    user: dict[str, str] = Depends(get_current_user),
-    year: int = Query(datetime.now().year, description='Reference year for expense calculations'),
-    base_currency: str = Query('CZK', description='Currency to convert all amounts into'),
-) -> FIREResponse:
-    '''
-    Get FIRE (Financial Independence / Retire Early) analysis.
-
-    Returns FI numbers for Lean / Standard / Fat FIRE, current progress, projected FI date,
-    and Coast FIRE metrics. Expenses are sourced from the given year; income/savings from
-    the trailing 12 months; net worth from all-time transaction history.
-    '''
-    try:
-        fire_data: FIREData = _fire_analysis(user['access_token'], year, base_currency)
-        return FIREResponse(
-            data=fire_data,
-            success=True,
-            message=f'FIRE analysis for {year} retrieved successfully',
-        )
-    except ValueError as e:
-        logger.warning(f'Invalid parameters for get_fire_analysis: {str(e)}')
-        raise fastapi.HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid year parameter')
-    except ConnectionError as e:
-        logger.error(f'Database connection failed: {str(e)}')
-        raise fastapi.HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Database connection failed. Please try again later.')
-    except Exception as e:
-        logger.error(f'Unexpected error in get_fire_analysis: {str(e)}')
-        raise fastapi.HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to generate FIRE analysis')
 
 
 @router.get('/heatmap', response_model=HeatmapResponse)

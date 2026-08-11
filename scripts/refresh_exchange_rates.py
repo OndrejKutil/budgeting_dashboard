@@ -35,7 +35,7 @@ def refresh_rates() -> None:
                 "Content-Type": "application/json",
             },
             json={},
-            timeout=30,
+            timeout=60,
         )
         resp.raise_for_status()
         data = resp.json()

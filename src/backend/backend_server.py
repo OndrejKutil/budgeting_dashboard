@@ -115,12 +115,14 @@ from .routers import (  # noqa: E402
     categories,
     dividends,
     export,
+    features,
     login,
     monthly_analytics,
     net_worth,
     profile,
     recurring,
     savings_funds,
+    screenshot_import,
     summary,
     tags,
     token_refresh,
@@ -144,6 +146,8 @@ app.include_router(budgets.router, prefix="/budgets", tags=["Budgets"])
 app.include_router(dividends.router, prefix="/dividends", tags=["Dividends"])
 app.include_router(recurring.router, prefix="/recurring", tags=["Recurring"])
 app.include_router(net_worth.router, prefix="/net-worth", tags=["Net Worth"])
+app.include_router(features.router, prefix="/features", tags=["Features"])
+app.include_router(screenshot_import.router, prefix="/screenshot-import", tags=["Screenshot Import"])
 
 
 # ================================================================================================
