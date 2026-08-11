@@ -50,6 +50,7 @@ USER_DATA_TABLES: tuple[tuple[str, str], ...] = (
     ("dim_accounts", "user_id_fk"),
     ("dim_categories_users", "user_id_fk"),
     ("dim_savings_funds", "user_id_fk"),
+    ("dim_features_users", "user_id_fk"),
 )
 
 #? This router prefix is /profile

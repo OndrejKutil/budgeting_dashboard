@@ -37,6 +37,18 @@ class TransactionRequest(BaseModel):
     )
 
 
+class ImportTransactionsRequest(BaseModel):
+    """
+    Request schema for POST /screenshot-import/import.
+
+    Each row is exactly what a single POST /transactions/ would accept -- this just inserts
+    them together so the review screen doesn't need one request per draft.
+    """
+    transactions: list[TransactionRequest] = Field(
+        ..., min_length=1, description="Reviewed drafts to save as real transactions"
+    )
+
+
 class TagRequest(BaseModel):
     """Schema for creating a new tag"""
     tag_name: str = Field(..., min_length=1, max_length=100, description="Name of the tag")

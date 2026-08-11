@@ -237,9 +237,13 @@ async function request<T>(
 
   const accessToken = tokenManager.getAccessToken();
 
+  // A FormData body must set its own Content-Type: only the browser knows the multipart
+  // boundary it generated, and overriding it makes the request unparseable server-side.
+  const isFormData = options.body instanceof FormData;
+
   const headers: HeadersInit = {
     'X-API-KEY': API_KEY,
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers,
   };
 
@@ -298,6 +302,14 @@ export const apiClient = {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     }),
+
+  /**
+   * Multipart POST for file uploads. Goes through `request()` rather than a raw `fetch` so
+   * uploads keep the 498 refresh-and-retry path — a large upload is exactly the request most
+   * likely to straddle a token expiry.
+   */
+  postForm: <T>(endpoint: string, body: FormData) =>
+    request<T>(endpoint, { method: 'POST', body }),
 
   put: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, {

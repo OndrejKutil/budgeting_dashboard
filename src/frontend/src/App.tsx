@@ -43,6 +43,7 @@ const BudgetMaker = lazy(() => import("./pages/dashboard/BudgetMaker"));
 const InvestingCalculator = lazy(() => import("./pages/dashboard/InvestingCalculator"));
 const DividendCalculator = lazy(() => import("./pages/dashboard/DividendCalculator"));
 const RecurringPage = lazy(() => import("./pages/dashboard/RecurringPage"));
+const ScreenshotImportPage = lazy(() => import("./pages/dashboard/ScreenshotImportPage"));
 const FIREPage = lazy(() => import("./pages/dashboard/analytics/FIREPage"));
 const CashFlowPage = lazy(() => import("./pages/dashboard/analytics/CashFlowPage"));
 
@@ -136,6 +137,7 @@ const AppContent = () => {
                 <Route path="fire-calculator" element={withSuspense(<FIREPage />, <AnalyticsSkeleton />)} />
                 <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
                 <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
+                <Route path="import/screenshot" element={withSuspense(<ScreenshotImportPage />, <DashboardSkeleton />)} />
               </Route>
 
               {/* Catch-all */}

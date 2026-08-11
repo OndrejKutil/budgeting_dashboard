@@ -11,6 +11,10 @@
  *  - Dashboard totals       → formatMoney(amount, userCurrency)  (via UserContext.formatCurrency wrapper)
  */
 
+// Currencies the app supports account-wide (see the currency Select in AccountsPage.tsx).
+// CURRENCY_FLAG/CURRENCY_LOCALE below should stay in sync with this set.
+export const SUPPORTED_CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'] as const;
+
 const CURRENCY_FLAG: Record<string, string> = {
   AUD: '🇦🇺',
   CAD: '🇨🇦',

@@ -44,6 +44,8 @@ has Row Level Security enabled**, with policies scoped to `auth.uid()`.
 | `fct_transactions` | fct | Core ledger; FKs to account / category / fund |
 | `fct_budgets` | fct | One row per user / month / year; the plan is stored as `plan_json` (JSONB) |
 | `fct_dividend_portfolios` | fct | One row per user; holdings stored as `portfolio_json` (JSONB) |
+| `dim_features` | dim | Global registry of gateable features (read = any authenticated user, write = migrations only) |
+| `dim_features_users` | dim | Per-user flag state, **seeded to `false` on signup** by the `seed_user_features()` trigger; SELECT-only for the user |
 
 **Enums:** `category_type` (`income`, `expense`, `saving`, `transfer`, `investment`,
 `exclude`) and `spending_type` (`Core`, `Fun`, `Future`, `Income`, `Necessary`).
@@ -53,6 +55,39 @@ has Row Level Security enabled**, with policies scoped to `auth.uid()`.
 **Not captured by the `public`-schema baseline** (re-create manually if rebuilding from
 zero): the trigger on `auth.users` that fires `seed_default_categories()`, plus Auth
 settings, Storage buckets, and Edge Functions (functions live in `supabase/functions/`).
+
+> The newer `seed_user_features()` trigger *is* in a migration
+> (`20260810000000_add_feature_flags.sql`), so it survives a `db reset`. Do the same for any
+> future `auth.users` trigger rather than creating it in the dashboard.
+
+### Feature flags
+
+Gating a feature per user takes two statements in a new migration — register it, then backfill
+the users that already exist:
+
+```sql
+insert into public.dim_features (feature_key, feature_name, feature_description)
+values ('<key>', '<Name>', '<what it does>');
+
+insert into public.dim_features_users (user_id_fk, feature_key, is_enabled)
+select u.id, '<key>', false from auth.users u
+on conflict (user_id_fk, feature_key) do nothing;
+```
+
+New signups are covered automatically by the `seed_user_features()` trigger. The read path
+(`src/backend/helper/features.py`) defaults a missing row to `false`, so forgetting the backfill
+degrades to "feature off", never to an error.
+
+Turning a flag on for one user is a **data** edit, so the SQL editor is fine here:
+
+```sql
+update public.dim_features_users
+set is_enabled = true, updated_at = now()
+where feature_key = '<key>'
+  and user_id_fk = (select id from auth.users where email = '<you@example.com>');
+```
+
+`dim_features_users` has a SELECT policy only — users cannot enable their own features.
 
 ---
 

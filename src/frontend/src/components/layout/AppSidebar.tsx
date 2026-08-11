@@ -25,9 +25,11 @@ import {
   Repeat,
   Flame,
   GitFork,
+  ScanLine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/user-context';
+import { useFeatureFlags } from '@/hooks/use-feature-flag';
 
 const mainNavItems = [
   { labelKey: 'nav.overview', href: '/dashboard', icon: LayoutDashboard },
@@ -47,6 +49,12 @@ const analyticsItems = [
 
 const toolsItems = [
   { labelKey: 'nav.budgetMaker', href: '/dashboard/budget-maker', icon: ListChecks },
+] as const;
+
+// Tools that only appear when their feature flag is on for this user. Kept separate from
+// `toolsItems` so the ungated arrays stay plain data.
+const featureGatedToolsItems = [
+  { labelKey: 'nav.screenshotImport', href: '/dashboard/import/screenshot', icon: ScanLine, flag: 'screenshot_import' },
 ] as const;
 
 const calculatorsItems = [
@@ -73,6 +81,15 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
     staleTime: 5 * 60 * 1000,
   });
   const dueRecurringCount = (recurringData?.data ?? []).filter((r) => daysDiff(r.next_date) <= 0).length;
+
+  const { data: featureFlags } = useFeatureFlags();
+  const enabledFlags = new Set(
+    (featureFlags ?? []).filter((f) => f.is_enabled).map((f) => f.feature_key)
+  );
+  const visibleToolsItems = [
+    ...toolsItems,
+    ...featureGatedToolsItems.filter((item) => enabledFlags.has(item.flag)),
+  ];
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return location.pathname === href;
@@ -263,7 +280,7 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
           <div className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
             {!collapsed && t('nav.tools')}
           </div>
-          {toolsItems.map((item) => (
+          {visibleToolsItems.map((item) => (
             <NavLink
               key={item.href}
               to={item.href}

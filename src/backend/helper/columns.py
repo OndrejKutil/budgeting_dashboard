@@ -118,3 +118,27 @@ class TRANSACTION_TAGS_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+
+
+class FEATURES_COLUMNS(Enum):
+    ID = "features_id_pk"
+    KEY = "feature_key"
+    NAME = "feature_name"
+    DESCRIPTION = "feature_description"
+    IS_ACTIVE = "is_active"
+    CREATED_AT = "created_at"
+
+    def __str__(self):
+        return self.value
+
+
+class FEATURES_USERS_COLUMNS(Enum):
+    ID = "features_users_id_pk"
+    USER_ID = "user_id_fk"
+    KEY = "feature_key"
+    IS_ENABLED = "is_enabled"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+
+    def __str__(self):
+        return self.value

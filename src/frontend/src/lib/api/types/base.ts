@@ -556,3 +556,59 @@ export interface DividendCalculationResult {
     portfolio_value: number;
     rows: DividendStockRow[];
 }
+
+// ================================================================================================
+//                                   Feature Flags
+// ================================================================================================
+
+/**
+ * A single feature and whether it is enabled for the current user
+ * Matches backend FeatureFlagData schema
+ */
+export interface FeatureFlag {
+    feature_key: string;
+    feature_name: string;
+    feature_description: string | null;
+    is_enabled: boolean;
+}
+
+// ================================================================================================
+//                                   Screenshot Import
+// ================================================================================================
+
+/**
+ * Where a draft field's value came from.
+ * Matches backend FieldSource enum — drives the per-field provenance badges in the review UI.
+ */
+export type FieldSource = 'rule' | 'model' | 'default' | 'none';
+
+/**
+ * One proposed transaction extracted from a screenshot.
+ * Nothing here is final: the category is a best guess. There is no separate merchant field --
+ * the app doesn't store one on a real transaction, so the merchant name is prefilled into
+ * `notes` instead.
+ * Matches backend DraftTransactionData schema
+ */
+export interface DraftTransaction {
+    amount: number | null;
+    currency: string | null;
+    date: string | null;
+    account_id_fk: string | null;
+    category_id_fk: number | null;
+    notes: string | null;
+    confidence: number;
+    field_sources: Partial<Record<keyof DraftTransaction, FieldSource>>;
+    warnings: string[];
+}
+
+/**
+ * Result of one screenshot extraction, plus how it was produced
+ * Matches backend ExtractionData schema
+ */
+export interface ExtractionData {
+    drafts: DraftTransaction[];
+    inference_model: string | null;
+    inference_called: boolean;
+    rules_hit: number;
+    raw_text: string | null;
+}

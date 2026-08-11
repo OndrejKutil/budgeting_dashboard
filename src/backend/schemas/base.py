@@ -774,3 +774,75 @@ class DividendCalculationResult(BaseModel):
     model_config = ConfigDict(
         json_encoders={Decimal: float}
     )
+
+
+# ================================================================================================
+#                                   Feature Flags
+# ================================================================================================
+
+class FeatureFlagData(BaseModel):
+    """A single feature and whether it is enabled for the current user"""
+    feature_key: str = Field(..., description="Stable identifier the code branches on")
+    feature_name: str = Field(..., description="Human-readable feature name")
+    feature_description: str | None = Field(None, description="What the feature does")
+    is_enabled: bool = Field(..., description="Whether the feature is enabled for this user")
+
+
+# ================================================================================================
+#                                   Screenshot Import
+# ================================================================================================
+
+class FieldSource(str, Enum):
+    """
+    Where a draft field's value came from.
+
+    The review UI shows this per field, and it is what makes the rules-first design legible:
+    a field sourced from MODEL that the user corrects is exactly the signal that should become
+    a rule, so the next import sources it from RULE instead.
+    """
+    RULE = "rule"        # matched a deterministic user rule
+    MODEL = "model"      # the model guessed it
+    DEFAULT = "default"  # filled from user context (e.g. their only account, home currency)
+    NONE = "none"        # nothing produced a value; the user must supply it
+
+    def __str__(self):
+        return self.value
+
+
+class DraftTransactionData(BaseModel):
+    """
+    One proposed transaction extracted from a screenshot.
+
+    Nothing here is final. Amounts and dates should be right nearly always, the category is a
+    best guess. There is no separate merchant field -- the app doesn't store one on a real
+    transaction, so the merchant name (when read) is prefilled straight into `notes` instead.
+    """
+    amount: Decimal | None = Field(None, description="Transaction amount")
+    currency: str | None = Field(None, description="Currency code as read from the screenshot")
+    date: Date | None = Field(None, description="Transaction date")
+    account_id_fk: str | None = Field(None, description="Resolved account ID, if one could be determined")
+    category_id_fk: int | None = Field(None, description="Best-guess category ID")
+    notes: str | None = Field(None, description="Prefilled with the merchant name when read; freely editable")
+    confidence: float = Field(0.0, ge=0.0, le=1.0, description="Overall confidence in this draft (0-1)")
+    field_sources: dict[str, FieldSource] = Field(
+        default_factory=dict,
+        description="Per-field provenance, keyed by field name"
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Anything the user should look at before saving this draft"
+    )
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float}
+    )
+
+
+class ExtractionData(BaseModel):
+    """Result of one screenshot extraction, plus how it was produced."""
+    drafts: list[DraftTransactionData] = Field(..., description="Proposed transactions for review")
+    # Named inference_* rather than model_*: pydantic v2 reserves the `model_` field namespace.
+    inference_model: str | None = Field(None, description="Model identifier, if one was called")
+    inference_called: bool = Field(False, description="Whether the model ran, or rules covered it")
+    rules_hit: int = Field(0, description="Number of fields resolved by deterministic rules")
+    raw_text: str | None = Field(None, description="Raw text read off the screenshot, for debugging")
