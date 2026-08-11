@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import abc
 import logging
+from typing import cast
 
 from groq import APIStatusError, Groq
+from groq.types.chat import ChatCompletionMessageParam
 
 from .environment import INFERENCE_API_KEY
 
@@ -105,13 +107,20 @@ class GroqLLMClient(LLMClient):
         user_content: UserContent,
         temperature: float,
     ) -> str:
+        # UserContent stays provider-agnostic (str | list[dict]) at the LLMClient boundary, so
+        # mypy can't structurally match it against Groq's TypedDict message params -- cast here,
+        # confined to this Groq-specific implementation, since the runtime shape is correct.
+        messages = cast(
+            "list[ChatCompletionMessageParam]",
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+        )
         try:
             completion = self._client.chat.completions.create(
                 model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+                messages=messages,
                 temperature=temperature,
                 response_format={"type": "json_object"},
             )
