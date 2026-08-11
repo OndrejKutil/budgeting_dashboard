@@ -14,7 +14,6 @@ from .base import (
     ExpenseRowResponse,
     ExtractionData,
     FeatureFlagData,
-    FIREData,
     IncomeRowResponse,
     InvestmentRowResponse,
     MonthlyAnalyticsData,
@@ -273,13 +272,6 @@ class YearlyAnalyticsResponse(BaseModel):
 class EmergencyFundResponse(BaseModel):
     """Response schema for emergency fund analysis endpoint"""
     data: EmergencyFundData = Field(..., description="Emergency fund analysis data")
-    success: bool = Field(..., description="Indicates if the request was successful")
-    message: str = Field(..., description="Response message")
-
-
-class FIREResponse(BaseModel):
-    """Response schema for FIRE dashboard endpoint"""
-    data: FIREData = Field(..., description="FIRE analysis data")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
 

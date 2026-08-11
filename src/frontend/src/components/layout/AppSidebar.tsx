@@ -23,7 +23,6 @@ import {
   ListChecks,
   CircleDollarSign,
   Repeat,
-  Flame,
   GitFork,
   ScanLine,
 } from 'lucide-react';
@@ -58,7 +57,6 @@ const featureGatedToolsItems = [
 ] as const;
 
 const calculatorsItems = [
-  { labelKey: 'nav.fire', href: '/dashboard/fire-calculator', icon: Flame },
   { labelKey: 'nav.investingCalculator', href: '/dashboard/investing-calculator', icon: Landmark },
   { labelKey: 'nav.dividendCalculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },
 ] as const;

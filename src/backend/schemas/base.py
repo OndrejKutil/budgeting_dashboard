@@ -545,39 +545,6 @@ class EmergencyFundData(BaseModel):
     )
 
 
-class FIREData(BaseModel):
-    """Schema for FIRE (Financial Independence / Retire Early) dashboard data"""
-    year: int = Field(..., description="Reference year for expense calculations")
-    base_currency: str = Field(..., description="Base currency for all amounts")
-
-    # FI target numbers (25× annual spending — 4% rule)
-    fi_number: float = Field(..., description="Standard FI number: 25× annual Core+Necessary expenses")
-    lean_fi_number: float = Field(..., description="Lean FI number: 25× annual Core-only expenses")
-    fat_fi_number: float = Field(..., description="Fat FI number: 25× annual Core+Necessary+Fun expenses")
-
-    # Current state
-    current_net_worth: float = Field(..., description="Current net worth in base currency")
-    annual_income: float = Field(..., description="Trailing-12-month income")
-    annual_savings: float = Field(..., description="Trailing-12-month savings (income − expenses − investments)")
-    savings_rate: float = Field(..., description="Trailing-12-month savings rate as % of income")
-
-    # Progress (capped at 100 for display)
-    fi_progress_pct: float = Field(..., description="Progress towards standard FI number (%)")
-    lean_progress_pct: float = Field(..., description="Progress towards Lean FI number (%)")
-    fat_progress_pct: float = Field(..., description="Progress towards Fat FI number (%)")
-
-    # Projections (None when not enough data)
-    years_to_fi: float | None = Field(None, description="Estimated years to standard FI at 7% annual growth + current savings rate")
-    projected_fi_year: int | None = Field(None, description="Calendar year of estimated FI achievement")
-    coast_fi_years: float | None = Field(None, description="Years until current NW alone grows to FI number at 7% (Coast FI)")
-
-    # Monthly expense breakdowns (for display)
-    monthly_core_expenses: float = Field(..., description="Average monthly Core-only expenses")
-    monthly_core_necessary_expenses: float = Field(..., description="Average monthly Core+Necessary expenses")
-    monthly_all_expenses: float = Field(..., description="Average monthly Core+Necessary+Fun expenses")
-    months_analyzed: int = Field(..., description="Number of months with expense data")
-
-
 # ================================================================================================
 #                                   Profile Schemas
 # ================================================================================================
