@@ -213,6 +213,7 @@ pytest                                  # tests + coverage
 | `DEVELOPMENT_MODE`    | Flag for dev-specific behavior             |
 | `INFERENCE_API_KEY`   | Vision-model API key for `/screenshot-import` |
 | `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` |
+| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` |
 
 ---
 
