@@ -452,7 +452,6 @@ export default function ScreenshotImportPage() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={(e) => acceptFile(e.target.files?.[0])}
           />
