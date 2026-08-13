@@ -184,6 +184,13 @@ docker-compose up -d
 - `ADMIN_KEY` - Admin authentication key
 - `FRONTEND_URL` - Frontend URL for CORS
 
+**Required if the Trading212 integration is used:**
+- `T212_ENCRYPTION_KEY` - Fernet key encrypting stored T212 credentials at rest. Generate with
+  `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+  Rotating it invalidates every stored connection (users must reconnect).
+- `T212_SYNC_JOB_SECRET` - Authenticates the Pi cron job against `POST /trading212/sync-all`.
+  Deliberately separate from `ADMIN_KEY` (see QUESTIONS.md §5).
+
 **Optional:**
 - `DEVELOPMENT_MODE` - Set to `False` for production (default: `False`)
 
@@ -192,6 +199,7 @@ docker-compose up -d
 - [ ] Set `DEVELOPMENT_MODE=False`
 - [ ] Use HTTPS for `FRONTEND_URL` and `PROJECT_URL`
 - [ ] Generate strong random keys for `API_KEY` and `ADMIN_KEY`
+- [ ] If using Trading212: generate `T212_ENCRYPTION_KEY` and `T212_SYNC_JOB_SECRET`, keep both out of version control
 - [ ] Never commit `.env` file to version control
 - [ ] Use secrets management (AWS Secrets Manager, Azure Key Vault, etc.)
 - [ ] Enable HTTPS/TLS on your deployment platform
