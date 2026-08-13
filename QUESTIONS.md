@@ -97,3 +97,18 @@ real cost, and it removes the dependency on a query-builder method the pinned cl
 have. `sync_one_connection`'s own DB calls remain unverified by the automated test suite (it's
 explicitly out of scope there, per that file's docstring) — worth a manual pass over the rest of
 that function's Supabase calls if anything else looks off in practice.
+
+## 9. Frontend double-`.data` unwrap bug in trading212Api
+
+Also only caught by driving the real app, not by `tsc`/`eslint` (both are structurally valid
+TypeScript, just wrong at the value level). `apiClient.get<T>()` returns `{data: T, status}`.
+`trading212Api`'s endpoints were written to return that raw wrapper unmodified (the
+`dividendApi` convention), but `Trading212Page.tsx`'s queries were written assuming a single
+`.data` reaches the actual payload (the `netWorthApi` convention, which unwraps once inside the
+endpoint function). The mismatch meant `connection.connected` read a field one level too
+shallow -- always `undefined` -- so the page showed the disconnected/connect-form view
+regardless of what the backend actually returned; `GET /trading212/connection` itself was
+correct the whole time (confirmed via the network tab: `{"data":{"connected":true,...}}`),
+and a real connection + successful sync existed the entire time this looked broken. Fixed by
+switching `trading212Api` to the `netWorthApi` unwrap-once convention instead of touching every
+call site in the page.
