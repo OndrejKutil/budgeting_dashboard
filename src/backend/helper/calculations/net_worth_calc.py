@@ -54,6 +54,14 @@ def calculate_net_worth_timeline(
     # Savings-fund transactions are internal transfers (account outflow ↔ fund balance).
     # Including them double-subtracts their value: account balance is already reduced by
     # the contribution, so summing them again deflates net worth by the full fund total.
+    #
+    # DEPENDENCY: the Trading212 net-worth contribution (helper/trading212_networth.py) relies
+    # on this function summing every transaction with no category-type filter -- a transfer to
+    # T212 is a real outflow here regardless of how it's categorised, and T212's own synced
+    # value is what adds it back on the router side (SPEC.md §7). If category filtering (e.g.
+    # excluding `transfer`/`investment` types) is ever added to this timeline, a T212 deposit
+    # would stop being subtracted here while still being added back at the router, silently
+    # double-counting it. Check trading212_networth.py before adding any category filter here.
     df = df.filter(pl.col(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value).is_null())
 
     # Auto-detect start from earliest transaction when no explicit start given

@@ -130,6 +130,7 @@ from .routers import (  # noqa: E402
     summary,
     tags,
     token_refresh,
+    trading212,
     transactions,
     yearly_analytics,
 )
@@ -152,6 +153,7 @@ app.include_router(recurring.router, prefix="/recurring", tags=["Recurring"])
 app.include_router(net_worth.router, prefix="/net-worth", tags=["Net Worth"])
 app.include_router(features.router, prefix="/features", tags=["Features"])
 app.include_router(screenshot_import.router, prefix="/screenshot-import", tags=["Screenshot Import"])
+app.include_router(trading212.router, prefix="/trading212", tags=["Trading212"])
 
 
 # ================================================================================================

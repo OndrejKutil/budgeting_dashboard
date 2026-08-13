@@ -226,11 +226,21 @@ class RecurringSummary(BaseModel):
     base_currency: str = Field(..., description="Currency used for totals")
 
 
+class InvestmentContribution(BaseModel):
+    """The latest Trading212 portfolio value, folded into the net-worth headline (SPEC.md §7)."""
+    total_value: float = Field(..., description="Latest synced portfolio value, converted to base currency")
+    synced_at: str = Field(..., description="ISO timestamp of the snapshot this value came from")
+    is_stale: bool = Field(..., description="True when synced_at is older than ~2x the sync cadence")
+
+
 class NetWorthTimelineData(BaseModel):
     """Schema for net-worth timeline data point"""
     dates: list[str] = Field(..., description="ISO date strings")
     net_worth: list[float] = Field(..., description="Net worth values in base currency")
     base_currency: str = Field(..., description="Base currency used")
+    investments: InvestmentContribution | None = Field(
+        None, description="Latest T212 portfolio value, or null when the feature is off/unconnected/never synced"
+    )
 
 
 class TokenData(BaseModel):
@@ -813,3 +823,55 @@ class ExtractionData(BaseModel):
     inference_called: bool = Field(False, description="Whether the model ran, or rules covered it")
     rules_hit: int = Field(0, description="Number of fields resolved by deterministic rules")
     raw_text: str | None = Field(None, description="Raw text read off the screenshot, for debugging")
+
+
+# ================================================================================================
+#                                   Trading212 Integration
+# ================================================================================================
+
+class T212SyncStatus(str, Enum):
+    """Mirrors the dim_t212_connections_status_check constraint in the migration."""
+    NEVER = "never"
+    OK = "ok"
+    AUTH_FAILED = "auth_failed"
+    ERROR = "error"
+
+    def __str__(self):
+        return self.value
+
+
+class T212ConnectionData(BaseModel):
+    """GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6)."""
+    connected: bool = Field(..., description="Whether this user has a stored Trading212 connection")
+    last_synced_at: str | None = Field(None, description="ISO timestamp of the last successful sync")
+    last_sync_status: T212SyncStatus = Field(..., description="never | ok | auth_failed | error")
+    account_currency: str | None = Field(None, description="T212 account's primary currency, once known")
+
+
+class T212PositionData(BaseModel):
+    """One open position from the latest synced snapshot, in the account's primary currency."""
+    ticker: str = Field(..., description="T212 instrument ticker")
+    quantity: float = Field(..., description="Shares held")
+    average_price: float = Field(..., description="Average price paid per share")
+    current_price: float = Field(..., description="Current market price per share")
+    market_value: float = Field(..., description="quantity * current_price")
+    ppl: float = Field(..., description="Profit/loss on this position")
+
+
+class T212PositionsData(BaseModel):
+    """GET /trading212/positions."""
+    positions: list[T212PositionData] = Field(default_factory=list, description="Latest synced positions")
+    synced_at: str | None = Field(None, description="ISO timestamp of the snapshot these positions came from")
+    account_currency: str | None = Field(None, description="Currency all values above are denominated in")
+
+
+class T212ValueHistoryPoint(BaseModel):
+    """One row from fct_t212_value_history."""
+    snapshot_at: str = Field(..., description="ISO timestamp of this snapshot")
+    total_value: float = Field(..., description="Portfolio total value at this snapshot")
+
+
+class T212HistoryData(BaseModel):
+    """GET /trading212/history."""
+    points: list[T212ValueHistoryPoint] = Field(default_factory=list, description="Value-history series")
+    account_currency: str | None = Field(None, description="Currency total_value is denominated in")

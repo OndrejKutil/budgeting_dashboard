@@ -256,3 +256,9 @@ class DividendPortfolioRequest(BaseModel):
             }
         }
     )
+
+
+class T212ConnectionRequest(BaseModel):
+    """POST /trading212/connection. T212 issues a key+secret pair, not a single key (QUESTIONS.md §1)."""
+    api_key: str = Field(..., min_length=1, max_length=512, description="Trading212 API key")
+    api_secret: str = Field(..., min_length=1, max_length=512, description="Trading212 API secret")
