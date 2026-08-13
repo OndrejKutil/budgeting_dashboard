@@ -89,9 +89,13 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.warning(f"Validation failed for {request.method} {request.url.path}: {exc.errors()}")
+    # exc.errors() can include the raw "input" value (request body contents, which may hold
+    # secrets like a Trading212 API key on a malformed /trading212/connection POST) -- logging
+    # the flattened, message-only string instead avoids writing that into the server log.
+    flattened = flatten_validation_errors(exc.errors())
+    logger.warning(f"Validation failed for {request.method} {request.url.path}: {flattened}")
     return JSONResponse(
-        {"detail": flatten_validation_errors(exc.errors()), "error_id": None},
+        {"detail": flattened, "error_id": None},
         status_code=422,
     )
 
