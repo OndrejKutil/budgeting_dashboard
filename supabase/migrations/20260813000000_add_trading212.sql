@@ -2,12 +2,14 @@
 -- snapshot, and an append-only value-history log used to add an "invested" figure to net worth.
 --
 -- See SPEC.md §§2-4 and QUESTIONS.md for the design rationale. Three tables, all
--- user_id_fk-keyed with the standard four RLS policies, matching fct_dividend_portfolios
--- (SPEC.md §3):
+-- user_id_fk-keyed and RLS-scoped to auth.uid(), matching fct_dividend_portfolios (SPEC.md §3):
 --
 --   fct_t212_connection    -- one row per user; holds the encrypted T212 credentials
+--                             (SELECT/INSERT/UPDATE/DELETE)
 --   fct_t212_positions     -- latest snapshot, upserted + stale rows deleted each sync
+--                             (SELECT/INSERT/UPDATE/DELETE)
 --   fct_t212_value_history -- one row appended per successful sync; never updated or bulk-deleted
+--                             (SELECT/INSERT/DELETE -- no UPDATE policy, rows are immutable)
 --
 -- The encrypted blob is opaque to Postgres -- encryption/decryption happens in the backend
 -- (helper/trading212_crypto.py) using a key (T212_ENCRYPTION_KEY) that only the backend process
