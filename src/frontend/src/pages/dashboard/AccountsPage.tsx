@@ -612,12 +612,30 @@ export default function AccountsPage() {
           </div>
         ) : (
           <>
-            <div className="mb-3">
+            <div className="mb-3 flex flex-wrap items-baseline gap-2">
               <p className="text-2xl font-bold font-display">
                 <SensitiveValue>
                   {formatCurrency(netWorthChartData[netWorthChartData.length - 1]?.value ?? 0)}
                 </SensitiveValue>
               </p>
+              {/* Headline stays liquid-only, by explicit choice -- overrides SPEC.md §7's
+                  "Total (liquid + invested)" decision. The invested chip below is purely
+                  informational, not folded into the headline number. */}
+              {netWorthData?.investments && (
+                <span
+                  className={cn(
+                    'rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium',
+                    netWorthData.investments.is_stale ? 'text-muted-foreground' : 'text-emerald-500'
+                  )}
+                >
+                  <SensitiveValue>
+                    {t('pages.netWorth.investedChip', {
+                      amount: formatCurrency(netWorthData.investments.total_value),
+                    })}
+                  </SensitiveValue>
+                  {netWorthData.investments.is_stale && ` (${t('pages.netWorth.investedStale')})`}
+                </span>
+              )}
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={netWorthChartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>

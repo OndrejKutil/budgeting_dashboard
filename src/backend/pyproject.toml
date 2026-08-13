@@ -41,6 +41,8 @@ dependencies = [
     # Fix the missing type hints in some dependencies
     "types-python-dateutil",
     "groq>=1.6.0",
+    # Encrypting the Trading212 API key/secret at rest
+    "cryptography>=42.0.0",
 ]
 
 # Install (from src/backend/):

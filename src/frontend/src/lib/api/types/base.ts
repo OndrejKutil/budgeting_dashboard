@@ -467,10 +467,21 @@ export interface RecurringSummary {
 //                                   Net Worth Types
 // ================================================================================================
 
+/**
+ * The latest Trading212 portfolio value folded into the net-worth headline (SPEC.md §7).
+ * Matches backend InvestmentContribution schema.
+ */
+export interface InvestmentContribution {
+    total_value: number;
+    synced_at: string;
+    is_stale: boolean;
+}
+
 export interface NetWorthTimeline {
     dates: string[];
     net_worth: number[];
     base_currency: string;
+    investments: InvestmentContribution | null;
 }
 
 // ================================================================================================
@@ -572,3 +583,59 @@ export interface ExtractionData {
     rules_hit: number;
     raw_text: string | null;
 }
+
+// ================================================================================================
+//                                   Trading212 Integration
+// ================================================================================================
+
+/** Matches backend T212SyncStatus enum. null means no sync has been attempted yet. */
+export type T212SyncStatus = 'ok' | 'auth_failed' | 'rate_limited' | 'error' | null;
+
+/**
+ * GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6).
+ * Matches backend T212ConnectionData schema.
+ */
+export interface T212Connection {
+    connected: boolean;
+    last_synced_at: string | null;
+    last_sync_status: T212SyncStatus;
+    account_currency: string | null;
+}
+
+/**
+ * One open position from the latest synced snapshot, converted to the caller's base currency.
+ * Matches backend T212PositionData schema.
+ */
+export interface T212Position {
+    ticker: string;
+    quantity: number;
+    average_price: number;
+    current_price: number;
+    market_value: number;
+    unrealised_pnl: number;
+    weight_pct: number;
+}
+
+/** Matches backend T212PositionsData schema. */
+export interface T212Positions {
+    positions: T212Position[];
+    synced_at: string | null;
+    /** Currency all values above are converted to (the caller's base currency). */
+    currency: string | null;
+}
+
+/** One row from fct_t212_value_history. Matches backend T212ValueHistoryPoint schema. */
+export interface T212ValueHistoryPoint {
+    snapshot_at: string;
+    total_value: number;
+}
+
+/** Matches backend T212HistoryData schema. */
+export interface T212History {
+    points: T212ValueHistoryPoint[];
+    /** Currency total_value is converted to (the caller's base currency). */
+    currency: string | null;
+}
+
+/** Query span for GET /trading212/history. */
+export type T212HistorySpan = '7d' | '1m' | '3m' | 'ytd' | '1y' | 'all';

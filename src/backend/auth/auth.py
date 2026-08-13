@@ -24,13 +24,15 @@ logger.setLevel(logging.INFO)
 API_KEY: str | None = env.API_KEY
 PROJECT_URL: str | None = env.PROJECT_URL
 ANON_KEY: str | None = env.ANON_KEY
-SUPABASE_JWT_SECRET: str | None = env.SUPABASE_JWT_SECRET
+SUPABASE_JWT_SECRET: str = env.SUPABASE_JWT_SECRET
 ADMIN_KEY: str | None = env.ADMIN_KEY
+T212_SYNC_JOB_SECRET: str | None = env.T212_SYNC_JOB_SECRET
 
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=False, scheme_name="API Key")
 supabase_refresh_token_header = APIKeyHeader(name="X-Refresh-Token", auto_error=False, scheme_name="Refresh Token")
 authorization_header = APIKeyHeader(name="Authorization", auto_error=False, scheme_name="Bearer Token")
 admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False, scheme_name="Admin Key")
+job_secret_header = APIKeyHeader(name="X-Job-Secret", auto_error=False, scheme_name="Job Secret")
 
 
 # ================================================================================================
@@ -169,10 +171,36 @@ async def admin_key_auth(admin_key: str = Depends(admin_key_header)) -> str:
     
     if admin_key != ADMIN_KEY:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Admin key"
         )
 
     return admin_key
+
+
+# ================================================================================================
+#                                   Job Secret Authentication
+# ================================================================================================
+
+async def job_secret_auth(job_secret: str = Depends(job_secret_header)) -> str:
+    """
+    Dependency for unattended background jobs (currently: the Trading212 sync cron running on
+    the Pi). Deliberately a separate secret from ADMIN_KEY -- this one lives unattended in a
+    long-running process outside this server, so a leak there should not also compromise
+    admin-only endpoints reachable from a browser.
+    """
+    if not job_secret:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job secret is missing",
+        )
+
+    if not T212_SYNC_JOB_SECRET or job_secret != T212_SYNC_JOB_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid job secret"
+        )
+
+    return job_secret
 
 

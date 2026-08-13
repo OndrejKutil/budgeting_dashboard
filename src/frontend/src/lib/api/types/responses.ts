@@ -22,6 +22,9 @@ import type {
     Recurring,
     RecurringSummary,
     NetWorthTimeline,
+    T212Connection,
+    T212History,
+    T212Positions,
 } from './base';
 
 // ================================================================================================
@@ -359,4 +362,33 @@ export interface ExtractionResponse {
     success: boolean;
     message: string;
     data: ExtractionData | null;
+}
+
+// ================================================================================================
+//                                   Trading212 Integration
+// ================================================================================================
+
+export interface T212ConnectionResponse {
+    data: T212Connection;
+    success: boolean;
+    message: string;
+}
+
+/** POST/DELETE /trading212/connection and POST /trading212/sync. */
+export interface T212ConnectionSuccessResponse {
+    success: boolean;
+    message: string;
+    data: T212Connection | null;
+}
+
+export interface T212PositionsResponse {
+    data: T212Positions;
+    success: boolean;
+    message: string;
+}
+
+export interface T212HistoryResponse {
+    data: T212History;
+    success: boolean;
+    message: string;
 }

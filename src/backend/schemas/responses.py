@@ -25,6 +25,9 @@ from .base import (
     SavingsRowResponse,
     SpendingType,
     SummaryData,
+    T212ConnectionData,
+    T212HistoryData,
+    T212PositionsData,
     TagData,
     TokenData,
     TransactionData,
@@ -579,3 +582,31 @@ class ExtractionResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the extraction succeeded")
     message: str = Field(..., description="Response message")
     data: ExtractionData | None = Field(None, description="Extracted drafts and provenance")
+
+
+class T212ConnectionResponse(BaseModel):
+    """Response schema for GET /trading212/connection"""
+    data: T212ConnectionData = Field(..., description="Connection state; never includes the key/secret")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class T212ConnectionSuccessResponse(BaseModel):
+    """Response schema for POST/DELETE /trading212/connection and POST /trading212/sync"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: T212ConnectionData | None = Field(None, description="Resulting connection state, if applicable")
+
+
+class T212PositionsResponse(BaseModel):
+    """Response schema for GET /trading212/positions"""
+    data: T212PositionsData = Field(..., description="Latest synced positions snapshot")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+
+class T212HistoryResponse(BaseModel):
+    """Response schema for GET /trading212/history"""
+    data: T212HistoryData = Field(..., description="Portfolio value-history series")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")

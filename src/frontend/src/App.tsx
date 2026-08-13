@@ -44,6 +44,7 @@ const InvestingCalculator = lazy(() => import("./pages/dashboard/InvestingCalcul
 const DividendCalculator = lazy(() => import("./pages/dashboard/DividendCalculator"));
 const RecurringPage = lazy(() => import("./pages/dashboard/RecurringPage"));
 const ScreenshotImportPage = lazy(() => import("./pages/dashboard/ScreenshotImportPage"));
+const Trading212Page = lazy(() => import("./pages/dashboard/Trading212Page"));
 const CashFlowPage = lazy(() => import("./pages/dashboard/analytics/CashFlowPage"));
 
 const STALE_TIME: number = 1000 * 60 * 5; // 5 minutes
@@ -136,6 +137,7 @@ const AppContent = () => {
                 <Route path="investing-calculator" element={withSuspense(<InvestingCalculator />, <DashboardSkeleton />)} />
                 <Route path="dividend-calculator" element={withSuspense(<DividendCalculator />, <DashboardSkeleton />)} />
                 <Route path="import/screenshot" element={withSuspense(<ScreenshotImportPage />, <DashboardSkeleton />)} />
+                <Route path="trading212" element={withSuspense(<Trading212Page />, <DashboardSkeleton />)} />
               </Route>
 
               {/* Catch-all */}

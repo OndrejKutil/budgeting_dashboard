@@ -89,9 +89,13 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.warning(f"Validation failed for {request.method} {request.url.path}: {exc.errors()}")
+    # exc.errors() can include the raw "input" value (request body contents, which may hold
+    # secrets like a Trading212 API key on a malformed /trading212/connection POST) -- logging
+    # the flattened, message-only string instead avoids writing that into the server log.
+    flattened = flatten_validation_errors(exc.errors())
+    logger.warning(f"Validation failed for {request.method} {request.url.path}: {flattened}")
     return JSONResponse(
-        {"detail": flatten_validation_errors(exc.errors()), "error_id": None},
+        {"detail": flattened, "error_id": None},
         status_code=422,
     )
 
@@ -126,6 +130,7 @@ from .routers import (  # noqa: E402
     summary,
     tags,
     token_refresh,
+    trading212,
     transactions,
     yearly_analytics,
 )
@@ -148,6 +153,7 @@ app.include_router(recurring.router, prefix="/recurring", tags=["Recurring"])
 app.include_router(net_worth.router, prefix="/net-worth", tags=["Net Worth"])
 app.include_router(features.router, prefix="/features", tags=["Features"])
 app.include_router(screenshot_import.router, prefix="/screenshot-import", tags=["Screenshot Import"])
+app.include_router(trading212.router, prefix="/trading212", tags=["Trading212"])
 
 
 # ================================================================================================

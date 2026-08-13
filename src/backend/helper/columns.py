@@ -142,3 +142,49 @@ class FEATURES_USERS_COLUMNS(Enum):
 
     def __str__(self):
         return self.value
+
+
+class T212_CONNECTION_COLUMNS(Enum):
+    ID_PK = "id_pk"
+    USER_ID_FK = "user_id_fk"
+    CREDENTIALS_CIPHERTEXT = "credentials_ciphertext"
+    KEY_VERSION = "key_version"
+    ACCOUNT_CURRENCY = "account_currency"
+    LAST_SYNCED_AT = "last_synced_at"
+    LAST_SYNC_STATUS = "last_sync_status"
+    LAST_SYNC_ERROR = "last_sync_error"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+
+    def __str__(self):
+        return self.value
+
+
+class T212_POSITIONS_COLUMNS(Enum):
+    ID_PK = "id_pk"
+    USER_ID_FK = "user_id_fk"
+    TICKER = "ticker"
+    QUANTITY = "quantity"
+    AVERAGE_PRICE = "average_price"
+    CURRENT_PRICE = "current_price"
+    MARKET_VALUE = "market_value"
+    UNREALISED_PNL = "unrealised_pnl"
+    CURRENCY = "currency"
+    SYNCED_AT = "synced_at"
+
+    def __str__(self):
+        return self.value
+
+
+class T212_VALUE_HISTORY_COLUMNS(Enum):
+    ID_PK = "id_pk"
+    USER_ID_FK = "user_id_fk"
+    TOTAL_VALUE = "total_value"
+    CASH_VALUE = "cash_value"
+    INVESTED_VALUE = "invested_value"
+    CURRENCY = "currency"
+    SNAPSHOT_AT = "snapshot_at"
+    CREATED_AT = "created_at"
+
+    def __str__(self):
+        return self.value
