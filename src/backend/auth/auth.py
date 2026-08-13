@@ -24,7 +24,7 @@ logger.setLevel(logging.INFO)
 API_KEY: str | None = env.API_KEY
 PROJECT_URL: str | None = env.PROJECT_URL
 ANON_KEY: str | None = env.ANON_KEY
-SUPABASE_JWT_SECRET: str | None = env.SUPABASE_JWT_SECRET
+SUPABASE_JWT_SECRET: str = env.SUPABASE_JWT_SECRET
 ADMIN_KEY: str | None = env.ADMIN_KEY
 T212_SYNC_JOB_SECRET: str | None = env.T212_SYNC_JOB_SECRET
 
