@@ -233,3 +233,15 @@ export interface DividendPortfolioRequest {
     portfolio_value: number;
     portfolio: DividendStockRowRequest[];
 }
+
+// ================================================================================================
+//                                   Trading212 Integration
+// ================================================================================================
+
+/**
+ * POST /trading212/connection. T212 issues a key+secret pair, not a single key (QUESTIONS.md §1).
+ */
+export interface T212ConnectionRequest {
+    api_key: string;
+    api_secret: string;
+}

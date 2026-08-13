@@ -20,3 +20,4 @@ export { netWorthApi } from './netWorth';
 export { tagsApi } from './tags';
 export { featuresApi } from './features';
 export { screenshotImportApi } from './screenshotImport';
+export { trading212Api } from './trading212';
