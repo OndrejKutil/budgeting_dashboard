@@ -286,7 +286,7 @@ export default function Trading212Page() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border border-border bg-card p-6 shadow-sm"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <p className="text-sm font-medium">{t('pages.trading212.valueChartTitle')}</p>
               <div className="flex gap-1">
                 {SPANS.map((s) => (
@@ -303,6 +303,19 @@ export default function Trading212Page() {
                 ))}
               </div>
             </div>
+
+            {!historyLoading && chartData.length > 0 && (
+              <div className="mb-3">
+                <p className="text-2xl font-bold font-display">
+                  <SensitiveValue>{formatCurrency(chartData[chartData.length - 1].value)}</SensitiveValue>
+                </p>
+                {connection?.last_synced_at && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at) })}
+                  </p>
+                )}
+              </div>
+            )}
 
             {historyLoading ? (
               <Skeleton className="h-[220px] w-full" />
@@ -331,7 +344,14 @@ export default function Trading212Page() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border border-border bg-card p-6 shadow-sm"
           >
-            <p className="text-sm font-medium mb-3">{t('pages.trading212.positionsTitle')}</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium">{t('pages.trading212.positionsTitle')}</p>
+              {positionsData?.synced_at && (
+                <p className="text-xs text-muted-foreground">
+                  {t('pages.trading212.lastSynced', { when: formatDate(positionsData.synced_at) })}
+                </p>
+              )}
+            </div>
             {positionsLoading ? (
               <Skeleton className="h-40 w-full" />
             ) : (positionsData?.positions.length ?? 0) === 0 ? (
