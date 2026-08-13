@@ -165,20 +165,20 @@ def sync_all_connections(service_client) -> dict[str, int]:
     skip is cron-only; the manual /sync endpoint always attempts, since a user clicking refresh
     is explicit evidence they may have just fixed something.
 
-    A never-synced connection has last_sync_status = NULL, and SQL's three-valued logic means a
-    plain "not equal to auth_failed" filter silently excludes NULL rows -- .or_() spells out
-    "NULL or not auth_failed" so a brand-new connection still gets its first sync.
+    Filtered in Python rather than at the query level: this table is one row per user, so
+    fetching it unfiltered is cheap, and it sidesteps postgrest-py 0.10.8 (pinned via
+    supabase==1.0.4) not exposing an .or_() query method -- a plain "!= auth_failed" filter at
+    the query level would also silently exclude never-synced (NULL last_sync_status) rows under
+    SQL's three-valued logic, which is the opposite of what a brand-new connection needs.
     """
-    response = (
-        service_client.table(CONNECTION_TABLE)
-        .select("*")
-        .or_(f"{T212_CONNECTION_COLUMNS.LAST_SYNC_STATUS.value}.is.null,"
-             f"{T212_CONNECTION_COLUMNS.LAST_SYNC_STATUS.value}.neq.auth_failed")
-        .execute()
-    )
+    response = service_client.table(CONNECTION_TABLE).select("*").execute()
+    connections = [
+        row for row in (response.data or [])
+        if row.get(T212_CONNECTION_COLUMNS.LAST_SYNC_STATUS.value) != "auth_failed"
+    ]
 
     results = {"ok": 0, "auth_failed": 0, "rate_limited": 0, "error": 0}
-    for connection in response.data or []:
+    for connection in connections:
         status = sync_one_connection(service_client, connection)
         results[status] = results.get(status, 0) + 1
 
