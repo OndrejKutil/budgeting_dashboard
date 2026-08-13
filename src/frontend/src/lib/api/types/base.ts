@@ -588,8 +588,8 @@ export interface ExtractionData {
 //                                   Trading212 Integration
 // ================================================================================================
 
-/** Matches backend T212SyncStatus enum. */
-export type T212SyncStatus = 'never' | 'ok' | 'auth_failed' | 'error';
+/** Matches backend T212SyncStatus enum. null means no sync has been attempted yet. */
+export type T212SyncStatus = 'ok' | 'auth_failed' | 'rate_limited' | 'error' | null;
 
 /**
  * GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6).
@@ -603,7 +603,7 @@ export interface T212Connection {
 }
 
 /**
- * One open position from the latest synced snapshot, already in the account's primary currency.
+ * One open position from the latest synced snapshot, converted to the caller's base currency.
  * Matches backend T212PositionData schema.
  */
 export interface T212Position {
@@ -612,14 +612,16 @@ export interface T212Position {
     average_price: number;
     current_price: number;
     market_value: number;
-    ppl: number;
+    unrealised_pnl: number;
+    weight_pct: number;
 }
 
 /** Matches backend T212PositionsData schema. */
 export interface T212Positions {
     positions: T212Position[];
     synced_at: string | null;
-    account_currency: string | null;
+    /** Currency all values above are converted to (the caller's base currency). */
+    currency: string | null;
 }
 
 /** One row from fct_t212_value_history. Matches backend T212ValueHistoryPoint schema. */
@@ -631,7 +633,8 @@ export interface T212ValueHistoryPoint {
 /** Matches backend T212HistoryData schema. */
 export interface T212History {
     points: T212ValueHistoryPoint[];
-    account_currency: string | null;
+    /** Currency total_value is converted to (the caller's base currency). */
+    currency: string | null;
 }
 
 /** Query span for GET /trading212/history. */

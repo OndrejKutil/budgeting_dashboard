@@ -11,13 +11,14 @@ as "never raises" without wading through the endpoint's own error handling.
 import datetime
 import logging
 
-from .columns import T212_CONNECTIONS_COLUMNS, T212_VALUE_HISTORY_COLUMNS
+from .columns import T212_VALUE_HISTORY_COLUMNS
 from .features import is_feature_enabled
 
 logger = logging.getLogger(__name__)
 
-CONNECTIONS_TABLE = "dim_t212_connections"
 VALUE_HISTORY_TABLE = "fct_t212_value_history"
+
+FEATURE_KEY = "t212_integration"
 
 # SPEC.md §7 "Staleness": stale once older than ~2x the 30-minute cron cadence.
 STALE_AFTER_MINUTES = 60
@@ -40,22 +41,16 @@ def get_t212_net_worth_contribution(db_client, access_token: str, base_currency:
     from ..schemas.base import InvestmentContribution  # local import: schemas -> nothing back-imports helper
 
     try:
-        if not is_feature_enabled(access_token, "trading212"):
+        if not is_feature_enabled(access_token, FEATURE_KEY):
             return None
-
-        connection_response = (
-            db_client.table(CONNECTIONS_TABLE)
-            .select(f"{T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value}")
-            .limit(1)
-            .execute()
-        )
-        if not connection_response.data:
-            return None
-        account_currency = connection_response.data[0].get(T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value)
 
         history_response = (
             db_client.table(VALUE_HISTORY_TABLE)
-            .select(f"{T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value},{T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value}")
+            .select(
+                f"{T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value},"
+                f"{T212_VALUE_HISTORY_COLUMNS.CURRENCY.value},"
+                f"{T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value}"
+            )
             .order(T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value, desc=True)
             .limit(1)
             .execute()
@@ -65,11 +60,15 @@ def get_t212_net_worth_contribution(db_client, access_token: str, base_currency:
 
         latest = history_response.data[0]
         total_value = float(latest[T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value])
+        # Stored in the account's own currency at snapshot time, converted at read time
+        # (SPEC.md §3) -- using this row's own currency rather than today's connection
+        # currency, in case the two ever diverge.
+        row_currency = latest.get(T212_VALUE_HISTORY_COLUMNS.CURRENCY.value)
         snapshot_at_raw = latest[T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value]
 
-        if account_currency and account_currency != base_currency:
+        if row_currency and row_currency != base_currency:
             from .exchange_rates import get_rate
-            total_value *= get_rate(account_currency, base_currency)
+            total_value *= get_rate(row_currency, base_currency)
 
         snapshot_at = _parse_timestamp(snapshot_at_raw)
         age = datetime.datetime.now(datetime.UTC) - snapshot_at

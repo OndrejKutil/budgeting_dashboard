@@ -13,7 +13,8 @@ from ..data.database import get_db_client, get_service_db_client
 from ..helper import trading212_client as t212
 
 # helpers
-from ..helper.columns import T212_CONNECTIONS_COLUMNS, T212_POSITIONS_COLUMNS, T212_VALUE_HISTORY_COLUMNS
+from ..helper.columns import T212_CONNECTION_COLUMNS, T212_POSITIONS_COLUMNS, T212_VALUE_HISTORY_COLUMNS
+from ..helper.exchange_rates import get_rate
 from ..helper.features import is_feature_enabled
 from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..helper.trading212_crypto import encrypt_credentials
@@ -46,9 +47,12 @@ router = APIRouter()
 
 #? prefix - /trading212
 
-FEATURE_KEY = "trading212"
+# Matches the feature_key registered in the migration (SPEC.md §2). Not "trading212" -- that
+# would silently desync from the row `is_feature_enabled` actually looks up, and the feature
+# would read as permanently off for everyone.
+FEATURE_KEY = "t212_integration"
 
-CONNECTIONS_TABLE = "dim_t212_connections"
+CONNECTION_TABLE = "fct_t212_connection"
 POSITIONS_TABLE = "fct_t212_positions"
 VALUE_HISTORY_TABLE = "fct_t212_value_history"
 
@@ -63,31 +67,34 @@ SPAN_DAYS: dict[str, int | None] = {
 
 
 def _require_feature(access_token: str) -> None:
+    """
+    404, not 403 (SPEC.md §2): a disabled feature must be indistinguishable from a route that
+    doesn't exist at all, so the generic detail text below deliberately doesn't mention
+    Trading212 or "feature" -- that alone would leak that the route exists.
+    """
     if not is_feature_enabled(access_token, FEATURE_KEY):
-        raise fastapi.HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Trading212 integration is not enabled for this account.",
-        )
+        raise fastapi.HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
 def _connection_to_data(row: dict) -> T212ConnectionData:
+    raw_status = row.get(T212_CONNECTION_COLUMNS.LAST_SYNC_STATUS.value)
     return T212ConnectionData(
         connected=True,
-        last_synced_at=row.get(T212_CONNECTIONS_COLUMNS.LAST_SYNCED_AT.value),
-        last_sync_status=T212SyncStatus(row.get(T212_CONNECTIONS_COLUMNS.LAST_SYNC_STATUS.value) or "never"),
-        account_currency=row.get(T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value),
+        last_synced_at=row.get(T212_CONNECTION_COLUMNS.LAST_SYNCED_AT.value),
+        last_sync_status=T212SyncStatus(raw_status) if raw_status else None,
+        account_currency=row.get(T212_CONNECTION_COLUMNS.ACCOUNT_CURRENCY.value),
     )
 
 
 def _not_connected() -> T212ConnectionData:
-    return T212ConnectionData(connected=False, last_synced_at=None, last_sync_status=T212SyncStatus.NEVER, account_currency=None)
+    return T212ConnectionData(connected=False, last_synced_at=None, last_sync_status=None, account_currency=None)
 
 
 def _get_connection_row(db_client, user_id: str) -> dict | None:
     response = (
-        db_client.table(CONNECTIONS_TABLE)
+        db_client.table(CONNECTION_TABLE)
         .select("*")
-        .eq(T212_CONNECTIONS_COLUMNS.USER_ID_FK.value, user_id)
+        .eq(T212_CONNECTION_COLUMNS.USER_ID_FK.value, user_id)
         .limit(1)
         .execute()
     )
@@ -140,6 +147,10 @@ async def create_connection(
     Connect a Trading212 account. Validates the key/secret against T212 *before* writing
     anything (SPEC.md §6) -- a bad key should fail this request, not surface 30 minutes later
     in a cron log. 409 if a connection already exists; disconnect first to rotate a key.
+
+    Read-only scope (SPEC.md §4.1) cannot be verified in code -- T212 exposes no scope
+    introspection endpoint (QUESTIONS.md §2) -- so it is enforced only by this backend never
+    calling a write endpoint, and documented as a manual step in the connect UI copy.
     """
     try:
         _require_feature(user["access_token"])
@@ -173,12 +184,11 @@ async def create_connection(
         encrypted = encrypt_credentials(payload.api_key, payload.api_secret)
 
         data = {
-            T212_CONNECTIONS_COLUMNS.USER_ID_FK.value: user["user_id"],
-            T212_CONNECTIONS_COLUMNS.ENCRYPTED_CREDENTIALS.value: encrypted,
-            T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value: summary.get("currency"),
-            T212_CONNECTIONS_COLUMNS.LAST_SYNC_STATUS.value: "never",
+            T212_CONNECTION_COLUMNS.USER_ID_FK.value: user["user_id"],
+            T212_CONNECTION_COLUMNS.CREDENTIALS_CIPHERTEXT.value: encrypted,
+            T212_CONNECTION_COLUMNS.ACCOUNT_CURRENCY.value: summary.get("currency"),
         }
-        db.table(CONNECTIONS_TABLE).insert(data).execute()
+        db.table(CONNECTION_TABLE).insert(data).execute()
 
         return T212ConnectionSuccessResponse(
             success=True,
@@ -227,8 +237,8 @@ async def delete_connection(
                 T212_VALUE_HISTORY_COLUMNS.USER_ID_FK.value, user["user_id"]
             ).execute()
 
-        db.table(CONNECTIONS_TABLE).delete().eq(
-            T212_CONNECTIONS_COLUMNS.ID_PK.value, existing[T212_CONNECTIONS_COLUMNS.ID_PK.value]
+        db.table(CONNECTION_TABLE).delete().eq(
+            T212_CONNECTION_COLUMNS.ID_PK.value, existing[T212_CONNECTION_COLUMNS.ID_PK.value]
         ).execute()
 
         return T212ConnectionSuccessResponse(
@@ -256,10 +266,15 @@ async def delete_connection(
 @limiter.limit(RATE_LIMITS["read_only"])
 async def get_positions(
     request: Request,
+    base_currency: str = Query("CZK", description="Currency to convert position values into"),
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
 ) -> T212PositionsResponse:
-    """Latest synced positions snapshot, already in the account's primary currency."""
+    """
+    Latest synced positions snapshot, converted to base_currency (SPEC.md §6). Stored values are
+    in the T212 account's own currency (§3); this is the read-time conversion §3 calls for, so a
+    stored figure never has to be rewritten when FX rates refresh.
+    """
     try:
         _require_feature(user["access_token"])
         db = get_db_client(user["access_token"])
@@ -267,7 +282,7 @@ async def get_positions(
         connection = _get_connection_row(db, user["user_id"])
         if connection is None:
             return T212PositionsResponse(
-                data=T212PositionsData(positions=[], synced_at=None, account_currency=None),
+                data=T212PositionsData(positions=[], synced_at=None, currency=None),
                 success=True,
                 message="No Trading212 connection found.",
             )
@@ -281,24 +296,32 @@ async def get_positions(
         )
 
         rows = response.data or []
-        positions = [
-            T212PositionData(
+        total_market_value = sum(float(row[T212_POSITIONS_COLUMNS.MARKET_VALUE.value]) for row in rows)
+
+        positions = []
+        for row in rows:
+            row_currency = row.get(T212_POSITIONS_COLUMNS.CURRENCY.value)
+            rate = get_rate(row_currency, base_currency)
+            market_value = float(row[T212_POSITIONS_COLUMNS.MARKET_VALUE.value])
+            weight_pct = (market_value / total_market_value * 100) if total_market_value else 0.0
+
+            positions.append(T212PositionData(
                 ticker=row[T212_POSITIONS_COLUMNS.TICKER.value],
-                quantity=row[T212_POSITIONS_COLUMNS.QUANTITY.value],
-                average_price=row[T212_POSITIONS_COLUMNS.AVERAGE_PRICE.value],
-                current_price=row[T212_POSITIONS_COLUMNS.CURRENT_PRICE.value],
-                market_value=row[T212_POSITIONS_COLUMNS.MARKET_VALUE.value],
-                ppl=row[T212_POSITIONS_COLUMNS.PPL.value],
-            )
-            for row in rows
-        ]
+                quantity=float(row[T212_POSITIONS_COLUMNS.QUANTITY.value]),
+                average_price=float(row[T212_POSITIONS_COLUMNS.AVERAGE_PRICE.value]) * rate,
+                current_price=float(row[T212_POSITIONS_COLUMNS.CURRENT_PRICE.value]) * rate,
+                market_value=market_value * rate,
+                unrealised_pnl=float(row[T212_POSITIONS_COLUMNS.UNREALISED_PNL.value]) * rate,
+                weight_pct=weight_pct,
+            ))
+
         synced_at = rows[0][T212_POSITIONS_COLUMNS.SYNCED_AT.value] if rows else None
 
         return T212PositionsResponse(
             data=T212PositionsData(
                 positions=positions,
                 synced_at=synced_at,
-                account_currency=connection.get(T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value),
+                currency=base_currency,
             ),
             success=True,
             message="Trading212 positions retrieved successfully.",
@@ -320,10 +343,15 @@ async def get_positions(
 async def get_history(
     request: Request,
     span: str = Query("3m", description="7d | 1m | 3m | ytd | 1y | all"),
+    base_currency: str = Query("CZK", description="Currency to convert value-history figures into"),
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
 ) -> T212HistoryResponse:
-    """Portfolio value-history series for the requested span."""
+    """
+    Portfolio value-history series for the requested span, converted to base_currency at read
+    time (SPEC.md §3) rather than at sync time, so a historical point doesn't drift when FX
+    rates are refreshed later.
+    """
     try:
         _require_feature(user["access_token"])
         if span not in SPAN_DAYS and span != "ytd":
@@ -333,11 +361,14 @@ async def get_history(
             )
 
         db = get_db_client(user["access_token"])
-        connection = _get_connection_row(db, user["user_id"])
 
         query = (
             db.table(VALUE_HISTORY_TABLE)
-            .select(f"{T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value},{T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value}")
+            .select(
+                f"{T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value},"
+                f"{T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value},"
+                f"{T212_VALUE_HISTORY_COLUMNS.CURRENCY.value}"
+            )
             .eq(T212_VALUE_HISTORY_COLUMNS.USER_ID_FK.value, user["user_id"])
         )
 
@@ -355,16 +386,14 @@ async def get_history(
         points = [
             T212ValueHistoryPoint(
                 snapshot_at=row[T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value],
-                total_value=row[T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value],
+                total_value=float(row[T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value])
+                * get_rate(row.get(T212_VALUE_HISTORY_COLUMNS.CURRENCY.value), base_currency),
             )
             for row in (response.data or [])
         ]
 
         return T212HistoryResponse(
-            data=T212HistoryData(
-                points=points,
-                account_currency=connection.get(T212_CONNECTIONS_COLUMNS.ACCOUNT_CURRENCY.value) if connection else None,
-            ),
+            data=T212HistoryData(points=points, currency=base_currency),
             success=True,
             message="Trading212 value history retrieved successfully.",
         )
@@ -413,6 +442,7 @@ async def manual_sync(
         messages = {
             "ok": "Trading212 synced successfully.",
             "auth_failed": "Trading212 rejected the stored credentials. Reconnect with a fresh key.",
+            "rate_limited": "Trading212 rate limit hit. Try again later.",
             "error": "Trading212 sync failed. It will retry on the next scheduled run.",
         }
 

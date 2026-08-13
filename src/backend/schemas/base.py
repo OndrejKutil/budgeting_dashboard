@@ -830,10 +830,10 @@ class ExtractionData(BaseModel):
 # ================================================================================================
 
 class T212SyncStatus(str, Enum):
-    """Mirrors the dim_t212_connections_status_check constraint in the migration."""
-    NEVER = "never"
+    """Mirrors the fct_t212_connection_status_check constraint in the migration."""
     OK = "ok"
     AUTH_FAILED = "auth_failed"
+    RATE_LIMITED = "rate_limited"
     ERROR = "error"
 
     def __str__(self):
@@ -844,25 +844,28 @@ class T212ConnectionData(BaseModel):
     """GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6)."""
     connected: bool = Field(..., description="Whether this user has a stored Trading212 connection")
     last_synced_at: str | None = Field(None, description="ISO timestamp of the last successful sync")
-    last_sync_status: T212SyncStatus = Field(..., description="never | ok | auth_failed | error")
+    last_sync_status: T212SyncStatus | None = Field(
+        None, description="null (no sync attempted yet) | ok | auth_failed | rate_limited | error"
+    )
     account_currency: str | None = Field(None, description="T212 account's primary currency, once known")
 
 
 class T212PositionData(BaseModel):
-    """One open position from the latest synced snapshot, in the account's primary currency."""
+    """One open position from the latest synced snapshot, converted to the caller's base currency."""
     ticker: str = Field(..., description="T212 instrument ticker")
     quantity: float = Field(..., description="Shares held")
     average_price: float = Field(..., description="Average price paid per share")
     current_price: float = Field(..., description="Current market price per share")
     market_value: float = Field(..., description="quantity * current_price")
-    ppl: float = Field(..., description="Profit/loss on this position")
+    unrealised_pnl: float = Field(..., description="Unrealised profit/loss on this position")
+    weight_pct: float = Field(..., description="This position's share of total portfolio market value, 0-100")
 
 
 class T212PositionsData(BaseModel):
     """GET /trading212/positions."""
     positions: list[T212PositionData] = Field(default_factory=list, description="Latest synced positions")
     synced_at: str | None = Field(None, description="ISO timestamp of the snapshot these positions came from")
-    account_currency: str | None = Field(None, description="Currency all values above are denominated in")
+    currency: str | None = Field(None, description="Currency all values above are converted to (the caller's base currency)")
 
 
 class T212ValueHistoryPoint(BaseModel):
@@ -874,4 +877,4 @@ class T212ValueHistoryPoint(BaseModel):
 class T212HistoryData(BaseModel):
     """GET /trading212/history."""
     points: list[T212ValueHistoryPoint] = Field(default_factory=list, description="Value-history series")
-    account_currency: str | None = Field(None, description="Currency total_value is denominated in")
+    currency: str | None = Field(None, description="Currency total_value is converted to (the caller's base currency)")

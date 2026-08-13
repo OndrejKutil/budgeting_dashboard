@@ -55,7 +55,7 @@ const toolsItems = [
 // `toolsItems` so the ungated arrays stay plain data.
 const featureGatedToolsItems = [
   { labelKey: 'nav.screenshotImport', href: '/dashboard/import/screenshot', icon: ScanLine, flag: 'screenshot_import' },
-  { labelKey: 'nav.trading212', href: '/dashboard/trading212', icon: LineChart, flag: 'trading212' },
+  { labelKey: 'nav.trading212', href: '/dashboard/trading212', icon: LineChart, flag: 't212_integration' },
 ] as const;
 
 const calculatorsItems = [

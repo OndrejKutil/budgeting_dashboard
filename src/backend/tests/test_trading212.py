@@ -24,7 +24,10 @@ if src_path not in sys.path:
 
 from backend.helper import environment as env  # noqa: E402
 from backend.helper import trading212_crypto  # noqa: E402
-from backend.helper.trading212_networth import STALE_AFTER_MINUTES, get_t212_net_worth_contribution  # noqa: E402
+from backend.helper.trading212_networth import (  # noqa: E402
+    STALE_AFTER_MINUTES,
+    get_t212_net_worth_contribution,
+)
 from backend.schemas.requests import T212ConnectionRequest  # noqa: E402
 
 # ================================================================================================
@@ -141,22 +144,11 @@ def test_contribution_none_when_feature_disabled(monkeypatch):
     assert get_t212_net_worth_contribution(db, "fake-token", "EUR") is None
 
 
-def test_contribution_none_when_no_connection(monkeypatch):
-    monkeypatch.setattr(
-        "backend.helper.trading212_networth.is_feature_enabled", lambda token, key: True
-    )
-    db = FakeDbClient({"dim_t212_connections": []})
-    assert get_t212_net_worth_contribution(db, "fake-token", "EUR") is None
-
-
 def test_contribution_none_when_never_synced(monkeypatch):
     monkeypatch.setattr(
         "backend.helper.trading212_networth.is_feature_enabled", lambda token, key: True
     )
-    db = FakeDbClient({
-        "dim_t212_connections": [{"account_currency": "EUR"}],
-        "fct_t212_value_history": [],
-    })
+    db = FakeDbClient({"fct_t212_value_history": []})
     assert get_t212_net_worth_contribution(db, "fake-token", "EUR") is None
 
 
@@ -169,8 +161,7 @@ def test_contribution_converts_currency_and_reports_fresh(monkeypatch):
     )
     now = datetime.datetime.now(datetime.UTC)
     db = FakeDbClient({
-        "dim_t212_connections": [{"account_currency": "USD"}],
-        "fct_t212_value_history": [{"total_value": 100.0, "snapshot_at": now.isoformat()}],
+        "fct_t212_value_history": [{"total_value": 100.0, "currency": "USD", "snapshot_at": now.isoformat()}],
     })
 
     result = get_t212_net_worth_contribution(db, "fake-token", "EUR")
@@ -186,8 +177,7 @@ def test_contribution_reports_stale_past_threshold(monkeypatch):
     )
     old = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=STALE_AFTER_MINUTES + 1)
     db = FakeDbClient({
-        "dim_t212_connections": [{"account_currency": "EUR"}],
-        "fct_t212_value_history": [{"total_value": 50.0, "snapshot_at": old.isoformat()}],
+        "fct_t212_value_history": [{"total_value": 50.0, "currency": "EUR", "snapshot_at": old.isoformat()}],
     })
 
     result = get_t212_net_worth_contribution(db, "fake-token", "EUR")

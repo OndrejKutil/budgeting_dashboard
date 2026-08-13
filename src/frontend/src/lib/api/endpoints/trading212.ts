@@ -21,11 +21,11 @@ export const trading212Api = {
             `/trading212/connection?delete_history=${deleteHistory}`
         ),
 
-    getPositions: () =>
-        apiClient.get<T212PositionsResponse>('/trading212/positions'),
+    getPositions: (baseCurrency: string) =>
+        apiClient.get<T212PositionsResponse>('/trading212/positions', { base_currency: baseCurrency }),
 
-    getHistory: (span: T212HistorySpan = '3m') =>
-        apiClient.get<T212HistoryResponse>('/trading212/history', { span }),
+    getHistory: (span: T212HistorySpan = '3m', baseCurrency?: string) =>
+        apiClient.get<T212HistoryResponse>('/trading212/history', { span, base_currency: baseCurrency }),
 
     sync: () =>
         apiClient.post<T212ConnectionSuccessResponse>('/trading212/sync'),

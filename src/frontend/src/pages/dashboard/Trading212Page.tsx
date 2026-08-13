@@ -32,12 +32,13 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
-const FEATURE_KEY = 'trading212';
+// Matches the feature_key registered in the migration (SPEC.md §2) -- not "trading212".
+const FEATURE_KEY = 't212_integration';
 
 const SPANS: T212HistorySpan[] = ['7d', '1m', '3m', 'ytd', '1y', 'all'];
 
 export default function Trading212Page() {
-  const { t, formatDate, formatCurrency } = useUser();
+  const { t, formatDate, formatCurrency, currency: userCurrency } = useUser();
   const { enabled, isLoading: flagLoading } = useFeatureFlag(FEATURE_KEY);
   const queryClient = useQueryClient();
 
@@ -45,6 +46,8 @@ export default function Trading212Page() {
   const [apiSecret, setApiSecret] = useState('');
   const [span, setSpan] = useState<T212HistorySpan>('3m');
   const [deleteHistory, setDeleteHistory] = useState(false);
+  const [sortBy, setSortBy] = useState<'market_value' | 'unrealised_pnl' | 'weight_pct'>('market_value');
+  const [sortDesc, setSortDesc] = useState(true);
 
   const { data: connection, isLoading: connectionLoading } = useQuery({
     queryKey: ['trading212', 'connection'],
@@ -55,14 +58,14 @@ export default function Trading212Page() {
   const isConnected = connection?.connected === true;
 
   const { data: positionsData, isLoading: positionsLoading } = useQuery({
-    queryKey: ['trading212', 'positions'],
-    queryFn: async () => (await trading212Api.getPositions()).data,
+    queryKey: ['trading212', 'positions', userCurrency],
+    queryFn: async () => (await trading212Api.getPositions(userCurrency)).data,
     enabled: enabled && isConnected,
   });
 
   const { data: historyData, isLoading: historyLoading } = useQuery({
-    queryKey: ['trading212', 'history', span],
-    queryFn: async () => (await trading212Api.getHistory(span)).data,
+    queryKey: ['trading212', 'history', span, userCurrency],
+    queryFn: async () => (await trading212Api.getHistory(span, userCurrency)).data,
     enabled: enabled && isConnected,
   });
 
@@ -148,6 +151,7 @@ export default function Trading212Page() {
         return <Badge variant="default">{t('pages.trading212.syncStatusOk')}</Badge>;
       case 'auth_failed':
         return <Badge variant="destructive">{t('pages.trading212.syncStatusAuthFailed')}</Badge>;
+      case 'rate_limited':
       case 'error':
         return <Badge variant="secondary">{t('pages.trading212.syncStatusError')}</Badge>;
       default:
@@ -156,6 +160,19 @@ export default function Trading212Page() {
   };
 
   const chartData = (historyData?.points ?? []).map((p) => ({ date: p.snapshot_at, value: p.total_value }));
+
+  const sortedPositions = [...(positionsData?.positions ?? [])].sort((a, b) =>
+    sortDesc ? b[sortBy] - a[sortBy] : a[sortBy] - b[sortBy]
+  );
+
+  const toggleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortDesc((prev) => !prev);
+    } else {
+      setSortBy(column);
+      setSortDesc(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -329,12 +346,28 @@ export default function Trading212Page() {
                     <TableHead className="text-right">{t('pages.trading212.quantity')}</TableHead>
                     <TableHead className="text-right">{t('pages.trading212.avgPrice')}</TableHead>
                     <TableHead className="text-right">{t('pages.trading212.currentPrice')}</TableHead>
-                    <TableHead className="text-right">{t('pages.trading212.marketValue')}</TableHead>
-                    <TableHead className="text-right">{t('pages.trading212.pl')}</TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:text-foreground"
+                      onClick={() => toggleSort('market_value')}
+                    >
+                      {t('pages.trading212.marketValue')}{sortBy === 'market_value' && (sortDesc ? ' ↓' : ' ↑')}
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:text-foreground"
+                      onClick={() => toggleSort('unrealised_pnl')}
+                    >
+                      {t('pages.trading212.pl')}{sortBy === 'unrealised_pnl' && (sortDesc ? ' ↓' : ' ↑')}
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:text-foreground"
+                      onClick={() => toggleSort('weight_pct')}
+                    >
+                      {t('pages.trading212.weight')}{sortBy === 'weight_pct' && (sortDesc ? ' ↓' : ' ↑')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(positionsData?.positions ?? []).map((p) => (
+                  {sortedPositions.map((p) => (
                     <TableRow key={p.ticker}>
                       <TableCell className="font-medium">{p.ticker}</TableCell>
                       <TableCell className="text-right">
@@ -349,8 +382,11 @@ export default function Trading212Page() {
                       <TableCell className="text-right">
                         <SensitiveValue>{formatCurrency(p.market_value)}</SensitiveValue>
                       </TableCell>
-                      <TableCell className={cn('text-right', p.ppl >= 0 ? 'text-emerald-500' : 'text-destructive')}>
-                        <SensitiveValue>{formatCurrency(p.ppl)}</SensitiveValue>
+                      <TableCell className={cn('text-right', p.unrealised_pnl >= 0 ? 'text-emerald-500' : 'text-destructive')}>
+                        <SensitiveValue>{formatCurrency(p.unrealised_pnl)}</SensitiveValue>
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {p.weight_pct.toFixed(1)}%
                       </TableCell>
                     </TableRow>
                   ))}
