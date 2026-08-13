@@ -615,14 +615,12 @@ export default function AccountsPage() {
             <div className="mb-3 flex flex-wrap items-baseline gap-2">
               <p className="text-2xl font-bold font-display">
                 <SensitiveValue>
-                  {formatCurrency(
-                    (netWorthChartData[netWorthChartData.length - 1]?.value ?? 0) +
-                      (netWorthData?.investments?.total_value ?? 0)
-                  )}
+                  {formatCurrency(netWorthChartData[netWorthChartData.length - 1]?.value ?? 0)}
                 </SensitiveValue>
               </p>
-              {/* The chart line stays liquid-only (SPEC.md §7) -- only the headline number and this
-                  chip fold in the latest synced Trading212 value. */}
+              {/* Headline stays liquid-only, by explicit choice -- overrides SPEC.md §7's
+                  "Total (liquid + invested)" decision. The invested chip below is purely
+                  informational, not folded into the headline number. */}
               {netWorthData?.investments && (
                 <span
                   className={cn(

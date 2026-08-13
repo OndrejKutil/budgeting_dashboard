@@ -69,3 +69,31 @@ Confirmed via docs: `/equity/account/summary` = 1 req/5s, `/equity/portfolio` pr
 (undocumented explicitly but same "account" endpoint class), `/equity/history/*` = 6 req/min.
 SPEC.md §5.2's 30-minute cadence and 5/hour manual-refresh cap both sit far under every one of
 these.
+
+## 7. Net-worth headline: liquid-only, not liquid + invested
+
+SPEC.md §7's "Decisions already made" table and its own body text are explicit: "Net-worth
+headline | Total (liquid + invested), with a `+ €X invested` delta chip" and "Frontend: headline
+= `liquid_now + investments.total_value`." That's what was originally built.
+
+**Overridden by explicit user instruction**: the headline number in `AccountsPage.tsx` now shows
+liquid net worth only, unchanged from before this feature existed. The `+ €X invested` chip is
+still shown next to it (still pulling from `investments.total_value`), but is purely
+informational rather than folded into the headline. The backend is untouched —
+`NetWorthResponse.data.investments` still carries the same converted figure; only the frontend's
+display choice changed. If the combined total is wanted back, it's a one-line revert in
+`AccountsPage.tsx`.
+
+## 8. sync_all_connections crashed on the pinned postgrest client
+
+Caught only by actually running it against the user's real Docker + Supabase setup, not by any
+automated check here: `pyproject.toml` pins `supabase==1.0.4`, which pulls in
+`postgrest==0.10.8` — old enough that its query builder has no `.or_()` method at all. The
+original NULL-inclusive cron filter (`.or_("last_sync_status.is.null,last_sync_status.neq.auth_failed")`)
+threw `AttributeError` on every real invocation, 500ing `POST /trading212/sync-all` before it
+touched any data. `helper/trading212_sync.py` now fetches `fct_t212_connection` unfiltered and
+excludes `auth_failed` rows in Python instead — this table is one row per user, so there's no
+real cost, and it removes the dependency on a query-builder method the pinned client doesn't
+have. `sync_one_connection`'s own DB calls remain unverified by the automated test suite (it's
+explicitly out of scope there, per that file's docstring) — worth a manual pass over the rest of
+that function's Supabase calls if anything else looks off in practice.
