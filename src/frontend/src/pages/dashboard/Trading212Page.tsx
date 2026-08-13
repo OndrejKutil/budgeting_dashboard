@@ -37,6 +37,16 @@ const FEATURE_KEY = 't212_integration';
 
 const SPANS: T212HistorySpan[] = ['7d', '1m', '3m', 'ytd', '1y', 'all'];
 
+// "Last synced" needs time-of-day, not just the date -- a sync runs every 30 minutes, so the
+// date alone is ambiguous within the same day.
+const SYNCED_AT_FORMAT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+};
+
 export default function Trading212Page() {
   const { t, formatDate, formatCurrency, currency: userCurrency } = useUser();
   const { enabled, isLoading: flagLoading } = useFeatureFlag(FEATURE_KEY);
@@ -230,7 +240,7 @@ export default function Trading212Page() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {connection?.last_synced_at
-                  ? t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at) })
+                  ? t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at, SYNCED_AT_FORMAT) })
                   : t('pages.trading212.neverSynced')}
               </p>
             </div>
@@ -311,7 +321,7 @@ export default function Trading212Page() {
                 </p>
                 {connection?.last_synced_at && (
                   <p className="text-xs text-muted-foreground">
-                    {t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at) })}
+                    {t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at, SYNCED_AT_FORMAT) })}
                   </p>
                 )}
               </div>
@@ -348,7 +358,7 @@ export default function Trading212Page() {
               <p className="text-sm font-medium">{t('pages.trading212.positionsTitle')}</p>
               {positionsData?.synced_at && (
                 <p className="text-xs text-muted-foreground">
-                  {t('pages.trading212.lastSynced', { when: formatDate(positionsData.synced_at) })}
+                  {t('pages.trading212.lastSynced', { when: formatDate(positionsData.synced_at, SYNCED_AT_FORMAT) })}
                 </p>
               )}
             </div>
