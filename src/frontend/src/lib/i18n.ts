@@ -334,6 +334,19 @@ const dashboardTranslations = {
         reviewTitle: 'Review drafts',
         reviewSubtitle: '{count} transaction(s) found — {needsReview} need your input.',
         noTransactionsFound: 'No transactions found in that screenshot.',
+        // Keyed by ExtractionData.reason — the vision model's own account of why it came back
+        // empty. `generic` covers the model not saying, or saying something unrecognised.
+        reason: {
+          generic: 'Make sure the notification text is fully visible and in focus, then try again.',
+          unreadable:
+            'The text is too blurry to read. Send the screenshot itself rather than a photo of your screen.',
+          not_a_transaction_screenshot:
+            "This doesn't look like a bank, wallet, or payment screen. Try a screenshot of your notifications or a transaction list.",
+          only_grouped_notifications:
+            'Your notifications are collapsed into a summary. Expand them so each amount is visible, then screenshot again.',
+          no_transactions_visible: 'This screen is readable, but there are no transactions on it.',
+        },
+        rateLimited: 'The screenshot reader is busy right now. Wait a minute and try the same image again.',
         inferenceModelLabel: 'Model',
         needsInput: 'Needs your input',
         defaulted: 'Defaulted',
@@ -1056,6 +1069,17 @@ const dashboardTranslations = {
         reviewTitle: 'Kontrola návrhů',
         reviewSubtitle: 'Nalezeno {count} transakcí — {needsReview} vyžaduje váš vstup.',
         noTransactionsFound: 'Na tomto snímku nebyly nalezeny žádné transakce.',
+        reason: {
+          generic: 'Ujistěte se, že je text oznámení celý viditelný a ostrý, a zkuste to znovu.',
+          unreadable:
+            'Text je příliš rozmazaný. Pošlete přímo snímek obrazovky, ne vyfocenou obrazovku.',
+          not_a_transaction_screenshot:
+            'Toto nevypadá jako obrazovka banky, peněženky ani platby. Zkuste snímek oznámení nebo seznamu transakcí.',
+          only_grouped_notifications:
+            'Oznámení jsou sbalená do souhrnu. Rozbalte je tak, aby byly vidět jednotlivé částky, a pořiďte snímek znovu.',
+          no_transactions_visible: 'Tato obrazovka je čitelná, ale nejsou na ní žádné transakce.',
+        },
+        rateLimited: 'Čtečka snímků je právě vytížená. Počkejte minutu a zkuste stejný obrázek znovu.',
         inferenceModelLabel: 'Model',
         needsInput: 'Vyžaduje váš vstup',
         defaulted: 'Výchozí hodnota',

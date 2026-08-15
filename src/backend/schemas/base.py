@@ -815,6 +815,29 @@ class DraftTransactionData(BaseModel):
     )
 
 
+class NoTransactionsReason(str, Enum):
+    """
+    Why a screenshot yielded no drafts, as reported by the vision stage itself.
+
+    Every one of these reaches the backend as the same empty `transactions` array, so nothing
+    downstream can tell them apart -- a blurry photo of a screen, a screenshot of something
+    that isn't banking at all, and a genuinely empty wallet screen are indistinguishable after
+    the fact. The vision model is the only thing that saw the image, so it is asked to say
+    which case it was; these are the four answers it may give.
+
+    Carried as a code rather than a sentence because the frontend renders it through i18n --
+    see `pages.screenshotImport.reason.*`. Adding a member here means adding that key in every
+    language, or the UI falls back to the generic empty state.
+    """
+    UNREADABLE = "unreadable"
+    NOT_A_TRANSACTION_SCREENSHOT = "not_a_transaction_screenshot"
+    ONLY_GROUPED_NOTIFICATIONS = "only_grouped_notifications"
+    NO_TRANSACTIONS_VISIBLE = "no_transactions_visible"
+
+    def __str__(self):
+        return self.value
+
+
 class ExtractionData(BaseModel):
     """Result of one screenshot extraction, plus how it was produced."""
     drafts: list[DraftTransactionData] = Field(..., description="Proposed transactions for review")
@@ -823,6 +846,9 @@ class ExtractionData(BaseModel):
     inference_called: bool = Field(False, description="Whether the model ran, or rules covered it")
     rules_hit: int = Field(0, description="Number of fields resolved by deterministic rules")
     raw_text: str | None = Field(None, description="Raw text read off the screenshot, for debugging")
+    reason: NoTransactionsReason | None = Field(
+        None, description="Why nothing was extracted; null whenever drafts is non-empty"
+    )
 
 
 # ================================================================================================
