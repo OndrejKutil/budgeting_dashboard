@@ -573,6 +573,19 @@ export interface DraftTransaction {
 }
 
 /**
+ * Why a screenshot produced no drafts, reported by the vision model itself
+ * Matches backend NoTransactionsReason enum
+ *
+ * Each value needs a matching `pages.screenshotImport.reason.<value>` key in every language;
+ * without one the UI falls back to the generic empty state.
+ */
+export type NoTransactionsReason =
+    | 'unreadable'
+    | 'not_a_transaction_screenshot'
+    | 'only_grouped_notifications'
+    | 'no_transactions_visible';
+
+/**
  * Result of one screenshot extraction, plus how it was produced
  * Matches backend ExtractionData schema
  */
@@ -582,6 +595,8 @@ export interface ExtractionData {
     inference_called: boolean;
     rules_hit: number;
     raw_text: string | null;
+    /** Only set when drafts is empty — null whenever anything was extracted */
+    reason: NoTransactionsReason | null;
 }
 
 // ================================================================================================

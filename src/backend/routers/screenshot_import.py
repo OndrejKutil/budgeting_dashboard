@@ -24,7 +24,13 @@ from ..helper.llm_client import LLMProviderError, get_llm_client
 
 # rate limiting
 from ..helper.rate_limiter import RATE_LIMITS, limiter
-from ..schemas.base import DraftTransactionData, ExtractionData, FieldSource, TransactionData
+from ..schemas.base import (
+    DraftTransactionData,
+    ExtractionData,
+    FieldSource,
+    NoTransactionsReason,
+    TransactionData,
+)
 from ..schemas.requests import ImportTransactionsRequest
 from ..schemas.responses import ExtractionResponse, TransactionSuccessResponse
 
@@ -51,6 +57,13 @@ MAX_IMPORT_ROWS = 50
 # Kept in sync by hand since there's no shared schema across the two languages; a currency
 # stage two reports outside this set is treated as unresolved rather than passed through.
 SUPPORTED_CURRENCIES = frozenset({"AUD", "CAD", "CZK", "EUR", "GBP", "PLN", "USD"})
+
+# Completion ceilings for the two inference calls, set explicitly because the provider default
+# (1024) is small enough to truncate a busy screenshot mid-JSON -- and a truncated completion
+# comes back as an opaque provider 400, not as a partial result. Stage two gets the larger
+# budget: it re-emits every row stage one found and adds warnings on top.
+STAGE_ONE_MAX_TOKENS = 2048
+STAGE_TWO_MAX_TOKENS = 4096
 
 def _build_system_prompt() -> str:
     """
@@ -104,6 +117,19 @@ Rules:
 - Merchant Slim: Only the name of the merchant, no location info - Trim any text containing for example "in Prague" or "at London" or "near Berlin" from the merchant name.
 - Bank name: If the bank name is visible, extract it. If not, output null.
 - If the image contains no transactions, return an empty array.
+- Whenever you return an empty array, you must also say why in "no_transactions_reason",
+  using exactly one of these four values:
+  - "unreadable" — there is something transaction-like here, but the text cannot be
+    transcribed: too blurry, too dark, too low-resolution, cut off, or a photo taken of
+    another screen rather than a real screenshot.
+  - "not_a_transaction_screenshot" — the image is perfectly legible but is not a bank,
+    wallet, or payment screen at all (a chat, a game, a web page, a camera photo).
+  - "only_grouped_notifications" — the only transaction notifications present are collapsed
+    into a summary banner (e.g. "3 more notifications") with no individual amounts readable.
+    Use this instead of inventing rows for the transactions hidden inside it.
+  - "no_transactions_visible" — this is a legible bank/wallet screen, but no transactions
+    are shown on it (an empty statement, a balance-only screen, a settings page).
+  If you did extract at least one transaction, output null for this field.
 
 Output a single JSON object matching this schema, and nothing else — no markdown fences,
 no commentary before or after:
@@ -125,7 +151,8 @@ SECOND_PART = """
       "confidence": <number 0.0-1.0>,
       "source_text": <string>
     }
-  ]
+  ],
+  "no_transactions_reason": <"unreadable"|"not_a_transaction_screenshot"|"only_grouped_notifications"|"no_transactions_visible"|null>
 }
 """
 
@@ -289,6 +316,28 @@ def _fetch_user_context(access_token: str) -> tuple[list[dict], list[dict]]:
     return categories, accounts
 
 
+def _parse_no_transactions_reason(value: object) -> NoTransactionsReason | None:
+    """
+    The vision stage's self-reported reason for finding nothing, accepted only if it is one of
+    the four values the prompt asked for.
+
+    Anything else -- a synonym, a whole sentence, an invented code -- is dropped rather than
+    passed through, because the frontend renders this by looking up `reason.<value>` in its
+    translations and an unrecognised code would render as a missing string. Falling back to
+    None just shows the generic empty state, which is correct when the model went off-script.
+
+    Case and surrounding whitespace are forgiven first: "UNREADABLE" is the model formatting an
+    enum the way enums are usually written, not choosing a different answer, and throwing that
+    away would cost a reason we did in fact get.
+    """
+    if isinstance(value, str):
+        value = value.strip().lower()
+    try:
+        return NoTransactionsReason(value)
+    except (ValueError, TypeError):
+        return None
+
+
 def _build_draft(
     item: dict,
     category_type_by_id: dict,
@@ -438,11 +487,21 @@ async def extract_from_screenshot(
                 },
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base_64_image}"}},
             ],
+            # Stage one is pure transcription -- the prompt above forbids inferring, calculating,
+            # or guessing anything, so chain-of-thought has nothing to contribute here. On a
+            # reasoning model it actively hurts: thinking is billed from the same completion
+            # budget as the answer, so the model can deliberate right past the cap and return
+            # nothing at all, and the tokens it burns come out of the per-minute quota that the
+            # image alone already eats a large share of.
+            disable_reasoning=True,
+            max_completion_tokens=STAGE_ONE_MAX_TOKENS,
         )
         stage_one_data = json.loads(raw_stage_one) if raw_stage_one else {}
         stage_one_transactions = stage_one_data.get("transactions") or []
 
         if not stage_one_transactions:
+            reason = _parse_no_transactions_reason(stage_one_data.get("no_transactions_reason"))
+            logger.info(f"Screenshot yielded no transactions - user_id: {user['user_id']}, reason: {reason}")
             return ExtractionResponse(
                 success=True,
                 message="No transactions found in the screenshot",
@@ -452,6 +511,7 @@ async def extract_from_screenshot(
                     inference_called=True,
                     rules_hit=0,
                     raw_text=raw_stage_one,
+                    reason=reason,
                 ),
             )
 
@@ -473,6 +533,9 @@ async def extract_from_screenshot(
                 },
                 ensure_ascii=False,
             ),
+            # Reasoning is left on here (where the model has actual matching to do), so this
+            # budget covers both the thinking and the rows it produces.
+            max_completion_tokens=STAGE_TWO_MAX_TOKENS,
         )
         stage_two_data = json.loads(raw_stage_two) if raw_stage_two else {}
         stage_two_transactions = stage_two_data.get("transactions") or []
@@ -496,12 +559,20 @@ async def extract_from_screenshot(
 
     except fastapi.HTTPException:
         raise
-    except LLMProviderError:
+    except LLMProviderError as e:
         # Full diagnostics (status, rate-limit headers, response body) are already logged
         # where the provider call actually happened -- see GroqLLMClient.complete_json.
+        # A provider-side rate limit is the one failure here that isn't a bug and isn't the
+        # user's fault, and it fixes itself in under a minute -- so it gets its own status and
+        # a message that says what to do, instead of a generic "rejected" the user can't act on.
+        if e.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="The image-reading service is busy. Wait a minute and try the screenshot again.",
+            )
         raise fastapi.HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The inference provider rejected this request. Check the server logs for details.",
+            detail="Couldn't read this screenshot. Check the server logs for details.",
         )
     except Exception as e:
         logger.error("Screenshot extraction failed")

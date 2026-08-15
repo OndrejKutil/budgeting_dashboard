@@ -35,9 +35,9 @@ import {
 import { cn } from '@/lib/utils';
 import { getCurrencyFlag, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { toast } from '@/hooks/use-toast';
-import { getErrorMessage } from '@/lib/api/client';
+import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { screenshotImportApi, accountsApi, categoriesApi } from '@/lib/api/endpoints';
-import type { DraftTransaction, FieldSource } from '@/lib/api/types';
+import type { DraftTransaction, FieldSource, NoTransactionsReason } from '@/lib/api/types';
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
@@ -195,6 +195,7 @@ export default function ScreenshotImportPage() {
   const [extracted, setExtracted] = useState(false);
   const [drafts, setDrafts] = useState<EditableDraft[]>([]);
   const [inferenceModel, setInferenceModel] = useState<string | null>(null);
+  const [emptyReason, setEmptyReason] = useState<NoTransactionsReason | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -225,6 +226,7 @@ export default function ScreenshotImportPage() {
     setExtracted(false);
     setDrafts([]);
     setInferenceModel(null);
+    setEmptyReason(null);
     setErrorMessage(null);
   };
 
@@ -280,14 +282,22 @@ export default function ScreenshotImportPage() {
       setExtracted(true);
       setDrafts((body.data?.drafts ?? []).map(toEditableDraft));
       setInferenceModel(body.data?.inference_model ?? null);
+      setEmptyReason(body.data?.reason ?? null);
       setErrorMessage(null);
       toast({ title: t('pages.screenshotImport.extracted') });
     },
     onError: (err) => {
-      const message = getErrorMessage(err, t('pages.screenshotImport.extractFailed'));
+      // A 429 here is the inference provider's per-minute limit, not ours, and it clears on its
+      // own -- so it gets translated copy telling the user to retry the same image. Everything
+      // else falls through to the backend's `detail`, which is English-only by design.
+      const message =
+        err instanceof ApiError && err.status === 429
+          ? t('pages.screenshotImport.rateLimited')
+          : getErrorMessage(err, t('pages.screenshotImport.extractFailed'));
       setExtracted(false);
       setDrafts([]);
       setInferenceModel(null);
+      setEmptyReason(null);
       setErrorMessage(message);
       toast({
         title: t('common.error'),
@@ -508,6 +518,11 @@ export default function ScreenshotImportPage() {
             <EmptyState
               icon={<ScanLine className="h-8 w-8 text-muted-foreground" />}
               title={t('pages.screenshotImport.noTransactionsFound')}
+              description={t(
+                emptyReason
+                  ? `pages.screenshotImport.reason.${emptyReason}`
+                  : 'pages.screenshotImport.reason.generic'
+              )}
             />
           ) : (
             <div className="space-y-3">
