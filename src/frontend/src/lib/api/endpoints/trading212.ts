@@ -18,7 +18,7 @@ export const trading212Api = {
     connect: async (payload: T212ConnectionRequest) =>
         (await apiClient.post<T212ConnectionSuccessResponse>('/trading212/connection', payload)).data,
 
-    /** delete_history defaults to false -- deleting recorded value history is opt-in (SPEC.md §6). */
+    /** delete_history defaults to false -- deleting recorded value history is opt-in. */
     disconnect: async (deleteHistory: boolean = false) =>
         (await apiClient.delete<T212ConnectionSuccessResponse>(
             `/trading212/connection?delete_history=${deleteHistory}`

@@ -47,9 +47,9 @@ router = APIRouter()
 
 #? prefix - /trading212
 
-# Matches the feature_key registered in the migration (SPEC.md §2). Not "trading212" -- that
-# would silently desync from the row `is_feature_enabled` actually looks up, and the feature
-# would read as permanently off for everyone.
+# Matches the feature_key registered in the migration. Not "trading212" -- that would
+# silently desync from the row `is_feature_enabled` actually looks up, and the feature would
+# read as permanently off for everyone.
 FEATURE_KEY = "t212_integration"
 
 CONNECTION_TABLE = "fct_t212_connection"
@@ -68,9 +68,9 @@ SPAN_DAYS: dict[str, int | None] = {
 
 def _require_feature(access_token: str) -> None:
     """
-    404, not 403 (SPEC.md §2): a disabled feature must be indistinguishable from a route that
-    doesn't exist at all, so the generic detail text below deliberately doesn't mention
-    Trading212 or "feature" -- that alone would leak that the route exists.
+    404, not 403: a disabled feature must be indistinguishable from a route that doesn't exist
+    at all, so the generic detail text below deliberately doesn't mention Trading212 or
+    "feature" -- that alone would leak that the route exists.
     """
     if not is_feature_enabled(access_token, FEATURE_KEY):
         raise fastapi.HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
@@ -145,12 +145,12 @@ async def create_connection(
 ) -> T212ConnectionSuccessResponse:
     """
     Connect a Trading212 account. Validates the key/secret against T212 *before* writing
-    anything (SPEC.md §6) -- a bad key should fail this request, not surface 30 minutes later
-    in a cron log. 409 if a connection already exists; disconnect first to rotate a key.
+    anything -- a bad key should fail this request, not surface 30 minutes later in a cron
+    log. 409 if a connection already exists; disconnect first to rotate a key.
 
-    Read-only scope (SPEC.md §4.1) cannot be verified in code -- T212 exposes no scope
-    introspection endpoint (QUESTIONS.md §2) -- so it is enforced only by this backend never
-    calling a write endpoint, and documented as a manual step in the connect UI copy.
+    Read-only scope cannot be verified in code -- T212 exposes no scope introspection endpoint
+    (QUESTIONS.md §2) -- so it is enforced only by this backend never calling a write
+    endpoint, and documented as a manual step in the connect UI copy.
     """
     try:
         _require_feature(user["access_token"])
@@ -217,7 +217,7 @@ async def delete_connection(
     """
     Always deletes the connection row (and the key with it) and fct_t212_positions, a disposable
     snapshot. fct_t212_value_history is deleted only when delete_history=true -- there is no
-    backfill path for it, so this is the one irreversible option here (SPEC.md §6).
+    backfill path for it, so this is the one irreversible option here.
     """
     try:
         _require_feature(user["access_token"])
@@ -271,9 +271,9 @@ async def get_positions(
     user: dict[str, str] = Depends(get_current_user),
 ) -> T212PositionsResponse:
     """
-    Latest synced positions snapshot, converted to base_currency (SPEC.md §6). Stored values are
-    in the T212 account's own currency (§3); this is the read-time conversion §3 calls for, so a
-    stored figure never has to be rewritten when FX rates refresh.
+    Latest synced positions snapshot, converted to base_currency. Stored values are in the
+    T212 account's own currency; converting at read time means a stored figure never has to
+    be rewritten when FX rates refresh.
     """
     try:
         _require_feature(user["access_token"])
@@ -349,8 +349,8 @@ async def get_history(
 ) -> T212HistoryResponse:
     """
     Portfolio value-history series for the requested span, converted to base_currency at read
-    time (SPEC.md §3) rather than at sync time, so a historical point doesn't drift when FX
-    rates are refreshed later.
+    time rather than at sync time, so a historical point doesn't drift when FX rates are
+    refreshed later.
     """
     try:
         _require_feature(user["access_token"])
@@ -423,7 +423,7 @@ async def manual_sync(
     """
     Manual refresh. Runs the identical sync code path the cron job uses, just scoped to this
     user's own JWT-authenticated client instead of the service-role client. Tightly rate
-    limited (SPEC.md §5.2) so this can't be used to burn the cron job's T212 rate-limit budget.
+    limited so this can't be used to burn the cron job's T212 rate-limit budget.
     """
     try:
         _require_feature(user["access_token"])
@@ -470,9 +470,8 @@ async def cron_sync_all(
     job_secret: str = Depends(job_secret_auth),
 ) -> dict[str, int]:
     """
-    Cron entry point for the Pi script (SPEC.md §5.1/§9 step 6). Gated on the job secret
-    specifically -- not api_key_auth + get_current_user -- so a logged-in user cannot drive
-    this path themselves; see QUESTIONS.md §5 for why this is a dedicated secret rather than
+    Cron entry point for the Pi script. Gated on the job secret specifically -- not
+    api_key_auth + get_current_user -- so a logged-in user cannot drive this path themselves; see QUESTIONS.md §5 for why this is a dedicated secret rather than
     ADMIN_KEY. Uses the service-role client since this iterates every connected user's row, not
     just one caller's own (mirrors the account-deletion and exchange-rate-cache use of the
     service client). Excluded from the OpenAPI schema -- this isn't a user-facing endpoint.

@@ -8,10 +8,10 @@ exposes no scope-introspection endpoint; see QUESTIONS.md §2), so the only enfo
 guarantee is that this client never calls one.
 
 Auth is HTTP Basic with the key as username and secret as password (confirmed against
-docs.trading212.com/api -- this is a key+secret pair, not the single key SPEC.md assumed; see
-QUESTIONS.md §1). Calls are sequenced by the caller, never parallelised, per SPEC.md §5.2 --
-T212's per-account rate limits are tight enough (account/portfolio: 1 req/5s; history: 6
-req/min) that a burst from this app alone could exhaust them.
+docs.trading212.com/api -- this is a key+secret pair, not a single key; see QUESTIONS.md §1).
+Calls are sequenced by the caller, never parallelised -- T212's per-account rate limits are
+tight enough (account/portfolio: 1 req/5s; history: 6 req/min) that a burst from this app
+alone could exhaust them.
 """
 
 import logging
@@ -33,7 +33,7 @@ class T212AuthError(T212ApiError):
 
 
 class T212RateLimitError(T212ApiError):
-    """429 -- back off and abort the run, per SPEC.md §5.2. Never retried in a tight loop."""
+    """429 -- back off and abort the run. Never retried in a tight loop."""
 
 
 def _auth(api_key: str, api_secret: str) -> httpx.BasicAuth:
@@ -70,8 +70,8 @@ def get_account_summary(api_key: str, api_secret: str) -> dict:
     GET /equity/account/summary -- cash, currency, and aggregate investment figures.
 
     Used both to validate a new connection (POST /connection must confirm the key works
-    before anything is stored, per SPEC.md §6) and, on every sync, to read the account's
-    currency and total value for fct_t212_value_history.
+    before anything is stored) and, on every sync, to read the account's currency and total
+    value for fct_t212_value_history.
     """
     data = _get("/equity/account/summary", api_key, api_secret)
     return data if isinstance(data, dict) else {}

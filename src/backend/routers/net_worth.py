@@ -41,8 +41,8 @@ async def get_net_worth(
             base_currency=resolved_currency,
         )
 
-        # The only place T212 touches net worth (SPEC.md §7) -- the timeline itself stays
-        # purely transaction-derived; this just adds a nullable "what's invested" figure on top.
+        # The only place T212 touches net worth -- the timeline itself stays purely
+        # transaction-derived; this just adds a nullable "what's invested" figure on top.
         # investments is None when the feature is off, unconnected, or nothing has synced yet.
         investments = get_t212_net_worth_contribution(db, user["access_token"], resolved_currency)
 

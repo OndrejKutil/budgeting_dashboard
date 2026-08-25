@@ -32,7 +32,7 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
-// Matches the feature_key registered in the migration (SPEC.md §2) -- not "trading212".
+// Matches the feature_key registered in the migration -- not "trading212".
 const FEATURE_KEY = 't212_integration';
 
 const SPANS: T212HistorySpan[] = ['7d', '1m', '3m', 'ytd', '1y', 'all'];
