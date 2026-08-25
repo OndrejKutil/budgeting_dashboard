@@ -1,5 +1,5 @@
 """
-The one cross-cutting piece of the Trading212 integration (SPEC.md §7): folding the latest
+The one cross-cutting piece of the Trading212 integration: folding the latest
 synced portfolio value into the net-worth headline without touching the transaction-derived
 timeline itself.
 
@@ -20,7 +20,7 @@ VALUE_HISTORY_TABLE = "fct_t212_value_history"
 
 FEATURE_KEY = "t212_integration"
 
-# SPEC.md §7 "Staleness": stale once older than ~2x the 30-minute cron cadence.
+# Staleness: stale once older than ~2x the 30-minute cron cadence.
 STALE_AFTER_MINUTES = 60
 
 
@@ -36,7 +36,7 @@ def get_t212_net_worth_contribution(db_client, access_token: str, base_currency:
 
     None covers every case where there's nothing meaningful to add: the feature flag is off, no
     connection exists, or nothing has synced yet. Never raises -- a broken integration must not
-    500 the net-worth endpoint (SPEC.md §7), same principle as is_feature_enabled.
+    500 the net-worth endpoint, same principle as is_feature_enabled.
     """
     from ..schemas.base import InvestmentContribution  # local import: schemas -> nothing back-imports helper
 
@@ -60,9 +60,9 @@ def get_t212_net_worth_contribution(db_client, access_token: str, base_currency:
 
         latest = history_response.data[0]
         total_value = float(latest[T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value])
-        # Stored in the account's own currency at snapshot time, converted at read time
-        # (SPEC.md §3) -- using this row's own currency rather than today's connection
-        # currency, in case the two ever diverge.
+        # Stored in the account's own currency at snapshot time, converted at read time --
+        # using this row's own currency rather than today's connection currency, in case the
+        # two ever diverge.
         row_currency = latest.get(T212_VALUE_HISTORY_COLUMNS.CURRENCY.value)
         snapshot_at_raw = latest[T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value]
 

@@ -227,7 +227,7 @@ class RecurringSummary(BaseModel):
 
 
 class InvestmentContribution(BaseModel):
-    """The latest Trading212 portfolio value, folded into the net-worth headline (SPEC.md §7)."""
+    """The latest Trading212 portfolio value, folded into the net-worth headline."""
     total_value: float = Field(..., description="Latest synced portfolio value, converted to base currency")
     synced_at: str = Field(..., description="ISO timestamp of the snapshot this value came from")
     is_stale: bool = Field(..., description="True when synced_at is older than ~2x the sync cadence")
@@ -867,7 +867,7 @@ class T212SyncStatus(str, Enum):
 
 
 class T212ConnectionData(BaseModel):
-    """GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6)."""
+    """GET /trading212/connection. Never includes the key/secret, not even masked."""
     connected: bool = Field(..., description="Whether this user has a stored Trading212 connection")
     last_synced_at: str | None = Field(None, description="ISO timestamp of the last successful sync")
     last_sync_status: T212SyncStatus | None = Field(

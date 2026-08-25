@@ -88,7 +88,7 @@ RATE_LIMITS = {
     # Health check and status endpoints
     "health": "300/minute",
 
-    # Manual Trading212 sync — strictly tighter than the 30-minute cron cadence (SPEC.md §5.2)
+    # Manual Trading212 sync — strictly tighter than the 30-minute cron cadence
     # so a user mashing the refresh button can't burn the T212 rate-limit budget.
     "t212_sync": "5/hour",
 }

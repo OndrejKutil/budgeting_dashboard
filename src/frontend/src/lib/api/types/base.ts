@@ -468,7 +468,7 @@ export interface RecurringSummary {
 // ================================================================================================
 
 /**
- * The latest Trading212 portfolio value folded into the net-worth headline (SPEC.md §7).
+ * The latest Trading212 portfolio value folded into the net-worth headline.
  * Matches backend InvestmentContribution schema.
  */
 export interface InvestmentContribution {
@@ -607,7 +607,7 @@ export interface ExtractionData {
 export type T212SyncStatus = 'ok' | 'auth_failed' | 'rate_limited' | 'error' | null;
 
 /**
- * GET /trading212/connection. Never includes the key/secret, not even masked (SPEC.md §6).
+ * GET /trading212/connection. Never includes the key/secret, not even masked.
  * Matches backend T212ConnectionData schema.
  */
 export interface T212Connection {

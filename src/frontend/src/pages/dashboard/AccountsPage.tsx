@@ -618,9 +618,9 @@ export default function AccountsPage() {
                   {formatCurrency(netWorthChartData[netWorthChartData.length - 1]?.value ?? 0)}
                 </SensitiveValue>
               </p>
-              {/* Headline stays liquid-only, by explicit choice -- overrides SPEC.md §7's
-                  "Total (liquid + invested)" decision. The invested chip below is purely
-                  informational, not folded into the headline number. */}
+              {/* Headline stays liquid-only, by explicit choice -- not a "Total (liquid +
+                  invested)" figure. The invested chip below is purely informational, not
+                  folded into the headline number. */}
               {netWorthData?.investments && (
                 <span
                   className={cn(

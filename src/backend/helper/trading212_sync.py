@@ -1,11 +1,11 @@
 """
 The Trading212 per-user sync, shared verbatim by the manual POST /sync endpoint and the
-cron-triggered POST /sync-all endpoint (SPEC.md §5.2: "Manual refresh runs the identical code
-path"). Only the Supabase client differs: manual sync gets a user-JWT client (RLS scopes it to
-that user's own row automatically), the cron job gets the service-role client so it can write
-rows for every connected user in one run.
+cron-triggered POST /sync-all endpoint -- manual refresh runs the identical code path. Only
+the Supabase client differs: manual sync gets a user-JWT client (RLS scopes it to that user's
+own row automatically), the cron job gets the service-role client so it can write rows for
+every connected user in one run.
 
-Per-run sequence (SPEC.md §5.2), calls sequenced never parallel:
+Per-run sequence, calls sequenced never parallel:
   1. decrypt stored credentials
   2. fetch account/cash summary
   3. fetch positions
@@ -14,7 +14,7 @@ Per-run sequence (SPEC.md §5.2), calls sequenced never parallel:
   6. update last_synced_at / last_sync_status
 
 Partial success is fine -- write what succeeded -- but a failed positions fetch must never
-result in a value-history row (SPEC.md §5.2: "or the chart gets a false dip").
+result in a value-history row, or the chart gets a false dip.
 """
 
 import datetime
@@ -54,7 +54,7 @@ def _update_connection_status(
 
 
 def _classify(e: Exception) -> tuple[str, str]:
-    """(status, short-classified-reason). Never the raw upstream response or the key (SPEC.md §4.4)."""
+    """(status, short-classified-reason). Never the raw upstream response or the key."""
     if isinstance(e, t212.T212AuthError):
         return "auth_failed", "auth_failed"
     if isinstance(e, t212.T212RateLimitError):
@@ -98,7 +98,7 @@ def sync_one_connection(db_client, connection: dict) -> str:
         positions = t212.get_positions(api_key, api_secret)
     except t212.T212ApiError as e:
         # Account summary succeeded but positions didn't -- update the currency we did learn,
-        # but write no positions and no value-history row (SPEC.md §5.2: avoids a false dip).
+        # but write no positions and no value-history row (avoids a false dip).
         status, reason = _classify(e)
         logger.warning(f"T212 sync: positions fetch failed for user {user_id}: {e}")
         _update_connection_status(db_client, connection_id, status, error=reason, currency=currency)
@@ -158,7 +158,7 @@ def sync_one_connection(db_client, connection: dict) -> str:
 
 def sync_all_connections(service_client) -> dict[str, int]:
     """
-    Cron entry point: sync every connected user, sequenced (never parallel -- SPEC.md §5.2).
+    Cron entry point: sync every connected user, sequenced (never parallel).
 
     Skips connections already marked auth_failed -- a dead key doesn't get retried every 30
     minutes until the user reconnects (which creates a fresh row via POST /connection). This

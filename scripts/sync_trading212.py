@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 BACKEND_URL      = "https://your-backend.onrender.com"   # no trailing slash
 API_KEY          = "your-app-api-key"                     # X-API-KEY, same as the rest of the app
 JOB_SECRET       = "your-t212-sync-job-secret"             # matches T212_SYNC_JOB_SECRET on the backend
-INTERVAL_MINUTES = 30                                      # matches SPEC.md §5.2's cadence
+INTERVAL_MINUTES = 30                                      # matches the backend's cron cadence
 # ─────────────────────────────────────────────────────────────────────────────
 
 
