@@ -79,6 +79,12 @@ const dashboardTranslations = {
       includeInTotal: 'Include in total',
       remainingPlannedBudget: 'Remaining Planned Budget',
     },
+    analytics: {
+      month: 'Month',
+      other: 'Other',
+      share: 'Share',
+      total: 'Total',
+    },
     statement: {
       monthlyTitle: 'Monthly Statement',
       yearlyTitle: 'Yearly Statement',
@@ -452,6 +458,9 @@ const dashboardTranslations = {
         yearlyHeatmap: 'Full-Year Spending Heatmap',
         heatmapDescription: 'Daily expense totals across the year — darker = higher spend',
         heatmapNoData: 'No spending data available for this year',
+        profitAndCashFlow: 'Profit & Cash Flow',
+        monthlyBreakdown: 'Monthly Breakdown',
+        monthlyBreakdownDescription: 'Every figure behind the charts above, month by month · Click a row to drill down',
         exportPdf: 'Export PDF',
       },
       cashFlow: {
@@ -767,6 +776,12 @@ const dashboardTranslations = {
       diff: 'Rozdíl',
       includeInTotal: 'Zahrnout do součtu',
       remainingPlannedBudget: 'Zbývající plánovaný rozpočet',
+    },
+    analytics: {
+      month: 'Měsíc',
+      other: 'Ostatní',
+      share: 'Podíl',
+      total: 'Celkem',
     },
     statement: {
       monthlyTitle: 'Měsíční výpis',
@@ -1205,6 +1220,9 @@ const dashboardTranslations = {
         yearlyHeatmap: 'Roční heatmapa výdajů',
         heatmapDescription: 'Denní celkové výdaje za rok — tmavší = vyšší útrata',
         heatmapNoData: 'Pro tento rok nejsou k dispozici žádná data výdajů',
+        profitAndCashFlow: 'Zisk a cash flow',
+        monthlyBreakdown: 'Měsíční rozpad',
+        monthlyBreakdownDescription: 'Všechna čísla za grafy výše, měsíc po měsíci · Klikněte na řádek pro detail',
         exportPdf: 'Exportovat PDF',
       },
       cashFlow: {

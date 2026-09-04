@@ -39,6 +39,23 @@ const CURRENCY_LOCALE: Record<string, string> = {
   USD: 'en-US',
 };
 
+/**
+ * Short form for chart axis ticks: "12,5 tis. Kč" instead of "12 500,00 Kč".
+ *
+ * A tick only has to say roughly where you are on the scale, and full-precision
+ * amounts either overlap each other or force the plot to give up its width. Exact
+ * figures stay in tooltips, tables and KPIs.
+ */
+export function formatMoneyCompact(amount: number, currency: string): string {
+  const locale = CURRENCY_LOCALE[currency] ?? 'en-US';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(amount);
+}
+
 export function formatMoney(amount: number, currency: string): string {
   const locale = CURRENCY_LOCALE[currency] ?? 'en-US';
   return new Intl.NumberFormat(locale, {
