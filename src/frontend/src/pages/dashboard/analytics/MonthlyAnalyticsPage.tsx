@@ -1,5 +1,4 @@
 import { PageHeader } from '@/components/ui/page-header';
-import { KPICard } from '@/components/ui/kpi-card';
 import { AnalyticsSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,12 +24,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LabelList,
 } from 'recharts';
 import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -40,42 +33,33 @@ import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
-import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
+import { CHART_COLORS } from '@/lib/chart-colors';
 import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
+import { DonutBreakdown, type DonutSlice } from '@/components/analytics/DonutBreakdown';
+import { CategoryBreakdownTable } from '@/components/analytics/CategoryBreakdownTable';
 import type { CategoryBreakdownData } from '@/lib/api/types/base';
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    name: string;
-    value: number;
-    payload?: unknown;
-  }>;
-  formatCurrency: (value: number) => string;
-}
+/**
+ * Fixed hue order for income sources.
+ *
+ * Only three: these are the widest-separated hues the chart tokens offer, and every
+ * four-colour combination available fails either colourblind separation or the
+ * normal-vision floor (the pink/green pair sits at ΔE 4.5 under deuteranopia). Anything
+ * past the third source folds into a single grey "Other" slice rather than inventing a
+ * fourth hue that readers cannot reliably tell apart.
+ */
+const INCOME_SLICE_COLORS = [
+  CHART_COLORS.income,
+  CHART_COLORS.savings,
+  CHART_COLORS.investment,
+] as const;
 
-const CustomTooltip = ({ active, payload, formatCurrency }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    const data = payload[0];
-    return (
-      <div style={{
-        backgroundColor: 'hsl(var(--popover))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '8px',
-        padding: '8px',
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-      }}>
-        <p style={{ color: 'hsl(var(--popover-foreground))', fontSize: '12px', marginBottom: '2px' }}>
-          {data.name}
-        </p>
-        <p style={{ color: CHART_COLORS.expense, fontSize: '14px', fontWeight: 'bold' }}>
-          <SensitiveValue>{formatCurrency(data.value)}</SensitiveValue>
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+const SPENDING_TYPE_COLORS = {
+  Core: CHART_COLORS.core,
+  Necessary: CHART_COLORS.necessary,
+  Fun: CHART_COLORS.fun,
+  Future: CHART_COLORS.future,
+} as const;
 
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency, formatDate, formatMonth, t, currency } = useUser();
@@ -136,18 +120,39 @@ export default function MonthlyAnalyticsPage() {
     placeholderData: keepPreviousData,
   });
 
-  const incomeBarData = useMemo(() => data?.income_breakdown
+  const incomeDonutData = useMemo(() => {
+    const sorted = (data?.income_breakdown ?? [])
+      .map((item) => ({ name: item.category, value: Number(item.total) }))
+      .sort((a, b) => b.value - a.value);
+
+    const slices: DonutSlice[] = sorted
+      .slice(0, INCOME_SLICE_COLORS.length)
+      .map((item, index) => ({ ...item, color: INCOME_SLICE_COLORS[index] }));
+
+    const rest = sorted.slice(INCOME_SLICE_COLORS.length);
+    if (rest.length > 0) {
+      slices.push({
+        name: t('analytics.other'),
+        value: rest.reduce((sum, item) => sum + item.value, 0),
+        color: CHART_COLORS.neutral,
+      });
+    }
+
+    return slices;
+  }, [data, t]);
+
+  const expenseCategoryData = useMemo(() => data?.expenses_breakdown
     .map((item) => ({ name: item.category, value: Number(item.total) }))
     .sort((a, b) => b.value - a.value) ?? [], [data]);
 
-  const expenseBarData = useMemo(() => data?.expenses_breakdown
-    .map((item) => ({ name: item.category, value: Number(item.total) }))
-    .sort((a, b) => b.value - a.value) ?? [], [data]);
-
-  const spendingTypeData = useMemo(() => data?.spending_type_breakdown.map((item) => ({
-    name: spendingTypeLabels[item.type as keyof typeof spendingTypeLabels] ?? item.type,
-    value: Number(item.amount),
-  })) ?? [], [data, spendingTypeLabels]);
+  const spendingTypeData = useMemo(() => data?.spending_type_breakdown
+    .map((item) => ({
+      name: spendingTypeLabels[item.type as keyof typeof spendingTypeLabels] ?? item.type,
+      value: Number(item.amount),
+      // Colour by spending type rather than by position, so Core is always the same hue.
+      color: SPENDING_TYPE_COLORS[item.type as keyof typeof SPENDING_TYPE_COLORS] ?? CHART_COLORS.neutral,
+    }))
+    .sort((a, b) => b.value - a.value) ?? [], [data, spendingTypeLabels]);
 
   const dailyData = useMemo(() => data?.daily_spending_heatmap.map((item) => ({
     day: new Date(item.day).getDate(),
@@ -405,55 +410,19 @@ export default function MonthlyAnalyticsPage() {
         className="grid gap-6 lg:grid-cols-2"
         fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card lg:col-span-2" />}
       >
-        {/* Income Breakdown Bar Chart */}
+        {/* Income Sources — same donut treatment as the spending-type breakdown; a
+            handful of sources is a part-to-whole story, not a magnitude comparison. */}
         <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.incomeSources')}</h3>
-          <div className={`h-[300px] ${sensitiveChartClass}`}>
-            {incomeBarData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={incomeBarData}
-                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
-                  barCategoryGap={30}
-                >
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
-                    dy={10}
-                    interval={0}
-                  />
-                  <YAxis hide={true} />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
-                  />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    <LabelList
-                      dataKey="value"
-                      position="top"
-                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      fill="hsl(var(--foreground))"
-                      fontSize={10}
-                      fontWeight={600}
-                    />
-                    {incomeBarData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS.income} opacity={Math.max(0.35, 0.9 - index * 0.12)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="h-[300px]">
+            {incomeDonutData.length > 0 ? (
+              <DonutBreakdown
+                data={incomeDonutData}
+                formatCurrency={formatCurrency}
+                centerLabel={t('analytics.total')}
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noIncomeData')}</div>
             )}
@@ -465,50 +434,13 @@ export default function MonthlyAnalyticsPage() {
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
           <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.spendingTypeBreakdown')}</h3>
-          <div className={`h-[300px] ${sensitiveChartClass}`}>
+          <div className="h-[300px]">
             {spendingTypeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={spendingTypeData}
-                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
-                  barCategoryGap={30}
-                >
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
-                    dy={10}
-                    interval={0}
-                  />
-                  <YAxis hide={true} />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
-                  />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    <LabelList
-                      dataKey="value"
-                      position="top"
-                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      fill="hsl(var(--foreground))"
-                      fontSize={10}
-                      fontWeight={600}
-                    />
-                    {spendingTypeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={0.9} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <DonutBreakdown
+                data={spendingTypeData}
+                formatCurrency={formatCurrency}
+                centerLabel={t('analytics.total')}
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noSpendingTypeData')}</div>
             )}
@@ -516,7 +448,8 @@ export default function MonthlyAnalyticsPage() {
         </div>
       </DeferredRender>
 
-      {/* Full Width Grid: Expense Categories */}
+      {/* Expense Categories — a ranked table reads far better than a wide bar chart
+          once a month has more than a handful of categories. */}
       <DeferredRender
         className="grid gap-6 lg:grid-cols-1"
         fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card" />}
@@ -524,55 +457,21 @@ export default function MonthlyAnalyticsPage() {
         <div
           className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
         >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.expenseCategories')}</h3>
-          <div className={`h-[300px] ${sensitiveChartClass}`}>
-            {expenseBarData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={expenseBarData}
-                  margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
-                  barCategoryGap={20}
-                >
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.7 }}
-                    dy={10}
-                    interval={0}
-                  />
-                  <YAxis hide={true} />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
-                  />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    <LabelList
-                      dataKey="value"
-                      position="top"
-                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      fill="hsl(var(--foreground))"
-                      fontSize={10}
-                      fontWeight={600}
-                    />
-                    {expenseBarData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} opacity={Math.max(0.45, 0.9 - index * 0.05)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noExpenseData')}</div>
-            )}
-          </div>
+          <h3 className="mb-4 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.expenseCategories')}</h3>
+          {expenseCategoryData.length > 0 ? (
+            <CategoryBreakdownTable
+              rows={expenseCategoryData}
+              formatCurrency={formatCurrency}
+              labels={{
+                category: t('common.category'),
+                amount: t('common.amount'),
+                share: t('analytics.share'),
+                total: t('statement.total'),
+              }}
+            />
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noExpenseData')}</div>
+          )}
         </div>
       </DeferredRender>
     </div>

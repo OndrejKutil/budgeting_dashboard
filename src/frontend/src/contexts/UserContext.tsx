@@ -7,7 +7,7 @@ import type { UpdateProfileRequest } from '@/lib/api/types/requests';
 import { DEFAULT_LOCALE, isAppLocale, translate } from '@/lib/i18n';
 import type { AppLocale, DashboardTranslationKey } from '@/lib/i18n';
 import { toast } from '@/hooks/use-toast';
-import { formatMoney } from '@/lib/currency';
+import { formatMoney, formatMoneyCompact } from '@/lib/currency';
 
 // UserContext imported from ./user-context
 
@@ -84,6 +84,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return formatMoney(amount, currency);
     }, [currency]);
 
+    const formatCurrencyCompact = useCallback((amount: number) => {
+        return formatMoneyCompact(amount, currency);
+    }, [currency]);
+
     const formatNumber = useCallback((value: number, options?: Intl.NumberFormatOptions) => {
         return new Intl.NumberFormat(locale, options).format(value);
     }, [locale]);
@@ -109,11 +113,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         refreshProfile: fetchProfile,
         updateProfile,
         formatCurrency,
+        formatCurrencyCompact,
         formatNumber,
         formatDate,
         formatMonth,
         t,
-    }), [profile, currency, locale, isLoading, fetchProfile, updateProfile, formatCurrency, formatNumber, formatDate, formatMonth, t]);
+    }), [profile, currency, locale, isLoading, fetchProfile, updateProfile, formatCurrency, formatCurrencyCompact, formatNumber, formatDate, formatMonth, t]);
 
     return (
         <UserContext.Provider value={value}>

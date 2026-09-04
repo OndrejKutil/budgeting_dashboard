@@ -11,6 +11,8 @@ export interface UserContextType {
     refreshProfile: () => Promise<void>;
     updateProfile: (data: UpdateProfileRequest) => Promise<void>;
     formatCurrency: (amount: number) => string;
+    /** Short form for chart axis ticks — see formatMoneyCompact. */
+    formatCurrencyCompact: (amount: number) => string;
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
     formatDate: (date: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions) => string;
     formatMonth: (monthIndex: number, format?: 'long' | 'short') => string;
