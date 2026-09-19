@@ -31,10 +31,13 @@ UserContent = str | list[dict]
 # its own ceiling so that default can never be the thing that breaks a request.
 DEFAULT_MAX_COMPLETION_TOKENS = 4096
 
-# `reasoning_effort` is only understood by models that actually reason -- Groq 400s on the rest,
-# and our stage-two model (llama-3.3-70b-versatile) is one of the rest. Prefix-matched rather
-# than pinned to exact ids so a point upgrade (qwen3.6 -> qwen3.7) doesn't silently stop
-# honouring `disable_reasoning`; an unrecognised model just keeps the provider default.
+# `reasoning_effort` is only understood by models that actually reason, and the ones that do
+# don't agree on the vocabulary: Groq 400s a non-reasoning model outright, and gpt-oss (our
+# stage-two model) reasons but accepts only low/medium/high -- never the "none" that
+# `disable_reasoning` asks for. Both cases are handled by sending the parameter to nothing but
+# the Qwen3 family. Prefix-matched rather than pinned to exact ids so a point upgrade
+# (qwen3.6 -> qwen3.8) doesn't silently stop honouring `disable_reasoning`; every other model,
+# stage two included, just keeps the provider default (reasoning on, which is what it wants).
 _REASONING_EFFORT_MODEL_PREFIXES = ("qwen/qwen3",)
 
 
