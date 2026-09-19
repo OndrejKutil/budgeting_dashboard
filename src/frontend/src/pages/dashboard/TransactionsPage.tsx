@@ -157,7 +157,7 @@ function TableRowSkeleton() {
 }
 
 export default function TransactionsPage() {
-  const { formatCurrency, formatDate, formatMonth, formatNumber, t } = useUser();
+  const { currency, formatCurrency, formatDate, formatMonth, formatNumber, t } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
@@ -249,9 +249,12 @@ export default function TransactionsPage() {
 
   const anyFilterActive = categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery;
 
+  // base_currency is kept out of commonFilterParams because that object is also spread into the
+  // list query, which has no use for it. It belongs in the key as well as the request: the total
+  // is converted server-side, so switching display currency has to refetch, not just reformat.
   const { data: summaryData } = useQuery({
-    queryKey: ['transactions-summary', commonFilterParams],
-    queryFn: () => transactionsApi.getSummary(commonFilterParams),
+    queryKey: ['transactions-summary', commonFilterParams, currency],
+    queryFn: () => transactionsApi.getSummary({ ...commonFilterParams, base_currency: currency }),
     enabled: !!anyFilterActive,
   });
 

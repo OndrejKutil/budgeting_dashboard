@@ -15,6 +15,7 @@ from ..data.database import get_db_client
 # Load environment variables
 # helper
 from ..helper.columns import TRANSACTION_TAGS_COLUMNS, TRANSACTIONS_COLUMNS
+from ..helper.exchange_rates import get_rate
 
 # rate limiting
 from ..helper.rate_limiter import RATE_LIMITS, limiter
@@ -43,6 +44,22 @@ def _build_transaction_data(item: dict) -> TransactionData:
     raw_junction = item.pop("fct_transaction_tags", None) or []
     tags = [TagData(**jt["dim_tags"]) for jt in raw_junction if jt.get("dim_tags")]
     return TransactionData(**item, tags=tags if tags else None)
+
+
+def _row_currency(row: dict) -> str | None:
+    """
+    Pull the account currency out of a `dim_accounts(currency)` embed.
+
+    PostgREST shapes a to-one embed as an object, but returns null for a row whose account_id is
+    null and (depending on how it resolves the relationship) a single-element list rather than an
+    object. All three are handled here so the caller can treat currency as a plain optional str.
+    """
+    embed = row.get("dim_accounts")
+    if isinstance(embed, list):
+        embed = embed[0] if embed else None
+    if not isinstance(embed, dict):
+        return None
+    return embed.get("currency")
 
 
 def _apply_common_filters(query, start_date, end_date, category_id, account_id,
@@ -91,10 +108,16 @@ async def get_transactions_summary(
     min_amount: float | None = Query(None),
     max_amount: float | None = Query(None),
     tag_id: str | None = Query(None),
+    base_currency: str = Query("CZK", description="Currency to convert the filtered total into"),
 ) -> TransactionSummaryResponse:
     """
     Return count and total_amount for all transactions matching the given filters.
     No pagination — covers the full filtered set.
+
+    An amount is stored in its account's currency, never in a single shared one, so the filtered
+    set can mix currencies (a trip tag covering CZK and EUR accounts is the ordinary case). Each
+    row is therefore converted at `dim_accounts.currency -> base_currency` before it is added in;
+    summing the raw column instead would add 200 EUR to 5000 CZK and label the result CZK.
     """
     try:
         client = get_db_client(user["access_token"])
@@ -102,7 +125,9 @@ async def get_transactions_summary(
         needs_tag_filter = bool(tag_id)
         needs_type_filter = bool(category_type)
 
-        select_parts = [TRANSACTIONS_COLUMNS.AMOUNT.value]
+        # dim_accounts stays a left join (no !inner): it is here to read a currency, not to
+        # filter, and a transaction whose account_id is null must still reach the count.
+        select_parts = [TRANSACTIONS_COLUMNS.AMOUNT.value, "dim_accounts(currency)"]
         if needs_type_filter:
             select_parts.append("dim_categories_users!inner(type)")
         if needs_tag_filter:
@@ -117,13 +142,18 @@ async def get_transactions_summary(
 
         response = query.execute()
         rows = response.data or []
-        total = sum(float(r[TRANSACTIONS_COLUMNS.AMOUNT.value]) for r in rows)
+        total = sum(
+            float(r[TRANSACTIONS_COLUMNS.AMOUNT.value])
+            * get_rate(_row_currency(r) or base_currency, base_currency)
+            for r in rows
+        )
 
         return TransactionSummaryResponse(
             success=True,
             message="Transaction summary retrieved successfully",
             count=len(rows),
             total_amount=total,
+            base_currency=base_currency,
         )
 
     except Exception as e:
