@@ -566,7 +566,8 @@ class TransactionSummaryResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
     count: int = Field(..., description="Number of matching transactions")
-    total_amount: float = Field(..., description="Sum of amounts for matching transactions")
+    total_amount: float = Field(..., description="Sum of amounts for matching transactions, converted to base_currency")
+    base_currency: str = Field("CZK", description="Currency the total is expressed in")
 
 
 class FeatureFlagsResponse(BaseModel):

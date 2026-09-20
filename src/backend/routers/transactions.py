@@ -91,18 +91,26 @@ async def get_transactions_summary(
     min_amount: float | None = Query(None),
     max_amount: float | None = Query(None),
     tag_id: str | None = Query(None),
+    base_currency: str = Query("CZK", description="Currency to convert all amounts into"),
 ) -> TransactionSummaryResponse:
     """
     Return count and total_amount for all transactions matching the given filters.
     No pagination — covers the full filtered set.
+
+    Amounts are stored in the currency of the owning account, so every row is converted
+    into `base_currency` before summing — otherwise a filtered total would add up
+    mismatched currencies (e.g. CZK + EUR).
     """
     try:
+        from ..helper.exchange_rates import get_rate
+
         client = get_db_client(user["access_token"])
 
         needs_tag_filter = bool(tag_id)
         needs_type_filter = bool(category_type)
 
-        select_parts = [TRANSACTIONS_COLUMNS.AMOUNT.value]
+        # dim_accounts(currency) is a left join — needed to convert each amount
+        select_parts = [TRANSACTIONS_COLUMNS.AMOUNT.value, "dim_accounts(currency)"]
         if needs_type_filter:
             select_parts.append("dim_categories_users!inner(type)")
         if needs_tag_filter:
@@ -117,13 +125,19 @@ async def get_transactions_summary(
 
         response = query.execute()
         rows = response.data or []
-        total = sum(float(r[TRANSACTIONS_COLUMNS.AMOUNT.value]) for r in rows)
+
+        total = 0.0
+        for row in rows:
+            account = row.get("dim_accounts") or {}
+            currency = account.get("currency") or base_currency
+            total += float(row[TRANSACTIONS_COLUMNS.AMOUNT.value]) * get_rate(currency, base_currency)
 
         return TransactionSummaryResponse(
             success=True,
             message="Transaction summary retrieved successfully",
             count=len(rows),
-            total_amount=total,
+            total_amount=round(total, 2),
+            base_currency=base_currency,
         )
 
     except Exception as e:

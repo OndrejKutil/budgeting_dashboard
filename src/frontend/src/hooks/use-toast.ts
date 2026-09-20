@@ -3,7 +3,9 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// How long a dismissed toast lingers in state before it is dropped — just long enough
+// for the exit animation to play out.
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -163,6 +165,16 @@ function toast({ ...props }: Toast) {
   };
 }
 
+/**
+ * Dismiss every visible toast.
+ *
+ * Used when a modal opens so a success/error message from a previous action does not
+ * hang around on top of the form the user just opened.
+ */
+function dismissToasts() {
+  dispatch({ type: "DISMISS_TOAST" });
+}
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 
@@ -183,4 +195,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast };
+export { useToast, toast, dismissToasts };
