@@ -212,8 +212,12 @@ pytest                                  # tests + coverage
 | `SUPABASE_JWT_SECRET` | JWT verification secret                    |
 | `DEVELOPMENT_MODE`    | Flag for dev-specific behavior             |
 | `INFERENCE_API_KEY`   | Vision-model API key for `/screenshot-import` |
-| `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` |
-| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` |
+| `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` (stage one), e.g. `qwen/qwen3.8-27b` |
+| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` (stage two), e.g. `openai/gpt-oss-120b` |
+
+> Both model ids must be ones the provider still serves. Groq retires ids on its own schedule and
+> a retired one answers with a 404 `model_not_found`, which `/screenshot-import/extract` reports
+> as a 502 -- if extraction breaks with no code change behind it, check these two values first.
 
 ---
 
