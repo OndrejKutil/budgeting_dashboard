@@ -157,7 +157,7 @@ function TableRowSkeleton() {
 }
 
 export default function TransactionsPage() {
-  const { formatCurrency, formatDate, formatMonth, formatNumber, t } = useUser();
+  const { formatCurrency, formatDate, formatMonth, formatNumber, t, currency: userCurrency } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
@@ -249,9 +249,11 @@ export default function TransactionsPage() {
 
   const anyFilterActive = categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery;
 
+  // The summary total mixes transactions from accounts in different currencies, so the
+  // backend converts everything into the user's currency before summing.
   const { data: summaryData } = useQuery({
-    queryKey: ['transactions-summary', commonFilterParams],
-    queryFn: () => transactionsApi.getSummary(commonFilterParams),
+    queryKey: ['transactions-summary', commonFilterParams, userCurrency],
+    queryFn: () => transactionsApi.getSummary({ ...commonFilterParams, base_currency: userCurrency }),
     enabled: !!anyFilterActive,
   });
 

@@ -13,7 +13,9 @@ interface TransactionSummaryResponse {
     success: boolean;
     message: string;
     count: number;
+    /** Already converted into `base_currency` by the backend. */
     total_amount: number;
+    base_currency: string;
 }
 
 type TransactionFilterParams = {
@@ -41,7 +43,7 @@ export const transactionsApi = {
         return response.data;
     },
 
-    getSummary: async (params?: Omit<TransactionFilterParams, 'limit' | 'offset'>) => {
+    getSummary: async (params?: Omit<TransactionFilterParams, 'limit' | 'offset'> & { base_currency?: string }) => {
         const response = await apiClient.get<TransactionSummaryResponse>(
             '/transactions/summary',
             params as Record<string, string | number | undefined>
