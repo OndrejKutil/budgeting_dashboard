@@ -91,9 +91,26 @@ class AccountData(BaseModel):
     type: str = Field(..., description="Type of the account (e.g., 'checking', 'savings')")
     currency: str | None = Field(..., description="Currency of the account")
     account_is_active: bool | None = Field(True, description="Whether the account is active")
-    current_balance: float | None = Field(0.0, description="Current balance of the account")
-    net_flow_30d: float | None = Field(0.0, description="Net flow of the account in the last 30 days")
+    account_group_id_fk: str | None = Field(None, description="Group this account belongs to, if any")
+    current_balance: float | None = Field(0.0, description="Current balance of the account, in its own currency")
+    current_balance_base: float | None = Field(
+        None,
+        description="current_balance converted to the requested base_currency; null when base_currency was not supplied",
+    )
+    net_flow_mtd: float | None = Field(0.0, description="Net flow of the account since the start of the current month")
+    net_flow_mtd_base: float | None = Field(
+        None,
+        description="net_flow_mtd converted to the requested base_currency; null when base_currency was not supplied",
+    )
     history_30d: list[dict] | None = Field(None, description="Daily balance history for the last 30 days")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+
+
+class AccountGroupData(BaseModel):
+    """Schema for an account group -- a user-defined label tying together several accounts."""
+    account_groups_id_pk: str = Field(..., description="Account group ID")
+    user_id_fk: str | None = Field(None, description="User ID who owns this group")
+    group_name: str = Field(..., description="Group name")
     created_at: datetime | None = Field(None, description="Record creation timestamp")
 
 class UserData(BaseModel):

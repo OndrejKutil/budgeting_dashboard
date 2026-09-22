@@ -1166,7 +1166,7 @@ function DemoAccounts() {
       >
         {DEMO_ACCOUNTS.map((account) => {
           const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
-          const isPositive = account.net_flow_30d >= 0;
+          const isPositive = account.net_flow_mtd >= 0;
           return (
             <motion.div
               key={account.id}
@@ -1217,12 +1217,12 @@ function DemoAccounts() {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Net flow 30d */}
+                {/* This month's net flow */}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Net flow 30d</span>
+                  <span className="text-muted-foreground">This Month</span>
                   <span className={cn('font-medium', isPositive ? 'text-emerald-500' : 'text-destructive')}>
-                    {account.net_flow_30d > 0 ? '+' : ''}
-                    <SensitiveValue>{fmtCZK(account.net_flow_30d)}</SensitiveValue>
+                    {account.net_flow_mtd > 0 ? '+' : ''}
+                    <SensitiveValue>{fmtCZK(account.net_flow_mtd)}</SensitiveValue>
                   </span>
                 </div>
               </div>

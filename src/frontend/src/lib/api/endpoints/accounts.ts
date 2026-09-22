@@ -4,17 +4,11 @@
  */
 
 import { apiClient } from '../client';
-import type { Account } from '../types/base';
-
-interface AccountsResponse {
-    data: Account[];
-    count: number;
-    success: boolean;
-    message: string;
-}
+import type { CreateAccountRequest, UpdateAccountRequest } from '../types/requests';
+import type { AccountsResponse } from '../types/responses';
 
 export const accountsApi = {
-    getAll: async (params?: { account_id?: string; account_name?: string }) => {
+    getAll: async (params?: { account_id?: string; account_name?: string; base_currency?: string }) => {
         const response = await apiClient.get<AccountsResponse>(
             '/accounts/',
             params as Record<string, string | number | undefined>
@@ -22,7 +16,7 @@ export const accountsApi = {
         return response.data;
     },
 
-    create: async (account: { account_name: string; type: string; currency: string }) => {
+    create: async (account: CreateAccountRequest) => {
         const response = await apiClient.post<{ success: boolean; message: string }>(
             '/accounts/',
             account
@@ -30,7 +24,7 @@ export const accountsApi = {
         return response.data;
     },
 
-    update: async (accountId: string, account: { account_name: string; type: string; currency: string }) => {
+    update: async (accountId: string, account: UpdateAccountRequest) => {
         const response = await apiClient.put<{ success: boolean; message: string }>(
             `/accounts/${accountId}`,
             account

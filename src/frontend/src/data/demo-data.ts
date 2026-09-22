@@ -7,7 +7,7 @@ export interface DemoAccount {
   balance: number;
   currency: string;
   history_30d: { balance: number }[];
-  net_flow_30d: number;
+  net_flow_mtd: number;
 }
 
 export interface DemoTransaction {
@@ -60,22 +60,22 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     id: 'acc-1', name: 'Main Checking', type: 'checking', balance: 38400, currency: 'CZK',
     history_30d: makeHistory(35600, 38400),
-    net_flow_30d: 2800,
+    net_flow_mtd: 2800,
   },
   {
     id: 'acc-2', name: 'Savings Account', type: 'savings', balance: 151000, currency: 'CZK',
     history_30d: makeHistory(146000, 151000),
-    net_flow_30d: 5000,
+    net_flow_mtd: 5000,
   },
   {
     id: 'acc-3', name: 'Credit Card', type: 'credit', balance: -4200, currency: 'CZK',
     history_30d: makeHistory(-1800, -4200),
-    net_flow_30d: -2400,
+    net_flow_mtd: -2400,
   },
   {
     id: 'acc-4', name: 'ETF Portfolio', type: 'investment', balance: 224000, currency: 'CZK',
     history_30d: makeHistory(216000, 224000),
-    net_flow_30d: 8000,
+    net_flow_mtd: 8000,
   },
 ];
 

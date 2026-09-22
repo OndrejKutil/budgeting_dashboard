@@ -78,6 +78,7 @@ def test_account_creation():
         type="Checking",
         currency="USD",
         created_at=None,
-        account_is_active=True
+        account_is_active=True,
+        account_group_id_fk=None
     )
     assert acc.account_name == "Main Bank"
