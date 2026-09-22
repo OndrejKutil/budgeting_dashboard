@@ -1454,7 +1454,7 @@ export default function TransactionsPage() {
                             }}
                           >
                             {tag.tag_name}
-                            <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
+                            <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
                           </span>
                         ))
                       ) : (

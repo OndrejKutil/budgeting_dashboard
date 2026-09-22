@@ -38,7 +38,7 @@ import { BudgetRowResponse } from '@/lib/api/types/responses';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -345,20 +345,31 @@ export default function BudgetMaker() {
             <Collapsible open={isOpen} onOpenChange={() => toggleSection(group)} className="mb-6">
                 <Card className="border-none shadow-none bg-transparent">
                     <div className="flex items-center justify-between mb-2 px-2">
-                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleSection(group)}>
-                            <div className={cn("p-1 rounded-md transition-colors text-muted-foreground/50 group-hover:text-primary", isOpen ? "rotate-90" : "")}>
-                                <ChevronRight className="h-5 w-5 transition-transform" />
-                            </div>
-                            <div className="flex items-baseline gap-4">
-                                <h2 className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</h2>
-                                <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
-                                    <SensitiveValue>{formatCurrency(total)}</SensitiveValue>
-                                    <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
-                                        (<SensitiveValue>{pctOfIncome.toFixed(1)}%</SensitiveValue>)
+                        {/* Heading wrapping the trigger: keeps the section reachable by heading
+                            navigation while Radix gives the button aria-expanded + Enter/Space.
+                            The inner nodes are spans because a <button> may only contain
+                            phrasing content -- a nested <h2> would be invalid HTML. */}
+                        <h2>
+                            <CollapsibleTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-3 text-left rounded-md group ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                    <span className={cn("inline-flex p-1 rounded-md transition-colors text-muted-foreground/50 group-hover:text-primary", isOpen ? "rotate-90" : "")}>
+                                        <ChevronRight className="h-5 w-5 transition-transform" />
                                     </span>
-                                </span>
-                            </div>
-                        </div>
+                                    <span className="flex items-baseline gap-4">
+                                        <span className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</span>
+                                        <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
+                                            <SensitiveValue>{formatCurrency(total)}</SensitiveValue>
+                                            <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
+                                                (<SensitiveValue>{pctOfIncome.toFixed(1)}%</SensitiveValue>)
+                                            </span>
+                                        </span>
+                                    </span>
+                                </button>
+                            </CollapsibleTrigger>
+                        </h2>
 
                         {isEditing && (
                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); addRow(group); }} className="text-primary hover:text-primary/90 hover:bg-primary/10">
@@ -423,7 +434,7 @@ export default function BudgetMaker() {
                                                                                 return cat ? (
                                                                                     <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
                                                                                         {cat.category_name}
-                                                                                        <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
+                                                                                        <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
                                                                                     </span>
                                                                                 ) : null;
                                                                             })
@@ -475,7 +486,7 @@ export default function BudgetMaker() {
                                                                                 return tag ? (
                                                                                     <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
                                                                                         {tag.tag_name}
-                                                                                        <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
+                                                                                        <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
                                                                                     </span>
                                                                                 ) : null;
                                                                             })
@@ -625,7 +636,7 @@ export default function BudgetMaker() {
                                                                         return cat ? (
                                                                             <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
                                                                                 {cat.category_name}
-                                                                                <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
+                                                                                <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
                                                                             </span>
                                                                         ) : null;
                                                                     })
@@ -677,7 +688,7 @@ export default function BudgetMaker() {
                                                                         return tag ? (
                                                                             <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
                                                                                 {tag.tag_name}
-                                                                                <X className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
+                                                                                <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
                                                                             </span>
                                                                         ) : null;
                                                                     })

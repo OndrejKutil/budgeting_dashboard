@@ -109,6 +109,8 @@ export function MonthlyBreakdownTable({
           {rows.map((row, index) => (
             <tr
               key={row.month}
+              // The row stays clickable as a wide mouse target, but the real control is the
+              // button in the month cell -- a bare onClick on a <tr> is unreachable by Tab.
               onClick={onMonthClick ? () => onMonthClick(row.month) : undefined}
               className={cn(
                 'border-b border-border/40 transition-colors',
@@ -117,7 +119,20 @@ export function MonthlyBreakdownTable({
               )}
             >
               <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-muted-foreground">
-                {row.month}
+                {onMonthClick ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation(); // the row's own handler would otherwise fire too
+                      onMonthClick(row.month);
+                    }}
+                    className="rounded-sm underline-offset-4 ring-offset-background hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {row.month}
+                  </button>
+                ) : (
+                  row.month
+                )}
               </td>
               <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums text-foreground">
                 <SensitiveValue>{formatCurrency(row.income)}</SensitiveValue>
