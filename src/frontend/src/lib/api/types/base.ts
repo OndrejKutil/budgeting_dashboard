@@ -159,9 +159,24 @@ export interface Account {
     type: string;
     currency: string | null;
     account_is_active?: boolean;
+    account_group_id_fk: string | null;
     current_balance: number | null;
-    net_flow_30d: number | null;
+    current_balance_base?: number | null;
+    net_flow_mtd: number | null;
+    net_flow_mtd_base?: number | null;
     history_30d?: { date: string; balance: number }[];
+    created_at: string | null;
+}
+
+/**
+ * Account group -- a user-defined label tying together several accounts
+ * (e.g. one bank account held in multiple currencies).
+ * Matches backend AccountGroupData schema
+ */
+export interface AccountGroup {
+    account_groups_id_pk: string;
+    user_id_fk: string | null;
+    group_name: string;
     created_at: string | null;
 }
 

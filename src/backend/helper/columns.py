@@ -28,10 +28,22 @@ class ACCOUNTS_COLUMNS(Enum):
     CURRENCY = "currency"
     IS_ACTIVE = "account_is_active"
     CREATED_AT = "created_at"
+    GROUP_ID = "account_group_id_fk"
 
     def __str__(self):
         return self.value
-    
+
+
+class ACCOUNT_GROUPS_COLUMNS(Enum):
+
+    ID = "account_groups_id_pk"
+    USER_ID = "user_id_fk"
+    NAME = "group_name"
+    CREATED_AT = "created_at"
+
+    def __str__(self):
+        return self.value
+
 
 class CATEGORIES_COLUMNS(Enum):
 

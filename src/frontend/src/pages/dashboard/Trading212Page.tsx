@@ -184,6 +184,28 @@ export default function Trading212Page() {
     }
   };
 
+  /**
+   * A sortable header is a real <button> inside the <th>, not a clickable <th>: the sort
+   * has to be reachable by Tab/Enter, and `aria-sort` carries the current order that the
+   * arrow glyph only draws. Written as a function rather than a nested component so the
+   * button keeps its identity — and therefore keyboard focus — across re-sorts.
+   */
+  const sortableHead = (column: typeof sortBy, label: string) => (
+    <TableHead
+      className="text-right"
+      aria-sort={sortBy === column ? (sortDesc ? 'descending' : 'ascending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => toggleSort(column)}
+        className="inline-flex select-none items-center gap-1 rounded-sm ring-offset-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {label}
+        {sortBy === column && <span aria-hidden="true">{sortDesc ? '↓' : '↑'}</span>}
+      </button>
+    </TableHead>
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader title={t('pages.trading212.title')} description={t('pages.trading212.description')} />
@@ -376,24 +398,9 @@ export default function Trading212Page() {
                     <TableHead className="text-right">{t('pages.trading212.quantity')}</TableHead>
                     <TableHead className="text-right">{t('pages.trading212.avgPrice')}</TableHead>
                     <TableHead className="text-right">{t('pages.trading212.currentPrice')}</TableHead>
-                    <TableHead
-                      className="text-right cursor-pointer select-none hover:text-foreground"
-                      onClick={() => toggleSort('market_value')}
-                    >
-                      {t('pages.trading212.marketValue')}{sortBy === 'market_value' && (sortDesc ? ' ↓' : ' ↑')}
-                    </TableHead>
-                    <TableHead
-                      className="text-right cursor-pointer select-none hover:text-foreground"
-                      onClick={() => toggleSort('unrealised_pnl')}
-                    >
-                      {t('pages.trading212.pl')}{sortBy === 'unrealised_pnl' && (sortDesc ? ' ↓' : ' ↑')}
-                    </TableHead>
-                    <TableHead
-                      className="text-right cursor-pointer select-none hover:text-foreground"
-                      onClick={() => toggleSort('weight_pct')}
-                    >
-                      {t('pages.trading212.weight')}{sortBy === 'weight_pct' && (sortDesc ? ' ↓' : ' ↑')}
-                    </TableHead>
+                    {sortableHead('market_value', t('pages.trading212.marketValue'))}
+                    {sortableHead('unrealised_pnl', t('pages.trading212.pl'))}
+                    {sortableHead('weight_pct', t('pages.trading212.weight'))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>

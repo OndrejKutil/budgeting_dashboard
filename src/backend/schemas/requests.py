@@ -66,6 +66,7 @@ class AccountRequest(BaseModel):
     currency: str | None = Field(..., description="Currency of the account")
     created_at: datetime | None = Field(None, description="Record creation timestamp")
     account_is_active: bool | None = Field(None, description="Whether the account is active")
+    account_group_id_fk: str | None = Field(None, description="Group this account belongs to, if any")
 
     model_config = ConfigDict(
         # Allow Decimal to be serialized as float in JSON
@@ -77,6 +78,42 @@ class AccountRequest(BaseModel):
                 "type": "",
                 "currency": "",
                 "created_at": "2025-01-15T10:30:00Z"
+            }
+        }
+    )
+
+
+class AccountUpdateRequest(BaseModel):
+    """
+    Schema for updating an existing account. Every field is optional and the router applies
+    the update with exclude_unset, not exclude_none -- so, unlike AccountRequest, this schema
+    can express "clear account_group_id_fk back to ungrouped" by sending it as null.
+    """
+    account_name: str | None = Field(None, description="Name of the account")
+    type: str | None = Field(None, description="Type of the account (e.g., 'checking', 'savings')")
+    currency: str | None = Field(None, description="Currency of the account")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+    account_is_active: bool | None = Field(None, description="Whether the account is active")
+    account_group_id_fk: str | None = Field(None, description="Group this account belongs to, or null to ungroup")
+
+    model_config = ConfigDict(
+        json_encoders={Decimal: float},
+        json_schema_extra={
+            "example": {
+                "account_is_active": True
+            }
+        }
+    )
+
+
+class AccountGroupRequest(BaseModel):
+    """Schema for creating or renaming an account group"""
+    group_name: str = Field(..., min_length=1, max_length=100, description="Name of the account group")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "group_name": "Revolut"
             }
         }
     )

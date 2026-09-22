@@ -10,6 +10,7 @@ import type {
     Transaction,
     Category,
     Account,
+    AccountGroup,
     SavingsFund,
     SummaryData,
     MonthlyAnalytics,
@@ -158,6 +159,27 @@ export interface AccountResponse {
     data: Account;
     success: boolean;
     message: string;
+}
+
+/**
+ * Account groups list response
+ */
+export interface AccountGroupsResponse {
+    data: AccountGroup[];
+    count: number;
+    success: boolean;
+    message: string;
+}
+
+/**
+ * Account group create/update/delete response -- data is the created/updated group,
+ * letting the caller use its id without a refetch (e.g. assigning a freshly created
+ * group to the account being saved in the same submit).
+ */
+export interface AccountGroupSuccessResponse {
+    success: boolean;
+    message: string;
+    data?: AccountGroup | null;
 }
 
 // ================================================================================================

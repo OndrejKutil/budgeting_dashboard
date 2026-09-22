@@ -97,6 +97,10 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+/** House focus ring, matching the shadcn primitives -- the nav items are hand-rolled buttons. */
+const FOCUS_RING =
+  'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2';
+
 function DemoSidebar({ activePage, onNavigate, collapsed, onToggle, isMobile, onClose }: SidebarProps) {
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const wide = !collapsed || isMobile;
@@ -158,10 +162,12 @@ function DemoSidebar({ activePage, onNavigate, collapsed, onToggle, isMobile, on
         {/* Main nav */}
         <div className="space-y-1">
           {DEMO_NAV.map((item) => (
-            <div
+            <button
               key={item.page}
+              type="button"
               onClick={() => handleNav(item.page)}
-              className={cn(itemBase, 'cursor-pointer', activePage === item.page ? activeClass : idleClass)}
+              className={cn(itemBase, 'w-full text-left', FOCUS_RING, activePage === item.page ? activeClass : idleClass)}
+              aria-current={activePage === item.page ? 'page' : undefined}
               aria-label={!wide ? item.label : undefined}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -177,7 +183,7 @@ function DemoSidebar({ activePage, onNavigate, collapsed, onToggle, isMobile, on
                   </motion.span>
                 )}
               </AnimatePresence>
-            </div>
+            </button>
           ))}
           {LOCKED_NAV.map((item) => (
             <div key={item.label} className={cn(itemBase, lockedClass)}>
@@ -212,16 +218,19 @@ function DemoSidebar({ activePage, onNavigate, collapsed, onToggle, isMobile, on
                     exit={{ height: 0, opacity: 0 }}
                     className="mt-1 space-y-1 overflow-hidden pl-4"
                   >
-                    <div
+                    <button
+                      type="button"
                       onClick={() => handleNav('analytics')}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all cursor-pointer',
+                        'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-all',
+                        FOCUS_RING,
                         activePage === 'analytics' ? activeClass : idleClass
                       )}
+                      aria-current={activePage === 'analytics' ? 'page' : undefined}
                     >
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       <span>Monthly</span>
-                    </div>
+                    </button>
                     {LOCKED_ANALYTICS.map((item) => (
                       <div key={item.label} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium', lockedClass)}>
                         <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -234,13 +243,15 @@ function DemoSidebar({ activePage, onNavigate, collapsed, onToggle, isMobile, on
               </AnimatePresence>
             </>
           ) : (
-            <div
+            <button
+              type="button"
               onClick={() => handleNav('analytics')}
-              className={cn(itemBase, 'cursor-pointer', activePage === 'analytics' ? activeClass : idleClass)}
+              className={cn(itemBase, 'w-full', FOCUS_RING, activePage === 'analytics' ? activeClass : idleClass)}
+              aria-current={activePage === 'analytics' ? 'page' : undefined}
               aria-label="Monthly Analytics"
             >
               <Calendar className="h-5 w-5 flex-shrink-0" />
-            </div>
+            </button>
           )}
         </div>
 
@@ -1155,7 +1166,7 @@ function DemoAccounts() {
       >
         {DEMO_ACCOUNTS.map((account) => {
           const Icon = ACCOUNT_ICONS[account.type] ?? Wallet;
-          const isPositive = account.net_flow_30d >= 0;
+          const isPositive = account.net_flow_mtd >= 0;
           return (
             <motion.div
               key={account.id}
@@ -1206,12 +1217,12 @@ function DemoAccounts() {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Net flow 30d */}
+                {/* This month's net flow */}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Net flow 30d</span>
+                  <span className="text-muted-foreground">This Month</span>
                   <span className={cn('font-medium', isPositive ? 'text-emerald-500' : 'text-destructive')}>
-                    {account.net_flow_30d > 0 ? '+' : ''}
-                    <SensitiveValue>{fmtCZK(account.net_flow_30d)}</SensitiveValue>
+                    {account.net_flow_mtd > 0 ? '+' : ''}
+                    <SensitiveValue>{fmtCZK(account.net_flow_mtd)}</SensitiveValue>
                   </span>
                 </div>
               </div>

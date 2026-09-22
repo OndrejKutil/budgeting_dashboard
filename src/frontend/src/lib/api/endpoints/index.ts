@@ -6,6 +6,7 @@
 export { authApi } from './auth';
 export { categoriesApi } from './categories';
 export { accountsApi } from './accounts';
+export { accountGroupsApi } from './accountGroups';
 export { transactionsApi } from './transactions';
 export { fundsApi } from './funds';
 export { profileApi } from './profile';

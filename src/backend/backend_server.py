@@ -114,6 +114,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 # Include routers (deliberately imported here, after the exception handlers they rely on)
 from .routers import (  # noqa: E402
+    account_groups,
     accounts,
     budgets,
     categories,
@@ -141,6 +142,7 @@ app.include_router(token_refresh.router, prefix="/refresh", tags=["Token refresh
 app.include_router(export.router, prefix="/export", tags=["Export"])
 app.include_router(categories.router, prefix="/categories", tags=["Categories"])
 app.include_router(accounts.router, prefix="/accounts", tags=["Accounts"])
+app.include_router(account_groups.router, prefix="/account-groups", tags=["Account Groups"])
 app.include_router(profile.router, prefix="/profile", tags=["Profile"])
 app.include_router(summary.router, prefix="/summary", tags=["Summary"])
 app.include_router(login.router, prefix="/auth", tags=["Authentication"])

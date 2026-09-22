@@ -28,10 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, RefreshCw } from 'lucide-react';
+import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, RefreshCw, Layers, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { getErrorMessage } from '@/lib/api/client';
-import { accountsApi, netWorthApi } from '@/lib/api/endpoints';
-import { Account, CreateAccountRequest, UpdateAccountRequest } from '@/lib/api/types';
+import { accountsApi, accountGroupsApi, netWorthApi } from '@/lib/api/endpoints';
+import { Account, AccountGroup, CreateAccountRequest, UpdateAccountRequest } from '@/lib/api/types';
 import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -43,7 +48,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-import { formatMoney } from '@/lib/currency';
+import { formatMoney, getCurrencyFlag } from '@/lib/currency';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   checking: Wallet,
@@ -79,6 +84,51 @@ function AccountSkeleton() {
         <Skeleton className="h-3 w-12" />
       </div>
     </div>
+  );
+}
+
+/**
+ * 40x16 trend line for one currency row inside a group card.
+ *
+ * Hand-rolled SVG rather than Recharts: at this size the chart machinery (and a
+ * ResponsiveContainer per row) buys nothing, and a group card can hold half a dozen rows.
+ */
+function MicroSparkline({ data, className }: { data?: { balance: number }[]; className?: string }) {
+  const values = data?.map((d) => d.balance) ?? [];
+  if (values.length < 2) return <div className="h-4 w-10 shrink-0" />;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const w = 40;
+  const h = 16;
+  const pad = 1; // keep the stroke from clipping at the top/bottom edge
+  const points = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      className={cn('shrink-0', className)}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -150,9 +200,17 @@ export default function AccountsPage() {
   // const [error, setError] = useState<string | null>(null);
 
   const { data: accounts = [], isLoading, error } = useQuery({
-    queryKey: ['accounts'],
+    queryKey: ['accounts', userCurrency],
     queryFn: async () => {
-      const response = await accountsApi.getAll();
+      const response = await accountsApi.getAll({ base_currency: userCurrency });
+      return response.data;
+    },
+  });
+
+  const { data: groups = [] } = useQuery({
+    queryKey: ['account-groups'],
+    queryFn: async () => {
+      const response = await accountGroupsApi.getAll();
       return response.data;
     },
   });
@@ -166,12 +224,27 @@ export default function AccountsPage() {
     type: '',
     currency: 'CZK',
   });
+  // Select value for the group field. Either 'none', an existing group's id, or the 'new'
+  // sentinel — the last reveals newGroupName below instead of resolving to an id directly.
+  const [groupSelection, setGroupSelection] = useState<string>('none');
+  const [newGroupName, setNewGroupName] = useState('');
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [renameGroup, setRenameGroup] = useState<AccountGroup | null>(null);
+  const [renameGroupName, setRenameGroupName] = useState('');
+  const [deleteGroupConfirmId, setDeleteGroupConfirmId] = useState<string | null>(null);
+
   const activeAccounts = accounts.filter(a => a.account_is_active !== false);
   const inactiveAccounts = accounts.filter(a => a.account_is_active === false);
-  const nativeAccounts = activeAccounts.filter(a => !a.currency || a.currency === userCurrency);
-  const foreignAccounts = activeAccounts.filter(a => a.currency && a.currency !== userCurrency);
+  const ungroupedActiveAccounts = activeAccounts.filter(a => !a.account_group_id_fk);
+  const nativeAccounts = ungroupedActiveAccounts.filter(a => !a.currency || a.currency === userCurrency);
+  const foreignAccounts = ungroupedActiveAccounts.filter(a => a.currency && a.currency !== userCurrency);
+  const groupedAccounts = groups
+    .map(group => ({
+      group,
+      members: activeAccounts.filter(a => a.account_group_id_fk === group.account_groups_id_pk),
+    }))
+    .filter(g => g.members.length > 0);
 
   const accountTypeLabel = (type: string) => ({
     cash: t('types.cash'),
@@ -188,13 +261,13 @@ export default function AccountsPage() {
   // a soft-deleted account simply reappears under "inactive" once the refetch lands.
   const optimisticDelete = optimisticList<Account, string>(
     queryClient,
-    ['accounts'],
+    ['accounts', userCurrency],
     (prev, id) => withoutId(prev, 'accounts_id_pk', id)
   );
 
   const optimisticCreate = optimisticList<Account, CreateAccountRequest>(
     queryClient,
-    ['accounts'],
+    ['accounts', userCurrency],
     (prev, payload) => [
       ...prev,
       markOptimistic<Account>({
@@ -204,8 +277,11 @@ export default function AccountsPage() {
         type: payload.type,
         currency: payload.currency ?? userCurrency,
         account_is_active: true,
+        account_group_id_fk: payload.account_group_id_fk ?? null,
         current_balance: payload.current_balance ?? 0,
-        net_flow_30d: 0,
+        current_balance_base: payload.current_balance ?? 0,
+        net_flow_mtd: 0,
+        net_flow_mtd_base: 0,
         history_30d: [],
         created_at: null,
       }),
@@ -214,7 +290,7 @@ export default function AccountsPage() {
 
   const optimisticUpdate = optimisticList<Account, { id: string; data: UpdateAccountRequest }>(
     queryClient,
-    ['accounts'],
+    ['accounts', userCurrency],
     (prev, vars) => patchById(prev, 'accounts_id_pk', vars.id, vars.data)
   );
 
@@ -284,6 +360,54 @@ export default function AccountsPage() {
     onSettled: optimisticUpdate.onSettled,
   });
 
+  const createGroupMutation = useMutation({
+    mutationFn: accountGroupsApi.create,
+    onSuccess: () => {
+      toast({ title: t('pages.accounts.groupCreated') });
+      void queryClient.invalidateQueries({ queryKey: ['account-groups'] });
+    },
+    onError: (err) => {
+      toast({
+        title: t('common.error'),
+        description: getErrorMessage(err, t('pages.accounts.groupCreateFailed')),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const renameGroupMutation = useMutation({
+    mutationFn: (vars: { id: string; group_name: string }) => accountGroupsApi.update(vars.id, { group_name: vars.group_name }),
+    onSuccess: () => {
+      toast({ title: t('pages.accounts.groupRenamed') });
+      void queryClient.invalidateQueries({ queryKey: ['account-groups'] });
+    },
+    onError: (err) => {
+      toast({
+        title: t('common.error'),
+        description: getErrorMessage(err, t('pages.accounts.groupRenameFailed')),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: accountGroupsApi.delete,
+    onSuccess: () => {
+      toast({ title: t('pages.accounts.groupDeleted') });
+      void queryClient.invalidateQueries({ queryKey: ['account-groups'] });
+      // Members are un-grouped server-side (ON DELETE SET NULL) -- refetch so their cards
+      // move back into the native/foreign sections instead of vanishing with the group.
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+    onError: (err) => {
+      toast({
+        title: t('common.error'),
+        description: getErrorMessage(err, t('pages.accounts.groupDeleteFailed')),
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSubmit = async () => {
     if (!formData.account_name || !formData.type) {
       toast({
@@ -294,10 +418,32 @@ export default function AccountsPage() {
       return;
     }
 
+    // A brand-new group must exist before the account can reference it, so this one path
+    // waits for the round-trip instead of closing on the optimistic write like the rest.
+    let account_group_id_fk: string | null = groupSelection === 'none' ? null : groupSelection;
+    if (groupSelection === 'new') {
+      if (!newGroupName.trim()) {
+        toast({
+          title: t('common.validationError'),
+          description: t('common.requiredFields'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      try {
+        const created = await createGroupMutation.mutateAsync({ group_name: newGroupName.trim() });
+        account_group_id_fk = created.data?.account_groups_id_pk ?? null;
+      } catch {
+        return; // createGroupMutation already toasted the failure
+      }
+    }
+
+    const payload = { ...formData, account_group_id_fk };
+
     if (selectedAccount) {
-      updateMutation.mutate({ id: selectedAccount.accounts_id_pk, data: formData });
+      updateMutation.mutate({ id: selectedAccount.accounts_id_pk, data: payload });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
 
     // The optimistic write already landed in the cache, so the modal can close immediately
@@ -312,6 +458,8 @@ export default function AccountsPage() {
       type: account.type,
       currency: account.currency || 'CZK',
     });
+    setGroupSelection(account.account_group_id_fk ?? 'none');
+    setNewGroupName('');
     setIsModalOpen(true);
   };
 
@@ -323,6 +471,20 @@ export default function AccountsPage() {
       type: '',
       currency: 'CZK',
     });
+    setGroupSelection('none');
+    setNewGroupName('');
+  };
+
+  const openRenameGroup = (group: AccountGroup) => {
+    setRenameGroup(group);
+    setRenameGroupName(group.group_name);
+  };
+
+  const handleRenameGroup = () => {
+    if (!renameGroup || !renameGroupName.trim()) return;
+    renameGroupMutation.mutate({ id: renameGroup.account_groups_id_pk, group_name: renameGroupName.trim() });
+    setRenameGroup(null);
+    setRenameGroupName('');
   };
 
   if (error && !isLoading && accounts.length === 0) {
@@ -427,6 +589,7 @@ export default function AccountsPage() {
             </p>
           </div>
 
+          <p className="text-right text-[10px] text-muted-foreground/70">{t('metrics.last30d')}</p>
           <div className="h-[60px] w-full">
             {account.history_30d && account.history_30d.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -455,15 +618,148 @@ export default function AccountsPage() {
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t('metrics.netFlow30d')}</span>
+            <span className="text-muted-foreground">{t('metrics.netFlowMtd')}</span>
             <span
-              className={`font-medium ${(account.net_flow_30d || 0) >= 0
+              className={`font-medium ${(account.net_flow_mtd || 0) >= 0
                 ? 'text-emerald-500'
                 : 'text-destructive'
                 }`}
             >
-              {(account.net_flow_30d || 0) > 0 ? '+' : ''}
-              <SensitiveValue>{formatMoney(account.net_flow_30d || 0, account.currency || 'CZK')}</SensitiveValue>
+              {(account.net_flow_mtd || 0) > 0 ? '+' : ''}
+              <SensitiveValue>{formatMoney(account.net_flow_mtd || 0, account.currency || 'CZK')}</SensitiveValue>
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  /**
+   * A group renders as ONE card the same size and shape as an account card, sitting in the
+   * same grid -- a multicurrency account the way a bank shows it, not a container of cards.
+   * Members become currency rows; each keeps its own trend line and actions menu.
+   */
+  const renderGroupCard = ({ group, members }: { group: AccountGroup; members: Account[] }) => {
+    const combinedBase = members.reduce((sum, a) => sum + (a.current_balance_base ?? 0), 0);
+    const combinedFlowBase = members.reduce((sum, a) => sum + (a.net_flow_mtd_base ?? 0), 0);
+    const currencyCodes = Array.from(new Set(members.map(a => a.currency || userCurrency)));
+    // Two accounts can share a currency inside one group; only then is the code alone
+    // ambiguous, so the account name is shown as a second line just for those rows.
+    const duplicated = new Set(
+      currencyCodes.filter(c => members.filter(a => (a.currency || userCurrency) === c).length > 1)
+    );
+
+    return (
+      <motion.div
+        key={group.account_groups_id_pk}
+        variants={fadeIn}
+        className="group flex h-full flex-col rounded-xl border border-border bg-card p-5 shadow-card transition-colors hover:border-primary/50"
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{group.group_name}</h3>
+              <p className="text-sm text-muted-foreground">{currencyCodes.join(' · ')}</p>
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`${t('common.actions')}: ${group.group_name}`}
+                className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openRenameGroup(group)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                {t('pages.accounts.renameGroup')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteGroupConfirmId(group.account_groups_id_pk)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('pages.accounts.deleteGroup')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* flex-1 + mt-auto on the footer pins "This Month" to the bottom edge, so group
+            cards with different row counts still line their footers up across a grid row.
+            Deliberately no space-y-* here: its `> * ~ *` selector outranks mt-auto. */}
+        <div className="mt-4 flex flex-1 flex-col">
+          <div>
+            <p className="text-xs text-muted-foreground">{t('metrics.totalBalance')}</p>
+            <p className="text-2xl font-bold font-display">
+              <SensitiveValue>{formatCurrency(combinedBase)}</SensitiveValue>
+            </p>
+          </div>
+
+          <div className="mt-3 divide-y divide-border/60 border-y border-border/60">
+            {members.map((account) => {
+              const cur = account.currency || userCurrency;
+              const pending = isOptimistic(account);
+              const up = (account.net_flow_mtd || 0) >= 0;
+              return (
+                <div key={account.accounts_id_pk} className="group/row flex items-center gap-2 py-2">
+                  <span className="text-sm leading-none">{getCurrencyFlag(cur)}</span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium text-muted-foreground">{cur}</span>
+                    {duplicated.has(cur) && (
+                      <p className="truncate text-[10px] text-muted-foreground/70">{account.account_name}</p>
+                    )}
+                  </div>
+                  <span className="flex-1 text-right text-sm font-medium tabular-nums">
+                    <SensitiveValue>{formatMoney(account.current_balance || 0, cur)}</SensitiveValue>
+                  </span>
+                  <MicroSparkline
+                    data={account.history_30d}
+                    className={up ? 'text-emerald-500/70' : 'text-destructive/70'}
+                  />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={pending}
+                        aria-label={`${t('common.actions')}: ${account.account_name}`}
+                        className="h-6 w-6 shrink-0 opacity-100 md:opacity-0 md:group-hover/row:opacity-100 md:focus-visible:opacity-100"
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditModal(account)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('common.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeleteConfirmId(account.accounts_id_pk)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('common.delete')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto flex items-center justify-between pt-3 text-sm">
+            <span className="text-muted-foreground">{t('metrics.netFlowMtd')}</span>
+            <span className={`font-medium ${combinedFlowBase >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+              {combinedFlowBase > 0 ? '+' : ''}
+              <SensitiveValue>{formatCurrency(combinedFlowBase)}</SensitiveValue>
             </span>
           </div>
         </div>
@@ -484,20 +780,6 @@ export default function AccountsPage() {
         }
       />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-border bg-card p-6 shadow-sm"
-      >
-        <p className="text-sm text-muted-foreground">{t('metrics.totalActiveAccounts')}</p>
-        <div className="mt-1 text-3xl font-bold font-display">
-          {isLoading ? <Skeleton className="h-9 w-16 inline-block" /> : activeAccounts.length}
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t('pages.accounts.summaryDescription')}
-        </p>
-      </motion.div>
-
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -516,42 +798,61 @@ export default function AccountsPage() {
         />
       ) : (
         <div className="space-y-8">
-          {foreignAccounts.length === 0 ? (
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              animate="show"
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {activeAccounts.map(renderAccountCard)}
-            </motion.div>
-          ) : (
-            <div className="space-y-6">
-              {nativeAccounts.length > 0 && (
+          {/* Groups keep their own labelled section, never mixed into the ungrouped grids --
+              a multicurrency group belongs to neither the native nor the foreign bucket.
+              Everything below this is the original native/foreign split, untouched. */}
+          {groupedAccounts.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">{t('pages.accounts.groups')}</p>
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                animate="show"
+                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                {groupedAccounts.map(renderGroupCard)}
+              </motion.div>
+            </div>
+          )}
+
+          {ungroupedActiveAccounts.length > 0 && (
+            foreignAccounts.length === 0 ? (
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                animate="show"
+                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                {ungroupedActiveAccounts.map(renderAccountCard)}
+              </motion.div>
+            ) : (
+              <div className="space-y-6">
+                {nativeAccounts.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-muted-foreground">{userCurrency}</p>
+                    <motion.div
+                      variants={stagger}
+                      initial="hidden"
+                      animate="show"
+                      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    >
+                      {nativeAccounts.map(renderAccountCard)}
+                    </motion.div>
+                  </div>
+                )}
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground">{userCurrency}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('pages.accounts.foreignCurrencies')}</p>
                   <motion.div
                     variants={stagger}
                     initial="hidden"
                     animate="show"
                     className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
                   >
-                    {nativeAccounts.map(renderAccountCard)}
+                    {foreignAccounts.map(renderAccountCard)}
                   </motion.div>
                 </div>
-              )}
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">{t('pages.accounts.foreignCurrencies')}</p>
-                <motion.div
-                  variants={stagger}
-                  initial="hidden"
-                  animate="show"
-                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                  {foreignAccounts.map(renderAccountCard)}
-                </motion.div>
               </div>
-            </div>
+            )
           )}
 
           {inactiveAccounts.length > 0 && (
@@ -730,6 +1031,46 @@ export default function AccountsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="account_group">{t('pages.accounts.group')}</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={t('pages.accounts.groupHelp')}
+                      className="text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>{t('pages.accounts.groupHelp')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Select value={groupSelection} onValueChange={setGroupSelection}>
+                <SelectTrigger id="account_group">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('pages.accounts.noGroup')}</SelectItem>
+                  {groups.map((group) => (
+                    <SelectItem key={group.account_groups_id_pk} value={group.account_groups_id_pk}>
+                      {group.group_name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new">{t('pages.accounts.newGroup')}</SelectItem>
+                </SelectContent>
+              </Select>
+              {groupSelection === 'new' && (
+                <Input
+                  placeholder={t('pages.accounts.groupNamePlaceholder')}
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                />
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
@@ -760,6 +1101,56 @@ export default function AccountsPage() {
             <Button
               variant="destructive"
               onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
+            >
+              {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Group Dialog */}
+      <Dialog open={renameGroup !== null} onOpenChange={(open) => !open && setRenameGroup(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{t('pages.accounts.renameGroup')}</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              value={renameGroupName}
+              onChange={(e) => setRenameGroupName(e.target.value)}
+              placeholder={t('pages.accounts.groupNamePlaceholder')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameGroup(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleRenameGroup}>
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Group Confirmation Dialog */}
+      <Dialog open={deleteGroupConfirmId !== null} onOpenChange={() => setDeleteGroupConfirmId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{t('pages.accounts.deleteGroupTitle')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            {t('pages.accounts.deleteGroupDescription')}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteGroupConfirmId(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteGroupConfirmId !== null) deleteGroupMutation.mutate(deleteGroupConfirmId);
+                setDeleteGroupConfirmId(null);
+              }}
             >
               {t('common.delete')}
             </Button>

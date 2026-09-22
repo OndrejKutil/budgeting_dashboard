@@ -19,11 +19,12 @@ from ..helper.calculations import accounts_calc
 
 # helper
 from ..helper.columns import ACCOUNTS_COLUMNS, TRANSACTIONS_COLUMNS
+from ..helper.exchange_rates import get_rate
 
 # rate limiting
 from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..schemas.base import AccountData
-from ..schemas.requests import AccountRequest
+from ..schemas.requests import AccountRequest, AccountUpdateRequest
 from ..schemas.responses import AccountsResponse, AccountSuccessResponse
 
 # ================================================================================================
@@ -50,9 +51,10 @@ async def get_all_accounts(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     account_id: int | None = Query(None, description="Optional filtering for only the given account for getting its name"),
-    account_name: str | None = Query(None, description="Optional filtering for only the given account for getting its name")
+    account_name: str | None = Query(None, description="Optional filtering for only the given account for getting its name"),
+    base_currency: str | None = Query(None, description="If provided, also return current_balance_base converted into this currency")
 ) -> AccountsResponse:
-    
+
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
@@ -63,7 +65,8 @@ async def get_all_accounts(
             ACCOUNTS_COLUMNS.TYPE.value,
             ACCOUNTS_COLUMNS.CURRENCY.value,
             ACCOUNTS_COLUMNS.IS_ACTIVE.value,
-            ACCOUNTS_COLUMNS.CREATED_AT.value
+            ACCOUNTS_COLUMNS.CREATED_AT.value,
+            ACCOUNTS_COLUMNS.GROUP_ID.value
         ])
         query = user_supabase_client.table("dim_accounts").select(account_fields)
 
@@ -90,13 +93,20 @@ async def get_all_accounts(
             if acc_id in metrics:
                 acc_metrics = metrics[acc_id]
                 item['current_balance'] = acc_metrics["current_balance"]
-                item['net_flow_30d'] = acc_metrics["net_flow_30d"]
+                item['net_flow_mtd'] = acc_metrics["net_flow_mtd"]
                 item['history_30d'] = acc_metrics.get("history_30d", [])
             else:
                 # Default values if no transactions
                 item['current_balance'] = 0.0
-                item['net_flow_30d'] = 0.0
+                item['net_flow_mtd'] = 0.0
                 item['history_30d'] = []
+
+            # One rate per account, applied to both figures -- the group card on the accounts
+            # page sums these across members to show a combined total in the user's currency.
+            rate = get_rate(item.get(ACCOUNTS_COLUMNS.CURRENCY.value), base_currency) if base_currency else None
+            item['current_balance_base'] = round(item['current_balance'] * rate, 2) if rate is not None else None
+            item['net_flow_mtd_base'] = round(item['net_flow_mtd'] * rate, 2) if rate is not None else None
+
             data.append(AccountData(**item))
 
         return AccountsResponse(
@@ -162,7 +172,7 @@ async def create_account(
 async def update_account(
     request: Request,
     account_id: str,
-    account_data: AccountRequest,
+    account_data: AccountUpdateRequest,
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user)
 ) -> AccountSuccessResponse:
@@ -170,7 +180,9 @@ async def update_account(
     try:
         user_supabase_client = get_db_client(user["access_token"])
 
-        data = account_data.model_dump(exclude_none=True)
+        # exclude_unset (not exclude_none): a field the client omitted stays untouched, but one
+        # sent explicitly as null (e.g. account_group_id_fk to ungroup) is applied as NULL.
+        data = account_data.model_dump(exclude_unset=True)
 
         # user_id is optional and will not really be provided, as we can easily get it from the user object from the access token
         if not data.get(ACCOUNTS_COLUMNS.USER_ID.value):

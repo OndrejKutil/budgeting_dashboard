@@ -105,6 +105,7 @@ export interface CreateAccountRequest {
     type: string;
     currency?: string;
     current_balance?: number;
+    account_group_id_fk?: string | null;
 }
 
 /**
@@ -116,6 +117,14 @@ export interface UpdateAccountRequest {
     currency?: string;
     current_balance?: number;
     account_is_active?: boolean;
+    account_group_id_fk?: string | null;
+}
+
+/**
+ * Create/rename account group request payload
+ */
+export interface CreateAccountGroupRequest {
+    group_name: string;
 }
 
 // ================================================================================================

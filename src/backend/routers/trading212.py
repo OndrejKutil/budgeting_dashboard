@@ -383,13 +383,22 @@ async def get_history(
 
         response = query.order(T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value).execute()
 
+        # Cron cadence is once or twice a day, not fixed -- a day with two syncs would otherwise
+        # plot two points. Collapse to one point per calendar day (the day's last snapshot).
+        # Rows arrive ascending by snapshot_at, so overwriting by day key leaves each key mapped
+        # to its latest row while preserving chronological dict-insertion order.
+        rows_by_day: dict[str, dict] = {}
+        for row in response.data or []:
+            day_key = row[T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value][:10]
+            rows_by_day[day_key] = row
+
         points = [
             T212ValueHistoryPoint(
                 snapshot_at=row[T212_VALUE_HISTORY_COLUMNS.SNAPSHOT_AT.value],
                 total_value=float(row[T212_VALUE_HISTORY_COLUMNS.TOTAL_VALUE.value])
                 * get_rate(row.get(T212_VALUE_HISTORY_COLUMNS.CURRENCY.value), base_currency),
             )
-            for row in (response.data or [])
+            for row in rows_by_day.values()
         ]
 
         return T212HistoryResponse(

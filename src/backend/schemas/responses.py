@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .base import (
     AccountData,
+    AccountGroupData,
     BudgetSummaryResponse,
     CategoryData,
     CategoryType,
@@ -183,6 +184,10 @@ class AccountsResponse(BaseModel):
                         "account_name": "Main Checking Account",
                         "type": "checking",
                         "currency": "USD",
+                        "account_group_id_fk": None,
+                        "current_balance": 1200.00,
+                        "current_balance_base": None,
+                        "net_flow_mtd": 150.00,
                         "created_at": "2025-01-15T10:30:00Z"
                     },
                     {
@@ -191,10 +196,64 @@ class AccountsResponse(BaseModel):
                         "account_name": "Savings Account",
                         "type": "savings",
                         "currency": "USD",
+                        "account_group_id_fk": None,
+                        "current_balance": 5000.00,
+                        "current_balance_base": None,
+                        "net_flow_mtd": 0.00,
                         "created_at": "2025-01-16T11:00:00Z"
                     }
                 ],
                 "count": 2,
+            }
+        }
+    )
+
+
+class AccountGroupsResponse(BaseModel):
+    """Response schema for account groups endpoint"""
+    data: list[AccountGroupData] = Field(..., description="List of account group records")
+    count: int = Field(..., description="Total number of records returned")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "data": [
+                    {
+                        "account_groups_id_pk": "grp123",
+                        "user_id_fk": "user123",
+                        "group_name": "Revolut",
+                        "created_at": "2025-01-15T10:30:00Z"
+                    }
+                ],
+                "count": 1,
+                "success": True,
+                "message": "Account groups retrieved successfully"
+            }
+        }
+    )
+
+
+class AccountGroupSuccessResponse(BaseModel):
+    """Response schema for account group create/update/delete operations"""
+    success: bool = Field(..., description="Indicates if the operation was successful")
+    message: str = Field(..., description="Success/error message")
+    data: AccountGroupData | None = Field(
+        None, description="The created/updated group -- lets the caller grab its id without a refetch"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": "Account group created successfully",
+                "data": {
+                    "account_groups_id_pk": "grp123",
+                    "user_id_fk": "user123",
+                    "group_name": "Revolut",
+                    "created_at": "2025-01-15T10:30:00Z"
+                }
             }
         }
     )
