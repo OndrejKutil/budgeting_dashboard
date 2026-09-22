@@ -20,8 +20,11 @@ VALUE_HISTORY_TABLE = "fct_t212_value_history"
 
 FEATURE_KEY = "t212_integration"
 
-# Staleness: stale once older than ~2x the 30-minute cron cadence.
-STALE_AFTER_MINUTES = 60
+# Staleness: stale once older than ~2x the actual cron cadence (once or twice a day, not the
+# 30-minute figure the rest of this integration's comments were written against -- see
+# scripts/sync_trading212.py). 26h covers a once-daily run plus buffer without flagging a
+# normal twice-daily gap as stale.
+STALE_AFTER_MINUTES = 26 * 60
 
 
 def _parse_timestamp(value: str) -> datetime.datetime:
