@@ -100,7 +100,7 @@ Rules:
   transactions inside it.
 - Not every bank notification uses a two-line "Merchant / Amount" layout. Some describe the
   movement in a sentence instead, e.g. a title like "Pohyb na účtě" ("Account activity") with
-  a body like "💰 Přišlo 500,00 CZK (Platba od x)" ("500.00 CZK arrived — payment
+  a body like "Přišlo 500,00 CZK (Platba od x)" ("500.00 CZK arrived — payment
   from x"). For these: the amount is the number stated, the merchant is the
   sender/payer or recipient/payee named in the sentence, and words like "Přišlo"/"received"/
   "arrived" vs. "Odešlo"/"sent"/"paid" tell you whether money came in or went out -- carry that
@@ -193,7 +193,7 @@ For each transaction, produce:
 - date: the best-effort actual calendar date in ISO format (YYYY-MM-DD), using stage one's
   "actual_date" if present, otherwise deriving it yourself from "raw_date_time_text" /
   "raw_date" if unambiguous. Output null if you cannot determine it.
-- merchant: the cleaned merchant name (prefer stage one's "merchant_slim").
+- merchant: the cleaned merchant name (prefer stage one's "merchant_slim"), do not include the name of the bank account like moneta or raiffeisen or others, only the merchant.
 - category_id_fk: the id of the best-matching category from the "categories" list, or null.
 - account_id_fk: the id of the best-matching account from the "accounts" list, or null.
   Match by bank_name against account name, and by currency, when available.
