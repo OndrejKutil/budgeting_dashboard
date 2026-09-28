@@ -8,6 +8,8 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  error: Error | null;
+  componentStack: string | null;
 }
 
 /**
@@ -19,16 +21,17 @@ interface ErrorBoundaryState {
  * equivalent yet.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+  state: ErrorBoundaryState = { hasError: false, error: null, componentStack: null };
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error, componentStack: null };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // The only client-side error surface today — matches NotFound.tsx's existing console.error
     // for 404s. No error-tracking service is wired up.
     console.error('Unhandled render error:', error, errorInfo.componentStack);
+    this.setState({ componentStack: errorInfo.componentStack ?? null });
   }
 
   render() {
@@ -66,6 +69,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </a>
             </Button>
           </div>
+
+          {/* Collapsed by default: useless to you mid-task, but the one thing worth having
+              when a crash needs reporting — and far easier to copy than a console trace. */}
+          {this.state.error && (
+            <details className="mt-10 w-full text-left">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                Technical details
+              </summary>
+              <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-3 text-left font-mono text-[11px] leading-relaxed text-muted-foreground">
+                {this.state.error.message}
+                {this.state.error.stack ? `
+
+${this.state.error.stack}` : ''}
+                {this.state.componentStack ?? ''}
+              </pre>
+            </details>
+          )}
         </div>
       </div>
     );

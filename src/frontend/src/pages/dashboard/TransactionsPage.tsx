@@ -73,9 +73,12 @@ import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '
 import { Transaction, Category, Account, SavingsFund, Tag, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
-import { formatMoney, getCurrencyFlag } from '@/lib/currency';
+import { formatMoney } from '@/lib/currency';
 import { useDebounce } from '@/hooks/use-debounce';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { AccountBalance, AccountSelect } from '@/components/AccountSelect';
+import { accountLabel, useAccountSections } from '@/hooks/use-account-sections';
+import { MultiSelect, type MultiSelectGroup } from '@/components/MultiSelect';
 import { Badge } from '@/components/ui/badge';
 import {
   Command,
@@ -101,6 +104,52 @@ import {
 const ITEMS_PER_PAGE: number = 20;
 const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
 
+// Categories are grouped by type in both the form picker and the filter, so the ordering
+// lives here rather than inside either one's JSX.
+const CATEGORY_TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
+const CATEGORY_TYPE_LABEL: Record<string, string> = {
+  expense: 'Expenses', income: 'Income', saving: 'Saving',
+  investment: 'Investments', exclude: 'Exclude', transfer: 'Transfer',
+};
+
+/**
+ * Filters persist to the URL and session storage as a single string, so a multi-select
+ * stores its picks comma-joined. 'all' is the legacy sentinel for "no filter" and stays —
+ * it keeps old bookmarked URLs working and reads better in the bar than an empty param.
+ */
+function parseFilter(value: string): string[] {
+  return !value || value === 'all' ? [] : value.split(',');
+}
+
+function serializeFilter(values: string[]): string {
+  return values.length ? values.join(',') : 'all';
+}
+
+/** `YYYY-MM` — how a picked month is stored, sent, and compared. */
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** `monthsAgo(0)` is this month; the Date constructor rolls negative months into last year. */
+function monthsAgo(count: number): string {
+  const now = new Date();
+  return monthKey(new Date(now.getFullYear(), now.getMonth() - count, 1));
+}
+
+/**
+ * Read the month filter, upgrading the format it used to have.
+ *
+ * Months were once bare numbers scoped to the Year select; they now carry their year so a
+ * selection can span one (Nov + Dec + Jan). Saved sessions and shared links still hold the
+ * old shape, and an unqualified "3" would reach the backend as a malformed month — so
+ * anything without a year gets the selected one.
+ */
+function parseMonths(value: string, fallbackYear: string): string[] {
+  return parseFilter(value).map(month =>
+    month.includes('-') ? month : `${fallbackYear}-${month.padStart(2, '0')}`,
+  );
+}
+
 /**
  * A transfer writes two ledger rows. When the second create fails the first is already posted,
  * so the error message has to say that rather than implying nothing happened. Declared at module
@@ -119,6 +168,15 @@ function toggleAmountSign(value: string): string {
   if (trimmedValue.startsWith('-')) return trimmedValue.slice(1);
 
   return `-${trimmedValue}`;
+}
+
+/**
+ * An FX rate and its reciprocal live on wildly different scales — 25.1234 CZK/EUR against
+ * 0.0398 EUR/CZK — so a fixed decimal count either wastes digits on one side or throws
+ * away precision on the other. Anchor on significant digits below 1 instead.
+ */
+function formatRate(rate: number): string {
+  return rate >= 1 ? rate.toFixed(4) : rate.toPrecision(4);
 }
 
 function parseDecimalInput(value: string): number | null {
@@ -229,7 +287,84 @@ export default function TransactionsPage() {
     },
   });
 
-  // Shared filter params (used by both the list query and the summary query)
+  // Generate years for filter (current year + 3 years)
+  // TODO: Get years from API
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 4 }, (_, i) => (currentYear - i + 2).toString());
+  }, []);
+
+  // Option groups for the multi-select filters. Accounts reuse the picker's sectioning so
+  // the filter and the form never order the same accounts differently; inactive accounts
+  // stay listed here because their past transactions are still in the ledger.
+  const accountSections = useAccountSections(accounts, { includeInactive: true });
+  const accountOptionGroups: MultiSelectGroup[] = accountSections.map(section => ({
+    key: section.key,
+    label: accountSections.length > 1 ? section.label : undefined,
+    options: section.items.map(acc => ({
+      value: acc.accounts_id_pk,
+      label: accountLabel(acc),
+      hint: <AccountBalance account={acc} />,
+    })),
+  }));
+
+  const categoryOptionGroups: MultiSelectGroup[] = CATEGORY_TYPE_ORDER
+    .map(type => ({
+      key: type,
+      label: CATEGORY_TYPE_LABEL[type],
+      options: categories
+        .filter(c => c.type === type)
+        .sort((a, b) => a.category_name.localeCompare(b.category_name))
+        .map(c => ({ value: c.categories_id_pk.toString(), label: c.category_name })),
+    }))
+    .filter(group => group.options.length > 0);
+
+  const typeOptionGroups: MultiSelectGroup[] = [{
+    key: 'type',
+    options: (['income', 'expense', 'saving', 'investment'] as const)
+      .map(type => ({ value: type, label: t(`types.${type}`) })),
+  }];
+
+  const fundOptionGroups: MultiSelectGroup[] = [{
+    key: 'fund',
+    options: [
+      // 'none' is the unassigned sentinel the backend turns into an IS NULL check.
+      { value: 'none', label: t('pages.transactions.notAssigned') },
+      ...funds
+        .slice()
+        .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
+        .map(f => ({ value: f.savings_funds_id_pk, label: f.fund_name })),
+    ],
+  }];
+
+  const tagOptionGroups: MultiSelectGroup[] = [{
+    key: 'tag',
+    options: tags
+      .slice()
+      .sort((a, b) => a.tag_name.localeCompare(b.tag_name))
+      .map(tag => ({ value: tag.tags_id_pk.toString(), label: tag.tag_name })),
+  }];
+
+  // Months are listed under year headers so a span like Nov + Dec + Jan can be selected as
+  // one thing. Same year range the Year select offers — a second, different range would
+  // just raise the question of why they disagree.
+  const monthOptionGroups: MultiSelectGroup[] = years.map(year => ({
+    key: year,
+    label: year,
+    options: [...Array(12)].map((_, i) => ({
+      value: `${year}-${String(i + 1).padStart(2, '0')}`,
+      label: formatMonth(i),
+      // In the menu the year header carries the year; on the trigger there is no header,
+      // and a bare "November" would not say which year it came from.
+      triggerLabel: `${formatMonth(i)} ${year}`,
+    })),
+  }));
+
+  const selectedMonths = parseMonths(monthFilter, yearFilter);
+
+  // Shared filter params (used by both the list query and the summary query).
+  // The multi-value filters travel as the same comma-joined string they are stored as;
+  // the backend splits them (see helper/transaction_filters.py).
   const commonFilterParams = {
     search: debouncedSearch || undefined,
     category_id: categoryFilter === 'all' ? undefined : categoryFilter,
@@ -239,12 +374,12 @@ export default function TransactionsPage() {
     min_amount: parseDecimalInput(debouncedMin) ?? undefined,
     max_amount: parseDecimalInput(debouncedMax) ?? undefined,
     tag_id: tagFilter === 'all' ? undefined : tagFilter,
-    start_date: monthFilter === 'all'
-      ? `${yearFilter}-01-01`
-      : `${yearFilter}-${monthFilter.padStart(2, '0')}-01`,
-    end_date: monthFilter === 'all'
-      ? `${yearFilter}-12-31`
-      : `${yearFilter}-${monthFilter.padStart(2, '0')}-${new Date(parseInt(yearFilter), parseInt(monthFilter), 0).getDate()}`,
+    // Picked months are disjoint spans that can cross a year (Nov + Dec + Jan), which no
+    // single range expresses — so when any are picked they are the whole date filter and
+    // the year bounds drop out. The Year select only scopes the unfiltered case.
+    start_date: selectedMonths.length ? undefined : `${yearFilter}-01-01`,
+    end_date: selectedMonths.length ? undefined : `${yearFilter}-12-31`,
+    months: selectedMonths.length ? selectedMonths.join(',') : undefined,
   };
 
   const anyFilterActive = categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery;
@@ -344,21 +479,20 @@ export default function TransactionsPage() {
 
 
 
-  // Generate years for filter (current year + 3 years)
-  // TODO: Get years from API
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 4 }, (_, i) => (currentYear - i + 2).toString());
-  }, []);
 
 
 
-  // Reset page when filters change
+  // Reset page when filters change. Every filter belongs here, not just a few: narrowing
+  // the set while on page 5 otherwise leaves you staring at an empty list with no hint
+  // that the results are one page back — and multi-select makes narrowing a lot easier.
   useEffect(() => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [categoryFilter, yearFilter, debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    categoryFilter, accountFilter, fundFilter, typeFilter, tagFilter,
+    yearFilter, monthFilter, debouncedSearch, debouncedMin, debouncedMax,
+  ]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => transactionsApi.delete(id),
@@ -660,30 +794,19 @@ export default function TransactionsPage() {
           {[
             {
               label: t('pages.transactions.thisMonth'),
-              action: () => {
-                const now = new Date();
-                setYearFilter(now.getFullYear().toString());
-                setMonthFilter((now.getMonth() + 1).toString());
-              },
+              action: () => setMonthFilter(serializeFilter([monthsAgo(0)])),
             },
             {
               label: t('pages.transactions.lastMonth'),
-              action: () => {
-                const prev = new Date();
-                prev.setMonth(prev.getMonth() - 1);
-                setYearFilter(prev.getFullYear().toString());
-                setMonthFilter((prev.getMonth() + 1).toString());
-              },
+              action: () => setMonthFilter(serializeFilter([monthsAgo(1)])),
             },
             {
               label: t('pages.transactions.last3Months'),
-              action: () => {
-                const now = new Date();
-                setYearFilter(now.getFullYear().toString());
-                setMonthFilter('all');
-              },
+              action: () => setMonthFilter(serializeFilter([monthsAgo(2), monthsAgo(1), monthsAgo(0)])),
             },
             {
+              // The only preset with no months: clearing them is what hands the date range
+              // back to the Year select.
               label: t('pages.transactions.thisYear'),
               action: () => {
                 setYearFilter(new Date().getFullYear().toString());
@@ -705,80 +828,62 @@ export default function TransactionsPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
-          <Select value={yearFilter} onValueChange={setYearFilter}>
+          {/* Picked months carry their own year, so the Year select has nothing left to say
+              while any are selected. */}
+          <Select value={yearFilter} onValueChange={setYearFilter} disabled={selectedMonths.length > 0}>
             <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.year')} /></SelectTrigger>
             <SelectContent>
               {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.month')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.transactions.allMonths')}</SelectItem>
-              {[...Array(12)].map((_, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  {formatMonth(i)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={monthOptionGroups}
+            selected={selectedMonths}
+            onChange={values => setMonthFilter(serializeFilter(values))}
+            allLabel={t('pages.transactions.allMonths')}
+            className="bg-background/50 border-input/50"
+          />
 
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.type')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.transactions.allTypes')}</SelectItem>
-              <SelectItem value="income">{t('types.income')}</SelectItem>
-              <SelectItem value="expense">{t('types.expense')}</SelectItem>
-              <SelectItem value="saving">{t('types.saving')}</SelectItem>
-              <SelectItem value="investment">{t('types.investment')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={typeOptionGroups}
+            selected={parseFilter(typeFilter)}
+            onChange={values => setTypeFilter(serializeFilter(values))}
+            allLabel={t('pages.transactions.allTypes')}
+            className="bg-background/50 border-input/50"
+          />
 
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.category')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.transactions.allCategories')}</SelectItem>
-              {categories
-                .slice()
-                .sort((a, b) => a.category_name.localeCompare(b.category_name))
-                .map(c => <SelectItem key={c.categories_id_pk} value={c.categories_id_pk.toString()}>{c.category_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={categoryOptionGroups}
+            selected={parseFilter(categoryFilter)}
+            onChange={values => setCategoryFilter(serializeFilter(values))}
+            allLabel={t('pages.transactions.allCategories')}
+            className="bg-background/50 border-input/50"
+          />
 
-          <Select value={accountFilter} onValueChange={setAccountFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('common.account')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.transactions.allAccounts')}</SelectItem>
-              {accounts
-                .slice()
-                .sort((a, b) => a.account_name.localeCompare(b.account_name))
-                .map(a => <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{getCurrencyFlag(a.currency)} {a.account_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={accountOptionGroups}
+            selected={parseFilter(accountFilter)}
+            onChange={values => setAccountFilter(serializeFilter(values))}
+            allLabel={t('pages.transactions.allAccounts')}
+            className="bg-background/50 border-input/50"
+          />
 
-          <Select value={fundFilter} onValueChange={setFundFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder={t('pages.transactions.savingsFund')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.transactions.allFunds')}</SelectItem>
-              <SelectItem value="none">{t('pages.transactions.notAssigned')}</SelectItem>
-              {funds
-                .slice()
-                .sort((a, b) => a.fund_name.localeCompare(b.fund_name))
-                .map(f => <SelectItem key={f.savings_funds_id_pk} value={f.savings_funds_id_pk}>{f.fund_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={fundOptionGroups}
+            selected={parseFilter(fundFilter)}
+            onChange={values => setFundFilter(serializeFilter(values))}
+            allLabel={t('pages.transactions.allFunds')}
+            className="bg-background/50 border-input/50"
+          />
 
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Tag" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tags</SelectItem>
-              {tags
-                .slice()
-                .sort((a, b) => a.tag_name.localeCompare(b.tag_name))
-                .map(tag => <SelectItem key={tag.tags_id_pk} value={tag.tags_id_pk.toString()}>{tag.tag_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            groups={tagOptionGroups}
+            selected={parseFilter(tagFilter)}
+            onChange={values => setTagFilter(serializeFilter(values))}
+            allLabel={'All Tags'}
+            className="bg-background/50 border-input/50"
+          />
 
           <Input
             placeholder={t('pages.transactions.minAmount')}
@@ -1282,12 +1387,7 @@ export default function TransactionsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {(() => {
-                      const TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
-                      const TYPE_LABEL: Record<string, string> = {
-                        expense: 'Expenses', income: 'Income', saving: 'Saving',
-                        investment: 'Investments', exclude: 'Exclude', transfer: 'Transfer',
-                      };
-                      return TYPE_ORDER
+                      return CATEGORY_TYPE_ORDER
                         .map(type => ({
                           type,
                           cats: categories
@@ -1301,7 +1401,7 @@ export default function TransactionsPage() {
                               "px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2",
                               i > 0 && "mt-1 pt-2 border-t border-border/40"
                             )}>
-                              {TYPE_LABEL[g.type]}
+                              {CATEGORY_TYPE_LABEL[g.type]}
                             </SelectLabel>
                             {g.cats.map(cat => (
                               <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
@@ -1317,50 +1417,29 @@ export default function TransactionsPage() {
             )}
             <div className="space-y-2">
               <Label htmlFor="account">{t('common.account')}</Label>
-              <Select
+              <AccountSelect
+                id="account"
+                accounts={accounts}
                 value={formData.account_id_fk}
                 onValueChange={(value) => setFormData({ ...formData, account_id_fk: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('pages.transactions.selectAccount')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts
-                    .filter(a => a.account_is_active !== false)
-                    .sort((a, b) => a.account_name.localeCompare(b.account_name))
-                    .map((acc) => (
-                    <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
-                      {getCurrencyFlag(acc.currency)} {acc.account_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={t('pages.transactions.selectAccount')}
+              />
             </div>
 
             {isTransfer && (
               <div className="space-y-2">
                 <Label htmlFor="to-account">{t('pages.transactions.toAccount')}</Label>
-                <Select
+                <AccountSelect
+                  id="to-account"
+                  accounts={accounts}
+                  excludeIds={[formData.account_id_fk]}
                   value={transferToAccountId}
                   onValueChange={(value) => {
                     setTransferToAccountId(value);
                     setTransferDestAmount('');
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('pages.transactions.selectDestinationAccount')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts
-                      .filter(acc => acc.account_is_active !== false && acc.accounts_id_pk !== formData.account_id_fk)
-                      .sort((a, b) => a.account_name.localeCompare(b.account_name))
-                      .map((acc) => (
-                        <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
-                          {getCurrencyFlag(acc.currency)} {acc.account_name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={t('pages.transactions.selectDestinationAccount')}
+                />
               </div>
             )}
 
@@ -1380,11 +1459,23 @@ export default function TransactionsPage() {
                   value={transferDestAmount}
                   onChange={(e) => setTransferDestAmount(e.target.value)}
                 />
-                {transferDestAmount && parseDecimalInput(formData.amount) && parseDecimalInput(transferDestAmount) && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('pages.transactions.impliedRate')}: 1 {accountMap[formData.account_id_fk]?.currency} = {(parseDecimalInput(transferDestAmount)! / Math.abs(parseDecimalInput(formData.amount)!)).toFixed(4)} {accountMap[transferToAccountId]?.currency}
-                  </p>
-                )}
+                {transferDestAmount && parseDecimalInput(formData.amount) && parseDecimalInput(transferDestAmount) && (() => {
+                  // Both directions, always. Which one reads naturally depends on the pair
+                  // (1 EUR = 25 CZK is obvious; 1 CZK = 0.04 EUR is not), and which side you
+                  // sent from is an accident of the transfer, not of how you think about
+                  // the rate — so we never make the user flip it in their head.
+                  const from = accountMap[formData.account_id_fk]?.currency;
+                  const to = accountMap[transferToAccountId]?.currency;
+                  const rate = parseDecimalInput(transferDestAmount)! / Math.abs(parseDecimalInput(formData.amount)!);
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      {t('pages.transactions.impliedRate')}:{' '}
+                      <span className="tabular-nums">1 {from} = {formatRate(rate)} {to}</span>
+                      {' · '}
+                      <span className="tabular-nums">1 {to} = {formatRate(1 / rate)} {from}</span>
+                    </p>
+                  );
+                })()}
               </div>
             )}
 
