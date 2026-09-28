@@ -48,6 +48,7 @@ import type { Recurring, CreateRecurringRequest, RecurringResponse } from '@/lib
 import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { AccountSelect } from '@/components/AccountSelect';
 import { formatMoney } from '@/lib/currency';
 import { daysDiff, toLocalDateString } from '@/lib/dates';
 
@@ -480,14 +481,12 @@ export default function RecurringPage() {
             {/* Account */}
             <div className="space-y-2">
               <Label>{t('common.account')}</Label>
-              <Select value={form.account_id_fk} onValueChange={v => setForm(f => ({ ...f, account_id_fk: v }))}>
-                <SelectTrigger><SelectValue placeholder={t('pages.transactions.selectAccount')} /></SelectTrigger>
-                <SelectContent>
-                  {accounts.filter(a => a.account_is_active !== false).map(a => (
-                    <SelectItem key={a.accounts_id_pk} value={a.accounts_id_pk}>{a.account_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AccountSelect
+                accounts={accounts}
+                value={form.account_id_fk}
+                onValueChange={v => setForm(f => ({ ...f, account_id_fk: v }))}
+                placeholder={t('pages.transactions.selectAccount')}
+              />
             </div>
 
             {/* Category */}

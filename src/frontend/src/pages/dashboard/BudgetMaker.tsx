@@ -540,7 +540,7 @@ export default function BudgetMaker() {
                                                         />
                                                     ) : (
                                                         <span className="text-foreground font-medium">
-                                                            <SensitiveValue>{formatCurrency(row.amount)}</SensitiveValue>
+                                                            <SensitiveValue>{formatCurrency(Number(row.amount))}</SensitiveValue>
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -743,7 +743,7 @@ export default function BudgetMaker() {
                                                         />
                                                     ) : (
                                                         <span className="font-mono font-medium text-foreground">
-                                                            <SensitiveValue>{formatCurrency(row.amount)}</SensitiveValue>
+                                                            <SensitiveValue>{formatCurrency(Number(row.amount))}</SensitiveValue>
                                                         </span>
                                                     )}
                                                 </div>

@@ -17,7 +17,9 @@ export default function CashFlowPage() {
   const { t, currency, formatMonth } = useUser();
   const now = useMemo(() => new Date(), []);
   const chartRef = useRef<SankeyChartHandle>(null);
-  const [mode, setMode] = useUrlState('mode', 'year');
+  // Explicitly <string>: inferred from the default alone, T narrows to the literal 'year',
+  // which makes the `=== 'month'` below look impossible and rejects setMode from the Select.
+  const [mode, setMode] = useUrlState<string>('mode', 'year');
   const [selectedYear, setSelectedYear] = useUrlState('year', now.getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useUrlState('month', (now.getMonth() + 1).toString().padStart(2, '0'));
   const selectedYearNumber = parseInt(selectedYear);

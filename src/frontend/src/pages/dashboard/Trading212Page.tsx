@@ -95,7 +95,7 @@ export default function Trading212Page() {
     onError: (error) => {
       toast({
         title: t('pages.trading212.connectFailed'),
-        description: getErrorMessage(error),
+        description: getErrorMessage(error, t('common.unknownError')),
         variant: 'destructive',
       });
     },
@@ -112,7 +112,7 @@ export default function Trading212Page() {
       invalidateAll();
     },
     onError: (error) => {
-      toast({ title: t('pages.trading212.syncFailed'), description: getErrorMessage(error), variant: 'destructive' });
+      toast({ title: t('pages.trading212.syncFailed'), description: getErrorMessage(error, t('common.unknownError')), variant: 'destructive' });
     },
   });
 
@@ -126,7 +126,7 @@ export default function Trading212Page() {
     onError: (error) => {
       toast({
         title: t('pages.trading212.disconnectFailed'),
-        description: getErrorMessage(error),
+        description: getErrorMessage(error, t('common.unknownError')),
         variant: 'destructive',
       });
     },

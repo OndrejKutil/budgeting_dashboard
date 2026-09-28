@@ -18,6 +18,11 @@ interface TransactionSummaryResponse {
     base_currency: string;
 }
 
+/**
+ * The id filters (category_id, account_id, savings_fund_id, category_type, tag_id) each
+ * accept a comma-separated list — the transactions page's pickers are multi-select and
+ * the backend expands them with IN. A single value needs no special casing.
+ */
 type TransactionFilterParams = {
     start_date?: string;
     end_date?: string;
@@ -30,6 +35,11 @@ type TransactionFilterParams = {
     min_amount?: number;
     max_amount?: number;
     tag_id?: string;
+    /**
+     * Comma-separated YYYY-MM list. Disjoint months (Jan + Mar) are not a date range, so
+     * they ride alongside start_date/end_date rather than replacing them.
+     */
+    months?: string;
     limit?: number;
     offset?: number;
 };

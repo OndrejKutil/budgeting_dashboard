@@ -30,7 +30,9 @@ import {
 } from '@/components/ui/select';
 import { Plus, Wallet, CreditCard, Landmark, MoreHorizontal, Pencil, Trash2, AlertCircle, Building, RefreshCw, Layers, Info } from 'lucide-react';
 import {
-  Tooltip,
+  // recharts exports a Tooltip too (imported above for the balance chart), and two
+  // top-level bindings of one name is a SyntaxError. DemoPage.tsx aliases it the same way.
+  Tooltip as UITooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
@@ -1034,7 +1036,7 @@ export default function AccountsPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
                 <Label htmlFor="account_group">{t('pages.accounts.group')}</Label>
-                <Tooltip>
+                <UITooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
@@ -1047,7 +1049,7 @@ export default function AccountsPage() {
                   <TooltipContent side="right" className="max-w-xs">
                     <p>{t('pages.accounts.groupHelp')}</p>
                   </TooltipContent>
-                </Tooltip>
+                </UITooltip>
               </div>
               <Select value={groupSelection} onValueChange={setGroupSelection}>
                 <SelectTrigger id="account_group">

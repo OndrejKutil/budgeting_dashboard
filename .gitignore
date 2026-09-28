@@ -47,6 +47,8 @@ build/
 dist/
 .cache/
 .parcel-cache/
+# Incremental-build state written by `tsc -b` (npm run check)
+*.tsbuildinfo
 
 # IDE/Editor
 .vscode/

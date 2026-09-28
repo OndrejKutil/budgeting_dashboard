@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrencyFlag, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { AccountSelect } from '@/components/AccountSelect';
 import { toast } from '@/hooks/use-toast';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { screenshotImportApi, accountsApi, categoriesApi } from '@/lib/api/endpoints';
@@ -695,24 +696,14 @@ export default function ScreenshotImportPage() {
                           defaultedLabel={t('pages.screenshotImport.defaulted')}
                         />
                       </div>
-                      <Select
+                      <AccountSelect
+                        id={`account-${i}`}
+                        accounts={accounts}
                         value={draft.account_id_fk}
                         onValueChange={(value) => updateDraft(i, { account_id_fk: value })}
-                      >
-                        <SelectTrigger id={`account-${i}`} className={cn(fieldRingClass(draft.field_sources.account_id_fk))}>
-                          <SelectValue placeholder={t('pages.transactions.selectAccount')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts
-                            .filter((a) => a.account_is_active !== false)
-                            .sort((a, b) => a.account_name.localeCompare(b.account_name))
-                            .map((acc) => (
-                              <SelectItem key={acc.accounts_id_pk} value={acc.accounts_id_pk}>
-                                {getCurrencyFlag(acc.currency)} {acc.account_name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder={t('pages.transactions.selectAccount')}
+                        className={cn(fieldRingClass(draft.field_sources.account_id_fk))}
+                      />
                     </div>
 
                     <div className="space-y-2 sm:col-span-2">

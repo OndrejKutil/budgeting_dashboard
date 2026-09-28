@@ -18,6 +18,7 @@ from ..helper.columns import TRANSACTION_TAGS_COLUMNS, TRANSACTIONS_COLUMNS
 
 # rate limiting
 from ..helper.rate_limiter import RATE_LIMITS, limiter
+from ..helper.transaction_filters import apply_common_filters
 from ..schemas.base import TagData, TransactionData
 from ..schemas.requests import TransactionRequest
 from ..schemas.responses import TransactionsResponse, TransactionSuccessResponse, TransactionSummaryResponse
@@ -45,36 +46,6 @@ def _build_transaction_data(item: dict) -> TransactionData:
     return TransactionData(**item, tags=tags if tags else None)
 
 
-def _apply_common_filters(query, start_date, end_date, category_id, account_id,
-                          savings_fund_id, category_type, min_amount, max_amount,
-                          search, tag_id):
-    """Apply all shared filter conditions to a query builder."""
-    if start_date:
-        query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
-    if end_date:
-        query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
-    if category_id:
-        query = query.eq(TRANSACTIONS_COLUMNS.CATEGORY_ID.value, category_id)
-    if account_id:
-        query = query.eq(TRANSACTIONS_COLUMNS.ACCOUNT_ID.value, account_id)
-    if savings_fund_id:
-        if savings_fund_id.lower() == 'none':
-            query = query.is_(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, "null")
-        else:
-            query = query.eq(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value, savings_fund_id)
-    if category_type:
-        query = query.eq("dim_categories_users.type", category_type)
-    if min_amount is not None:
-        query = query.gte(TRANSACTIONS_COLUMNS.AMOUNT.value, min_amount)
-    if max_amount is not None:
-        query = query.lte(TRANSACTIONS_COLUMNS.AMOUNT.value, max_amount)
-    if search:
-        query = query.ilike(TRANSACTIONS_COLUMNS.NOTES.value, f"%{search}%")
-    if tag_id:
-        query = query.eq("fct_transaction_tags.tag_id_fk", tag_id)
-    return query
-
-
 @router.get("/summary", response_model=TransactionSummaryResponse)
 @limiter.limit(RATE_LIMITS["read_only"])
 async def get_transactions_summary(
@@ -91,6 +62,7 @@ async def get_transactions_summary(
     min_amount: float | None = Query(None),
     max_amount: float | None = Query(None),
     tag_id: str | None = Query(None),
+    months: str | None = Query(None, description="Comma-separated YYYY-MM list; matches any of them"),
     base_currency: str = Query("CZK", description="Currency to convert all amounts into"),
 ) -> TransactionSummaryResponse:
     """
@@ -118,9 +90,10 @@ async def get_transactions_summary(
 
         query = client.table("fct_transactions").select(",".join(select_parts))
 
-        query = _apply_common_filters(
+        query = apply_common_filters(
             query, start_date, end_date, category_id, account_id,
-            savings_fund_id, category_type, min_amount, max_amount, search, tag_id
+            savings_fund_id, category_type, min_amount, max_amount, search, tag_id,
+            months=months,
         )
 
         response = query.execute()
@@ -140,6 +113,9 @@ async def get_transactions_summary(
             base_currency=base_currency,
         )
 
+    except fastapi.HTTPException:
+        # A rejected filter value is the caller's problem — don't relabel it as a 500.
+        raise
     except Exception as e:
         logger.error(f"Transaction summary query failed: {str(e)}")
         raise fastapi.HTTPException(
@@ -165,6 +141,7 @@ async def get_all_data(
     min_amount: float | None = Query(None, description="Filter by minimum amount value"),
     max_amount: float | None = Query(None, description="Filter by maximum amount value"),
     tag_id: str | None = Query(None, description="Filter by tag ID"),
+    months: str | None = Query(None, description="Comma-separated YYYY-MM list; matches any of them"),
     limit: int | None = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
     offset: int | None = Query(0, ge=0, description="Number of items to skip")
 ) -> TransactionsResponse:
@@ -209,9 +186,10 @@ async def get_all_data(
         if transaction_id:
             query = query.eq(TRANSACTIONS_COLUMNS.ID.value, transaction_id)
 
-        query = _apply_common_filters(
+        query = apply_common_filters(
             query, start_date, end_date, category_id, account_id,
-            savings_fund_id, category_type, min_amount, max_amount, search, tag_id
+            savings_fund_id, category_type, min_amount, max_amount, search, tag_id,
+            months=months,
         )
 
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=True)
@@ -229,6 +207,9 @@ async def get_all_data(
             message="Transactions retrieved successfully"
         )
 
+    except fastapi.HTTPException:
+        # A rejected filter value is the caller's problem — don't relabel it as a 500.
+        raise
     except Exception as e:
         logger.error(f"Database query failed for get_all_data: {str(e)}")
         logger.info(f"Query parameters - start_date: {start_date}, end_date: {end_date}, category_id: {category_id}, account_id: {account_id}, limit: {limit}, offset: {offset}")

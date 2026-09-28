@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    /* lib runs a notch ahead of target: tsc never emits here (esbuild does), so target only
+       bounds syntax, while lib declares which runtime APIs exist. Every browser in Vite's
+       default build target ships the ES2021 library — String.replaceAll, used by i18n's
+       translate(), has been in Safari since 13.1. */
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
