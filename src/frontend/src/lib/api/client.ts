@@ -285,7 +285,9 @@ async function request<T>(
 // API Client Methods
 // ============================================
 export const apiClient = {
-  get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) => {
+  // Booleans are allowed because query flags are a normal thing to send (`include_inactive`);
+  // String(true) -> "true", which is exactly what FastAPI parses back into a bool.
+  get: <T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>) => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

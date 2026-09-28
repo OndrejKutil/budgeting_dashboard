@@ -79,7 +79,10 @@ function AnimatedDonut() {
             fill="none"
             stroke={seg.color}
             strokeWidth="3.5"
-            pathOffset={offset}
+            // pathOffset is a framer-motion value, not an SVG attribute — passed as a bare
+            // prop React just forwards it to the DOM, which drops it, and every segment
+            // starts at angle 0. It has to go through style/animate to take effect.
+            style={{ pathOffset: offset }}
             initial={{ pathLength: 0 }}
             animate={{ pathLength: seg.pct / 100 }}
             transition={{ duration: 1, delay: 0.5 + i * 0.15, ease: EASE_OUT }}

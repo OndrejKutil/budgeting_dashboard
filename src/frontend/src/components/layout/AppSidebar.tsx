@@ -284,7 +284,6 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
             <NavLink
               key={item.href}
               to={item.href}
-              end={item.href === '/dashboard'}
               onClick={handleNavClick}
               aria-label={collapsed ? t(item.labelKey) : undefined}
               className={({ isActive: active }) =>
@@ -323,7 +322,6 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
             <NavLink
               key={item.href}
               to={item.href}
-              end={item.href === '/dashboard'}
               onClick={handleNavClick}
               aria-label={collapsed ? t(item.labelKey) : undefined}
               className={({ isActive: active }) =>
