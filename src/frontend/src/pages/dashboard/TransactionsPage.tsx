@@ -46,6 +46,7 @@ import {
   Receipt,
   MoreHorizontal,
   Pencil,
+  Copy,
   Trash2,
   ChevronLeft,
   ChevronRight,
@@ -427,6 +428,9 @@ export default function TransactionsPage() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  // Copy prefills the create form from an existing row; it only changes the modal's wording,
+  // the submit path stays the create one (selectedTransaction is left null on purpose).
+  const [isCopy, setIsCopy] = useState(false);
   const [isWithdrawal, setIsWithdrawal] = useState(false);
   const [isTransfer, setIsTransfer] = useState(false);
   const [transferToAccountId, setTransferToAccountId] = useState<string>('');
@@ -689,6 +693,7 @@ export default function TransactionsPage() {
 
   const openEditModal = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
+    setIsCopy(false);
 
     // Check if this is a withdrawal transaction
     const category = categoryMap[transaction.category_id_fk];
@@ -708,13 +713,42 @@ export default function TransactionsPage() {
     });
   };
 
+  /**
+   * Prefills the create form with an existing transaction's values. Mirrors openEditModal
+   * except that selectedTransaction stays null, so saving goes through createMutation and
+   * the original row is left untouched.
+   */
+  const openCopyModal = (transaction: Transaction) => {
+    setSelectedTransaction(null);
+    setIsCopy(true);
+
+    const category = categoryMap[transaction.category_id_fk];
+    setIsWithdrawal(category?.category_name === 'Savings Funds Withdrawal');
+    setIsTransfer(false);
+    setTransferToAccountId('');
+    setTransferDestAmount('');
+
+    setFormData({
+      amount: transaction.amount.toString(),
+      date: transaction.date,
+      notes: transaction.notes || '',
+      category_id_fk: transaction.category_id_fk.toString(),
+      account_id_fk: transaction.account_id_fk,
+      savings_fund_id_fk: transaction.savings_fund_id_fk || '',
+      tags: transaction.tags?.map(t => t.tags_id_pk) || [],
+    });
+
+    setIsCreateModalOpen(true);
+  };
+
   const closeModal = () => {
     setIsCreateModalOpen(false);
     setSelectedTransaction(null);
-    setSelectedTransaction(null);
+    setIsCopy(false);
     setIsWithdrawal(false);
     setIsTransfer(false);
     setTransferToAccountId('');
+    setTransferDestAmount('');
     setFormData({
       amount: '',
       date: new Date().toISOString().split('T')[0],
@@ -1057,6 +1091,10 @@ export default function TransactionsPage() {
                                 <Pencil className="mr-2 h-4 w-4" />
                                 {t('common.edit')}
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openCopyModal(transaction)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                {t('common.duplicate')}
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => handleDelete(transaction.id_pk)}
@@ -1143,6 +1181,10 @@ export default function TransactionsPage() {
                             <Pencil className="mr-2 h-4 w-4" />
                             {t('common.edit')}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openCopyModal(transaction)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            {t('common.duplicate')}
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDelete(transaction.id_pk)}
                             className="text-destructive"
@@ -1214,10 +1256,18 @@ export default function TransactionsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {selectedTransaction ? t('pages.transactions.editTitle') : t('pages.transactions.addTitle')}
+              {selectedTransaction
+                ? t('pages.transactions.editTitle')
+                : isCopy
+                  ? t('pages.transactions.copyTitle')
+                  : t('pages.transactions.addTitle')}
             </DialogTitle>
             <div className="text-sm text-muted-foreground">
-              {selectedTransaction ? t('pages.transactions.editDescription') : t('pages.transactions.addDescription')}
+              {selectedTransaction
+                ? t('pages.transactions.editDescription')
+                : isCopy
+                  ? t('pages.transactions.copyDescription')
+                  : t('pages.transactions.addDescription')}
             </div>
           </DialogHeader>
           <div className="space-y-4 py-4">
