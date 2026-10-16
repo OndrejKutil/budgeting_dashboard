@@ -18,13 +18,13 @@ from ..helper.exchange_rates import get_rate
 from ..helper.features import is_feature_enabled
 from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..helper.trading212_crypto import encrypt_credentials
+from ..helper.trading212_positions import convert_positions
 from ..helper.trading212_sync import sync_all_connections, sync_one_connection
 
 # schemas
 from ..schemas.base import (
     T212ConnectionData,
     T212HistoryData,
-    T212PositionData,
     T212PositionsData,
     T212SyncStatus,
     T212ValueHistoryPoint,
@@ -271,9 +271,13 @@ async def get_positions(
     user: dict[str, str] = Depends(get_current_user),
 ) -> T212PositionsResponse:
     """
-    Latest synced positions snapshot, converted to base_currency. Stored values are in the
-    T212 account's own currency; converting at read time means a stored figure never has to
-    be rewritten when FX rates refresh.
+    Latest synced positions snapshot. Converting at read time (rather than at sync time) means
+    a stored figure never has to be rewritten when FX rates refresh.
+
+    Mixed denominations in the response, by design:
+      * market_value, unrealised_pnl -> base_currency (reported as data.currency)
+      * average_price, current_price -> the instrument's own quote currency, reported per
+        position as instrument_currency (null when it couldn't be resolved)
     """
     try:
         _require_feature(user["access_token"])
@@ -296,24 +300,7 @@ async def get_positions(
         )
 
         rows = response.data or []
-        total_market_value = sum(float(row[T212_POSITIONS_COLUMNS.MARKET_VALUE.value]) for row in rows)
-
-        positions = []
-        for row in rows:
-            row_currency = row.get(T212_POSITIONS_COLUMNS.CURRENCY.value)
-            rate = get_rate(row_currency, base_currency)
-            market_value = float(row[T212_POSITIONS_COLUMNS.MARKET_VALUE.value])
-            weight_pct = (market_value / total_market_value * 100) if total_market_value else 0.0
-
-            positions.append(T212PositionData(
-                ticker=row[T212_POSITIONS_COLUMNS.TICKER.value],
-                quantity=float(row[T212_POSITIONS_COLUMNS.QUANTITY.value]),
-                average_price=float(row[T212_POSITIONS_COLUMNS.AVERAGE_PRICE.value]) * rate,
-                current_price=float(row[T212_POSITIONS_COLUMNS.CURRENT_PRICE.value]) * rate,
-                market_value=market_value * rate,
-                unrealised_pnl=float(row[T212_POSITIONS_COLUMNS.UNREALISED_PNL.value]) * rate,
-                weight_pct=weight_pct,
-            ))
+        positions = convert_positions(rows, base_currency)
 
         synced_at = rows[0][T212_POSITIONS_COLUMNS.SYNCED_AT.value] if rows else None
 

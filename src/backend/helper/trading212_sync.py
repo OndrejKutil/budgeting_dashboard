@@ -9,9 +9,10 @@ Per-run sequence, calls sequenced never parallel:
   1. decrypt stored credentials
   2. fetch account/cash summary
   3. fetch positions
-  4. upsert fct_t212_positions, delete stale rows
-  5. insert one fct_t212_value_history row
-  6. update last_synced_at / last_sync_status
+  4. resolve each held ticker's quote currency (cached; catalogue fetched only on a miss)
+  5. upsert fct_t212_positions, delete stale rows
+  6. insert one fct_t212_value_history row
+  7. update last_synced_at / last_sync_status
 
 Partial success is fine -- write what succeeded -- but a failed positions fetch must never
 result in a value-history row, or the chart gets a false dip.
@@ -19,6 +20,7 @@ result in a value-history row, or the chart gets a false dip.
 
 import datetime
 import logging
+import time
 
 from . import trading212_client as t212
 from .columns import T212_CONNECTION_COLUMNS, T212_POSITIONS_COLUMNS, T212_VALUE_HISTORY_COLUMNS
@@ -51,6 +53,72 @@ def _update_connection_status(
     db_client.table(CONNECTION_TABLE).update(data).eq(
         T212_CONNECTION_COLUMNS.ID_PK.value, connection_id
     ).execute()
+
+
+# Ticker -> quote currency. Process-wide rather than per-user on purpose: this is public market
+# data, identical for everyone, so one user's sync warms it for the next -- which matters on the
+# cron path, where a single run walks every connected user.
+_instrument_currency_cache: dict[str, str] = {}
+
+# None, not 0.0, for "never fetched": time.monotonic()'s zero point is the *boot* of the machine
+# (or container host), not process start, so a sentinel of 0.0 makes the throttle below read
+# "fetched monotonic() seconds ago". On a freshly booted host that is single-digit seconds, and
+# the very first catalogue fetch -- the one that matters -- gets skipped for the first hour of
+# uptime.
+_catalogue_fetched_at: float | None = None
+
+# The catalogue endpoint is rate limited far harder than the portfolio one and returns several
+# MB. Even when a held ticker stays unresolved (delisted, renamed, genuinely absent), don't
+# re-pull it more often than this -- otherwise one odd ticker means a full catalogue fetch on
+# every single sync, forever.
+_CATALOGUE_MIN_INTERVAL_SECONDS = 3600.0
+
+
+def _resolve_instrument_currencies(
+    api_key: str, api_secret: str, tickers: set[str], existing_rows: list[dict]
+) -> dict[str, str]:
+    """
+    Quote currency per held ticker -- the field T212's portfolio payload leaves out.
+
+    Three sources, cheapest first: the process cache, the currencies already stored on this
+    user's existing position rows (so a restarted container doesn't re-pull the catalogue for
+    holdings it already knew), and only then the catalogue itself -- and only if some held
+    ticker is still unresolved.
+
+    A ticker that remains unresolved is simply absent from the returned dict, which the caller
+    stores as a null instrument_currency: the read path renders that as "unknown" instead of
+    assuming a currency, since assuming one is exactly what produced EUR prices labelled CZK.
+    A failed catalogue fetch (including a 429) is logged and otherwise ignored -- positions are
+    worth writing without it, and they keep whatever currency was resolved on an earlier run.
+    """
+    global _catalogue_fetched_at
+
+    for row in existing_rows:
+        ticker = row.get(T212_POSITIONS_COLUMNS.TICKER.value)
+        code = row.get(T212_POSITIONS_COLUMNS.INSTRUMENT_CURRENCY.value)
+        if ticker and code:
+            _instrument_currency_cache.setdefault(ticker, code)
+
+    unresolved = {ticker for ticker in tickers if ticker not in _instrument_currency_cache}
+    throttled = (
+        _catalogue_fetched_at is not None
+        and (time.monotonic() - _catalogue_fetched_at) < _CATALOGUE_MIN_INTERVAL_SECONDS
+    )
+    if unresolved and not throttled:
+        logger.info(f"T212 sync: resolving {len(unresolved)} unknown ticker currency/currencies from the catalogue")
+        try:
+            _instrument_currency_cache.update(t212.get_instrument_currencies(api_key, api_secret))
+        except t212.T212ApiError as e:
+            logger.warning(f"T212 sync: instrument catalogue fetch failed: {e}")
+        # Stamped even on failure: a broken or rate-limited catalogue shouldn't be retried on
+        # every sync either.
+        _catalogue_fetched_at = time.monotonic()
+
+    return {
+        ticker: _instrument_currency_cache[ticker]
+        for ticker in tickers
+        if ticker in _instrument_currency_cache
+    }
 
 
 def _classify(e: Exception) -> tuple[str, str]:
@@ -105,8 +173,35 @@ def sync_one_connection(db_client, connection: dict) -> str:
         return status
 
     synced_at = _now_iso()
+    current_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
+
+    # The existing snapshot is read *before* the upsert because it does double duty here:
+    # diffing tickers to find closed positions (as it always did) and seeding the
+    # instrument-currency cache with currencies resolved on an earlier run. The seed has to
+    # happen while the old rows are still there -- after the upsert they hold this run's values.
+    existing = (
+        db_client.table(POSITIONS_TABLE)
+        .select(
+            f"{T212_POSITIONS_COLUMNS.ID_PK.value},"
+            f"{T212_POSITIONS_COLUMNS.TICKER.value},"
+            f"{T212_POSITIONS_COLUMNS.INSTRUMENT_CURRENCY.value}"
+        )
+        .eq(T212_POSITIONS_COLUMNS.USER_ID_FK.value, user_id)
+        .execute()
+    )
+    existing_rows = existing.data or []
+
+    instrument_currencies = _resolve_instrument_currencies(
+        api_key, api_secret, {t for t in current_tickers if t}, existing_rows
+    )
 
     # Upsert current positions, then delete whatever ticker rows didn't come back this run.
+    #
+    # Prices -- and the market value derived from them -- are stored raw, in the instrument's
+    # own quote currency, and converted at read time, for the same reason value history is
+    # stored in the account currency: a stored figure then never has to be rewritten when FX
+    # rates refresh. unrealised_pnl (T212's `ppl`) is the one field already denominated in the
+    # account currency, so it is the one field `currency` applies to.
     position_rows = [
         {
             T212_POSITIONS_COLUMNS.USER_ID_FK.value: user_id,
@@ -117,6 +212,7 @@ def sync_one_connection(db_client, connection: dict) -> str:
             T212_POSITIONS_COLUMNS.MARKET_VALUE.value: (p.get("quantity") or 0) * (p.get("currentPrice") or 0),
             T212_POSITIONS_COLUMNS.UNREALISED_PNL.value: p.get("ppl"),
             T212_POSITIONS_COLUMNS.CURRENCY.value: currency,
+            T212_POSITIONS_COLUMNS.INSTRUMENT_CURRENCY.value: instrument_currencies.get(p.get("ticker") or ""),
             T212_POSITIONS_COLUMNS.SYNCED_AT.value: synced_at,
         }
         for p in positions
@@ -128,16 +224,9 @@ def sync_one_connection(db_client, connection: dict) -> str:
             on_conflict=f"{T212_POSITIONS_COLUMNS.USER_ID_FK.value},{T212_POSITIONS_COLUMNS.TICKER.value}",
         ).execute()
 
-    current_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
-    existing = (
-        db_client.table(POSITIONS_TABLE)
-        .select(f"{T212_POSITIONS_COLUMNS.ID_PK.value},{T212_POSITIONS_COLUMNS.TICKER.value}")
-        .eq(T212_POSITIONS_COLUMNS.USER_ID_FK.value, user_id)
-        .execute()
-    )
     stale_ids = [
         row[T212_POSITIONS_COLUMNS.ID_PK.value]
-        for row in (existing.data or [])
+        for row in existing_rows
         if row[T212_POSITIONS_COLUMNS.TICKER.value] not in current_tickers
     ]
     if stale_ids:

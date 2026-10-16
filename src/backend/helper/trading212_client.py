@@ -78,9 +78,67 @@ def get_account_summary(api_key: str, api_secret: str) -> dict:
 
 
 def get_positions(api_key: str, api_secret: str) -> list[dict]:
-    """GET /equity/portfolio -- every open position, values in the account's primary currency."""
+    """
+    GET /equity/portfolio -- every open position.
+
+    Mind the currencies: `averagePrice` and `currentPrice` are quoted in the *instrument's* own
+    currency (a Xetra-listed ETF comes back in EUR no matter what the account is denominated
+    in), while `ppl` is in the *account* currency. The payload itself says which is which
+    nowhere -- the quote currency has to come from get_instrument_currencies() below.
+    """
     data = _get("/equity/portfolio", api_key, api_secret)
     return data if isinstance(data, list) else []
+
+
+def get_instrument_currencies(api_key: str, api_secret: str) -> dict[str, str]:
+    """
+    GET /equity/metadata/instruments -> {ticker: quote currency}.
+
+    The whole tradable catalogue (thousands of instruments, several MB) for what is ultimately
+    one field per held ticker -- T212 exposes no per-ticker metadata lookup. Rate limited far
+    more tightly than the portfolio endpoint, so callers must cache this; see
+    trading212_sync._resolve_instrument_currencies.
+
+    Deliberately forgiving about the response shape: accepts `currencyCode` or `currency`, and
+    skips entries missing either field instead of raising. A renamed field then degrades to
+    "currency unknown" (rendered as such) rather than taking the whole sync down.
+    """
+    data = _get("/equity/metadata/instruments", api_key, api_secret)
+    if not isinstance(data, list):
+        return {}
+
+    currencies: dict[str, str] = {}
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        ticker = item.get("ticker")
+        code = item.get("currencyCode") or item.get("currency")
+        if isinstance(ticker, str) and isinstance(code, str) and ticker and code:
+            currencies[ticker] = code
+    return currencies
+
+
+# T212 quotes some venues in a currency's *minor* unit -- LSE lines come back as "GBX" (pence),
+# not GBP. There is no FX pair for a minor unit, so a GBX price looked up directly in
+# dim_exchange_rates misses, falls back to 1.0 (see exchange_rates.get_rate) and renders 100x
+# too large. Map to the major unit plus the divisor instead.
+_MINOR_UNITS: dict[str, tuple[str, float]] = {
+    "GBX": ("GBP", 100.0),
+    "ZAC": ("ZAR", 100.0),
+}
+
+
+def to_major_currency(code: str | None) -> tuple[str | None, float]:
+    """
+    (major currency code, divisor) for a T212 quote currency.
+
+    Returns the code unchanged with a divisor of 1.0 for everything that is already a major
+    unit, which is the overwhelming majority.
+    """
+    if not code:
+        return code, 1.0
+    major, divisor = _MINOR_UNITS.get(code.upper(), (code, 1.0))
+    return major, divisor
 
 
 def validate_credentials(api_key: str, api_secret: str) -> dict:

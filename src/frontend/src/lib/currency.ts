@@ -65,3 +65,30 @@ export function formatMoney(amount: number, currency: string): string {
     maximumFractionDigits: 2,
   }).format(amount);
 }
+
+/**
+ * formatMoney for an amount whose currency comes from outside the app's own set — a broker
+ * position's quote currency, which is whatever its listing venue uses.
+ *
+ * Two things formatMoney can't survive here: a code Intl has no entry for (Trading212 quotes
+ * LSE lines as "GBX", pence, which `style: 'currency'` rejects) and a null code, meaning the
+ * currency genuinely isn't known. Both degrade to the bare number — plus the raw code when
+ * there is one — rather than throwing inside a table row.
+ */
+export function formatMoneyForeign(amount: number, currency?: string | null): string {
+  if (currency) {
+    try {
+      return formatMoney(amount, currency);
+    } catch {
+      // Unknown to Intl — fall through to the bare-number form below.
+    }
+  }
+
+  const locale = (currency && CURRENCY_LOCALE[currency]) || 'en-US';
+  const number = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+  return currency ? `${number} ${currency}` : number;
+}

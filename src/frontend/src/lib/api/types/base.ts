@@ -633,16 +633,25 @@ export interface T212Connection {
 }
 
 /**
- * One open position from the latest synced snapshot, converted to the caller's base currency.
+ * One open position from the latest synced snapshot.
  * Matches backend T212PositionData schema.
+ *
+ * Two denominations, deliberately: the per-share prices are in the instrument's own quote
+ * currency (`instrument_currency`), while `market_value` and `unrealised_pnl` are converted to
+ * the base currency the request asked for (`T212Positions.currency`). Formatting every field
+ * with the base currency is the bug this split exists to prevent.
  */
 export interface T212Position {
     ticker: string;
     quantity: number;
+    /** In `instrument_currency`, NOT the base currency. */
     average_price: number;
+    /** In `instrument_currency`, NOT the base currency. */
     current_price: number;
     market_value: number;
     unrealised_pnl: number;
+    /** Quote currency of the two price fields; null when it couldn't be resolved. */
+    instrument_currency: string | null;
     weight_pct: number;
 }
 
@@ -650,7 +659,7 @@ export interface T212Position {
 export interface T212Positions {
     positions: T212Position[];
     synced_at: string | null;
-    /** Currency all values above are converted to (the caller's base currency). */
+    /** Currency market_value / unrealised_pnl are converted to (the caller's base currency). */
     currency: string | null;
 }
 

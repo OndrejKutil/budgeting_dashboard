@@ -182,6 +182,7 @@ class T212_POSITIONS_COLUMNS(Enum):
     MARKET_VALUE = "market_value"
     UNREALISED_PNL = "unrealised_pnl"
     CURRENCY = "currency"
+    INSTRUMENT_CURRENCY = "instrument_currency"
     SYNCED_AT = "synced_at"
 
     def __str__(self):
