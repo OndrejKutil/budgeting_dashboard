@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { LineChart as LineChartIcon, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatMoneyForeign } from '@/lib/currency';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/api/client';
 import { trading212Api } from '@/lib/api/endpoints';
@@ -204,6 +205,26 @@ export default function Trading212Page() {
         {sortBy === column && <span aria-hidden="true">{sortDesc ? '↓' : '↑'}</span>}
       </button>
     </TableHead>
+  );
+
+  /**
+   * Per-share prices are quoted in the instrument's own currency — a Xetra-listed ETF is priced
+   * in EUR no matter that the account and this dashboard are in CZK — so they are formatted
+   * with that currency, not the user's. Value and P/L stay in the user's currency; mixing the
+   * two within a row is intentional and matches how T212 itself shows a position.
+   *
+   * instrument_currency null means the backend couldn't resolve the quote currency, so the
+   * number is shown unlabelled with a marker rather than pinned to a currency we'd be guessing.
+   */
+  const priceCell = (amount: number, instrumentCurrency: string | null) => (
+    <SensitiveValue>
+      {formatMoneyForeign(amount, instrumentCurrency)}
+      {!instrumentCurrency && (
+        <span className="ml-1 cursor-help text-muted-foreground" title={t('pages.trading212.unknownCurrency')}>
+          ?
+        </span>
+      )}
+    </SensitiveValue>
   );
 
   return (
@@ -410,12 +431,8 @@ export default function Trading212Page() {
                       <TableCell className="text-right">
                         <SensitiveValue>{p.quantity}</SensitiveValue>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <SensitiveValue>{formatCurrency(p.average_price)}</SensitiveValue>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <SensitiveValue>{formatCurrency(p.current_price)}</SensitiveValue>
-                      </TableCell>
+                      <TableCell className="text-right">{priceCell(p.average_price, p.instrument_currency)}</TableCell>
+                      <TableCell className="text-right">{priceCell(p.current_price, p.instrument_currency)}</TableCell>
                       <TableCell className="text-right">
                         <SensitiveValue>{formatCurrency(p.market_value)}</SensitiveValue>
                       </TableCell>

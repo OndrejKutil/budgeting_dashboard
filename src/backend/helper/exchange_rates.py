@@ -4,7 +4,13 @@ import time
 logger = logging.getLogger(__name__)
 
 _cache: dict[tuple, float] = {}
-_cache_fetched_at: float = 0.0
+
+# None, not 0.0, for "never loaded": time.monotonic() counts from the *boot* of the machine (or
+# container host), not from process start, so 0.0 as a sentinel made the TTL check below read
+# "refreshed monotonic() seconds ago". Inside a freshly started container that is single-digit
+# seconds, so _ensure_cache() returned with the cache still empty and every single conversion
+# silently took the 1.0 fallback for the first hour of host uptime.
+_cache_fetched_at: float | None = None
 _CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
@@ -21,7 +27,7 @@ def _load_rates() -> dict[tuple, float]:
 
 def _ensure_cache() -> None:
     global _cache, _cache_fetched_at
-    if time.monotonic() - _cache_fetched_at < _CACHE_TTL_SECONDS:
+    if _cache_fetched_at is not None and time.monotonic() - _cache_fetched_at < _CACHE_TTL_SECONDS:
         return
     try:
         _cache = _load_rates()

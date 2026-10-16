@@ -894,13 +894,29 @@ class T212ConnectionData(BaseModel):
 
 
 class T212PositionData(BaseModel):
-    """One open position from the latest synced snapshot, converted to the caller's base currency."""
+    """
+    One open position from the latest synced snapshot.
+
+    Two denominations on purpose: the per-share prices stay in the instrument's own quote
+    currency (`instrument_currency`), while market_value and unrealised_pnl are converted to
+    the caller's base currency (`T212PositionsData.currency`). A EUR-quoted ETF held in a CZK
+    account genuinely has a EUR price and a CZK value; collapsing both into one currency label
+    is what made this table nonsense before.
+    """
     ticker: str = Field(..., description="T212 instrument ticker")
     quantity: float = Field(..., description="Shares held")
-    average_price: float = Field(..., description="Average price paid per share")
-    current_price: float = Field(..., description="Current market price per share")
-    market_value: float = Field(..., description="quantity * current_price")
-    unrealised_pnl: float = Field(..., description="Unrealised profit/loss on this position")
+    average_price: float = Field(..., description="Average price paid per share, in instrument_currency")
+    current_price: float = Field(..., description="Current market price per share, in instrument_currency")
+    market_value: float = Field(..., description="quantity * current_price, converted to the caller's base currency")
+    unrealised_pnl: float = Field(
+        ..., description="Unrealised profit/loss on this position, converted to the caller's base currency"
+    )
+    instrument_currency: str | None = Field(
+        None,
+        description="Quote currency of average_price/current_price. Null when it couldn't be resolved "
+                    "(never synced since this field was added, or ticker missing from T212's catalogue) -- "
+                    "treat those prices as being of unknown currency.",
+    )
     weight_pct: float = Field(..., description="This position's share of total portfolio market value, 0-100")
 
 
