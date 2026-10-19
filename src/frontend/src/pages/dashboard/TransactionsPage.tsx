@@ -1348,9 +1348,12 @@ export default function TransactionsPage() {
                           setFormData({ ...formData, date: offsetDate.toISOString().split('T')[0] });
                         }
                       }}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date("1900-01-01")
-                      }
+                      disabled={(date) => {
+                        // Allow future dates (up to a year) so prepaid costs can be booked to the month they belong to
+                        const maxDate = new Date();
+                        maxDate.setFullYear(maxDate.getFullYear() + 1);
+                        return date > maxDate || date < new Date("1900-01-01");
+                      }}
                       initialFocus
                     />
                   </PopoverContent>

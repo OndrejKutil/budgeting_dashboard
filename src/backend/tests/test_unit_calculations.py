@@ -318,3 +318,37 @@ def test_calculate_budget_view(sample_budget_plan_rows, sample_budget_actuals):
     assert unused.difference_pct == -100.0
 
 
+
+
+# ================================================================================================
+#                                   Future-dated transactions
+# ================================================================================================
+
+from datetime import timedelta  # noqa: E402
+
+from backend.helper.calculations.accounts_calc import calculate_account_metrics  # noqa: E402
+from backend.helper.calculations.savings_funds_calc import calculate_fund_metrics  # noqa: E402
+
+
+@pytest.fixture
+def past_and_future_transactions():
+    """One transaction today and one prepaid transaction dated 40 days ahead."""
+    today = date.today()
+    return pl.DataFrame({
+        "account_id_fk": ["acc-1", "acc-1"],
+        "savings_fund_id_fk": ["fund-1", "fund-1"],
+        "amount": [-100.0, -500.0],
+        "date": [today, today + timedelta(days=40)],
+    })
+
+
+def test_account_metrics_future_dated_counts_in_balance_not_flow(past_and_future_transactions):
+    metrics = calculate_account_metrics(past_and_future_transactions)["acc-1"]
+    assert metrics["current_balance"] == -600.0
+    assert metrics["net_flow_mtd"] == -100.0
+
+
+def test_fund_metrics_future_dated_counts_in_amount_not_flow(past_and_future_transactions):
+    metrics = calculate_fund_metrics(past_and_future_transactions)["fund-1"]
+    assert metrics["current_amount"] == 600.0
+    assert metrics["net_flow_30d"] == 100.0
