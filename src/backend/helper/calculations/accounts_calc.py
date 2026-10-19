@@ -45,7 +45,11 @@ def calculate_account_metrics(transactions_df: pl.DataFrame) -> dict[str, Accoun
     month_start = today.replace(day=1)
     history_cutoff = today - timedelta(days=29)  # 30 points: T-29 .. T-0
 
-    mtd_transactions = transactions_df.filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= month_start)
+    # Future-dated transactions count toward the balance, but only enter the flow on their own date
+    mtd_transactions = transactions_df.filter(
+        (pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= month_start)
+        & (pl.col(TRANSACTIONS_COLUMNS.DATE.value) <= today)
+    )
     recent_transactions = transactions_df.filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= history_cutoff)
 
     # Calculate net flow since the start of the current month

@@ -43,11 +43,16 @@ def calculate_fund_metrics(transactions_df: pl.DataFrame) -> dict[str, FundMetri
     )
 
     # 2. Calculate 30-Day Net Flow
-    cutoff_date = date.today() - timedelta(days=30)
-    
+    today = date.today()
+    cutoff_date = today - timedelta(days=30)
+
+    # Future-dated transactions count toward the amount, but only enter the flow on their own date
     flow_df = (
         funds_df
-        .filter(pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= cutoff_date)
+        .filter(
+            (pl.col(TRANSACTIONS_COLUMNS.DATE.value) >= cutoff_date)
+            & (pl.col(TRANSACTIONS_COLUMNS.DATE.value) <= today)
+        )
         .group_by(TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value)
         .agg((pl.col(TRANSACTIONS_COLUMNS.AMOUNT.value).sum() * -1).alias("net_flow_30d"))
     )
