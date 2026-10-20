@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { BudgetMakerSkeleton } from '@/components/skeletons';
 import {
     Select,
@@ -14,31 +13,18 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
     Card,
-    CardContent,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Plus, Trash2, Save, Loader2, Pencil, X, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Copy, Loader2, RotateCcw, Trash2 } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { categoriesApi, budgetApi, tagsApi } from '@/lib/api/endpoints';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { BudgetPlan, BudgetPlanRow } from '@/lib/api/types/requests';
-import { BudgetRowResponse } from '@/lib/api/types/responses';
 import { toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -60,59 +46,84 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-
-// Types for local state
-interface LocalBudgetRow extends Omit<BudgetPlanRow, 'amount' | 'category_ids' | 'tags'> {
-    id: string; // Internal ID for React keys
-    amount: number | string;
-    actual?: number | null;
-    diff?: number | null;
-    category_ids: number[];
-    tags: number[];
-}
+import { BudgetSection, type RowPatch } from '@/components/budget/BudgetSection';
+import { useBudgetAutosave, type SaveStatus } from '@/components/budget/use-budget-autosave';
+import {
+    BUDGET_GROUPS,
+    buildPlan,
+    cloneRowsForNewMonth,
+    countRows,
+    createEmptyRow,
+    emptyRows,
+    mergeActuals,
+    parseAmount,
+    rowsFromResponse,
+    type BudgetGroup,
+    type LocalBudgetRow,
+    type RowsByGroup,
+} from '@/components/budget/budget-rows';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const parseParam = (raw: string | null, min: number, max: number) => {
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isInteger(n) && n >= min && n <= max ? n : null;
+};
+
+const shiftMonth = (month: number, year: number, delta: number) => {
+    const idx = year * 12 + (month - 1) + delta;
+    return { month: (idx % 12) + 1, year: Math.floor(idx / 12) };
+};
+
 export default function BudgetMaker() {
     const { formatCurrency, formatMonth, t } = useUser();
     const queryClient = useQueryClient();
     const monthOptions = useMemo(() => MONTHS.map((_, index) => formatMonth(index, 'long')), [formatMonth]);
 
+    // Period lives in the URL, like the other dashboard pages, so back/refresh/links keep it.
+    const now = new Date();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const selectedMonth = parseParam(searchParams.get('month'), 1, 12) ?? now.getMonth() + 1;
+    const selectedYear = parseParam(searchParams.get('year'), 2000, 2100) ?? now.getFullYear();
+    const setPeriod = (month: number, year: number) =>
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('month', String(month));
+            next.set('year', String(year));
+            return next;
+        }, { replace: true });
+    const prevPeriod = shiftMonth(selectedMonth, selectedYear, -1);
+    const nextPeriod = shiftMonth(selectedMonth, selectedYear, 1);
+    const isCurrentPeriod = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
+    const periodKey = `${selectedYear}-${selectedMonth}`;
+    const periodKeyRef = useRef(periodKey);
+    periodKeyRef.current = periodKey;
+
+    const yearOptions = useMemo(() => {
+        const cur = new Date().getFullYear();
+        const from = Math.min(cur - 2, selectedYear);
+        const to = Math.max(cur + 2, selectedYear);
+        return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    }, [selectedYear]);
+
     // UI State
-    const [isEditing, setIsEditing] = useState(false);
     const [isCopyOpen, setIsCopyOpen] = useState(false);
-    const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    const [openSections, setOpenSections] = useState<Record<BudgetGroup, boolean>>({
         income: true,
         expense: true,
         saving: true,
-        investment: true
+        investment: true,
     });
+    const [copyTarget, setCopyTarget] = useState(nextPeriod);
 
-    // Date State
-    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
-    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    // Budget rows: local state is the source of truth once loaded; autosave pushes it to the server.
+    const [rows, setRows] = useState<RowsByGroup>(emptyRows);
+    const [loadedKey, setLoadedKey] = useState<string | null>(null);
+    const ready = loadedKey === periodKey;
 
-    // Copy Target State (default to next month)
-    const [copyTargetMonth, setCopyTargetMonth] = useState<number>(new Date().getMonth() + 2 > 12 ? 1 : new Date().getMonth() + 2);
-    const [copyTargetYear, setCopyTargetYear] = useState<number>(new Date().getMonth() + 2 > 12 ? new Date().getFullYear() + 1 : new Date().getFullYear());
-
-
-    // Budget Rows State
-    const [incomeRows, setIncomeRows] = useState<LocalBudgetRow[]>([]);
-    const [expenseRows, setExpenseRows] = useState<LocalBudgetRow[]>([]);
-    const [savingsRows, setSavingsRows] = useState<LocalBudgetRow[]>([]);
-    const [investmentRows, setInvestmentRows] = useState<LocalBudgetRow[]>([]);
-
-    // Per-row popover open state
-    const [catPopoverOpen, setCatPopoverOpen] = useState<Record<string, boolean>>({});
-    const [tagPopoverOpen, setTagPopoverOpen] = useState<Record<string, boolean>>({});
-    const [catSearchInput, setCatSearchInput] = useState<Record<string, string>>({});
-    const [tagSearchInput, setTagSearchInput] = useState<Record<string, string>>({});
-
-    // Fetch Categories
     const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
         queryFn: async () => {
@@ -121,7 +132,6 @@ export default function BudgetMaker() {
         },
     });
 
-    // Fetch Tags
     const { data: tags = [] } = useQuery({
         queryKey: ['tags'],
         queryFn: async () => {
@@ -130,667 +140,170 @@ export default function BudgetMaker() {
         },
     });
 
-    // Fetch Budget
-    const { data: budgetData, isLoading, error } = useQuery({
+    const { data: budgetData, isLoading, error, refetch } = useQuery({
         queryKey: ['budget', selectedMonth, selectedYear],
         queryFn: () => budgetApi.getBudget(selectedMonth, selectedYear),
     });
 
-    const budgetExists = budgetData?.data?.success === true;
+    const onSynced = useCallback((month: number, year: number, fresh: Parameters<typeof mergeActuals>[1], sentIds: Parameters<typeof mergeActuals>[2]) => {
+        if (periodKeyRef.current !== `${year}-${month}`) return;
+        setRows(prev => mergeActuals(prev, fresh, sentIds));
+    }, []);
 
-    // Initialize rows from fetched data
-    useEffect(() => {
-        if (budgetData?.data?.success) {
-            const bd = budgetData.data; // bd is BudgetResponse
+    const onSaveError = useCallback((err: unknown) => {
+        toast({
+            title: t('common.error'),
+            description: getErrorMessage(err as Error, t('pages.budgetMaker.saveFailed')),
+            variant: 'destructive',
+        });
+    }, [t]);
 
-            // Helper to map API rows to local rows
-            const mapRows = (rows: BudgetRowResponse[], group: string): LocalBudgetRow[] => {
-                return rows.map((r, i) => ({
-                    id: `${group}-${i}-${Date.now()}`,
-                    group,
-                    name: r.name,
-                    amount: r.amount,
-                    include_in_total: r.include_in_total,
-                    category_ids: r.category_ids ?? [],
-                    tags: r.tags ?? [],
-                    actual: r.actual_amount,
-                    diff: r.difference_pct,
-                }));
-            };
-
-            // Set rows if they exist
-            setIncomeRows(mapRows(bd.income_rows, 'income'));
-            setExpenseRows(mapRows(bd.expense_rows, 'expense'));
-            setSavingsRows(mapRows(bd.savings_rows, 'saving'));
-            setInvestmentRows(mapRows(bd.investment_rows, 'investment'));
-
-        } else if (!isLoading && !budgetData) {
-            // Reset to empty if not found
-            setIncomeRows([]);
-            setExpenseRows([]);
-            setSavingsRows([]);
-            setInvestmentRows([]);
-        }
-    }, [budgetData, isLoading]);
-
-    // Handle specific 404 error
-    useEffect(() => {
-        if (error) {
-            setIncomeRows([]);
-            setExpenseRows([]);
-            setSavingsRows([]);
-            setInvestmentRows([]);
-        }
-    }, [error]);
-
-    const createEmptyRow = (group: string): LocalBudgetRow => ({
-        id: `${group}-${Date.now()}-${Math.random()}`,
-        group,
-        name: '',
-        amount: 0,
-        include_in_total: true,
-        category_ids: [],
-        tags: [],
+    const autosave = useBudgetAutosave({
+        month: selectedMonth,
+        year: selectedYear,
+        rows,
+        ready,
+        onSynced,
+        onError: onSaveError,
     });
+    const { markClean } = autosave;
 
-    const addRow = (group: string) => {
-        const newRow = createEmptyRow(group);
-        if (group === 'income') setIncomeRows([...incomeRows, newRow]);
-        if (group === 'expense') setExpenseRows([...expenseRows, newRow]);
-        if (group === 'saving') setSavingsRows([...savingsRows, newRow]);
-        if (group === 'investment') setInvestmentRows([...investmentRows, newRow]);
+    // Load rows once per period. Later refetches of the same period are ignored on purpose:
+    // they'd clobber edits in progress, and autosave already keeps the cache in sync.
+    useEffect(() => {
+        if (!budgetData?.data?.success || loadedKey === periodKey) return;
+        const loaded = rowsFromResponse(budgetData.data);
+        markClean(loaded);
+        setRows(loaded);
+        setLoadedKey(periodKey);
+    }, [budgetData, periodKey, loadedKey, markClean]);
+
+    const isEmpty = ready && countRows(rows) === 0;
+
+    // Offer "copy from last month" when this month is empty.
+    const { data: prevBudget } = useQuery({
+        queryKey: ['budget', prevPeriod.month, prevPeriod.year],
+        queryFn: () => budgetApi.getBudget(prevPeriod.month, prevPeriod.year),
+        enabled: isEmpty,
+    });
+    const prevHasRows = !!prevBudget?.data?.success && countRows(rowsFromResponse(prevBudget.data)) > 0;
+
+    // ---- Row operations --------------------------------------------------------------
+
+    const setGroup = (group: BudgetGroup, fn: (list: LocalBudgetRow[]) => LocalBudgetRow[]) =>
+        setRows(prev => ({ ...prev, [group]: fn(prev[group]) }));
+
+    const addRow = (group: BudgetGroup) => {
+        const row = createEmptyRow(group);
+        setGroup(group, list => [...list, row]);
+        return row.id;
     };
 
-    const removeRow = (group: string, id: string) => {
-        if (group === 'income') setIncomeRows(incomeRows.filter(r => r.id !== id));
-        if (group === 'expense') setExpenseRows(expenseRows.filter(r => r.id !== id));
-        if (group === 'saving') setSavingsRows(savingsRows.filter(r => r.id !== id));
-        if (group === 'investment') setInvestmentRows(investmentRows.filter(r => r.id !== id));
+    const updateRow = (group: BudgetGroup, id: string, patch: RowPatch) =>
+        setGroup(group, list => list.map(r => (r.id === id ? { ...r, ...patch } : r)));
+
+    const removeRow = (group: BudgetGroup, id: string) => {
+        const index = rows[group].findIndex(r => r.id === id);
+        const removed = rows[group][index];
+        if (!removed) return;
+        setGroup(group, list => list.filter(r => r.id !== id));
+
+        // Untouched new rows go silently; anything else gets an undo, since autosave makes deletes stick.
+        if (removed.name.trim() === '' && parseAmount(removed.amount) === 0) return;
+        const key = periodKey;
+        toast({
+            title: t('pages.budgetMaker.rowRemoved', { name: removed.name || t('pages.budgetMaker.itemName') }),
+            action: (
+                <ToastAction
+                    altText={t('pages.budgetMaker.undo')}
+                    onClick={() => {
+                        if (periodKeyRef.current !== key) return;
+                        setGroup(group, list => {
+                            const next = [...list];
+                            next.splice(Math.min(index, next.length), 0, removed);
+                            return next;
+                        });
+                    }}
+                >
+                    {t('pages.budgetMaker.undo')}
+                </ToastAction>
+            ),
+        });
     };
 
-    const updateRow = (group: string, id: string, field: keyof LocalBudgetRow, value: string | number | boolean | null | number[]) => {
-        const update = (rows: LocalBudgetRow[]) =>
-            rows.map(r => r.id === id ? { ...r, [field]: value } : r);
-
-        if (group === 'income') setIncomeRows(update(incomeRows));
-        if (group === 'expense') setExpenseRows(update(expenseRows));
-        if (group === 'saving') setSavingsRows(update(savingsRows));
-        if (group === 'investment') setInvestmentRows(update(investmentRows));
+    const copyFromPrevious = () => {
+        if (!prevBudget?.data) return;
+        setRows(cloneRowsForNewMonth(prevBudget.data));
     };
 
-    // Calculations
-    const calculateTotal = (rows: LocalBudgetRow[]) =>
-        rows.filter(r => r.include_in_total).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    // ---- Totals ----------------------------------------------------------------------
 
-    const totalIncome = calculateTotal(incomeRows);
-    const totalExpenses = calculateTotal(expenseRows);
-    const totalSavings = calculateTotal(savingsRows);
-    const totalInvestments = calculateTotal(investmentRows);
+    const calculateTotal = (list: LocalBudgetRow[]) =>
+        list.filter(r => r.include_in_total).reduce((sum, r) => sum + (parseAmount(r.amount) || 0), 0);
 
-    const remainingBudget = totalIncome - totalExpenses - totalSavings - totalInvestments;
+    const totalIncome = calculateTotal(rows.income);
+    const remainingBudget = totalIncome - calculateTotal(rows.expense) - calculateTotal(rows.saving) - calculateTotal(rows.investment);
     const remainingBudgetPct = totalIncome > 0 ? (remainingBudget / totalIncome) * 100 : 0;
 
-    // Save Mutation
-    const saveMutation = useMutation({
-        mutationFn: async () => {
-            const plan: BudgetPlan = {
-                rows: [
-                    ...incomeRows,
-                    ...expenseRows,
-                    ...savingsRows,
-                    ...investmentRows
-                ].map(({ id, actual, diff, ...rest }) => ({
-                    ...rest,
-                    amount: Number(rest.amount),
-                    group: rest.group,
-                }))
-            };
+    // ---- Budget-level mutations ------------------------------------------------------
 
-            try {
-                return await budgetApi.updateBudget(selectedMonth, selectedYear, plan);
-            } catch (error) {
-                if (error instanceof ApiError && error.status === 404) {
-                    return await budgetApi.createBudget(selectedMonth, selectedYear, plan);
-                }
-                throw error;
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] });
-            toast({ title: t('pages.budgetMaker.saved') });
-            setIsEditing(false); // Exit edit mode
-        },
-        onError: (err: Error | ApiError) => {
-            const message = getErrorMessage(err, t('pages.budgetMaker.saveFailed'));
-            toast({
-                title: t('common.error'),
-                description: message,
-                variant: 'destructive',
-            });
-        }
-    });
-
-    // Delete Mutation
     const deleteMutation = useMutation({
         mutationFn: () => budgetApi.deleteBudget(selectedMonth, selectedYear),
         onSuccess: () => {
+            const cleared = emptyRows();
+            markClean(cleared);
+            setRows(cleared);
             queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] });
             toast({ title: t('pages.budgetMaker.deleted') });
-            setIsEditing(false);
-            // Reset to empty state manually or let useEffect handle it after refetch
         },
         onError: (err: Error | ApiError) => {
-            const message = getErrorMessage(err, t('pages.budgetMaker.deleteFailed'));
             toast({
                 title: t('common.error'),
-                description: message,
+                description: getErrorMessage(err, t('pages.budgetMaker.deleteFailed')),
                 variant: 'destructive',
             });
         }
     });
 
-    // Copy Mutation
     const copyMutation = useMutation({
         mutationFn: async () => {
-            const plan: BudgetPlan = {
-                rows: [
-                    ...incomeRows,
-                    ...expenseRows,
-                    ...savingsRows,
-                    ...investmentRows
-                ].map(({ id, actual, diff, ...rest }) => ({
-                    ...rest,
-                    amount: Number(rest.amount),
-                    group: rest.group,
-                }))
-            };
-
-            // Use upsert logic for target month
+            const { plan } = buildPlan(rows);
+            const { month, year } = copyTarget;
             try {
-                return await budgetApi.updateBudget(copyTargetMonth, copyTargetYear, plan);
+                return await budgetApi.updateBudget(month, year, plan);
             } catch (error) {
                 if (error instanceof ApiError && error.status === 404) {
-                    return await budgetApi.createBudget(copyTargetMonth, copyTargetYear, plan);
+                    return await budgetApi.createBudget(month, year, plan);
                 }
                 throw error;
             }
         },
         onSuccess: () => {
-            // Invalidate target budget queries
-            queryClient.invalidateQueries({ queryKey: ['budget', copyTargetMonth, copyTargetYear] });
-            toast({ title: t('pages.budgetMaker.copied', { month: monthOptions[copyTargetMonth - 1], year: copyTargetYear }) });
+            queryClient.invalidateQueries({ queryKey: ['budget', copyTarget.month, copyTarget.year] });
+            toast({
+                title: t('pages.budgetMaker.copied', { month: monthOptions[copyTarget.month - 1], year: copyTarget.year }),
+                action: (
+                    <ToastAction altText={t('pages.budgetMaker.openTarget')} onClick={() => setPeriod(copyTarget.month, copyTarget.year)}>
+                        {t('pages.budgetMaker.openTarget')}
+                    </ToastAction>
+                ),
+            });
             setIsCopyOpen(false);
         },
         onError: (err: Error | ApiError) => {
-            const message = getErrorMessage(err, t('pages.budgetMaker.copyFailed'));
             toast({
                 title: t('common.error'),
-                description: message,
+                description: getErrorMessage(err, t('pages.budgetMaker.copyFailed')),
                 variant: 'destructive',
             });
         }
     });
 
-
-    const toggleSection = (group: string) => {
-        setOpenSections(prev => ({ ...prev, [group]: !prev[group] }));
-    };
-
-    const renderSection = (title: string, group: string, rows: LocalBudgetRow[]) => {
-        const total = calculateTotal(rows);
-        const pctOfIncome = totalIncome > 0 ? (total / totalIncome) * 100 : 0;
-        const isOpen = openSections[group];
-
-        return (
-            <Collapsible open={isOpen} onOpenChange={() => toggleSection(group)} className="mb-6">
-                <Card className="border-none shadow-none bg-transparent">
-                    <div className="flex items-center justify-between mb-2 px-2">
-                        {/* Heading wrapping the trigger: keeps the section reachable by heading
-                            navigation while Radix gives the button aria-expanded + Enter/Space.
-                            The inner nodes are spans because a <button> may only contain
-                            phrasing content -- a nested <h2> would be invalid HTML. */}
-                        <h2>
-                            <CollapsibleTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="flex items-center gap-3 text-left rounded-md group ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                >
-                                    <span className={cn("inline-flex p-1 rounded-md transition-colors text-muted-foreground/50 group-hover:text-primary", isOpen ? "rotate-90" : "")}>
-                                        <ChevronRight className="h-5 w-5 transition-transform" />
-                                    </span>
-                                    <span className="flex items-baseline gap-4">
-                                        <span className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</span>
-                                        <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
-                                            <SensitiveValue>{formatCurrency(total)}</SensitiveValue>
-                                            <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
-                                                (<SensitiveValue>{pctOfIncome.toFixed(1)}%</SensitiveValue>)
-                                            </span>
-                                        </span>
-                                    </span>
-                                </button>
-                            </CollapsibleTrigger>
-                        </h2>
-
-                        {isEditing && (
-                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); addRow(group); }} className="text-primary hover:text-primary/90 hover:bg-primary/10">
-                                <Plus className="h-4 w-4 mr-1" /> {t('pages.budgetMaker.addRow')}
-                            </Button>
-                        )}
-                    </div>
-
-                    <CollapsibleContent>
-                        <CardContent className="px-0 py-2">
-                            {rows.length === 0 ? (
-                                <div className="px-6 py-8 text-center text-muted-foreground text-sm italic bg-muted/30 rounded-xl border border-dashed border-border/50">
-                                    {t('pages.budgetMaker.noItems')} {isEditing && t('pages.budgetMaker.addRowHint')}
-                                </div>
-                            ) : (
-                                <>
-                                {/* Desktop Table View */}
-                                <div className="hidden md:block">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="hover:bg-transparent border-b border-border/50">
-                                            <TableHead className="w-[25%] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('common.name')}</TableHead>
-                                            <TableHead className="w-[25%] text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">Filters</TableHead>
-                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.planned')}</TableHead>
-                                            <TableHead className="w-[15%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.actual')}</TableHead>
-                                            <TableHead className="w-[10%] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/40">{t('metrics.diff')}</TableHead>
-                                            <TableHead className="w-[5%] text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground/40" title={t('metrics.includeInTotal')}>Inc.</TableHead>
-                                            {isEditing && <TableHead className="w-[5%] pr-4"></TableHead>}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {rows.map((row) => (
-                                            <TableRow key={row.id} className="hover:bg-muted/40 border-b border-border/30 transition-colors group/row">
-                                                <TableCell className="pl-4 py-2 font-medium">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            value={row.name}
-                                                            onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
-                                                            placeholder={t('pages.budgetMaker.itemName')}
-                                                            className="h-9 bg-background/50 border-input/50 focus:bg-background"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-foreground text-base">{row.name}</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="py-2">
-                                                    {isEditing ? (
-                                                        <div className="flex flex-col gap-1.5">
-                                                            {/* Category multi-select */}
-                                                            <Popover
-                                                                open={!!catPopoverOpen[row.id]}
-                                                                onOpenChange={(open) => {
-                                                                    setCatPopoverOpen(prev => ({ ...prev, [row.id]: open }));
-                                                                    if (!open) setCatSearchInput(prev => ({ ...prev, [row.id]: '' }));
-                                                                }}
-                                                            >
-                                                                <PopoverTrigger asChild>
-                                                                    <Button variant="outline" className="h-auto min-h-8 w-full justify-start flex-wrap gap-1 px-2 py-1 text-xs bg-background/50 border-input/50">
-                                                                        {(row.category_ids ?? []).length > 0 ? (
-                                                                            (row.category_ids ?? []).map(cid => {
-                                                                                const cat = categories.find(c => c.categories_id_pk === cid);
-                                                                                return cat ? (
-                                                                                    <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
-                                                                                        {cat.category_name}
-                                                                                        <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
-                                                                                    </span>
-                                                                                ) : null;
-                                                                            })
-                                                                        ) : (
-                                                                            <span className="text-muted-foreground">Categories…</span>
-                                                                        )}
-                                                                    </Button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-56 p-0" align="start">
-                                                                    <Command>
-                                                                        <CommandInput placeholder="Search categories…" value={catSearchInput[row.id] ?? ''} onValueChange={(v) => setCatSearchInput(prev => ({ ...prev, [row.id]: v }))} />
-                                                                        <CommandList>
-                                                                            <CommandEmpty>No categories found.</CommandEmpty>
-                                                                            <CommandGroup>
-                                                                                {categories.filter(c => {
-                                                                                    if (c.is_active === false) return false;
-                                                                                    if (group === 'income') return c.type === 'income';
-                                                                                    if (group === 'expense') return c.type === 'expense';
-                                                                                    if (group === 'saving') return c.type === 'saving';
-                                                                                    if (group === 'investment') return c.type === 'investment';
-                                                                                    return true;
-                                                                                }).sort((a, b) => a.category_name.localeCompare(b.category_name)).map(c => (
-                                                                                    <CommandItem key={c.categories_id_pk} value={c.category_name} onSelect={() => {
-                                                                                        const current = row.category_ids ?? [];
-                                                                                        updateRow(group, row.id, 'category_ids', current.includes(c.categories_id_pk) ? current.filter(id => id !== c.categories_id_pk) : [...current, c.categories_id_pk]);
-                                                                                    }}>
-                                                                                        <Check className={cn('mr-2 h-3.5 w-3.5', (row.category_ids ?? []).includes(c.categories_id_pk) ? 'opacity-100' : 'opacity-0')} />
-                                                                                        {c.category_name}
-                                                                                    </CommandItem>
-                                                                                ))}
-                                                                            </CommandGroup>
-                                                                        </CommandList>
-                                                                    </Command>
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                            {/* Tag multi-select */}
-                                                            <Popover
-                                                                open={!!tagPopoverOpen[row.id]}
-                                                                onOpenChange={(open) => {
-                                                                    setTagPopoverOpen(prev => ({ ...prev, [row.id]: open }));
-                                                                    if (!open) setTagSearchInput(prev => ({ ...prev, [row.id]: '' }));
-                                                                }}
-                                                            >
-                                                                <PopoverTrigger asChild>
-                                                                    <Button variant="outline" className="h-auto min-h-8 w-full justify-start flex-wrap gap-1 px-2 py-1 text-xs bg-background/50 border-input/50">
-                                                                        {(row.tags ?? []).length > 0 ? (
-                                                                            (row.tags ?? []).map(tid => {
-                                                                                const tag = tags.find(t => t.tags_id_pk === tid);
-                                                                                return tag ? (
-                                                                                    <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5">
-                                                                                        {tag.tag_name}
-                                                                                        <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
-                                                                                    </span>
-                                                                                ) : null;
-                                                                            })
-                                                                        ) : (
-                                                                            <span className="text-muted-foreground">Tags…</span>
-                                                                        )}
-                                                                    </Button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-48 p-0" align="start">
-                                                                    <Command>
-                                                                        <CommandInput placeholder="Search tags…" value={tagSearchInput[row.id] ?? ''} onValueChange={(v) => setTagSearchInput(prev => ({ ...prev, [row.id]: v }))} />
-                                                                        <CommandList>
-                                                                            <CommandEmpty>{tags.length === 0 ? 'No tags. Create them in Transactions.' : 'No tags found.'}</CommandEmpty>
-                                                                            <CommandGroup>
-                                                                                {[...tags].sort((a, b) => a.tag_name.localeCompare(b.tag_name)).map(tag => (
-                                                                                    <CommandItem key={tag.tags_id_pk} value={tag.tag_name} onSelect={() => {
-                                                                                        const current = row.tags ?? [];
-                                                                                        updateRow(group, row.id, 'tags', current.includes(tag.tags_id_pk) ? current.filter(id => id !== tag.tags_id_pk) : [...current, tag.tags_id_pk]);
-                                                                                    }}>
-                                                                                        <Check className={cn('mr-2 h-3.5 w-3.5', (row.tags ?? []).includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
-                                                                                        {tag.tag_name}
-                                                                                    </CommandItem>
-                                                                                ))}
-                                                                            </CommandGroup>
-                                                                        </CommandList>
-                                                                    </Command>
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {(row.category_ids ?? []).map(cid => {
-                                                                const cat = categories.find(c => c.categories_id_pk === cid);
-                                                                return cat ? <span key={cid} className="text-xs rounded bg-secondary/60 text-secondary-foreground px-1.5 py-0.5">{cat.category_name}</span> : null;
-                                                            })}
-                                                            {(row.tags ?? []).map(tid => {
-                                                                const tag = tags.find(t => t.tags_id_pk === tid);
-                                                                return tag ? <span key={tid} className="text-xs rounded bg-muted text-muted-foreground px-1.5 py-0.5">{tag.tag_name}</span> : null;
-                                                            })}
-                                                            {(row.category_ids ?? []).length === 0 && (row.tags ?? []).length === 0 && <span className="text-sm text-muted-foreground">-</span>}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right py-2 font-mono">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={row.amount}
-                                                            onChange={(e) => updateRow(group, row.id, 'amount', e.target.value)}
-                                                            className="h-9 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-foreground font-medium">
-                                                            <SensitiveValue>{formatCurrency(Number(row.amount))}</SensitiveValue>
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right py-2 font-mono font-medium">
-                                                    {row.actual != null ? (
-                                                        <span className="text-muted-foreground">
-                                                            <SensitiveValue>{formatCurrency(row.actual)}</SensitiveValue>
-                                                        </span>
-                                                    ) : '-'}
-                                                </TableCell>
-                                                <TableCell className="text-right py-2 font-mono text-sm">
-                                                    {row.diff != null ? (
-                                                        <span className={cn(
-                                                            "opacity-80",
-                                                            row.diff > 0
-                                                                ? (group === 'expense' ? "text-destructive" : "text-success")
-                                                                : row.diff < 0
-                                                                    ? (group === 'expense' ? "text-success" : "text-destructive")
-                                                                    : "text-muted-foreground"
-                                                        )}>
-                                                            <SensitiveValue>{row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%</SensitiveValue>
-                                                        </span>
-                                                    ) : '-'}
-                                                </TableCell>
-                                                <TableCell className="text-center py-2">
-                                                    {isEditing ? (
-                                                        <div className="flex justify-center">
-                                                            <Checkbox
-                                                                checked={row.include_in_total}
-                                                                onCheckedChange={(checked) => updateRow(group, row.id, 'include_in_total', checked)}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex justify-center">
-                                                            {row.include_in_total && (
-                                                                <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                {isEditing && (
-                                                    <TableCell className="pr-4 py-2">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 hover:text-destructive transition-colors" onClick={() => removeRow(group, row.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                                </div>
-
-                                {/* Mobile Card View */}
-                                <div className="md:hidden space-y-3 px-2">
-                                    {rows.map((row) => (
-                                        <div key={row.id} className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            value={row.name}
-                                                            onChange={(e) => updateRow(group, row.id, 'name', e.target.value)}
-                                                            placeholder={t('pages.budgetMaker.itemName')}
-                                                            className="h-9 bg-background/50 border-input/50 focus:bg-background"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-foreground font-medium text-sm">{row.name}</span>
-                                                    )}
-                                                </div>
-                                                {isEditing && (
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground/30 hover:text-destructive" onClick={() => removeRow(group, row.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-
-                                            {isEditing ? (
-                                                <div className="flex flex-col gap-1.5">
-                                                    {/* Category multi-select (mobile) */}
-                                                    <Popover
-                                                        open={!!catPopoverOpen[`m-${row.id}`]}
-                                                        onOpenChange={(open) => {
-                                                            setCatPopoverOpen(prev => ({ ...prev, [`m-${row.id}`]: open }));
-                                                            if (!open) setCatSearchInput(prev => ({ ...prev, [`m-${row.id}`]: '' }));
-                                                        }}
-                                                    >
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="outline" className="h-auto min-h-9 w-full justify-start flex-wrap gap-1 px-3 py-1.5 text-sm bg-background/50 border-input/50">
-                                                                {(row.category_ids ?? []).length > 0 ? (
-                                                                    (row.category_ids ?? []).map(cid => {
-                                                                        const cat = categories.find(c => c.categories_id_pk === cid);
-                                                                        return cat ? (
-                                                                            <span key={cid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
-                                                                                {cat.category_name}
-                                                                                <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'category_ids', (row.category_ids ?? []).filter(id => id !== cid)); }} />
-                                                                            </span>
-                                                                        ) : null;
-                                                                    })
-                                                                ) : (
-                                                                    <span className="text-muted-foreground text-sm font-normal">Categories…</span>
-                                                                )}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-56 p-0" align="start">
-                                                            <Command>
-                                                                <CommandInput placeholder="Search categories…" value={catSearchInput[`m-${row.id}`] ?? ''} onValueChange={(v) => setCatSearchInput(prev => ({ ...prev, [`m-${row.id}`]: v }))} />
-                                                                <CommandList>
-                                                                    <CommandEmpty>No categories found.</CommandEmpty>
-                                                                    <CommandGroup>
-                                                                        {categories.filter(c => {
-                                                                            if (c.is_active === false) return false;
-                                                                            if (group === 'income') return c.type === 'income';
-                                                                            if (group === 'expense') return c.type === 'expense';
-                                                                            if (group === 'saving') return c.type === 'saving';
-                                                                            if (group === 'investment') return c.type === 'investment';
-                                                                            return true;
-                                                                        }).sort((a, b) => a.category_name.localeCompare(b.category_name)).map(c => (
-                                                                            <CommandItem key={c.categories_id_pk} value={c.category_name} onSelect={() => {
-                                                                                const current = row.category_ids ?? [];
-                                                                                updateRow(group, row.id, 'category_ids', current.includes(c.categories_id_pk) ? current.filter(id => id !== c.categories_id_pk) : [...current, c.categories_id_pk]);
-                                                                            }}>
-                                                                                <Check className={cn('mr-2 h-3.5 w-3.5', (row.category_ids ?? []).includes(c.categories_id_pk) ? 'opacity-100' : 'opacity-0')} />
-                                                                                {c.category_name}
-                                                                            </CommandItem>
-                                                                        ))}
-                                                                    </CommandGroup>
-                                                                </CommandList>
-                                                            </Command>
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                    {/* Tag multi-select (mobile) */}
-                                                    <Popover
-                                                        open={!!tagPopoverOpen[`m-${row.id}`]}
-                                                        onOpenChange={(open) => {
-                                                            setTagPopoverOpen(prev => ({ ...prev, [`m-${row.id}`]: open }));
-                                                            if (!open) setTagSearchInput(prev => ({ ...prev, [`m-${row.id}`]: '' }));
-                                                        }}
-                                                    >
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="outline" className="h-auto min-h-9 w-full justify-start flex-wrap gap-1 px-3 py-1.5 text-sm bg-background/50 border-input/50">
-                                                                {(row.tags ?? []).length > 0 ? (
-                                                                    (row.tags ?? []).map(tid => {
-                                                                        const tag = tags.find(t => t.tags_id_pk === tid);
-                                                                        return tag ? (
-                                                                            <span key={tid} className="inline-flex items-center gap-0.5 rounded bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5">
-                                                                                {tag.tag_name}
-                                                                                <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); updateRow(group, row.id, 'tags', (row.tags ?? []).filter(id => id !== tid)); }} />
-                                                                            </span>
-                                                                        ) : null;
-                                                                    })
-                                                                ) : (
-                                                                    <span className="text-muted-foreground text-sm font-normal">Tags…</span>
-                                                                )}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-48 p-0" align="start">
-                                                            <Command>
-                                                                <CommandInput placeholder="Search tags…" value={tagSearchInput[`m-${row.id}`] ?? ''} onValueChange={(v) => setTagSearchInput(prev => ({ ...prev, [`m-${row.id}`]: v }))} />
-                                                                <CommandList>
-                                                                    <CommandEmpty>{tags.length === 0 ? 'No tags. Create them in Transactions.' : 'No tags found.'}</CommandEmpty>
-                                                                    <CommandGroup>
-                                                                        {tags.map(tag => (
-                                                                            <CommandItem key={tag.tags_id_pk} value={tag.tag_name} onSelect={() => {
-                                                                                const current = row.tags ?? [];
-                                                                                updateRow(group, row.id, 'tags', current.includes(tag.tags_id_pk) ? current.filter(id => id !== tag.tags_id_pk) : [...current, tag.tags_id_pk]);
-                                                                            }}>
-                                                                                <Check className={cn('mr-2 h-3.5 w-3.5', (row.tags ?? []).includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
-                                                                                {tag.tag_name}
-                                                                            </CommandItem>
-                                                                        ))}
-                                                                    </CommandGroup>
-                                                                </CommandList>
-                                                            </Command>
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {(row.category_ids ?? []).map(cid => {
-                                                        const cat = categories.find(c => c.categories_id_pk === cid);
-                                                        return cat ? <span key={cid} className="text-xs rounded bg-secondary/60 text-secondary-foreground px-1.5 py-0.5">{cat.category_name}</span> : null;
-                                                    })}
-                                                    {(row.tags ?? []).map(tid => {
-                                                        const tag = tags.find(t => t.tags_id_pk === tid);
-                                                        return tag ? <span key={tid} className="text-xs rounded bg-muted text-muted-foreground px-1.5 py-0.5">{tag.tag_name}</span> : null;
-                                                    })}
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.planned')}</span>
-                                                    {isEditing ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={row.amount}
-                                                            onChange={(e) => updateRow(group, row.id, 'amount', e.target.value)}
-                                                            className="h-9 w-28 text-right font-mono bg-background/50 border-input/50 focus:bg-background"
-                                                        />
-                                                    ) : (
-                                                        <span className="font-mono font-medium text-foreground">
-                                                            <SensitiveValue>{formatCurrency(Number(row.amount))}</SensitiveValue>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.actual')}</span>
-                                                    <span className="font-mono font-medium text-muted-foreground">
-                                                        {row.actual != null ? <SensitiveValue>{formatCurrency(row.actual)}</SensitiveValue> : '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">{t('metrics.diff')}</span>
-                                                    {row.diff != null ? (
-                                                        <span className={cn(
-                                                            "font-mono text-sm font-medium",
-                                                            row.diff > 0
-                                                                ? (group === 'expense' ? "text-destructive" : "text-success")
-                                                                : row.diff < 0
-                                                                    ? (group === 'expense' ? "text-success" : "text-destructive")
-                                                                    : "text-muted-foreground"
-                                                        )}>
-                                                            <SensitiveValue>{row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%</SensitiveValue>
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground/40 text-sm">-</span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {isEditing && (
-                                                <div className="flex items-center gap-2 pt-1 border-t border-border/30">
-                                                    <Checkbox
-                                                        checked={row.include_in_total}
-                                                        onCheckedChange={(checked) => updateRow(group, row.id, 'include_in_total', checked)}
-                                                    />
-                                                    <span className="text-xs text-muted-foreground">{t('metrics.includeInTotal')}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                </>
-                            )}
-                        </CardContent>
-                    </CollapsibleContent>
-                </Card>
-            </Collapsible>
-        );
+    const sectionTitles: Record<BudgetGroup, string> = {
+        income: t('metrics.income'),
+        expense: t('metrics.expenses'),
+        saving: t('metrics.savings'),
+        investment: t('metrics.investments'),
     };
 
     return (
@@ -799,54 +312,17 @@ export default function BudgetMaker() {
                 title={t('pages.budgetMaker.title')}
                 description={t('pages.budgetMaker.description')}
                 actions={
-                    <div className="flex gap-2">
-                        {isEditing ? (
+                    <div className="flex items-center gap-2">
+                        <SaveIndicator status={autosave.status} onRetry={autosave.retry} />
+                        {ready && countRows(rows) > 0 && (
                             <>
-                                {budgetExists && (
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" /> {t('pages.budgetMaker.deleteBudget')}
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>{t('pages.budgetMaker.deleteConfirmTitle')}</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    {t('pages.budgetMaker.deleteConfirmDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive hover:bg-destructive/90">
-                                                    {t('common.delete')}
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )}
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        queryClient.invalidateQueries({ queryKey: ['budget', selectedMonth, selectedYear] }); // Reset changes
-                                        toast({ title: t('common.changesDiscarded') });
+                                <Dialog
+                                    open={isCopyOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) setCopyTarget(nextPeriod);
+                                        setIsCopyOpen(open);
                                     }}
                                 >
-                                    <X className="mr-2 h-4 w-4" /> {t('common.cancel')}
-                                </Button>
-                                <Button
-                                    onClick={() => saveMutation.mutate()}
-                                    disabled={saveMutation.isPending}
-                                    className="bg-primary hover:bg-primary/90 transition-all shadow-md"
-                                >
-                                    {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    {t('pages.budgetMaker.saveBudget')}
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Dialog open={isCopyOpen} onOpenChange={setIsCopyOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline">
                                             <Copy className="mr-2 h-4 w-4" /> {t('pages.budgetMaker.copyTo')}
@@ -862,7 +338,7 @@ export default function BudgetMaker() {
                                         <div className="flex gap-4 py-4">
                                             <div className="flex flex-col gap-1.5 flex-1">
                                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetMonth')}</Label>
-                                                <Select value={copyTargetMonth.toString()} onValueChange={(val) => setCopyTargetMonth(parseInt(val))}>
+                                                <Select value={copyTarget.month.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, month: parseInt(val) }))}>
                                                     <SelectTrigger>
                                                         <SelectValue />
                                                     </SelectTrigger>
@@ -875,15 +351,14 @@ export default function BudgetMaker() {
                                             </div>
                                             <div className="flex flex-col gap-1.5 w-1/3">
                                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetYear')}</Label>
-                                                <Select value={copyTargetYear.toString()} onValueChange={(val) => setCopyTargetYear(parseInt(val))}>
+                                                <Select value={copyTarget.year.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, year: parseInt(val) }))}>
                                                     <SelectTrigger>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {[...Array(5)].map((_, i) => {
-                                                            const y = new Date().getFullYear() - 1 + i;
-                                                            return <SelectItem key={y} value={y.toString()}>{y}</SelectItem>;
-                                                        })}
+                                                        {yearOptions.map(y => (
+                                                            <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -898,25 +373,47 @@ export default function BudgetMaker() {
                                     </DialogContent>
                                 </Dialog>
 
-                                <Button
-                                    onClick={() => setIsEditing(true)}
-                                    className="transition-all shadow-md"
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    {t('pages.budgetMaker.editBudget')}
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label={t('pages.budgetMaker.deleteBudget')}
+                                            title={t('pages.budgetMaker.deleteBudget')}
+                                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>{t('pages.budgetMaker.deleteConfirmTitle')}</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                {t('pages.budgetMaker.deleteConfirmDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive hover:bg-destructive/90">
+                                                {t('common.delete')}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </>
                         )}
                     </div>
                 }
             />
 
-            {/* Date Selectors */}
-            <div className="flex gap-4 mb-4 bg-card p-4 rounded-xl border border-border shadow-sm w-fit transition-shadow hover:shadow-md">
-                <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('common.month')}</Label>
-                    <Select value={selectedMonth.toString()} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
-                        <SelectTrigger className="w-[140px] border-transparent bg-muted/50 focus:bg-background hover:bg-background transition-colors font-medium">
+            {/* Period navigation */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 bg-card p-1.5 rounded-xl border border-border shadow-sm">
+                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('pages.budgetMaker.previousMonth')} onClick={() => setPeriod(prevPeriod.month, prevPeriod.year)}>
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Select value={selectedMonth.toString()} onValueChange={(val) => setPeriod(parseInt(val), selectedYear)}>
+                        <SelectTrigger aria-label={t('common.month')} className="w-[140px] border-transparent bg-transparent hover:bg-muted/60 transition-colors font-medium">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -925,37 +422,77 @@ export default function BudgetMaker() {
                             ))}
                         </SelectContent>
                     </Select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('common.year')}</Label>
-                    <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
-                        <SelectTrigger className="w-[100px] border-transparent bg-muted/50 focus:bg-background hover:bg-background transition-colors font-medium">
+                    <Select value={selectedYear.toString()} onValueChange={(val) => setPeriod(selectedMonth, parseInt(val))}>
+                        <SelectTrigger aria-label={t('common.year')} className="w-[90px] border-transparent bg-transparent hover:bg-muted/60 transition-colors font-medium">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {[...Array(5)].map((_, i) => {
-                                const y = new Date().getFullYear() + i - 2;
-                                return <SelectItem key={y} value={y.toString()}>{y}</SelectItem>;
-                            })}
+                            {yearOptions.map(y => (
+                                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
+                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('pages.budgetMaker.nextMonth')} onClick={() => setPeriod(nextPeriod.month, nextPeriod.year)}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
                 </div>
+                {!isCurrentPeriod && (
+                    <Button variant="ghost" size="sm" onClick={() => setPeriod(now.getMonth() + 1, now.getFullYear())}>
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('pages.budgetMaker.thisMonth')}
+                    </Button>
+                )}
             </div>
 
-            {isLoading ? (
+            {error && !ready ? (
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
+                    <AlertCircle className="h-6 w-6 text-destructive" />
+                    <p className="text-sm text-muted-foreground">{t('pages.budgetMaker.loadFailed')}</p>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>
+                </div>
+            ) : isLoading || !ready ? (
                 <BudgetMakerSkeleton />
             ) : (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    key={periodKey}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.25 }}
                     className="space-y-2"
                 >
-                    {renderSection(t('metrics.income'), 'income', incomeRows)}
-                    {renderSection(t('metrics.expenses'), 'expense', expenseRows)}
-                    {renderSection(t('metrics.savings'), 'saving', savingsRows)}
-                    {renderSection(t('metrics.investments'), 'investment', investmentRows)}
+                    {isEmpty && (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-5 py-4">
+                            <div>
+                                <p className="font-medium">
+                                    {t('pages.budgetMaker.emptyTitle', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
+                                </p>
+                                <p className="text-sm text-muted-foreground">{t('pages.budgetMaker.emptyDescription')}</p>
+                            </div>
+                            {prevHasRows && (
+                                <Button onClick={copyFromPrevious} className="shrink-0">
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    {t('pages.budgetMaker.copyFromPrevious', { month: monthOptions[prevPeriod.month - 1], year: prevPeriod.year })}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {BUDGET_GROUPS.map(group => (
+                        <BudgetSection
+                            key={group}
+                            title={sectionTitles[group]}
+                            group={group}
+                            rows={rows[group]}
+                            totalIncome={totalIncome}
+                            categories={categories}
+                            tags={tags}
+                            open={openSections[group]}
+                            onOpenChange={(open) => setOpenSections(prev => ({ ...prev, [group]: open }))}
+                            onAdd={() => addRow(group)}
+                            onUpdate={(id, patch) => updateRow(group, id, patch)}
+                            onRemove={(id) => removeRow(group, id)}
+                            onReorder={(next) => setGroup(group, () => next)}
+                        />
+                    ))}
 
                     {/* Summary Card */}
                     <AnimatePresence>
@@ -985,5 +522,37 @@ export default function BudgetMaker() {
                 </motion.div>
             )}
         </div>
+    );
+}
+
+function SaveIndicator({ status, onRetry }: { status: SaveStatus; onRetry: () => void }) {
+    const { t } = useUser();
+
+    const content = (() => {
+        switch (status) {
+            case 'pending':
+                return <><span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />{t('pages.budgetMaker.unsavedStatus')}</>;
+            case 'saving':
+                return <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('pages.budgetMaker.savingStatus')}</>;
+            case 'saved':
+                return <><Check className="h-3.5 w-3.5 text-success" />{t('pages.budgetMaker.savedStatus')}</>;
+            case 'invalid':
+                return <span className="flex items-center gap-1.5 text-warning"><AlertCircle className="h-3.5 w-3.5" />{t('pages.budgetMaker.invalidStatus')}</span>;
+            case 'error':
+                return (
+                    <span className="flex items-center gap-1.5 text-destructive">
+                        <AlertCircle className="h-3.5 w-3.5" />{t('pages.budgetMaker.errorStatus')}
+                        <Button variant="link" size="sm" className="h-auto p-0 text-destructive underline" onClick={onRetry}>{t('common.retry')}</Button>
+                    </span>
+                );
+            default:
+                return null;
+        }
+    })();
+
+    return (
+        <span role="status" aria-live="polite" className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2 whitespace-nowrap">
+            {content}
+        </span>
     );
 }
