@@ -2,13 +2,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { AnalyticsSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   TrendingUp,
   TrendingDown,
   PiggyBank,
@@ -27,7 +20,9 @@ import {
 } from 'recharts';
 import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useUrlState } from '@/hooks/use-url-state';
+import { useUrlPeriod } from '@/hooks/use-url-state';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { DeferredRender } from '@/components/performance/DeferredRender';
@@ -64,33 +59,11 @@ const SPENDING_TYPE_COLORS = {
 export default function MonthlyAnalyticsPage() {
   const { formatCurrency, formatDate, formatMonth, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
-  const currentDate = useMemo(() => new Date(), []);
   const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
 
-  const [selectedYear, setSelectedYear] = useUrlState('year', currentDate.getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useUrlState('month', (currentDate.getMonth() + 1).toString().padStart(2, '0'));
-  const selectedYearNumber = parseInt(selectedYear);
-  const selectedMonthNumber = parseInt(selectedMonth);
-
-
-  // Generate years for filter (current year + 4 years)
-  // TODO: Get years from API
-  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => (currentDate.getFullYear() - i + 2).toString()), [currentDate]);
-
-  const months = useMemo(() => [
-    { value: '01', label: formatMonth(0, 'long') },
-    { value: '02', label: formatMonth(1, 'long') },
-    { value: '03', label: formatMonth(2, 'long') },
-    { value: '04', label: formatMonth(3, 'long') },
-    { value: '05', label: formatMonth(4, 'long') },
-    { value: '06', label: formatMonth(5, 'long') },
-    { value: '07', label: formatMonth(6, 'long') },
-    { value: '08', label: formatMonth(7, 'long') },
-    { value: '09', label: formatMonth(8, 'long') },
-    { value: '10', label: formatMonth(9, 'long') },
-    { value: '11', label: formatMonth(10, 'long') },
-    { value: '12', label: formatMonth(11, 'long') },
-  ], [formatMonth]);
+  const { month: selectedMonthNumber, year: selectedYearNumber, setPeriod } = useUrlPeriod();
+  const selectedYear = String(selectedYearNumber);
+  const years = useAvailableYears();
 
   const prevLabel = useMemo(() => {
     const prevDate = new Date(selectedYearNumber, selectedMonthNumber - 2, 1);
@@ -189,38 +162,14 @@ export default function MonthlyAnalyticsPage() {
     <div className="screen-content space-y-6">
       <PageHeader
         title={t('pages.monthlyAnalytics.title')}
-        description={t('pages.monthlyAnalytics.description', { month: selectedMonth, year: selectedYear })}
+        description={t('pages.monthlyAnalytics.description', { month: formatMonth(selectedMonthNumber - 1, 'long'), year: selectedYear })}
         actions={
-          <div className="flex gap-2 no-print">
+          <div className="flex flex-wrap items-center gap-2 no-print">
+            <PeriodNavigator mode="month" month={selectedMonthNumber} year={selectedYearNumber} years={years} onChange={setPeriod} />
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <FileDown className="h-4 w-4 mr-2" />
               {t('pages.monthlyAnalytics.exportPdf')}
             </Button>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t('common.month')} />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder={t('common.year')} />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         }
       />

@@ -5,7 +5,7 @@
 
 import { apiClient } from '../client';
 import type { Transaction } from '../types/base';
-import type { TransactionsResponse } from '../types/responses';
+import type { TransactionsResponse, TransactionYearsResponse } from '../types/responses';
 
 import type { CreateTransactionRequest, UpdateTransactionRequest } from '../types/requests';
 
@@ -45,6 +45,11 @@ type TransactionFilterParams = {
 };
 
 export const transactionsApi = {
+    getYears: async () => {
+        const response = await apiClient.get<TransactionYearsResponse>('/transactions/years');
+        return response.data;
+    },
+
     getAll: async (params?: TransactionFilterParams) => {
         const response = await apiClient.get<TransactionsResponse>(
             '/transactions/',

@@ -58,3 +58,50 @@ export function useUrlState<T extends string | number>(
 
     return [parsedValue, setValue];
 }
+
+/**
+ * Month + year as URL params (same storage as two `useUrlState` calls), with a setter that
+ * writes both in ONE navigation. Two separate `useUrlState` setters called back to back
+ * (e.g. Jan → Dec of the previous year) would each start from the same stale params and the
+ * second would undo the first.
+ *
+ * `month` is stored zero-padded ("03"), matching the existing analytics URLs.
+ */
+export function useUrlPeriod(): { month: number; year: number; setPeriod: (month: number, year: number) => void } {
+    const location = useLocation();
+    const [, setSearchParams] = useSearchParams();
+    const now = new Date();
+    const defaultYear = String(now.getFullYear());
+    const defaultMonth = String(now.getMonth() + 1).padStart(2, '0');
+
+    const [yearStr] = useUrlState('year', defaultYear);
+    const [monthStr] = useUrlState('month', defaultMonth);
+
+    const parsedMonth = parseInt(monthStr);
+    const parsedYear = parseInt(yearStr);
+    const month = parsedMonth >= 1 && parsedMonth <= 12 ? parsedMonth : now.getMonth() + 1;
+    const year = Number.isFinite(parsedYear) ? parsedYear : now.getFullYear();
+
+    const setPeriod = useCallback((newMonth: number, newYear: number) => {
+        const entries: [string, string, string][] = [
+            ['month', String(newMonth).padStart(2, '0'), defaultMonth],
+            ['year', String(newYear), defaultYear],
+        ];
+        setSearchParams((prev) => {
+            const newParams = new URLSearchParams(prev);
+            for (const [key, value, fallback] of entries) {
+                const storageKey = `budget-dashboard:${location.pathname}:${key}`;
+                if (value === fallback) {
+                    newParams.delete(key);
+                    sessionStorage.removeItem(storageKey);
+                } else {
+                    newParams.set(key, value);
+                    sessionStorage.setItem(storageKey, value);
+                }
+            }
+            return newParams;
+        });
+    }, [defaultMonth, defaultYear, location.pathname, setSearchParams]);
+
+    return { month, year, setPeriod };
+}

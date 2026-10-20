@@ -15,13 +15,8 @@ import {
   Cell,
 } from 'recharts';
 import { useUrlState } from '@/hooks/use-url-state';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
@@ -37,8 +32,7 @@ export default function EmergencyFundPage() {
   const { isPrivacyMode } = usePrivacyMode();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
-  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear - i + 2), [currentYear]);
+  const years = useAvailableYears();
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['emergency-fund', selectedYearNumber, currency],
@@ -254,18 +248,7 @@ export default function EmergencyFundPage() {
             <TabsTrigger value="all">{t('pages.emergencyFund.allExpenses')}</TabsTrigger>
           </TabsList>
 
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={y.toString()}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PeriodNavigator mode="year" year={selectedYearNumber} years={years} onChange={(_, y) => setSelectedYear(String(y))} />
         </div>
         
         <TabsContent value="core">

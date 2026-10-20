@@ -2,16 +2,11 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { AnalyticsSkeleton } from '@/components/skeletons';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   TrendingUp,
   TrendingDown,
@@ -82,8 +77,7 @@ export default function YearlyAnalyticsPage() {
     }
   };
 
-  // TODO: Get years from API
-  const years = useMemo(() => [2028, 2027, 2026, 2025], []);
+  const years = useAvailableYears();
 
   const { data, isLoading: loading, error } = useQuery({
     queryKey: ['yearly-analytics', selectedYearNumber, currency],
@@ -255,18 +249,7 @@ export default function YearlyAnalyticsPage() {
               <FileDown className="h-4 w-4 mr-2" />
               {t('pages.yearlyAnalytics.exportPdf')}
             </Button>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PeriodNavigator mode="year" year={selectedYearNumber} years={years} onChange={(_, y) => setSelectedYear(String(y))} />
           </div>
         }
       />

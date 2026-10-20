@@ -377,12 +377,13 @@ export function AppSidebar({ collapsed, onToggle, isMobile, onClose }: SidebarPr
 }
 
 export function MobileSidebarTrigger({ onClick }: { onClick: () => void }) {
+  const { t } = useUser();
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={onClick}
-      aria-label="Open navigation menu"
+      aria-label={t('nav.openMenu')}
       className="lg:hidden min-h-[44px] min-w-[44px]"
     >
       <Menu className="h-5 w-5" />

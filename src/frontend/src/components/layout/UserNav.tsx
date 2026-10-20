@@ -24,7 +24,7 @@ export function UserNav() {
         navigate('/');
     };
 
-    const displayName = profile?.user_metadata?.full_name || (userId ? `ID: ${userId.slice(0, 8)}...` : 'User');
+    const displayName = profile?.user_metadata?.full_name || (userId ? `ID: ${userId.slice(0, 8)}...` : t('common.user'));
     const email = profile?.email;
     const avatarUrl = getProfileAvatarUrl(profile);
 

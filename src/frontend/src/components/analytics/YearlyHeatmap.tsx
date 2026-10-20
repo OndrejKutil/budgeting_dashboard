@@ -13,7 +13,6 @@ const STEP = CELL_SIZE + CELL_GAP;
 const LABEL_OFFSET_Y = 20;
 const LABEL_OFFSET_X = 28;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function getIntensity(amount: number, p25: number, p50: number, p75: number): 1 | 2 | 3 | 4 {
     if (amount <= p25) return 1;
@@ -23,7 +22,7 @@ function getIntensity(amount: number, p25: number, p50: number, p75: number): 1 
 }
 
 export function YearlyHeatmap({ data, year }: Props) {
-    const { formatCurrency, formatDate } = useUser();
+    const { formatCurrency, formatDate, formatMonth, t } = useUser();
     const wrapRef = useRef<HTMLDivElement>(null);
     const [tooltip, setTooltip] = useState<{ x: number; y: number; day: string; amount: number } | null>(null);
 
@@ -61,11 +60,11 @@ export function YearlyHeatmap({ data, year }: Props) {
             const d = new Date(year, m, 1);
             const dayIndex = Math.floor((d.getTime() - jan1.getTime()) / 86400000);
             const col = Math.floor((dayIndex + firstDow) / 7);
-            labels.push({ month: MONTH_NAMES[m], col });
+            labels.push({ month: formatMonth(m, 'short'), col });
         }
 
         return { grid: cells, numWeeks: weeks, monthLabels: labels };
-    }, [data, year]);
+    }, [data, year, formatMonth]);
 
     const svgWidth = LABEL_OFFSET_X + numWeeks * STEP;
     const svgHeight = LABEL_OFFSET_Y + 7 * STEP + 4;
@@ -159,7 +158,7 @@ export function YearlyHeatmap({ data, year }: Props) {
 
             {/* Legend */}
             <div className="flex items-center gap-1.5 mt-3 text-[10px] text-muted-foreground">
-                <span>Less</span>
+                <span>{t('pages.yearlyAnalytics.heatmapLess')}</span>
                 {([0, 1, 2, 3, 4] as const).map((i) => (
                     <span
                         key={i}
@@ -167,7 +166,7 @@ export function YearlyHeatmap({ data, year }: Props) {
                         style={{ width: CELL_SIZE, height: CELL_SIZE, background: expenseColor(i) }}
                     />
                 ))}
-                <span>More</span>
+                <span>{t('pages.yearlyAnalytics.heatmapMore')}</span>
             </div>
         </div>
     );
