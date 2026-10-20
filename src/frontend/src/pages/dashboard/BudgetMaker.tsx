@@ -81,7 +81,7 @@ const shiftMonth = (month: number, year: number, delta: number) => {
 };
 
 export default function BudgetMaker() {
-    const { formatCurrency, formatMonth, t } = useUser();
+    const { formatCurrency, formatMonth, t, currency: userCurrency } = useUser();
     const queryClient = useQueryClient();
     const monthOptions = useMemo(() => MONTHS.map((_, index) => formatMonth(index, 'long')), [formatMonth]);
 
@@ -139,7 +139,7 @@ export default function BudgetMaker() {
 
     const { data: budgetData, isLoading, error, refetch } = useQuery({
         queryKey: ['budget', selectedMonth, selectedYear],
-        queryFn: () => budgetApi.getBudget(selectedMonth, selectedYear),
+        queryFn: () => budgetApi.getBudget(selectedMonth, selectedYear, userCurrency),
     });
 
     const onSynced = useCallback((month: number, year: number, fresh: Parameters<typeof mergeActuals>[1], sentIds: Parameters<typeof mergeActuals>[2]) => {
@@ -158,6 +158,7 @@ export default function BudgetMaker() {
     const autosave = useBudgetAutosave({
         month: selectedMonth,
         year: selectedYear,
+        baseCurrency: userCurrency,
         rows,
         ready,
         onSynced,
@@ -180,7 +181,7 @@ export default function BudgetMaker() {
     // Offer "copy from last month" when this month is empty.
     const { data: prevBudget } = useQuery({
         queryKey: ['budget', prevPeriod.month, prevPeriod.year],
-        queryFn: () => budgetApi.getBudget(prevPeriod.month, prevPeriod.year),
+        queryFn: () => budgetApi.getBudget(prevPeriod.month, prevPeriod.year, userCurrency),
         enabled: isEmpty,
     });
     const prevHasRows = !!prevBudget?.data?.success && countRows(rowsFromResponse(prevBudget.data)) > 0;

@@ -18,13 +18,16 @@ logger = logging.getLogger(__name__)
 def get_month_budget_view(
     month: int,
     year: int,
-    access_token: str
+    access_token: str,
+    base_currency: str = 'CZK',
 ) -> BudgetResponse:
     """
     Fetch the budget plan for the given month/year, merge with actuals,
-    and return the structured response.
+    and return the structured response. Actuals are converted into base_currency,
+    since transaction amounts are stored in the currency of their account.
     """
     from ...data.database import get_db_client
+    from ..exchange_rates import get_rate
 
     try:
         supabase = get_db_client(access_token)
@@ -64,7 +67,10 @@ def get_month_budget_view(
             end_date = next_month - datetime.timedelta(days=1)
 
             # Include id_pk when we need tag filtering
-            select_cols = f"{TRANSACTIONS_COLUMNS.CATEGORY_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value}"
+            select_cols = (
+                f"{TRANSACTIONS_COLUMNS.CATEGORY_ID.value},{TRANSACTIONS_COLUMNS.AMOUNT.value},"
+                "dim_accounts(currency)"
+            )
             if tag_ids_needed:
                 select_cols = f"id_pk,{select_cols}"
 
@@ -81,11 +87,16 @@ def get_month_budget_view(
             if tx_response.data:
                 tx_data = tx_response.data
                 for tx in tx_data:
+                    # Convert in place so both the category and the tag path see base_currency.
+                    account = tx.get("dim_accounts") or {}
+                    rate = get_rate(account.get("currency") or base_currency, base_currency)
+                    amt = Decimal(str(tx.get(TRANSACTIONS_COLUMNS.AMOUNT.value) or 0)) * Decimal(str(rate))
+                    tx[TRANSACTIONS_COLUMNS.AMOUNT.value] = amt
+
                     c_id = tx.get(TRANSACTIONS_COLUMNS.CATEGORY_ID.value)
-                    amt = tx.get(TRANSACTIONS_COLUMNS.AMOUNT.value, 0)
                     if c_id is not None:
                         current = actuals_map.get(c_id, Decimal(0))
-                        actuals_map[c_id] = current + Decimal(str(amt))
+                        actuals_map[c_id] = current + amt
 
         # 4. Fetch transaction-tag mappings if needed
         if tag_ids_needed:
