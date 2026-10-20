@@ -37,9 +37,10 @@ async def get_budget(
     api_key: str = Depends(api_key_auth),
     user: dict[str, str] = Depends(get_current_user),
     month: int = Query(datetime.date.today().month, ge=1, le=12, description="Month for which to retrieve budgets"),
-    year: int = Query(datetime.date.today().year, ge=2000, le=2100, description="Year for which to retrieve budgets")
+    year: int = Query(datetime.date.today().year, ge=2000, le=2100, description="Year for which to retrieve budgets"),
+    base_currency: str = Query("CZK", description="Currency to convert actual amounts into"),
 ) -> BudgetResponse:
-    return get_month_budget_view(month, year, user["access_token"])
+    return get_month_budget_view(month, year, user["access_token"], base_currency)
 
 
 

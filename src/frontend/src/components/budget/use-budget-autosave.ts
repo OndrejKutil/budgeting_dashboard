@@ -22,6 +22,8 @@ interface PendingSave {
 interface Options {
     month: number;
     year: number;
+    /** Currency the re-read actuals are converted into. */
+    baseCurrency: string;
     rows: RowsByGroup;
     /** True once `rows` were loaded from the server for this month/year — never save before that. */
     ready: boolean;
@@ -36,7 +38,7 @@ interface Options {
  * Pending edits are flushed immediately when the month changes, the page unmounts, or the tab
  * is hidden — that's what keeps edits from being lost when navigating away.
  */
-export function useBudgetAutosave({ month, year, rows, ready, onSynced, onError }: Options) {
+export function useBudgetAutosave({ month, year, baseCurrency, rows, ready, onSynced, onError }: Options) {
     const queryClient = useQueryClient();
     const [status, setStatus] = useState<SaveStatus>('idle');
 
@@ -65,10 +67,10 @@ export function useBudgetAutosave({ month, year, rows, ready, onSynced, onError 
             }
         }
         // Actuals depend on the linked categories/tags, so re-read the computed view.
-        const fresh = await budgetApi.getBudget(p.month, p.year);
+        const fresh = await budgetApi.getBudget(p.month, p.year, baseCurrency);
         queryClient.setQueryData(['budget', p.month, p.year], fresh);
         return fresh.data;
-    }, [queryClient]);
+    }, [queryClient, baseCurrency]);
 
     const flush = useCallback(() => {
         clearTimeout(timerRef.current);

@@ -3,8 +3,9 @@ import type { BudgetPlan } from '../types/requests';
 import type { BudgetResponse, BudgetSuccessResponse } from '../types/responses';
 
 export const budgetApi = {
-    getBudget: (month: number, year: number) =>
-        apiClient.get<BudgetResponse>('/budgets/', { month, year }),
+    /** Actuals come back converted into `baseCurrency`. */
+    getBudget: (month: number, year: number, baseCurrency: string) =>
+        apiClient.get<BudgetResponse>('/budgets/', { month, year, base_currency: baseCurrency }),
 
     createBudget: (month: number, year: number, plan: BudgetPlan) =>
         apiClient.post<BudgetSuccessResponse>(`/budgets/?month=${month}&year=${year}`, plan),
