@@ -42,6 +42,7 @@ import type { DraftTransaction, FieldSource, NoTransactionsReason } from '@/lib/
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
+import type { DashboardTranslationKey } from '@/lib/i18n';
 
 const FEATURE_KEY = 'screenshot_import';
 
@@ -88,13 +89,13 @@ function parseDecimalInput(value: string): number | null {
 }
 
 const CATEGORY_TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
-const CATEGORY_TYPE_LABEL: Record<string, string> = {
-  expense: 'Expenses',
-  income: 'Income',
-  saving: 'Saving',
-  investment: 'Investments',
-  exclude: 'Exclude',
-  transfer: 'Transfer',
+const CATEGORY_TYPE_LABEL_KEY: Record<string, DashboardTranslationKey> = {
+  expense: 'metrics.expenses',
+  income: 'metrics.income',
+  saving: 'types.saving',
+  investment: 'metrics.investments',
+  exclude: 'types.exclude',
+  transfer: 'types.transfer',
 };
 
 // The fields the review UI lets a user fix. Matches the backend's DraftTransactionData -- there
@@ -738,7 +739,7 @@ export default function ScreenshotImportPage() {
                                     gi > 0 && 'mt-1 border-t border-border/40 pt-2'
                                   )}
                                 >
-                                  {CATEGORY_TYPE_LABEL[g.type]}
+                                  {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
                                 </SelectLabel>
                                 {g.cats.map((cat) => (
                                   <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>

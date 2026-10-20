@@ -225,7 +225,7 @@ export default function FundsPage() {
     if (!userId) {
       toast({
         title: t('common.authenticationError'),
-        description: 'User ID not found. Please log in again.',
+        description: t('pages.funds.userIdMissing'),
         variant: 'destructive',
       });
       return;

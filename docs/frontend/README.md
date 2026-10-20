@@ -209,6 +209,20 @@ Preserves filters when:
 - Refreshing the page
 - Sharing links
 
+### Period pickers
+
+Pages driven by a month or year use the shared `components/period/PeriodNavigator.tsx`
+(◀ month/year ▶ + a "this month/year" shortcut), in `mode="month"` or `mode="year"`.
+
+- **Month + year together go through `useUrlPeriod()`** (`hooks/use-url-state.ts`), not two
+  `useUrlState` calls. Each `useUrlState` setter starts from the same params, so calling both
+  back to back (Jan → Dec of the previous year) makes the second undo the first.
+- **The year list comes from `useAvailableYears()`** (`hooks/use-available-years.ts`), backed by
+  `GET /transactions/years`: the earliest to latest transaction year, always including the
+  current one. Pages that plan ahead (Budget, Transactions) pass `{ future: 1 }`. Never hard-code
+  a year range. It is cached under `['transactions', 'years']`, so the usual `['transactions']`
+  invalidation after a create/delete refreshes it.
+
 ---
 
 ## Routing Structure

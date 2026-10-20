@@ -59,7 +59,7 @@ const makeLinkGradientId = (chartId: string, sourceKey: string, targetKey: strin
     `sk-${chartId}-g-${makeSafeIdPart(sourceKey)}-${makeSafeIdPart(targetKey)}`;
 
 export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyChart({ data, height = 540 }, ref) {
-    const { formatCurrency } = useUser();
+    const { formatCurrency, t } = useUser();
     const chartId = makeSafeIdPart(useId());
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
@@ -119,7 +119,7 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
         leafIdx = incomeEntries.length;
 
         // L1 — pool
-        rawNodes.push({ key: 'pool', name: 'Income', layer: 'pool', color: CHART_COLORS.income });
+        rawNodes.push({ key: 'pool', name: t('metrics.income'), layer: 'pool', color: CHART_COLORS.income });
 
         // L2 — destination groups (same level), each splitting into L3 leaves
         const addGroup = (key: string, name: string, color: string, total: number, entries: [string, number][], prefix: string) => {
@@ -136,12 +136,12 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
             }
         };
 
-        addGroup('g:expenses', 'Expenses', CHART_COLORS.expense, totalExpenses, expenseEntries, 'ex');
-        addGroup('g:savings', 'Savings', CHART_COLORS.savings, totalSaving, savingEntries, 'sv');
-        addGroup('g:investments', 'Investments', CHART_COLORS.investment, totalInvestment, investmentEntries, 'iv');
+        addGroup('g:expenses', t('metrics.expenses'), CHART_COLORS.expense, totalExpenses, expenseEntries, 'ex');
+        addGroup('g:savings', t('metrics.savings'), CHART_COLORS.savings, totalSaving, savingEntries, 'sv');
+        addGroup('g:investments', t('metrics.investments'), CHART_COLORS.investment, totalInvestment, investmentEntries, 'iv');
 
         if (showSurplus) {
-            rawNodes.push({ key: 'g:surplus', name: 'Surplus', layer: 'sink', color: CHART_COLORS.neutral });
+            rawNodes.push({ key: 'g:surplus', name: t('pages.cashFlow.surplus'), layer: 'sink', color: CHART_COLORS.neutral });
             rawLinks.push({ source: 'pool', target: 'g:surplus', value: surplus });
         }
 
@@ -157,7 +157,7 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
         });
 
         return { nodes: rawNodes, links: linksIdx, childrenByKey };
-    }, [data, collapsed]);
+    }, [data, collapsed, t]);
 
     const layout = useMemo(() => {
         if (width < 320 || nodes.length === 0) return null;

@@ -14,6 +14,7 @@ from ..data.database import get_db_client
 
 # Load environment variables
 # helper
+from ..helper.calculations.years_calc import years_with_data
 from ..helper.columns import TRANSACTION_TAGS_COLUMNS, TRANSACTIONS_COLUMNS
 
 # rate limiting
@@ -21,7 +22,12 @@ from ..helper.rate_limiter import RATE_LIMITS, limiter
 from ..helper.transaction_filters import apply_common_filters
 from ..schemas.base import TagData, TransactionData
 from ..schemas.requests import TransactionRequest
-from ..schemas.responses import TransactionsResponse, TransactionSuccessResponse, TransactionSummaryResponse
+from ..schemas.responses import (
+    TransactionsResponse,
+    TransactionSuccessResponse,
+    TransactionSummaryResponse,
+    TransactionYearsResponse,
+)
 
 # ================================================================================================
 #                                   Settings and Configuration
@@ -121,6 +127,49 @@ async def get_transactions_summary(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve transaction summary",
+        )
+
+
+@router.get("/years", response_model=TransactionYearsResponse)
+@limiter.limit(RATE_LIMITS["read_only"])
+async def get_transaction_years(
+    request: Request,
+    api_key: str = Depends(api_key_auth),
+    user: dict[str, str] = Depends(get_current_user),
+) -> TransactionYearsResponse:
+    """
+    Return the years the user has transactions in, for the frontend's period pickers.
+
+    Derived on the fly from the earliest and latest transaction date (two indexed
+    single-row reads) instead of being stored, so it can never drift from the data.
+    """
+    try:
+        client = get_db_client(user["access_token"])
+        date_col = TRANSACTIONS_COLUMNS.DATE.value
+
+        def edge(desc: bool) -> date | None:
+            rows = (
+                client.table("fct_transactions")
+                .select(date_col)
+                .order(date_col, desc=desc)
+                .limit(1)
+                .execute()
+            ).data
+            return date.fromisoformat(rows[0][date_col][:10]) if rows else None
+
+        years = years_with_data(edge(desc=False), edge(desc=True), date.today())
+
+        return TransactionYearsResponse(
+            success=True,
+            message="Transaction years retrieved successfully",
+            years=years,
+        )
+
+    except Exception as e:
+        logger.error(f"Transaction years query failed: {str(e)}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve transaction years",
         )
 
 

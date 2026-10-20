@@ -17,7 +17,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { AlertCircle, Check, ChevronLeft, ChevronRight, Copy, Loader2, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Copy, Loader2, Trash2 } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { categoriesApi, budgetApi, tagsApi } from '@/lib/api/endpoints';
@@ -46,6 +46,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
+import { useAvailableYears } from '@/hooks/use-available-years';
 import { BudgetSection, type RowPatch } from '@/components/budget/BudgetSection';
 import { useBudgetAutosave, type SaveStatus } from '@/components/budget/use-budget-autosave';
 import {
@@ -97,17 +99,12 @@ export default function BudgetMaker() {
         }, { replace: true });
     const prevPeriod = shiftMonth(selectedMonth, selectedYear, -1);
     const nextPeriod = shiftMonth(selectedMonth, selectedYear, 1);
-    const isCurrentPeriod = selectedMonth === now.getMonth() + 1 && selectedYear === now.getFullYear();
     const periodKey = `${selectedYear}-${selectedMonth}`;
     const periodKeyRef = useRef(periodKey);
     periodKeyRef.current = periodKey;
 
-    const yearOptions = useMemo(() => {
-        const cur = new Date().getFullYear();
-        const from = Math.min(cur - 2, selectedYear);
-        const to = Math.max(cur + 2, selectedYear);
-        return Array.from({ length: to - from + 1 }, (_, i) => from + i);
-    }, [selectedYear]);
+    // Budgets are planned ahead, so offer one year past the newest one with data.
+    const yearOptions = useAvailableYears({ future: 1, include: selectedYear });
 
     // UI State
     const [isCopyOpen, setIsCopyOpen] = useState(false);
@@ -407,41 +404,7 @@ export default function BudgetMaker() {
             />
 
             {/* Period navigation */}
-            <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 bg-card p-1.5 rounded-xl border border-border shadow-sm">
-                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('pages.budgetMaker.previousMonth')} onClick={() => setPeriod(prevPeriod.month, prevPeriod.year)}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Select value={selectedMonth.toString()} onValueChange={(val) => setPeriod(parseInt(val), selectedYear)}>
-                        <SelectTrigger aria-label={t('common.month')} className="w-[140px] border-transparent bg-transparent hover:bg-muted/60 transition-colors font-medium">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {monthOptions.map((m, i) => (
-                                <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={selectedYear.toString()} onValueChange={(val) => setPeriod(selectedMonth, parseInt(val))}>
-                        <SelectTrigger aria-label={t('common.year')} className="w-[90px] border-transparent bg-transparent hover:bg-muted/60 transition-colors font-medium">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {yearOptions.map(y => (
-                                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('pages.budgetMaker.nextMonth')} onClick={() => setPeriod(nextPeriod.month, nextPeriod.year)}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-                {!isCurrentPeriod && (
-                    <Button variant="ghost" size="sm" onClick={() => setPeriod(now.getMonth() + 1, now.getFullYear())}>
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('pages.budgetMaker.thisMonth')}
-                    </Button>
-                )}
-            </div>
+            <PeriodNavigator mode="month" month={selectedMonth} year={selectedYear} years={yearOptions} onChange={setPeriod} />
 
             {error && !ready ? (
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">

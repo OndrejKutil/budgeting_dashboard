@@ -213,8 +213,8 @@ export default function ProfilePage() {
   };
 
   const getDisplayName = () => {
-    if (!profile) return 'User';
-    return profile.user_metadata?.full_name || profile.email?.split('@')[0] || 'User';
+    if (!profile) return t('common.user');
+    return profile.user_metadata?.full_name || profile.email?.split('@')[0] || t('common.user');
   };
 
   const getMemberSince = () => {

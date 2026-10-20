@@ -629,6 +629,13 @@ class TransactionSummaryResponse(BaseModel):
     base_currency: str = Field("CZK", description="Currency the total is expressed in")
 
 
+class TransactionYearsResponse(BaseModel):
+    """Response schema for the years-with-data endpoint"""
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+    years: list[int] = Field(..., description="Years from the first to the last transaction (always incl. the current year), newest first")
+
+
 class FeatureFlagsResponse(BaseModel):
     """Response schema for the feature flags endpoint"""
     data: list[FeatureFlagData] = Field(..., description="Every active feature, with this user's state")

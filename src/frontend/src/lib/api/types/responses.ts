@@ -366,6 +366,15 @@ export interface DividendPortfolioSuccessResponse {
  * Every active feature, with the calling user's enabled state.
  * Features with no row for the user are reported disabled rather than omitted.
  */
+/**
+ * Years the user has transactions in, newest first (always includes the current year).
+ */
+export interface TransactionYearsResponse {
+    success: boolean;
+    message: string;
+    years: number[];
+}
+
 export interface FeatureFlagsResponse {
     data: FeatureFlag[];
     count: number;

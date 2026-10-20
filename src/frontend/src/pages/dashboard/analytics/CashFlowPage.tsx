@@ -1,11 +1,13 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { AnalyticsSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageDown } from 'lucide-react';
-import { useUrlState } from '@/hooks/use-url-state';
+import { useUrlPeriod, useUrlState } from '@/hooks/use-url-state';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
 import { SankeyChart, type SankeyChartHandle, type SankeyInput } from '@/components/analytics/SankeyChart';
@@ -15,22 +17,14 @@ const toRecord = (rows: { category: string; total: number }[]) =>
 
 export default function CashFlowPage() {
   const { t, currency, formatMonth } = useUser();
-  const now = useMemo(() => new Date(), []);
   const chartRef = useRef<SankeyChartHandle>(null);
   // Explicitly <string>: inferred from the default alone, T narrows to the literal 'year',
   // which makes the `=== 'month'` below look impossible and rejects setMode from the Select.
   const [mode, setMode] = useUrlState<string>('mode', 'year');
-  const [selectedYear, setSelectedYear] = useUrlState('year', now.getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useUrlState('month', (now.getMonth() + 1).toString().padStart(2, '0'));
-  const selectedYearNumber = parseInt(selectedYear);
-  const selectedMonthNumber = parseInt(selectedMonth);
+  const { month: selectedMonthNumber, year: selectedYearNumber, setPeriod } = useUrlPeriod();
+  const selectedYear = String(selectedYearNumber);
   const isMonthly = mode === 'month';
-
-  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => now.getFullYear() - i + 2), [now]);
-  const months = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => ({ value: (i + 1).toString().padStart(2, '0'), label: formatMonth(i, 'long') })),
-    [formatMonth]
-  );
+  const years = useAvailableYears();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['cashflow', mode, selectedYearNumber, selectedMonthNumber, currency],
@@ -63,10 +57,10 @@ export default function CashFlowPage() {
     placeholderData: keepPreviousData,
   });
 
-  const periodLabel = isMonthly ? `${months[selectedMonthNumber - 1]?.label} ${selectedYear}` : selectedYear;
+  const periodLabel = isMonthly ? `${formatMonth(selectedMonthNumber - 1, 'long')} ${selectedYear}` : selectedYear;
 
   const handleExport = () => {
-    const slug = isMonthly ? `${selectedYear}-${selectedMonth}` : selectedYear;
+    const slug = isMonthly ? `${selectedYear}-${String(selectedMonthNumber).padStart(2, '0')}` : selectedYear;
     chartRef.current?.exportPng(`cashflow-${slug}.png`);
   };
 
@@ -95,7 +89,7 @@ export default function CashFlowPage() {
               {t('pages.cashFlow.exportPng')}
             </Button>
             <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger className="w-[110px]">
+              <SelectTrigger className="w-[110px]" aria-label={t('pages.cashFlow.periodType')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -103,28 +97,13 @@ export default function CashFlowPage() {
                 <SelectItem value="month">{t('pages.cashFlow.periodMonth')}</SelectItem>
               </SelectContent>
             </Select>
-            {isMonthly && (
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder={t('common.month')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder={t('common.year')} />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PeriodNavigator
+              mode={isMonthly ? 'month' : 'year'}
+              month={selectedMonthNumber}
+              year={selectedYearNumber}
+              years={years}
+              onChange={setPeriod}
+            />
           </div>
         }
       />

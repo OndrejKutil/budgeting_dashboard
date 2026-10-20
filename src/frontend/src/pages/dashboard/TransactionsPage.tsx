@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useUrlState } from '@/hooks/use-url-state';
+import { useAvailableYears } from '@/hooks/use-available-years';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,7 @@ import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '
 import { Transaction, Category, Account, SavingsFund, Tag, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
+import type { DashboardTranslationKey } from '@/lib/i18n';
 import { formatMoney } from '@/lib/currency';
 import { useDebounce } from '@/hooks/use-debounce';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
@@ -108,9 +110,9 @@ const DECIMAL_INPUT_PATTERN = "-?[0-9]*([.,][0-9]*)?";
 // Categories are grouped by type in both the form picker and the filter, so the ordering
 // lives here rather than inside either one's JSX.
 const CATEGORY_TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
-const CATEGORY_TYPE_LABEL: Record<string, string> = {
-  expense: 'Expenses', income: 'Income', saving: 'Saving',
-  investment: 'Investments', exclude: 'Exclude', transfer: 'Transfer',
+const CATEGORY_TYPE_LABEL_KEY: Record<string, DashboardTranslationKey> = {
+  expense: 'metrics.expenses', income: 'metrics.income', saving: 'types.saving',
+  investment: 'metrics.investments', exclude: 'types.exclude', transfer: 'types.transfer',
 };
 
 /**
@@ -288,12 +290,9 @@ export default function TransactionsPage() {
     },
   });
 
-  // Generate years for filter (current year + 3 years)
-  // TODO: Get years from API
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 4 }, (_, i) => (currentYear - i + 2).toString());
-  }, []);
+  // Years with data, plus one ahead because transactions can be dated into the future.
+  const availableYears = useAvailableYears({ future: 1 });
+  const years = useMemo(() => availableYears.map(String), [availableYears]);
 
   // Option groups for the multi-select filters. Accounts reuse the picker's sectioning so
   // the filter and the form never order the same accounts differently; inactive accounts
@@ -312,7 +311,7 @@ export default function TransactionsPage() {
   const categoryOptionGroups: MultiSelectGroup[] = CATEGORY_TYPE_ORDER
     .map(type => ({
       key: type,
-      label: CATEGORY_TYPE_LABEL[type],
+      label: t(CATEGORY_TYPE_LABEL_KEY[type]),
       options: categories
         .filter(c => c.type === type)
         .sort((a, b) => a.category_name.localeCompare(b.category_name))
@@ -519,9 +518,9 @@ export default function TransactionsPage() {
     }
   });
 
-  const handleDelete = (transactionId: string) => {
-    deleteMutation.mutate(transactionId);
-  };
+  // Deleting is permanent, so the row menu only opens a confirmation; the dialog does the delete.
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
+  const handleDelete = (transaction: Transaction) => setPendingDelete(transaction);
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateTransactionRequest) => transactionsApi.create(payload),
@@ -915,7 +914,7 @@ export default function TransactionsPage() {
             groups={tagOptionGroups}
             selected={parseFilter(tagFilter)}
             onChange={values => setTagFilter(serializeFilter(values))}
-            allLabel={'All Tags'}
+            allLabel={t('pages.transactions.allTags')}
             className="bg-background/50 border-input/50"
           />
 
@@ -1097,7 +1096,7 @@ export default function TransactionsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDelete(transaction.id_pk)}
+                                onClick={() => handleDelete(transaction)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 {t('common.delete')}
@@ -1186,7 +1185,7 @@ export default function TransactionsPage() {
                             {t('common.duplicate')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(transaction.id_pk)}
+                            onClick={() => handleDelete(transaction)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -1206,8 +1205,8 @@ export default function TransactionsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
               <p className="text-xs text-muted-foreground">
-                Showing <span className="font-medium text-foreground">{rangeStart}</span>-
-                <span className="font-medium text-foreground">{rangeEnd}</span> transactions
+                {t('pages.transactions.showing')} <span className="font-medium text-foreground">{rangeStart}</span>-
+                <span className="font-medium text-foreground">{rangeEnd}</span> {t('pages.transactions.showingSuffix')}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -1217,7 +1216,7 @@ export default function TransactionsPage() {
                   onClick={() => setPage(1)}
                   className="hidden sm:flex h-8 bg-background/50"
                 >
-                  Newest
+                  {t('pages.transactions.newest')}
                 </Button>
                 <div className="flex gap-2">
                   <Button
@@ -1228,7 +1227,7 @@ export default function TransactionsPage() {
                     className="h-8 bg-background/50"
                   >
                     <ChevronLeft className="mr-1 h-3 w-3" />
-                    Previous
+                    {t('common.previous')}
                   </Button>
                   <Button
                     variant="outline"
@@ -1237,7 +1236,7 @@ export default function TransactionsPage() {
                     onClick={() => setPage(page + 1)}
                     className="h-8 bg-background/50"
                   >
-                    Next
+                    {t('common.next')}
                     <ChevronRight className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
@@ -1454,7 +1453,7 @@ export default function TransactionsPage() {
                               "px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2",
                               i > 0 && "mt-1 pt-2 border-t border-border/40"
                             )}>
-                              {CATEGORY_TYPE_LABEL[g.type]}
+                              {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
                             </SelectLabel>
                             {g.cats.map(cat => (
                               <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
@@ -1569,7 +1568,7 @@ export default function TransactionsPage() {
             {!isTransfer && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Tags</Label>
+                  <Label>{t('pages.transactions.tags')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -1577,7 +1576,7 @@ export default function TransactionsPage() {
                     className="h-6 text-xs text-muted-foreground hover:text-foreground px-2"
                     onClick={() => setIsManageTagsOpen(true)}
                   >
-                    Manage tags
+                    {t('pages.transactions.manageTags')}
                   </Button>
                 </div>
                 <Popover open={tagComboOpen} onOpenChange={(open) => { setTagComboOpen(open); if (!open) setTagSearchInput(''); }}>
@@ -1602,14 +1601,14 @@ export default function TransactionsPage() {
                           </span>
                         ))
                       ) : (
-                        <span className="text-muted-foreground text-sm font-normal">Add tags…</span>
+                        <span className="text-muted-foreground text-sm font-normal">{t('pages.transactions.addTags')}</span>
                       )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                     <Command>
                       <CommandInput
-                        placeholder="Search or create tag…"
+                        placeholder={t('pages.transactions.searchOrCreateTag')}
                         value={tagSearchInput}
                         onValueChange={setTagSearchInput}
                       />
@@ -1630,13 +1629,13 @@ export default function TransactionsPage() {
                                     setTagComboOpen(false);
                                   }
                                 }).catch(() => {
-                                  toast({ title: 'Failed to create tag', variant: 'destructive' });
+                                  toast({ title: t('pages.transactions.createTagFailed'), variant: 'destructive' });
                                 });
                               }}
                             >
-                              Create tag "<span className="font-medium">{tagSearchInput.trim()}</span>"
+                              {t('pages.transactions.createTag')} "<span className="font-medium">{tagSearchInput.trim()}</span>"
                             </button>
-                          ) : 'No tags found.'}
+                          ) : t('pages.transactions.noTagsFound')}
                         </CommandEmpty>
                         <CommandGroup>
                           {[...tags].sort((a, b) => a.tag_name.localeCompare(b.tag_name)).map(tag => (
@@ -1686,11 +1685,11 @@ export default function TransactionsPage() {
       }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Manage Tags</DialogTitle>
+            <DialogTitle>{t('pages.transactions.manageTagsTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2 max-h-72 overflow-y-auto pr-1">
             {tags.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No tags yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t('pages.transactions.noTagsYet')}</p>
             )}
             {tags.map(tag => (
               <div key={tag.tags_id_pk} className="flex items-center gap-2 group">
@@ -1710,7 +1709,7 @@ export default function TransactionsPage() {
                             queryClient.invalidateQueries({ queryKey: ['transactions'] });
                             setEditingTagId(null);
                             setEditingTagName('');
-                          }).catch(() => toast({ title: 'Failed to rename tag', variant: 'destructive' }));
+                          }).catch(() => toast({ title: t('pages.transactions.renameTagFailed'), variant: 'destructive' }));
                         }
                         if (e.key === 'Escape') { setEditingTagId(null); setEditingTagName(''); }
                       }}
@@ -1723,9 +1722,9 @@ export default function TransactionsPage() {
                         queryClient.invalidateQueries({ queryKey: ['transactions'] });
                         setEditingTagId(null);
                         setEditingTagName('');
-                      }).catch(() => toast({ title: 'Failed to rename tag', variant: 'destructive' }));
-                    }}>Save</Button>
-                    <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setEditingTagId(null); setEditingTagName(''); }}>Cancel</Button>
+                      }).catch(() => toast({ title: t('pages.transactions.renameTagFailed'), variant: 'destructive' }));
+                    }}>{t('common.save')}</Button>
+                    <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setEditingTagId(null); setEditingTagName(''); }}>{t('common.cancel')}</Button>
                   </>
                 ) : (
                   <>
@@ -1746,13 +1745,13 @@ export default function TransactionsPage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete tag "{tag.tag_name}"?</AlertDialogTitle>
+                          <AlertDialogTitle>{t('pages.transactions.deleteTagTitle', { name: tag.tag_name })}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove the tag from all transactions. Transactions themselves are not deleted.
+                            {t('pages.transactions.deleteTagDescription')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                           <AlertDialogAction
                             className="bg-destructive hover:bg-destructive/90"
                             onClick={() => {
@@ -1761,10 +1760,10 @@ export default function TransactionsPage() {
                                 queryClient.invalidateQueries({ queryKey: ['transactions'] });
                                 queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
                                 setFormData(prev => ({ ...prev, tags: prev.tags.filter(id => id !== tag.tags_id_pk) }));
-                              }).catch(() => toast({ title: 'Failed to delete tag', variant: 'destructive' }));
+                              }).catch(() => toast({ title: t('pages.transactions.deleteTagFailed'), variant: 'destructive' }));
                             }}
                           >
-                            Delete
+                            {t('common.delete')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -1776,6 +1775,43 @@ export default function TransactionsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('pages.transactions.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('pages.transactions.deleteConfirmDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {pendingDelete && (() => {
+            const account = accountMap[pendingDelete.account_id_fk];
+            const category = categoryMap[pendingDelete.category_id_fk];
+            return (
+              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{pendingDelete.notes || category?.category_name || t('common.unknown')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(pendingDelete.date)} · {category?.category_name || t('common.unknown')} · {account?.account_name || t('common.unknown')}
+                    </p>
+                  </div>
+                  <SensitiveValue className="shrink-0 font-mono font-medium">
+                    {pendingDelete.amount > 0 ? '+' : ''}{formatMoney(pendingDelete.amount, account?.currency || 'CZK')}
+                  </SensitiveValue>
+                </div>
+              </div>
+            );
+          })()}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (pendingDelete) deleteMutation.mutate(pendingDelete.id_pk); }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Mobile Floating Action Button */}
       <Button
