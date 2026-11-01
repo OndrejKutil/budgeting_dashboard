@@ -582,6 +582,11 @@ export interface DraftTransaction {
     account_id_fk: string | null;
     category_id_fk: number | null;
     notes: string | null;
+    savings_fund_id_fk: string | null;
+    /** IDs of the user's existing tags */
+    tags: number[];
+    /** Tags the user asked for that don't exist yet -- created by the client at import time */
+    new_tag_names: string[];
     confidence: number;
     field_sources: Partial<Record<keyof DraftTransaction, FieldSource>>;
     warnings: string[];
