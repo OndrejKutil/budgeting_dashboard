@@ -8,6 +8,7 @@ failing upload.
 
 import os
 import sys
+from typing import Any
 
 import pytest
 
@@ -52,9 +53,14 @@ def test_other_errors_are_not_detected(error):
 
 @pytest.fixture
 def sent(monkeypatch):
-    calls = []
+    calls: list[tuple[tuple, dict]] = []
+
+    def fake_send(*args, **kwargs) -> bool:
+        calls.append((args, kwargs))
+        return True
+
     notifications.reset_model_alert_cooldown()
-    monkeypatch.setattr(notifications, "send_ntfy", lambda *a, **k: calls.append((a, k)) or True)
+    monkeypatch.setattr(notifications, "send_ntfy", fake_send)
     yield calls
     notifications.reset_model_alert_cooldown()
 
@@ -83,7 +89,7 @@ def test_send_ntfy_is_disabled_without_topic():
 
 
 def test_send_ntfy_posts_to_topic(monkeypatch):
-    captured = {}
+    captured: dict[str, Any] = {}
 
     class _Resp:
         def raise_for_status(self):
