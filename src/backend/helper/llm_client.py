@@ -16,6 +16,7 @@ from groq import APIStatusError, Groq, Omit, omit
 from groq.types.chat import ChatCompletionMessageParam
 
 from .environment import INFERENCE_API_KEY
+from .notifications import alert_model_unavailable
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,40 @@ class LLMClient(abc.ABC):
         models that have no such control.
         """
         raise NotImplementedError
+
+
+# Groq error codes meaning "this model id is gone", as opposed to "this request was bad".
+# `model_decommissioned` (400) is a model Groq has retired; `model_not_found` (404) is an id it
+# doesn't serve at all -- what a retired id eventually turns into, or a typo in the env var.
+# Either way nothing but changing INFERENCE_MODEL / REASONING_MODEL fixes it.
+_MODEL_UNAVAILABLE_CODES = frozenset({"model_decommissioned", "model_not_found"})
+_MODEL_UNAVAILABLE_PHRASES = ("decommissioned", "no longer supported", "does not exist")
+
+
+def _error_code_and_message(error: LLMProviderError) -> tuple[str | None, str]:
+    body = error.body
+    inner = body.get("error") if isinstance(body, dict) else None
+    if not isinstance(inner, dict):
+        return None, str(error)
+    code = inner.get("code")
+    return (code if isinstance(code, str) else None), str(inner.get("message") or error)
+
+
+def is_model_unavailable(error: LLMProviderError) -> bool:
+    """
+    Whether the provider rejected the request because the model itself is retired or unknown.
+
+    Matched on Groq's error code first; the message phrases are a fallback in case a provider
+    reports the same condition under a code we haven't seen. Only 400/404 are considered, so a
+    rate limit or outage that happens to mention a model never counts.
+    """
+    if error.status_code not in (400, 404):
+        return False
+    code, message = _error_code_and_message(error)
+    if code in _MODEL_UNAVAILABLE_CODES:
+        return True
+    lowered = message.lower()
+    return "model" in lowered and any(phrase in lowered for phrase in _MODEL_UNAVAILABLE_PHRASES)
 
 
 def _is_retryable(error: LLMProviderError) -> bool:
@@ -187,7 +222,12 @@ class GroqLLMClient(LLMClient):
             logger.error(f"Groq request failed for model '{model}': status={e.status_code}")
             logger.info(f"Groq rate-limit headers: {rate_limit_headers}")
             logger.info(f"Groq response body: {e.body}")
-            raise LLMProviderError(str(e), status_code=e.status_code, body=e.body) from e
+            provider_error = LLMProviderError(str(e), status_code=e.status_code, body=e.body)
+            if is_model_unavailable(provider_error):
+                code, _ = _error_code_and_message(provider_error)
+                logger.error(f"Groq no longer serves model '{model}' ({code or e.status_code}) -- update the env var")
+                alert_model_unavailable(model, code or f"HTTP {e.status_code}")
+            raise provider_error from e
 
         choice = completion.choices[0]
         content = choice.message.content or ""

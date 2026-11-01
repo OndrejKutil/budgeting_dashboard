@@ -27,3 +27,8 @@ REASONING_MODEL : str = str(os.getenv("REASONING_MODEL")) if os.getenv("REASONIN
 # kept separate from ADMIN_KEY so a leaked Pi secret can't be replayed against admin endpoints.
 T212_ENCRYPTION_KEY : str = str(os.getenv("T212_ENCRYPTION_KEY")) if os.getenv("T212_ENCRYPTION_KEY") else ""
 T212_SYNC_JOB_SECRET : str = str(os.getenv("T212_SYNC_JOB_SECRET")) if os.getenv("T212_SYNC_JOB_SECRET") else ""
+
+# ntfy push notifications for operational alerts (e.g. the inference provider retiring a model).
+# Empty NTFY_TOPIC_URL disables them. NTFY_TOKEN is only needed for a protected topic.
+NTFY_TOPIC_URL : str = str(os.getenv("NTFY_TOPIC_URL")).strip() if os.getenv("NTFY_TOPIC_URL") else ""
+NTFY_TOKEN : str = str(os.getenv("NTFY_TOKEN")).strip() if os.getenv("NTFY_TOKEN") else ""

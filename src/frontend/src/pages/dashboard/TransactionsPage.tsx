@@ -54,7 +54,6 @@ import {
   AlertCircle,
   Loader2,
   Info,
-  Check,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -83,15 +82,8 @@ import { AccountBalance, AccountSelect } from '@/components/AccountSelect';
 import { accountLabel, useAccountSections } from '@/hooks/use-account-sections';
 import { MultiSelect, type MultiSelectGroup } from '@/components/MultiSelect';
 import { Badge } from '@/components/ui/badge';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { X, Tags } from 'lucide-react';
+import { TagMultiSelect } from '@/components/TagMultiSelect';
+import { Tags } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -241,11 +233,9 @@ export default function TransactionsPage() {
   const debouncedMax = useDebounce(maxAmount, 500);
 
   // Tag management state (within modal)
-  const [tagComboOpen, setTagComboOpen] = useState(false);
   const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
   const [editingTagId, setEditingTagId] = useState<number | null>(null);
   const [editingTagName, setEditingTagName] = useState('');
-  const [tagSearchInput, setTagSearchInput] = useState('');
 
   const clearFilters = () => {
     const prefix = `budget-dashboard:${location.pathname}`;
@@ -467,18 +457,6 @@ export default function TransactionsPage() {
       return acc;
     }, {} as Record<string, SavingsFund>);
   }, [funds]);
-
-  const tagMap = useMemo(() => {
-    return tags.reduce((acc, tag) => {
-      acc[tag.tags_id_pk] = tag;
-      return acc;
-    }, {} as Record<number, Tag>);
-  }, [tags]);
-
-  // Tags selected in the current form (full Tag objects for display)
-  const selectedTagObjects = useMemo(() => {
-    return formData.tags.map(id => tagMap[id]).filter(Boolean) as Tag[];
-  }, [formData.tags, tagMap]);
 
 
 
@@ -1579,87 +1557,11 @@ export default function TransactionsPage() {
                     {t('pages.transactions.manageTags')}
                   </Button>
                 </div>
-                <Popover open={tagComboOpen} onOpenChange={(open) => { setTagComboOpen(open); if (!open) setTagSearchInput(''); }}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-start h-auto min-h-10 flex-wrap gap-1 px-3 py-2"
-                    >
-                      {selectedTagObjects.length > 0 ? (
-                        selectedTagObjects.map(tag => (
-                          <span
-                            key={tag.tags_id_pk}
-                            className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground text-xs px-2 py-0.5"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFormData(prev => ({ ...prev, tags: prev.tags.filter(id => id !== tag.tags_id_pk) }));
-                            }}
-                          >
-                            {tag.tag_name}
-                            <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-sm font-normal">{t('pages.transactions.addTags')}</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder={t('pages.transactions.searchOrCreateTag')}
-                        value={tagSearchInput}
-                        onValueChange={setTagSearchInput}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          {tagSearchInput.trim() ? (
-                            <button
-                              className="w-full px-4 py-2.5 text-left text-sm hover:bg-accent"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                const name = tagSearchInput.trim();
-                                tagsApi.create({ tag_name: name }).then(res => {
-                                  if (res.data?.[0]) {
-                                    const newTag = res.data[0];
-                                    queryClient.invalidateQueries({ queryKey: ['tags'] });
-                                    setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag.tags_id_pk] }));
-                                    setTagSearchInput('');
-                                    setTagComboOpen(false);
-                                  }
-                                }).catch(() => {
-                                  toast({ title: t('pages.transactions.createTagFailed'), variant: 'destructive' });
-                                });
-                              }}
-                            >
-                              {t('pages.transactions.createTag')} "<span className="font-medium">{tagSearchInput.trim()}</span>"
-                            </button>
-                          ) : t('pages.transactions.noTagsFound')}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {[...tags].sort((a, b) => a.tag_name.localeCompare(b.tag_name)).map(tag => (
-                            <CommandItem
-                              key={tag.tags_id_pk}
-                              value={tag.tag_name}
-                              onSelect={() => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  tags: prev.tags.includes(tag.tags_id_pk)
-                                    ? prev.tags.filter(id => id !== tag.tags_id_pk)
-                                    : [...prev.tags, tag.tags_id_pk],
-                                }));
-                              }}
-                            >
-                              <Check className={cn('mr-2 h-4 w-4', formData.tags.includes(tag.tags_id_pk) ? 'opacity-100' : 'opacity-0')} />
-                              {tag.tag_name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <TagMultiSelect
+                  tags={tags}
+                  value={formData.tags}
+                  onChange={(ids) => setFormData(prev => ({ ...prev, tags: ids }))}
+                />
               </div>
             )}
           </div>

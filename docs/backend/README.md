@@ -214,10 +214,14 @@ pytest                                  # tests + coverage
 | `INFERENCE_API_KEY`   | Vision-model API key for `/screenshot-import` |
 | `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` (stage one), e.g. `qwen/qwen3.8-27b` |
 | `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` (stage two), e.g. `openai/gpt-oss-120b` |
+| `NTFY_TOPIC_URL`      | Optional ntfy topic URL (e.g. `https://ntfy.sh/<secret-topic>`) for operational push alerts; empty disables them |
+| `NTFY_TOKEN`          | Optional Bearer token for a protected ntfy topic |
 
 > Both model ids must be ones the provider still serves. Groq retires ids on its own schedule and
-> a retired one answers with a 404 `model_not_found`, which `/screenshot-import/extract` reports
-> as a 502 -- if extraction breaks with no code change behind it, check these two values first.
+> a retired one answers with a 400 `model_decommissioned` or 404 `model_not_found`, which
+> `/screenshot-import/extract` reports as a 503. When `NTFY_TOPIC_URL` is set, the backend also
+> pushes an ntfy notification naming the model (at most once per model every 6 hours) -- if
+> extraction breaks with no code change behind it, check these two values first.
 
 ---
 

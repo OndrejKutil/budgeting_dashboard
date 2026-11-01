@@ -817,6 +817,12 @@ class DraftTransactionData(BaseModel):
     account_id_fk: str | None = Field(None, description="Resolved account ID, if one could be determined")
     category_id_fk: int | None = Field(None, description="Best-guess category ID")
     notes: str | None = Field(None, description="Prefilled with the merchant name when read; freely editable")
+    savings_fund_id_fk: str | None = Field(None, description="Savings fund, when the user's instructions asked for one")
+    tags: list[int] = Field(default_factory=list, description="IDs of the user's existing tags to attach")
+    new_tag_names: list[str] = Field(
+        default_factory=list,
+        description="Tags the user asked for that don't exist yet; created by the client at import time",
+    )
     confidence: float = Field(0.0, ge=0.0, le=1.0, description="Overall confidence in this draft (0-1)")
     field_sources: dict[str, FieldSource] = Field(
         default_factory=dict,

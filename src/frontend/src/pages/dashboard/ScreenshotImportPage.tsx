@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -31,14 +32,18 @@ import {
   ClipboardPaste,
   Trash2,
   CalendarIcon,
+  History,
+  Info,
+  Wand2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCurrencyFlag, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { AccountSelect } from '@/components/AccountSelect';
+import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { toast } from '@/hooks/use-toast';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
-import { screenshotImportApi, accountsApi, categoriesApi } from '@/lib/api/endpoints';
-import type { DraftTransaction, FieldSource, NoTransactionsReason } from '@/lib/api/types';
+import { screenshotImportApi, accountsApi, categoriesApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
+import type { Category, DraftTransaction, FieldSource, NoTransactionsReason, Tag } from '@/lib/api/types';
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
@@ -49,6 +54,12 @@ const FEATURE_KEY = 'screenshot_import';
 // Mirrors MAX_UPLOAD_BYTES in the backend router, so an oversized file is rejected before it
 // spends the user's bandwidth.
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+// Mirrors MAX_INSTRUCTIONS_CHARS in the backend router.
+const MAX_INSTRUCTIONS_CHARS = 1000;
+
+// Select value meaning "no savings fund" -- Radix Select can't use an empty string as a value.
+const NO_FUND = 'none';
 
 // Same rules as the transaction form (TransactionsPage.tsx) -- kept local rather than shared
 // since this is the only other place a signed-amount input appears.
@@ -102,6 +113,9 @@ const CATEGORY_TYPE_LABEL_KEY: Record<string, DashboardTranslationKey> = {
 // is no separate merchant field, `notes` carries it instead (see DraftTransactionData docstring).
 const REVIEW_FIELDS = ['amount', 'currency', 'date', 'notes', 'account_id_fk', 'category_id_fk'] as const;
 
+// "Keep as is" in the apply-to-all selects.
+const KEEP = '';
+
 // What actually has to be filled in to save a draft as a real transaction. Narrower than
 // REVIEW_FIELDS -- currency isn't stored on a transaction and notes is optional.
 const REQUIRED_FOR_IMPORT = ['amount', 'date', 'account_id_fk', 'category_id_fk'] as const;
@@ -117,8 +131,30 @@ interface EditableDraft {
   account_id_fk: string;
   category_id_fk: string;
   notes: string;
+  savings_fund_id_fk: string;
+  tags: number[];
+  /** Tag names to create at import time (asked for in the instructions, or typed in review). */
+  new_tag_names: string[];
+  warnings: string[];
   field_sources: Partial<Record<string, FieldSource>>;
 }
+
+/** The "Apply to all" bar's own form state. KEEP means "leave that field alone". */
+interface BulkEdit {
+  account_id_fk: string;
+  category_id_fk: string;
+  savings_fund_id_fk: string;
+  tags: number[];
+  new_tag_names: string[];
+}
+
+const EMPTY_BULK: BulkEdit = {
+  account_id_fk: KEEP,
+  category_id_fk: KEEP,
+  savings_fund_id_fk: KEEP,
+  tags: [],
+  new_tag_names: [],
+};
 
 function toEditableDraft(draft: DraftTransaction): EditableDraft {
   return {
@@ -128,6 +164,10 @@ function toEditableDraft(draft: DraftTransaction): EditableDraft {
     account_id_fk: draft.account_id_fk ?? '',
     category_id_fk: draft.category_id_fk !== null ? String(draft.category_id_fk) : '',
     notes: draft.notes ?? '',
+    savings_fund_id_fk: draft.savings_fund_id_fk ?? '',
+    tags: draft.tags ?? [],
+    new_tag_names: draft.new_tag_names ?? [],
+    warnings: draft.warnings ?? [],
     field_sources: draft.field_sources,
   };
 }
@@ -145,14 +185,97 @@ function draftIsReadyToImport(draft: EditableDraft): boolean {
   );
 }
 
-function buildImportPayload(drafts: EditableDraft[]): CreateTransactionRequest[] {
-  return drafts.map((draft) => ({
-    account_id_fk: draft.account_id_fk,
-    category_id_fk: Number(draft.category_id_fk),
-    amount: parseDecimalInput(draft.amount) ?? 0,
-    date: draft.date,
-    notes: draft.notes.trim() || null,
-  }));
+/** Case-insensitive key for matching tag names ("vacation" is the same tag as "Vacation"). */
+function tagKey(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+/**
+ * `newTagIds` maps tagKey(name) -> id for the tags created just before import, so each draft's
+ * pending names resolve to real ids.
+ */
+function buildImportPayload(drafts: EditableDraft[], newTagIds: Map<string, number>): CreateTransactionRequest[] {
+  return drafts.map((draft) => {
+    const tags = [...draft.tags];
+    for (const name of draft.new_tag_names) {
+      const id = newTagIds.get(tagKey(name));
+      if (id !== undefined && !tags.includes(id)) tags.push(id);
+    }
+    return {
+      account_id_fk: draft.account_id_fk,
+      category_id_fk: Number(draft.category_id_fk),
+      amount: parseDecimalInput(draft.amount) ?? 0,
+      date: draft.date,
+      notes: draft.notes.trim() || null,
+      savings_fund_id_fk: draft.savings_fund_id_fk || null,
+      tags,
+    };
+  });
+}
+
+/**
+ * Create every pending tag name across the drafts (once each, case-insensitively), reusing any
+ * that already exist by now. Throws with the failing name so the caller can abort the import.
+ */
+async function createPendingTags(drafts: EditableDraft[], existing: Tag[]): Promise<Map<string, number>> {
+  const ids = new Map<string, number>();
+  for (const tag of existing) ids.set(tagKey(tag.tag_name), tag.tags_id_pk);
+
+  const pending = new Map<string, string>();
+  for (const draft of drafts) {
+    for (const name of draft.new_tag_names) {
+      const key = tagKey(name);
+      if (key && !ids.has(key) && !pending.has(key)) pending.set(key, name.trim());
+    }
+  }
+
+  for (const [key, name] of pending) {
+    try {
+      const created = (await tagsApi.create({ tag_name: name })).data?.[0];
+      if (!created) throw new Error('empty response');
+      ids.set(key, created.tags_id_pk);
+    } catch {
+      throw new TagCreateError(name);
+    }
+  }
+  return ids;
+}
+
+class TagCreateError extends Error {
+  constructor(public tagName: string) {
+    super(`Couldn't create tag "${tagName}"`);
+  }
+}
+
+function CategorySelectItems({ categories, t }: { categories: Category[]; t: ReturnType<typeof useUser>['t'] }) {
+  return (
+    <>
+      {CATEGORY_TYPE_ORDER.map((type) => ({
+        type,
+        cats: categories
+          .filter((c) => c.is_active !== false && c.type === type)
+          .sort((a, b) => a.category_name.localeCompare(b.category_name)),
+      }))
+        .filter((g) => g.cats.length > 0)
+        .map((g, gi) => (
+          <SelectGroup key={g.type}>
+            <SelectLabel
+              className={cn(
+                'px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2',
+                gi > 0 && 'mt-1 border-t border-border/40 pt-2'
+              )}
+            >
+              {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
+            </SelectLabel>
+            {g.cats.map((cat) => (
+              <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
+                {cat.category_name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+    </>
+  );
 }
 
 function fieldRingClass(source: FieldSource | undefined): string {
@@ -168,11 +291,32 @@ function FieldStatus({
   source,
   needsInputLabel,
   defaultedLabel,
+  fromHistoryLabel,
+  fromHistoryHint,
 }: {
   source: FieldSource | undefined;
   needsInputLabel: string;
   defaultedLabel: string;
+  fromHistoryLabel?: string;
+  fromHistoryHint?: string;
 }) {
+  if (source === 'rule' && fromHistoryLabel) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className="h-4 gap-1 px-1.5 text-[10px] font-normal text-primary">
+            <History className="h-2.5 w-2.5" />
+            {fromHistoryLabel}
+          </Badge>
+        </TooltipTrigger>
+        {fromHistoryHint && (
+          <TooltipContent>
+            <p>{fromHistoryHint}</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    );
+  }
   if (source === 'none') {
     return <span className="text-[10px] font-medium text-destructive">{needsInputLabel}</span>;
   }
@@ -199,7 +343,12 @@ export default function ScreenshotImportPage() {
   const [inferenceModel, setInferenceModel] = useState<string | null>(null);
   const [emptyReason, setEmptyReason] = useState<NoTransactionsReason | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState('');
+  const [bulk, setBulk] = useState<BulkEdit>(EMPTY_BULK);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Instructions belong to one screenshot: once they've been used for an extraction, the next
+  // screenshot starts with an empty box. Text typed before the first extraction is kept.
+  const instructionsUsedRef = useRef(false);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -211,6 +360,19 @@ export default function ScreenshotImportPage() {
     queryFn: async () => (await categoriesApi.getAll()).data || [],
     enabled,
   });
+  const { data: funds = [] } = useQuery({
+    queryKey: ['funds'],
+    queryFn: async () => (await fundsApi.getAll()).data || [],
+    enabled,
+  });
+  const { data: tags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: async () => (await tagsApi.getAll()).data || [],
+    enabled,
+  });
+  const activeFunds = funds
+    .filter((f) => f.fund_is_active !== false)
+    .sort((a, b) => a.fund_name.localeCompare(b.fund_name));
 
   // Object URLs leak until revoked; tie each one's lifetime to the file it previews.
   useEffect(() => {
@@ -230,6 +392,7 @@ export default function ScreenshotImportPage() {
     setInferenceModel(null);
     setEmptyReason(null);
     setErrorMessage(null);
+    setBulk(EMPTY_BULK);
   };
 
   const acceptFile = useCallback(
@@ -256,6 +419,10 @@ export default function ScreenshotImportPage() {
 
       setFile(candidate);
       resetResults();
+      if (instructionsUsedRef.current) {
+        setInstructions('');
+        instructionsUsedRef.current = false;
+      }
     },
     [t]
   );
@@ -281,6 +448,7 @@ export default function ScreenshotImportPage() {
   const extractMutation = useMutation({
     mutationFn: screenshotImportApi.extract,
     onSuccess: (body) => {
+      instructionsUsedRef.current = true;
       setExtracted(true);
       setDrafts((body.data?.drafts ?? []).map(toEditableDraft));
       setInferenceModel(body.data?.inference_model ?? null);
@@ -310,7 +478,12 @@ export default function ScreenshotImportPage() {
   });
 
   const importMutation = useMutation({
-    mutationFn: (transactions: CreateTransactionRequest[]) => screenshotImportApi.import(transactions),
+    mutationFn: async (toImport: EditableDraft[]) => {
+      const hasPendingTags = toImport.some((d) => d.new_tag_names.length > 0);
+      const newTagIds = hasPendingTags ? await createPendingTags(toImport, tags) : new Map<string, number>();
+      if (hasPendingTags) queryClient.invalidateQueries({ queryKey: ['tags'] });
+      return screenshotImportApi.import(buildImportPayload(toImport, newTagIds));
+    },
     onSuccess: (body) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
@@ -321,7 +494,10 @@ export default function ScreenshotImportPage() {
       clearSelection();
     },
     onError: (err) => {
-      const message = getErrorMessage(err, t('pages.screenshotImport.importFailed'));
+      const message =
+        err instanceof TagCreateError
+          ? t('pages.screenshotImport.createTagFailed', { name: err.tagName })
+          : getErrorMessage(err, t('pages.screenshotImport.importFailed'));
       toast({
         title: t('common.error'),
         description: message,
@@ -333,6 +509,8 @@ export default function ScreenshotImportPage() {
   const clearSelection = () => {
     setFile(null);
     resetResults();
+    setInstructions('');
+    instructionsUsedRef.current = false;
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -353,6 +531,41 @@ export default function ScreenshotImportPage() {
 
   const removeDraft = (index: number) => {
     setDrafts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const bulkIsEmpty =
+    bulk.account_id_fk === KEEP &&
+    bulk.category_id_fk === KEEP &&
+    bulk.savings_fund_id_fk === KEEP &&
+    bulk.tags.length === 0 &&
+    bulk.new_tag_names.length === 0;
+
+  const applyBulk = () => {
+    setDrafts((prev) =>
+      prev.map((draft) => {
+        const next: EditableDraft = { ...draft, field_sources: { ...draft.field_sources } };
+        if (bulk.account_id_fk !== KEEP) {
+          next.account_id_fk = bulk.account_id_fk;
+          delete next.field_sources.account_id_fk;
+        }
+        if (bulk.category_id_fk !== KEEP) {
+          next.category_id_fk = bulk.category_id_fk;
+          delete next.field_sources.category_id_fk;
+        }
+        if (bulk.savings_fund_id_fk !== KEEP) {
+          next.savings_fund_id_fk = bulk.savings_fund_id_fk === NO_FUND ? '' : bulk.savings_fund_id_fk;
+        }
+        next.tags = [...new Set([...draft.tags, ...bulk.tags])];
+        const pendingKeys = new Set(draft.new_tag_names.map(tagKey));
+        next.new_tag_names = [
+          ...draft.new_tag_names,
+          ...bulk.new_tag_names.filter((name) => !pendingKeys.has(tagKey(name))),
+        ];
+        return next;
+      })
+    );
+    toast({ title: t('pages.screenshotImport.applyToAllDone', { count: drafts.length }) });
+    setBulk(EMPTY_BULK);
   };
 
   if (flagLoading) {
@@ -477,7 +690,7 @@ export default function ScreenshotImportPage() {
             <Button
               type="button"
               disabled={!file || extractMutation.isPending}
-              onClick={() => file && extractMutation.mutate(file)}
+              onClick={() => file && extractMutation.mutate({ file, instructions })}
             >
               {extractMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -487,6 +700,25 @@ export default function ScreenshotImportPage() {
               {t('pages.screenshotImport.extract')}
             </Button>
           </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="screenshot-instructions">{t('pages.screenshotImport.instructionsLabel')}</Label>
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              {instructions.length}/{MAX_INSTRUCTIONS_CHARS}
+            </span>
+          </div>
+          <Textarea
+            id="screenshot-instructions"
+            value={instructions}
+            maxLength={MAX_INSTRUCTIONS_CHARS}
+            rows={2}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder={t('pages.screenshotImport.instructionsPlaceholder')}
+            className="resize-y bg-background/50"
+          />
+          <p className="text-xs text-muted-foreground">{t('pages.screenshotImport.instructionsHint')}</p>
         </div>
       </motion.div>
 
@@ -528,6 +760,89 @@ export default function ScreenshotImportPage() {
             />
           ) : (
             <div className="space-y-3">
+              {drafts.length > 1 && (
+                <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-semibold text-foreground">
+                      {t('pages.screenshotImport.applyToAllTitle')}
+                    </h4>
+                  </div>
+                  <p className="mb-3 text-xs text-muted-foreground">{t('pages.screenshotImport.applyToAllHint')}</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bulk-account">{t('common.account')}</Label>
+                      <AccountSelect
+                        id="bulk-account"
+                        accounts={accounts}
+                        value={bulk.account_id_fk}
+                        onValueChange={(value) => setBulk((b) => ({ ...b, account_id_fk: value }))}
+                        placeholder={t('pages.screenshotImport.keepAsIs')}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bulk-category">{t('common.category')}</Label>
+                      <Select
+                        value={bulk.category_id_fk}
+                        onValueChange={(value) => setBulk((b) => ({ ...b, category_id_fk: value }))}
+                      >
+                        <SelectTrigger id="bulk-category">
+                          <SelectValue placeholder={t('pages.screenshotImport.keepAsIs')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <CategorySelectItems categories={categories} t={t} />
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bulk-fund">{t('pages.transactions.savingsFundOptional')}</Label>
+                      <Select
+                        value={bulk.savings_fund_id_fk}
+                        onValueChange={(value) => setBulk((b) => ({ ...b, savings_fund_id_fk: value }))}
+                      >
+                        <SelectTrigger id="bulk-fund">
+                          <SelectValue placeholder={t('pages.screenshotImport.keepAsIs')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_FUND}>{t('common.none')}</SelectItem>
+                          {activeFunds.map((fund) => (
+                            <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
+                              {fund.fund_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bulk-tags">{t('pages.transactions.tags')}</Label>
+                      <TagMultiSelect
+                        id="bulk-tags"
+                        tags={tags}
+                        value={bulk.tags}
+                        onChange={(ids) => setBulk((b) => ({ ...b, tags: ids }))}
+                        pendingNames={bulk.new_tag_names}
+                        onPendingNamesChange={(names) => setBulk((b) => ({ ...b, new_tag_names: names }))}
+                        pendingLabel={t('pages.screenshotImport.newTag')}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={bulkIsEmpty}
+                      onClick={() => setBulk(EMPTY_BULK)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                    <Button type="button" size="sm" disabled={bulkIsEmpty} onClick={applyBulk}>
+                      {t('pages.screenshotImport.applyToAllButton')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {drafts.map((draft, i) => (
                 <div
                   key={i}
@@ -555,6 +870,20 @@ export default function ScreenshotImportPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+
+                  {draft.warnings.length > 0 && (
+                    <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                      <p className="mb-1 flex items-center gap-1.5 font-medium">
+                        <Info className="h-3.5 w-3.5" />
+                        {t('pages.screenshotImport.warningsTitle')}
+                      </p>
+                      <ul className="list-disc space-y-0.5 pl-5">
+                        {draft.warnings.map((warning, wi) => (
+                          <li key={wi}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
@@ -695,6 +1024,8 @@ export default function ScreenshotImportPage() {
                           source={draft.field_sources.account_id_fk}
                           needsInputLabel={t('pages.screenshotImport.needsInput')}
                           defaultedLabel={t('pages.screenshotImport.defaulted')}
+                          fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
+                          fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
                         />
                       </div>
                       <AccountSelect
@@ -714,6 +1045,8 @@ export default function ScreenshotImportPage() {
                           source={draft.field_sources.category_id_fk}
                           needsInputLabel={t('pages.screenshotImport.needsInput')}
                           defaultedLabel={t('pages.screenshotImport.defaulted')}
+                          fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
+                          fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
                         />
                       </div>
                       <Select
@@ -724,32 +1057,44 @@ export default function ScreenshotImportPage() {
                           <SelectValue placeholder={t('pages.transactions.selectCategory')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {CATEGORY_TYPE_ORDER.map((type) => ({
-                            type,
-                            cats: categories
-                              .filter((c) => c.is_active !== false && c.type === type)
-                              .sort((a, b) => a.category_name.localeCompare(b.category_name)),
-                          }))
-                            .filter((g) => g.cats.length > 0)
-                            .map((g, gi) => (
-                              <SelectGroup key={g.type}>
-                                <SelectLabel
-                                  className={cn(
-                                    'px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2',
-                                    gi > 0 && 'mt-1 border-t border-border/40 pt-2'
-                                  )}
-                                >
-                                  {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
-                                </SelectLabel>
-                                {g.cats.map((cat) => (
-                                  <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
-                                    {cat.category_name}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            ))}
+                          <CategorySelectItems categories={categories} t={t} />
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`fund-${i}`}>{t('pages.transactions.savingsFundOptional')}</Label>
+                      <Select
+                        value={draft.savings_fund_id_fk || NO_FUND}
+                        onValueChange={(value) =>
+                          updateDraft(i, { savings_fund_id_fk: value === NO_FUND ? '' : value })
+                        }
+                      >
+                        <SelectTrigger id={`fund-${i}`}>
+                          <SelectValue placeholder={t('pages.transactions.selectFund')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_FUND}>{t('common.none')}</SelectItem>
+                          {activeFunds.map((fund) => (
+                            <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
+                              {fund.fund_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`tags-${i}`}>{t('pages.transactions.tags')}</Label>
+                      <TagMultiSelect
+                        id={`tags-${i}`}
+                        tags={tags}
+                        value={draft.tags}
+                        onChange={(ids) => updateDraft(i, { tags: ids })}
+                        pendingNames={draft.new_tag_names}
+                        onPendingNamesChange={(names) => updateDraft(i, { new_tag_names: names })}
+                        pendingLabel={t('pages.screenshotImport.newTag')}
+                      />
                     </div>
                   </div>
                 </div>
@@ -768,7 +1113,7 @@ export default function ScreenshotImportPage() {
               <Button
                 type="button"
                 disabled={!allReadyToImport || importMutation.isPending}
-                onClick={() => importMutation.mutate(buildImportPayload(drafts))}
+                onClick={() => importMutation.mutate(drafts)}
               >
                 {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('pages.screenshotImport.importButton', { count: drafts.length })}

@@ -11,12 +11,15 @@ interface ImportTransactionsResponse {
 
 export const screenshotImportApi = {
     /**
-     * Send a screenshot of bank notifications for extraction into draft transactions.
+     * Send a screenshot of bank notifications or a transaction list for extraction into draft
+     * transactions, optionally with free-text instructions (account, tags, fund, labels...).
      * Returns drafts to review — never finished transactions.
      */
-    extract: async (file: File) => {
+    extract: async ({ file, instructions }: { file: File; instructions?: string }) => {
         const formData = new FormData();
         formData.append('file', file);
+        const trimmed = instructions?.trim();
+        if (trimmed) formData.append('instructions', trimmed);
 
         const response = await apiClient.postForm<ExtractionResponse>(
             '/screenshot-import/extract',
