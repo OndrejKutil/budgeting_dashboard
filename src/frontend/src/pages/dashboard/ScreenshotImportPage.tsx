@@ -29,6 +29,7 @@ import {
   Loader2,
   X,
   AlertTriangle,
+  AlertCircle,
   ClipboardPaste,
   Trash2,
   CalendarIcon,
@@ -338,6 +339,8 @@ export default function ScreenshotImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // A rejected file is reported at the dropzone it was dropped on, not in a toast.
+  const [fileError, setFileError] = useState<string | null>(null);
   const [extracted, setExtracted] = useState(false);
   const [drafts, setDrafts] = useState<EditableDraft[]>([]);
   const [inferenceModel, setInferenceModel] = useState<string | null>(null);
@@ -400,22 +403,16 @@ export default function ScreenshotImportPage() {
       if (!candidate) return;
 
       if (!candidate.type.startsWith('image/')) {
-        toast({
-          title: t('common.validationError'),
-          description: t('pages.screenshotImport.notAnImage'),
-          variant: 'destructive',
-        });
+        setFileError(t('pages.screenshotImport.notAnImage'));
         return;
       }
 
       if (candidate.size > MAX_UPLOAD_BYTES) {
-        toast({
-          title: t('common.validationError'),
-          description: t('pages.screenshotImport.tooLarge'),
-          variant: 'destructive',
-        });
+        setFileError(t('pages.screenshotImport.tooLarge'));
         return;
       }
+
+      setFileError(null);
 
       setFile(candidate);
       resetResults();
@@ -629,7 +626,11 @@ export default function ScreenshotImportPage() {
           }}
           className={cn(
             'flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors',
-            isDragging ? 'border-primary bg-primary/5' : 'border-border bg-background/50'
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : fileError
+                ? 'border-destructive/60 bg-destructive/5'
+                : 'border-border bg-background/50'
           )}
         >
           {previewUrl ? (
@@ -671,6 +672,13 @@ export default function ScreenshotImportPage() {
                 {t('pages.screenshotImport.pasteHint')}
               </p>
             </>
+          )}
+
+          {fileError && (
+            <p role="alert" className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {fileError}
+            </p>
           )}
 
           <input

@@ -100,43 +100,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearAuthState]);
 
   const login = useCallback(async (email: string, password: string) => {
-    try {
-      const response = await authApi.login(email, password);
-      setIsAuthenticated(true);
-      setUserId(response.user_id);
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      });
-    } catch (error) {
-      const message = getErrorMessage(error, 'Login failed');
-      toast({
-        title: 'Login failed',
-        description: message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
+    // No failure toast: the login form shows the reason inline, and a toast on top of that
+    // reported it twice. A rejection simply propagates to the caller.
+    const response = await authApi.login(email, password);
+    setIsAuthenticated(true);
+    setUserId(response.user_id);
+    toast({
+      title: 'Welcome back!',
+      description: 'You have successfully logged in.',
+    });
   }, []);
 
   const register = useCallback(async (email: string, password: string, fullName?: string) => {
-    try {
-      const response = await authApi.register(email, password, fullName);
-      setIsAuthenticated(true);
-      setUserId(response.user_id);
-      toast({
-        title: 'Account created!',
-        description: 'Welcome to your personal finance dashboard.',
-      });
-    } catch (error) {
-      const message = getErrorMessage(error, 'Registration failed');
-      toast({
-        title: 'Registration failed',
-        description: message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
+    // Same as login: the register form owns the error message.
+    const response = await authApi.register(email, password, fullName);
+    setIsAuthenticated(true);
+    setUserId(response.user_id);
+    toast({
+      title: 'Account created!',
+      description: 'Welcome to your personal finance dashboard.',
+    });
   }, []);
 
   const logout = useCallback(async () => {

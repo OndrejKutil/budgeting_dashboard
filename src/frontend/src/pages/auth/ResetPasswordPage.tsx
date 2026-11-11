@@ -153,9 +153,9 @@ export default function ResetPasswordPage() {
             title="Reset your password"
             subtitle="Enter your new password below"
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
                 {errors.general && (
-                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                    <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                         {errors.general}
                     </div>
                 )}
@@ -165,6 +165,9 @@ export default function ResetPasswordPage() {
                     <div className="relative">
                         <Input
                             id="password"
+                            autoComplete="new-password"
+                            aria-invalid={!!errors.password}
+                            aria-describedby={errors.password ? "password-error" : undefined}
                             type={showPassword ? 'text' : 'password'}
                             placeholder="••••••••"
                             value={password}
@@ -186,7 +189,7 @@ export default function ResetPasswordPage() {
                         </button>
                     </div>
                     {errors.password && (
-                        <p className="text-xs text-destructive">{errors.password}</p>
+                        <p id="password-error" role="alert" className="text-xs text-destructive">{errors.password}</p>
                     )}
                 </div>
 
@@ -195,6 +198,9 @@ export default function ResetPasswordPage() {
                     <div className="relative">
                         <Input
                             id="confirmPassword"
+                            autoComplete="new-password"
+                            aria-invalid={!!errors.confirmPassword}
+                            aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
                             type={showConfirmPassword ? 'text' : 'password'}
                             placeholder="••••••••"
                             value={confirmPassword}
@@ -216,7 +222,7 @@ export default function ResetPasswordPage() {
                         </button>
                     </div>
                     {errors.confirmPassword && (
-                        <p className="text-xs text-destructive">{errors.confirmPassword}</p>
+                        <p id="confirmPassword-error" role="alert" className="text-xs text-destructive">{errors.confirmPassword}</p>
                     )}
                 </div>
 

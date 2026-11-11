@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
+import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -232,7 +233,9 @@ export default function RecurringPage() {
     onError: (err) => toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.postFailed')), variant: 'destructive' }),
   });
 
-  const closeModal = () => { setIsModalOpen(false); setSelected(null); setForm(EMPTY_FORM); setCalendarOpen(false); };
+  const { errors: formErrors, show: showFormErrors, clear: clearFormError, reset: resetFormErrors } = useFormErrors<'amount' | 'account' | 'category' | 'nextDate'>();
+
+  const closeModal = () => { setIsModalOpen(false); setSelected(null); setForm(EMPTY_FORM); setCalendarOpen(false); resetFormErrors(); };
 
   const openEdit = (r: Recurring) => {
     setSelected(r);
@@ -251,10 +254,13 @@ export default function RecurringPage() {
 
   const handleSubmit = () => {
     const amount = parseDecimalInput(form.amountRaw);
-    if (!form.account_id_fk || !form.category_id_fk || amount === null || !form.next_date) {
-      toast({ title: t('common.validationError'), description: t('common.requiredFields'), variant: 'destructive' });
-      return;
-    }
+    const fieldErrors: Partial<Record<'amount' | 'account' | 'category' | 'nextDate', string>> = {};
+    if (!form.amountRaw.trim()) fieldErrors.amount = t('pages.transactions.amountRequired');
+    else if (amount === null) fieldErrors.amount = t('pages.transactions.amountInvalid');
+    if (!form.account_id_fk) fieldErrors.account = t('pages.transactions.accountRequired');
+    if (!form.category_id_fk) fieldErrors.category = t('pages.transactions.categoryRequired');
+    if (!form.next_date) fieldErrors.nextDate = t('pages.recurring.nextDateRequired');
+    if (!showFormErrors(fieldErrors) || amount === null || !form.next_date) return;
     const payload: CreateRecurringRequest = {
       account_id_fk: form.account_id_fk,
       category_id_fk: Number(form.category_id_fk),
@@ -450,10 +456,16 @@ export default function RecurringPage() {
               {selected ? t('pages.recurring.editTitle') : t('pages.recurring.addTitle')}
             </DialogTitle>
           </DialogHeader>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
           <div className="space-y-4 py-2">
             {/* Amount */}
-            <div className="space-y-2">
-              <Label>{t('common.amount')}</Label>
+            <Field htmlFor="recurring-amount" label={t('common.amount')} error={formErrors.amount}>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -464,63 +476,71 @@ export default function RecurringPage() {
                     const v = form.amountRaw.trim();
                     setForm(f => ({ ...f, amountRaw: v.startsWith('-') ? v.slice(1) : v ? `-${v}` : '-' }));
                   }}
+                  aria-label={form.amountRaw.startsWith('-') ? t('pages.transactions.setAmountPositive') : t('pages.transactions.setAmountNegative')}
                   title={form.amountRaw.startsWith('-') ? t('pages.transactions.setAmountPositive') : t('pages.transactions.setAmountNegative')}
                 >
                   {form.amountRaw.startsWith('-') ? '−' : '+'}
                 </Button>
                 <Input
+                  id="recurring-amount"
                   inputMode="decimal"
                   pattern={DECIMAL_INPUT_PATTERN}
                   placeholder="0.00"
+                  className="text-[16px] tabular-nums"
                   value={form.amountRaw}
-                  onChange={e => setForm(f => ({ ...f, amountRaw: e.target.value }))}
+                  onChange={e => { setForm(f => ({ ...f, amountRaw: e.target.value })); clearFormError('amount'); }}
+                  {...fieldAria('recurring-amount', formErrors.amount)}
                 />
               </div>
-            </div>
+            </Field>
 
             {/* Account */}
-            <div className="space-y-2">
-              <Label>{t('common.account')}</Label>
+            <Field htmlFor="recurring-account" label={t('common.account')} error={formErrors.account}>
               <AccountSelect
+                id="recurring-account"
                 accounts={accounts}
                 value={form.account_id_fk}
-                onValueChange={v => setForm(f => ({ ...f, account_id_fk: v }))}
+                onValueChange={v => { setForm(f => ({ ...f, account_id_fk: v })); clearFormError('account'); }}
                 placeholder={t('pages.transactions.selectAccount')}
+                {...fieldAria('recurring-account', formErrors.account)}
               />
-            </div>
+            </Field>
 
             {/* Category */}
-            <div className="space-y-2">
-              <Label>{t('common.category')}</Label>
-              <Select value={form.category_id_fk} onValueChange={v => setForm(f => ({ ...f, category_id_fk: v }))}>
-                <SelectTrigger><SelectValue placeholder={t('pages.transactions.selectCategory')} /></SelectTrigger>
+            <Field htmlFor="recurring-category" label={t('common.category')} error={formErrors.category}>
+              <Select value={form.category_id_fk} onValueChange={v => { setForm(f => ({ ...f, category_id_fk: v })); clearFormError('category'); }}>
+                <SelectTrigger id="recurring-category" {...fieldAria('recurring-category', formErrors.category)}><SelectValue placeholder={t('pages.transactions.selectCategory')} /></SelectTrigger>
                 <SelectContent>
                   {categories.filter(c => c.is_active !== false).map(c => (
                     <SelectItem key={c.categories_id_pk} value={String(c.categories_id_pk)}>{c.category_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
             {/* Cadence */}
-            <div className="space-y-2">
-              <Label>{t('pages.recurring.cadence')}</Label>
+            <Field htmlFor="recurring-cadence" label={t('pages.recurring.cadence')}>
               <Select value={form.cadence} onValueChange={v => setForm(f => ({ ...f, cadence: v }))}>
-                <SelectTrigger><SelectValue placeholder={t('pages.recurring.selectCadence')} /></SelectTrigger>
+                <SelectTrigger id="recurring-cadence"><SelectValue placeholder={t('pages.recurring.selectCadence')} /></SelectTrigger>
                 <SelectContent>
                   {['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'].map(c => (
                     <SelectItem key={c} value={c}>{cadenceLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
             {/* Next Date */}
-            <div className="space-y-2">
-              <Label>{t('pages.recurring.nextDate')}</Label>
+            <Field htmlFor="recurring-next-date" label={t('pages.recurring.nextDate')} error={formErrors.nextDate}>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button
+                    id="recurring-next-date"
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal aria-[invalid=true]:border-destructive"
+                    {...fieldAria('recurring-next-date', formErrors.nextDate)}
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {form.next_date ? form.next_date.toLocaleDateString() : t('pages.transactions.pickDate')}
                   </Button>
@@ -529,18 +549,17 @@ export default function RecurringPage() {
                   <Calendar
                     mode="single"
                     selected={form.next_date}
-                    onSelect={d => { setForm(f => ({ ...f, next_date: d })); setCalendarOpen(false); }}
+                    onSelect={d => { setForm(f => ({ ...f, next_date: d })); setCalendarOpen(false); clearFormError('nextDate'); }}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-            </div>
+            </Field>
 
             {/* Savings Fund */}
-            <div className="space-y-2">
-              <Label>{t('pages.transactions.savingsFundOptional')}</Label>
+            <Field htmlFor="recurring-fund" label={t('pages.transactions.savingsFundOptional')}>
               <Select value={form.savings_fund_id_fk || 'none'} onValueChange={v => setForm(f => ({ ...f, savings_fund_id_fk: v === 'none' ? '' : v }))}>
-                <SelectTrigger><SelectValue placeholder={t('pages.transactions.selectFund')} /></SelectTrigger>
+                <SelectTrigger id="recurring-fund"><SelectValue placeholder={t('pages.transactions.selectFund')} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('common.none')}</SelectItem>
                   {funds.filter(f => f.fund_is_active !== false).map(f => (
@@ -548,25 +567,26 @@ export default function RecurringPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
             {/* Notes */}
-            <div className="space-y-2">
-              <Label>{t('common.notes')}</Label>
+            <Field htmlFor="recurring-notes" label={t('common.notes')}>
               <Input
+                id="recurring-notes"
                 placeholder={t('pages.transactions.notesPlaceholder')}
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               />
-            </div>
+            </Field>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeModal}>{t('common.cancel')}</Button>
+            <Button type="button" variant="outline" onClick={closeModal}>{t('common.cancel')}</Button>
             {/* Optimistic write + immediate close, so no pending gate is needed. */}
-            <Button onClick={handleSubmit}>
+            <Button type="submit">
               {selected ? t('common.save') : t('common.create')}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

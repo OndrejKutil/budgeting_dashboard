@@ -78,6 +78,8 @@ interface AccountSelectProps {
   id?: string;
   className?: string;
   disabled?: boolean;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 }
 
 export function AccountSelect({
@@ -91,6 +93,8 @@ export function AccountSelect({
   id,
   className,
   disabled,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
 }: AccountSelectProps) {
   const sections = useAccountSections(accounts, {
     excludeIds,
@@ -129,7 +133,7 @@ export function AccountSelect({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger id={id} className={className}>
+      <SelectTrigger id={id} className={className} aria-invalid={ariaInvalid} aria-describedby={ariaDescribedBy}>
         <SelectValue placeholder={placeholder}>{triggerLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
