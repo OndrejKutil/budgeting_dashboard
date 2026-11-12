@@ -25,6 +25,7 @@ export function useOpenAddTransaction(): () => void {
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+  if (target.closest('[role=combobox],[role=listbox],[role=option],[role=menuitem],[role=textbox]')) return true;
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
@@ -36,7 +37,7 @@ export function useAddTransactionShortcut(): void {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'n') return;
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.repeat) return;
-      if (event.defaultPrevented || isTypingTarget(event.target)) return;
+      if (event.isComposing || event.defaultPrevented || isTypingTarget(event.target)) return;
       if (document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"]')) return;
       event.preventDefault();
       openAdd();

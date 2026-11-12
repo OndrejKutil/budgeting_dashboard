@@ -14,7 +14,7 @@ export function DashboardLayout() {
         {/* Bottom padding clears the floating mobile dock (about 5rem) plus the home indicator. */}
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 sm:px-5 md:px-14 md:pb-16 md:pt-8"
+          className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 sm:px-5 lg:px-14 lg:pb-16 lg:pt-8"
         >
           <PullToRefresh>
             <Outlet />

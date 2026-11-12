@@ -18,7 +18,7 @@ import { isPathActive, primaryNavItems, RECURRING_PATH, type NavGroup } from './
 import { useDueRecurringCount, useVisibleNavGroups } from './use-nav';
 
 const pillItemClass =
-  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-[7px] text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[7px] text-sm xl:px-3.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 const pillItemActiveClass =
   'bg-foreground/10 text-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.16)]';
 
@@ -90,15 +90,15 @@ export function Topbar() {
 
   return (
     <header className="safe-top sticky top-0 z-40 bg-gradient-to-b from-background from-60% to-transparent pb-3">
-      <div className="mx-auto grid w-full max-w-[1160px] grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 md:grid-cols-[1fr_auto_1fr] md:px-14 md:pt-5">
+      <div className="mx-auto grid w-full max-w-[1160px] grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 lg:grid-cols-[1fr_auto_1fr] lg:px-14 lg:pt-5">
         <Link
           to="/dashboard"
-          className="justify-self-start rounded-md text-base font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="justify-self-start whitespace-nowrap rounded-md text-base font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {t('appName')}
         </Link>
 
-        <nav aria-label={t('nav.mainNavigation')} className="glass hidden items-center gap-0.5 rounded-full p-[5px] md:flex">
+        <nav aria-label={t('nav.mainNavigation')} className="glass hidden items-center gap-0.5 rounded-full p-[5px] lg:flex">
           {primaryNavItems.map((item) => {
             const active = isPathActive(pathname, item.href);
             return (
@@ -117,7 +117,7 @@ export function Topbar() {
           ))}
         </nav>
 
-        <div className="flex items-center justify-end gap-1 md:gap-2">
+        <div className="flex items-center justify-end gap-1 lg:gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

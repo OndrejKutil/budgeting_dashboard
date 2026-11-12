@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { OpenAddState } from '@/hooks/use-add-transaction';
 import { useUrlState } from '@/hooks/use-url-state';
@@ -217,8 +217,7 @@ export default function TransactionsPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-
+  
   // URL State Management
   const [page, setPage] = useUrlState<number>('page', 1);
   const [searchQuery, setSearchQuery] = useUrlState<string>('q', '');
@@ -431,8 +430,9 @@ export default function TransactionsPage() {
     const state = location.state as OpenAddState | null;
     if (!state?.openAdd) return;
     setIsCreateModalOpen(true);
-    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
-  }, [location, navigate]);
+    // Clear only the history state: navigating here would race useUrlState restoring saved filters.
+    window.history.replaceState({ ...(window.history.state as object | null), usr: null }, '');
+  }, [location]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   // Copy prefills the create form from an existing row; it only changes the modal's wording,
   // the submit path stays the create one (selectedTransaction is left null on purpose).

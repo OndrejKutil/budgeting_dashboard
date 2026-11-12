@@ -89,7 +89,7 @@ export function MobileDock() {
     <>
       <nav
         aria-label={t('nav.mobileNavigation')}
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 md:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 lg:hidden"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
       >
         <div className="glass pointer-events-auto mx-auto grid max-w-sm grid-cols-5 items-center rounded-[26px] p-2">
