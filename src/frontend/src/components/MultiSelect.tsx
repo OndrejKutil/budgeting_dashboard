@@ -120,7 +120,7 @@ export function MultiSelect({
         <span
           className={cn(
             'truncate',
-            variant === 'field' && selected.length === 0 && 'text-muted-foreground/70',
+            variant === 'field' && selected.length === 0 && 'text-muted-foreground dark:text-muted-foreground/80',
             variant === 'quiet' && 'max-w-[12rem] border-b-2 pb-[3px]',
             variant === 'quiet' && (selected.length > 0 ? 'border-primary' : 'border-transparent'),
           )}

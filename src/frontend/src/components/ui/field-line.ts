@@ -5,4 +5,4 @@
  * line with a box-shadow so nothing shifts) and red when `aria-invalid`.
  */
 export const fieldLine =
-  'rounded-none border-0 border-b border-foreground/25 bg-transparent px-0 hover:border-foreground/50 focus-visible:outline-none focus-visible:border-primary focus-visible:shadow-[0_1px_0_0_hsl(var(--primary))] aria-[invalid=true]:border-destructive aria-[invalid=true]:shadow-[0_1px_0_0_hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-50';
+  'rounded-none border-0 border-b border-foreground/50 dark:border-foreground/40 bg-transparent px-0 hover:border-foreground/70 focus-visible:outline-none focus-visible:border-primary focus-visible:shadow-[0_1px_0_0_hsl(var(--primary))] aria-[invalid=true]:border-destructive aria-[invalid=true]:shadow-[0_1px_0_0_hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-50';

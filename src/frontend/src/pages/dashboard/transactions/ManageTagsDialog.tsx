@@ -48,6 +48,7 @@ export function ManageTagsDialog({ open, onOpenChange, tags, onTagDeleted }: Man
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['tags'] });
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
         stopEditing();
       })
       .catch(() => toast({ title: t('pages.transactions.renameTagFailed'), variant: 'destructive' }));

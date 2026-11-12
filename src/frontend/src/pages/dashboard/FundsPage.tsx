@@ -223,6 +223,8 @@ export default function FundsPage() {
     if (!formData.fund_name.trim()) fieldErrors.name = t('pages.funds.nameRequired');
     if (!formData.target_amount) fieldErrors.target = t('pages.funds.targetRequired');
     else if (!Number.isFinite(target) || target < 0) fieldErrors.target = t('pages.funds.targetInvalid');
+    // The backend types target_amount as an int, so a decimal would silently be truncated.
+    else if (!Number.isInteger(target)) fieldErrors.target = t('pages.funds.targetWhole');
     if (!showFormErrors(fieldErrors)) return;
 
     const userId = tokenManager.getUserId();

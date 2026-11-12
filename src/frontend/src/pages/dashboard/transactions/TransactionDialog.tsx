@@ -288,7 +288,7 @@ export function TransactionDialog({
                       className={cn(
                         'flex h-[42px] w-full items-center justify-between gap-2 py-0 text-left text-base md:text-[15px]',
                         fieldLine,
-                        !formData.date && 'text-muted-foreground/70',
+                        !formData.date && 'text-muted-foreground dark:text-muted-foreground/80',
                       )}
                     >
                       <span className="truncate">

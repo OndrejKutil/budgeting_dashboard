@@ -174,7 +174,6 @@ export default function ResetPasswordPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             className={cn(
                                 'pr-10',
-                                errors.password && 'border-destructive focus-visible:ring-destructive'
                             )}
                             disabled={isLoading}
                         />
@@ -207,7 +206,6 @@ export default function ResetPasswordPage() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className={cn(
                                 'pr-10',
-                                errors.confirmPassword && 'border-destructive focus-visible:ring-destructive'
                             )}
                             disabled={isLoading}
                         />

@@ -42,6 +42,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { fieldLine } from '@/components/ui/field-line';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/api/client';
 import { recurringApi, accountsApi, categoriesApi, fundsApi } from '@/lib/api/endpoints';
@@ -534,16 +535,21 @@ export default function RecurringPage() {
             <Field htmlFor="recurring-next-date" label={t('pages.recurring.nextDate')} error={formErrors.nextDate}>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <Button
+                  <button
                     id="recurring-next-date"
                     type="button"
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal aria-[invalid=true]:border-destructive"
+                    className={cn(
+                      'flex h-[42px] w-full items-center justify-between gap-2 py-0 text-left text-base md:text-[15px]',
+                      fieldLine,
+                      !form.next_date && 'text-muted-foreground dark:text-muted-foreground/80',
+                    )}
                     {...fieldAria('recurring-next-date', formErrors.nextDate)}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.next_date ? form.next_date.toLocaleDateString() : t('pages.transactions.pickDate')}
-                  </Button>
+                    <span className="truncate">
+                      {form.next_date ? form.next_date.toLocaleDateString() : t('pages.transactions.pickDate')}
+                    </span>
+                    <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar

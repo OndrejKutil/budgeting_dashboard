@@ -205,7 +205,7 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             onChange={(e) => onUpdate(row.id, { name: e.target.value })}
             placeholder={t('pages.budgetMaker.itemName')}
             aria-invalid={nameInvalid || undefined}
-            className={cn(GHOST_INPUT, 'font-medium', nameInvalid && INVALID)}
+            className={cn(GHOST_INPUT, 'font-medium')}
         />
     );
 
@@ -301,8 +301,8 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
     );
 }
 
-const GHOST_INPUT = 'h-8 px-2 border-transparent bg-transparent shadow-none hover:border-input focus-visible:border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-offset-0';
-const INVALID = 'border-destructive/60 hover:border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40';
+// Ghost inputs hide their line until hover; focus and invalid styling come from Input's own fieldLine.
+const GHOST_INPUT = 'h-8 px-2 border-b-transparent hover:border-foreground/40';
 
 /** Text input (not type=number: no scroll-wheel surprises, accepts "1 234,50"); shows formatted currency when idle. */
 function AmountInput({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (v: string) => void }) {
@@ -322,7 +322,7 @@ function AmountInput({ value, invalid, onChange }: { value: string; invalid: boo
             onBlur={() => setFocused(false)}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={invalid || undefined}
-            className={cn(GHOST_INPUT, 'text-right font-mono tabular-nums', invalid && INVALID, isPrivacyMode && !focused && 'blur-[6px]')}
+            className={cn(GHOST_INPUT, 'text-right font-mono tabular-nums', isPrivacyMode && !focused && 'blur-[6px]')}
         />
     );
 }

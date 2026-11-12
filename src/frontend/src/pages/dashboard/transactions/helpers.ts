@@ -110,6 +110,17 @@ export function parseDecimalInput(value: string): number | null {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 }
 
+/**
+ * Which "{count} transactions" string fits this count in this locale. Intl.PluralRules knows
+ * the Czech split (1 / 2-4 / 5+ and 0), so no per-locale logic lives here.
+ */
+export function transactionCountKey(locale: string, count: number): DashboardTranslationKey {
+  const category = new Intl.PluralRules(locale).select(count);
+  if (category === 'one') return 'pages.transactions.countOne';
+  if (category === 'few') return 'pages.transactions.countFew';
+  return 'pages.transactions.countMany';
+}
+
 /** Narrow symbol of a currency code ("Kč", "€"), falling back to the code itself. */
 export function currencySymbol(currency: string): string {
   try {

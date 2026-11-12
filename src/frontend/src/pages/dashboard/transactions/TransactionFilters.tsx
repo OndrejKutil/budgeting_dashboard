@@ -320,7 +320,9 @@ export function TransactionFilters(props: TransactionFiltersProps) {
             </button>
           ) : (
             <Popover>
-              <PopoverTrigger className={moreTriggerClass} aria-label={t('pages.transactions.moreFilters')}>
+              <PopoverTrigger className={moreTriggerClass} aria-label={hiddenActiveCount > 0
+                  ? t('pages.transactions.moreFiltersActive', { count: hiddenActiveCount })
+                  : t('pages.transactions.moreFilters')}>
                 {moreTriggerContent}
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[22rem] max-w-[calc(100vw-2rem)] p-5">

@@ -130,7 +130,7 @@ export function TagMultiSelect({
       <PopoverAnchor asChild>
         <div
           className={cn(
-            'flex min-h-[42px] flex-wrap items-center gap-1.5 border-b border-foreground/25 py-1 transition-colors hover:border-foreground/50 focus-within:border-primary focus-within:shadow-[0_1px_0_0_hsl(var(--primary))]',
+            'flex min-h-[42px] flex-wrap items-center gap-1.5 border-b border-foreground/50 py-1 transition-colors hover:border-foreground/70 dark:border-foreground/40 focus-within:border-primary focus-within:shadow-[0_1px_0_0_hsl(var(--primary))]',
             className,
           )}
         >
@@ -166,7 +166,7 @@ export function TagMultiSelect({
               id={id}
               type="button"
               role="combobox"
-              className="flex h-8 min-w-[6rem] flex-1 items-center gap-1 rounded-sm text-left text-base text-muted-foreground/80 transition-colors hover:text-foreground focus-visible:outline-none md:text-[15px]"
+              className="flex h-8 min-w-[6rem] flex-1 items-center gap-1 rounded-sm text-left text-base text-muted-foreground transition-colors hover:text-foreground dark:text-muted-foreground/80 focus-visible:outline-none md:text-[15px]"
             >
               {hasSelection ? (
                 <>

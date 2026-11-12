@@ -879,15 +879,15 @@ function DemoTransactions() {
       />
 
       {/* Filter bar — matches real TransactionsPage */}
-      <div className="rounded-xl border border-border bg-card p-4 shadow-sm mb-6 space-y-4">
+      <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search transactions..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-10 bg-background/50 border-input/50 focus:bg-background transition-colors"
+              className="pl-7"
             />
           </div>
           {hasActiveFilter && (
@@ -925,7 +925,7 @@ function DemoTransactions() {
         {/* Selects row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Select value={monthFilter} onValueChange={(v) => { setMonthFilter(v as TxMonthFilter); setPage(1); }}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Month" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All months</SelectItem>
               <SelectItem value="apr">April</SelectItem>
@@ -935,7 +935,7 @@ function DemoTransactions() {
           </Select>
 
           <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as TxFilter); setPage(1); }}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="income">Income</SelectItem>
@@ -946,14 +946,14 @@ function DemoTransactions() {
           </Select>
 
           <Select value="all" onValueChange={() => {}}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All categories</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value="all" onValueChange={() => {}}>
-            <SelectTrigger className="bg-background/50 border-input/50"><SelectValue placeholder="Account" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All accounts</SelectItem>
             </SelectContent>
@@ -966,7 +966,7 @@ function DemoTransactions() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-xl border border-border bg-card shadow-sm overflow-hidden"
+        className="overflow-hidden"
       >
         {pageRows.length === 0 ? (
           <div className="p-12 text-center">
@@ -976,7 +976,7 @@ function DemoTransactions() {
         ) : (
           <>
             {/* Desktop table */}
-            <div className="hidden md:block rounded-md border">
+            <div className="hidden md:block">
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow className="hover:bg-transparent border-b border-border/50">

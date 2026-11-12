@@ -35,13 +35,14 @@ import {
   PartialTransferError,
   parseDecimalInput,
   parseMonths,
+  transactionCountKey,
   type TransactionField,
   type TransactionFormData,
   type TransactionMode,
 } from './transactions/helpers';
 
 export default function TransactionsPage() {
-  const { formatCurrency, formatDate, formatNumber, t, currency: userCurrency } = useUser();
+  const { formatCurrency, formatDate, formatNumber, t, locale, currency: userCurrency } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
@@ -265,6 +266,7 @@ export default function TransactionsPage() {
     mutationFn: (id: string) => transactionsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
       // Also invalidate summary/analytics if needed
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       toast({
@@ -334,6 +336,7 @@ export default function TransactionsPage() {
     onError: (err: Error | ApiError) => {
       // One leg may have landed — refetch so the list reflects whatever actually posted.
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
 
@@ -539,7 +542,7 @@ export default function TransactionsPage() {
           </h1>
           {summaryData && (
             <span className="text-sm text-muted-foreground tabular-nums">
-              {t('pages.transactions.countLabel', { count: formatNumber(summaryData.count) })}
+              {t(transactionCountKey(locale, summaryData.count), { count: formatNumber(summaryData.count) })}
             </span>
           )}
         </div>
@@ -604,8 +607,6 @@ export default function TransactionsPage() {
       {/* Filtered summary: a quiet line, not a panel. */}
       {anyFilterActive && summaryData && (
         <p className="text-[13px] text-muted-foreground" aria-live="polite">
-          <span className="tabular-nums">{t('pages.transactions.countLabel', { count: formatNumber(summaryData.count) })}</span>
-          {' · '}
           {t('pages.transactions.summaryTotal')}{' '}
           <span className="tabular-nums text-foreground">
             <SensitiveValue>{formatCurrency(summaryData.total_amount)}</SensitiveValue>

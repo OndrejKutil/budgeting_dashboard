@@ -294,8 +294,13 @@ export function TransactionList({
                 <p className="truncate text-[15px] text-foreground">
                   {transaction.notes || t('pages.transactions.noDescription')}
                 </p>
-                <p className="truncate text-[13px] text-muted-foreground">
-                  {category?.category_name || t('common.unknown')} · {formatDate(transaction.date)}
+                {/* Category and account give way first; the date always stays whole. */}
+                <p className="flex min-w-0 gap-1 text-[13px] text-muted-foreground">
+                  <span className="min-w-0 shrink truncate">{category?.category_name || t('common.unknown')}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="min-w-0 shrink truncate">{account?.account_name || t('common.unknown')}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="shrink-0 whitespace-nowrap">{formatDate(transaction.date)}</span>
                 </p>
                 <TagChips tags={transaction.tags} />
               </div>
