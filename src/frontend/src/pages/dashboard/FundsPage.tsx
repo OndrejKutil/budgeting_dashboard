@@ -117,6 +117,8 @@ export default function FundsPage() {
   const inactiveFunds = sortFunds(funds.filter(f => f.fund_is_active === false), sortKey);
   const totalTarget = activeFunds.reduce((sum, f) => sum + f.target_amount, 0);
   const totalCurrent = activeFunds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
+  // A target of 0 means "no target"; those funds stay out of the progress ratio so it never exceeds what the targets cover.
+  const totalCurrentTargeted = activeFunds.reduce((sum, f) => sum + (f.target_amount > 0 ? (f.current_amount || 0) : 0), 0);
 
   const handleOpenModal = (fund?: SavingsFund) => {
     if (fund) {
@@ -220,7 +222,7 @@ export default function FundsPage() {
     const fieldErrors: { name?: string; target?: string } = {};
     if (!formData.fund_name.trim()) fieldErrors.name = t('pages.funds.nameRequired');
     if (!formData.target_amount) fieldErrors.target = t('pages.funds.targetRequired');
-    else if (!Number.isFinite(target) || target <= 0) fieldErrors.target = t('pages.funds.targetInvalid');
+    else if (!Number.isFinite(target) || target < 0) fieldErrors.target = t('pages.funds.targetInvalid');
     if (!showFormErrors(fieldErrors)) return;
 
     const userId = tokenManager.getUserId();
@@ -304,7 +306,8 @@ export default function FundsPage() {
 
   const renderFundCard = (fund: SavingsFund) => {
     const current = fund.current_amount || 0;
-    const progress = fund.target_amount > 0 ? (current / fund.target_amount) * 100 : 0;
+    const hasTarget = fund.target_amount > 0;
+    const progress = hasTarget ? (current / fund.target_amount) * 100 : 0;
     const isComplete = progress >= 100;
     // Temp id until the server row arrives — actions would 404, so disable them.
     const pending = isOptimistic(fund);
@@ -391,7 +394,9 @@ export default function FundsPage() {
                 <SensitiveValue>{formatCurrency(current)}</SensitiveValue>
               </span>
               <span className="text-muted-foreground/70 ml-1 text-xs">
-                {t('pages.funds.of')} <SensitiveValue>{formatCurrency(fund.target_amount)}</SensitiveValue>
+                {hasTarget ? (
+                  <>{t('pages.funds.of')} <SensitiveValue>{formatCurrency(fund.target_amount)}</SensitiveValue></>
+                ) : t('pages.funds.noTarget')}
               </span>
             </div>
             {isComplete && (
@@ -400,12 +405,14 @@ export default function FundsPage() {
               </span>
             )}
           </div>
-          <Progress
-            value={Math.min(progress, 100)}
-            className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
-          />
+          {hasTarget && (
+            <Progress
+              value={Math.min(progress, 100)}
+              className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
+            />
+          )}
           {/* Timeline Projection */}
-          {!isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
+          {hasTarget && !isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
             <p className="mt-2 text-[11px] text-muted-foreground">
               {fund.net_flow_30d > 0 ? (() => {
                 const remaining = fund.target_amount - current;
@@ -474,18 +481,22 @@ export default function FundsPage() {
                 <SensitiveValue>{formatCurrency(totalCurrent)}</SensitiveValue>
               </p>
               <p className="text-sm text-muted-foreground">
-                {t('pages.funds.of')} <SensitiveValue>{formatCurrency(totalTarget)}</SensitiveValue> {t('pages.funds.activeTarget')}
+                {totalTarget > 0 ? (
+                  <>{t('pages.funds.of')} <SensitiveValue>{formatCurrency(totalTarget)}</SensitiveValue> {t('pages.funds.activeTarget')}</>
+                ) : t('pages.funds.noTarget')}
               </p>
             </div>
-            <div className="w-full sm:w-48">
-              <Progress
-                value={totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0}
-                className="h-3"
-              />
-              <p className="mt-1 text-right text-sm text-muted-foreground">
-                <SensitiveValue>{totalTarget > 0 ? ((totalCurrent / totalTarget) * 100).toFixed(0) : 0}%</SensitiveValue> {t('states.complete')}
-              </p>
-            </div>
+            {totalTarget > 0 && (
+              <div className="w-full sm:w-48">
+                <Progress
+                  value={Math.min((totalCurrentTargeted / totalTarget) * 100, 100)}
+                  className="h-3"
+                />
+                <p className="mt-1 text-right text-sm text-muted-foreground">
+                  <SensitiveValue>{((totalCurrentTargeted / totalTarget) * 100).toFixed(0)}%</SensitiveValue> {t('states.complete')}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </motion.div>
@@ -591,7 +602,7 @@ export default function FundsPage() {
                   id="target"
                   type="number"
                   inputMode="numeric"
-                  min={1}
+                  min={0}
                   placeholder="5000"
                   value={formData.target_amount}
                   onChange={(e) => {

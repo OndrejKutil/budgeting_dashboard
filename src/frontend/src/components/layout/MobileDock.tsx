@@ -79,7 +79,7 @@ export function MobileDock() {
   const groups = useVisibleNavGroups();
   const dueCount = useDueRecurringCount();
 
-  const dockItems = [overviewItem, transactionsItem, fundsItem];
+  const dockItems = [overviewItem, transactionsItem, accountsItem];
   const moreActive = !dockItems.some((item) => isPathActive(pathname, item.href));
   const closeMore = () => setMoreOpen(false);
 
@@ -103,7 +103,7 @@ export function MobileDock() {
           >
             <Plus className="mx-auto h-6 w-6" aria-hidden="true" />
           </button>
-          <DockLink item={fundsItem} active={isPathActive(pathname, fundsItem.href)} />
+          <DockLink item={accountsItem} active={isPathActive(pathname, accountsItem.href)} />
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
@@ -121,14 +121,14 @@ export function MobileDock() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="glass glass-dense max-h-[85vh] overflow-y-auto rounded-t-[30px] border-x-0 border-b-0 bg-transparent px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-6"
+          className="max-h-[85vh] overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-6"
         >
           <SheetHeader className="mb-2">
             <SheetTitle>{t('nav.more')}</SheetTitle>
             <SheetDescription className="sr-only">{t('nav.moreSheetDescription')}</SheetDescription>
           </SheetHeader>
           <nav aria-label={t('nav.more')} className="space-y-4">
-            <SheetLink item={accountsItem} active={isPathActive(pathname, accountsItem.href)} onNavigate={closeMore} />
+            <SheetLink item={fundsItem} active={isPathActive(pathname, fundsItem.href)} onNavigate={closeMore} />
             {groups.map((group) => (
               <div key={group.id}>
                 <p className="px-3 pb-1 text-[13px] text-muted-foreground">{t(group.labelKey)}</p>

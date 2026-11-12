@@ -41,7 +41,7 @@ function NavMenu({ group, dueCount }: { group: NavGroup; dueCount: number }) {
       <DropdownMenuContent
         align="start"
         sideOffset={10}
-        className="glass glass-dense min-w-[14rem] rounded-2xl bg-transparent p-2 text-sm"
+        className="min-w-[14rem] text-sm"
       >
         {group.items.map((item) => {
           const itemActive = isPathActive(pathname, item.href);

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, Plus, X } from 'lucide-react';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
   CommandEmpty,
@@ -113,6 +112,13 @@ export function TagMultiSelect({
 
   const hasSelection = selectedTags.length > 0 || pendingNames.length > 0;
 
+  // Selected tags are chips *next to* the combobox button, not children of it: a remove
+  // button nested inside another button is invalid HTML and unreachable by keyboard.
+  const chipClass =
+    'inline-flex max-w-full items-center gap-0.5 rounded-full bg-foreground/[0.08] py-0.5 pl-2.5 pr-1 text-xs text-foreground';
+  const removeClass =
+    'inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
   return (
     <Popover
       open={open}
@@ -121,52 +127,60 @@ export function TagMultiSelect({
         if (!next) setSearch('');
       }}
     >
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          role="combobox"
-          className={cn('w-full justify-start h-auto min-h-10 flex-wrap gap-1 px-3 py-2', className)}
-        >
-          {hasSelection ? (
-            <>
-              {selectedTags.map((tag) => (
-                <span
-                  key={tag.tags_id_pk}
-                  className="inline-flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground text-xs px-2 py-0.5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChange(value.filter((v) => v !== tag.tags_id_pk));
-                  }}
-                >
-                  {tag.tag_name}
-                  <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
-                </span>
-              ))}
-              {pendingNames.map((name) => (
-                <span
-                  key={`pending-${name}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-primary/60 text-xs px-2 py-0.5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPendingNamesChange?.(pendingNames.filter((p) => p !== name));
-                  }}
-                >
-                  {name}
-                  {pendingLabel && <span className="text-[10px] text-primary">{pendingLabel}</span>}
-                  <X aria-hidden="true" className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
-                </span>
-              ))}
-            </>
-          ) : (
-            <span className="text-muted-foreground text-sm font-normal">
-              {placeholder ?? t('pages.transactions.addTags')}
-            </span>
+      <PopoverAnchor asChild>
+        <div
+          className={cn(
+            'flex min-h-[42px] flex-wrap items-center gap-1.5 border-b border-foreground/25 py-1 transition-colors hover:border-foreground/50 focus-within:border-primary focus-within:shadow-[0_1px_0_0_hsl(var(--primary))]',
+            className,
           )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        >
+          {selectedTags.map((tag) => (
+            <span key={tag.tags_id_pk} className={chipClass}>
+              <span className="truncate">{tag.tag_name}</span>
+              <button
+                type="button"
+                aria-label={t('pages.transactions.removeTag', { name: tag.tag_name })}
+                className={removeClass}
+                onClick={() => onChange(value.filter((v) => v !== tag.tags_id_pk))}
+              >
+                <X aria-hidden="true" className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {pendingNames.map((name) => (
+            <span key={`pending-${name}`} className={cn(chipClass, 'border border-dashed border-primary/60 bg-transparent')}>
+              <span className="truncate">{name}</span>
+              {pendingLabel && <span className="text-[10px] text-primary">{pendingLabel}</span>}
+              <button
+                type="button"
+                aria-label={t('pages.transactions.removeTag', { name })}
+                className={removeClass}
+                onClick={() => onPendingNamesChange?.(pendingNames.filter((p) => p !== name))}
+              >
+                <X aria-hidden="true" className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <PopoverTrigger asChild>
+            <button
+              id={id}
+              type="button"
+              role="combobox"
+              className="flex h-8 min-w-[6rem] flex-1 items-center gap-1 rounded-sm text-left text-base text-muted-foreground/80 transition-colors hover:text-foreground focus-visible:outline-none md:text-[15px]"
+            >
+              {hasSelection ? (
+                <>
+                  <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+                  <span>{t('pages.transactions.addTag')}</span>
+                </>
+              ) : (
+                <span>{placeholder ?? t('pages.transactions.addTags')}</span>
+              )}
+            </button>
+          </PopoverTrigger>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent className="w-[min(24rem,calc(100vw-2rem))] p-0" align="start">
         <Command>
           <CommandInput
             placeholder={t('pages.transactions.searchOrCreateTag')}
@@ -178,7 +192,7 @@ export function TagMultiSelect({
               {search.trim() ? (
                 <button
                   type="button"
-                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-accent"
+                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     createTag(search.trim());
