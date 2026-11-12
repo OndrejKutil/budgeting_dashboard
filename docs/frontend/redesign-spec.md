@@ -7,9 +7,11 @@ Reference mockups (private Claude artifacts, sample data):
 
 - Pages in the chosen style: https://claude.ai/artifact/LHc8DgM5DyxRYr6fj7jfLD
 - Layout iterations (layout 1 was chosen): https://claude.ai/artifact/HL2pbCs7CbXCHpjBZv8msE
+- Earlier glass samples with five accent colours: https://claude.ai/artifact/6Gk5C8dgQpTiT97kk19E77
 
-The mockups predate some decisions below. Where they disagree, this document wins.
-See "Mockup differences" at the end.
+The pages mockup was updated on 2026-11-12 (second pass) to match the decisions in
+section 1. Where a mockup and this document disagree, this document wins. See
+"Mockup status" at the end.
 
 ---
 
@@ -30,6 +32,7 @@ See "Mockup differences" at the end.
 | Accounts | Individual accounts and groups are the focus, not net worth |
 | Budget Maker | Primarily an editing tool; actuals are secondary |
 | Transactions filters | Tags, month/date, account and type stay visible; the rest behind a button |
+| Landing footer | Upgraded: closing call to action, data facts, link columns with contact, legal line |
 
 ---
 
@@ -62,7 +65,9 @@ See "Mockup differences" at the end.
     error, with the message directly beneath (behaviour already shipped in PR #94).
 13. **One typeface, four weights.** A single grotesque with tabular figures.
 14. **Numbers align right, always tabular.**
-15. **Type side line.** Rows that have a type or state carry a thin vertical line on the
+15. **Compare with the average.** The small change under a figure and the dashed line
+    in a chart both use the average of the last six months.
+16. **Type side line.** Rows that have a type or state carry a thin vertical line on the
     side, as transaction rows do today. Used for transactions (type) and funds (recent
     activity).
 
@@ -158,21 +163,24 @@ Each needs a keep / restyle / remove decision.
 
 ### Accounts
 
-- **To be redrawn.** The mock was too flat and led with net worth, which is not what is
-  checked.
+- Redrawn in the second pass. The first mock was too flat and led with net worth, which
+  is not what is checked.
 - Focus: each account's balance, and each group's total (for example Revolut across
   currencies).
-- Hierarchy to establish: group as a clear heading with its total; accounts beneath;
-  balance as the largest thing on each row.
-- Net worth becomes secondary (smaller figure and chart).
+- Hierarchy: a group is a heading with its total on the right; its accounts sit
+  indented beneath; the balance is the largest thing on each row, with this month's
+  change beside it and a 30-day trace.
+- Accounts outside a group are listed under "Other accounts" with their own total.
+- Net worth is secondary: a small figure and trace in the page header.
 - Not yet decided: "invested" chip on net worth, Foreign Currencies section, inactive
   accounts, per-account 30-day chart.
 
 ### Savings funds
 
-- **To be redrawn.**
+- Redrawn in the second pass.
 - Each row: fund name, **saved amount as the main figure**, target and progress as
-  supporting text, last-30-days flow.
+  supporting text, last-30-days flow. A faint line under the row still shows progress.
+- A fund without a target shows "No target" and no progress line.
 - Side line colour: green if money went in during the last 30 days, red if it came out,
   grey if nothing moved.
 - Page headline: total saved across funds.
@@ -182,8 +190,8 @@ Each needs a keep / restyle / remove decision.
 
 - Four figures split by lines: income, expenses, savings rate, left. Each compared with
   the six-month average.
-- Daily spending strip: one bar per day, with a **horizontal average line**. No
-  highlighted highest day.
+- Daily spending strip: one bar per day, with a **dashed amber average line**. Days
+  above the average are slightly brighter. No single day is highlighted.
 - Three columns: expense categories, income sources, spending type.
 - Export PDF.
 - Not yet decided: comparison with the same month last year (today's page has it),
@@ -197,8 +205,10 @@ Each needs a keep / restyle / remove decision.
 - Actual and difference are secondary; a row over plan is marked.
 - Keep from today: drag to reorder, per-row "Total" toggle, autosave status, copy to
   another month, Investments section.
-- The summary figures above the table in the mock should be reduced, since the page is
-  mainly used for editing.
+- No large summary figures. One quiet line above the table: planned in, allocated,
+  left to plan.
+- The plan column is the editable one and the brightest; each plan value sits on an
+  input line. "Add row" under every section, including an empty Investments section.
 
 ### Landing
 
@@ -206,6 +216,46 @@ Each needs a keep / restyle / remove decision.
   grid.
 - Remove the leftover sentence on the current page: "The landing page does not need to
   explain every screen."
+- Ends with the upgraded footer below.
+
+### Footer (landing and all public pages)
+
+Today's footer is a brand blurb and three link columns (Product, Project, Legal). The
+upgrade adds contact, plain statements about data, and a legal line. It is used on the
+landing page and on FAQ, How it works, About, Terms, Privacy and the demo.
+
+Style reference requested: the footer on barleysolutions.cz. **That page could not be
+opened from the build environment (host blocked), so the mock is an independent
+proposal.** To align with the reference, either allow that host or add a screenshot,
+then revise this section.
+
+Structure, top to bottom:
+
+1. **Closing call to action.** A large line ("Start with this month.") with Create
+   account and Try the demo.
+2. **Data facts.** Four short statements split by lines. Each must stay true:
+   - No bank connection: records are entered by the user.
+   - Export: transactions can be exported from Profile.
+   - Delete: the account and its data can be deleted from Profile.
+   - Open source: MIT licence, code on GitHub.
+3. **Link columns.**
+   - Brand and one-line description.
+   - Product: How it works, FAQ, Demo.
+   - Project: About, Source on GitHub, MIT licence.
+   - Legal: Privacy Policy, Terms of Service.
+   - Contact: email address, GitHub profile.
+4. **Legal line.** Copyright and author, where data is stored and hosted (Supabase,
+   Render), language switch (English / Čeština).
+
+To decide before build:
+
+- Compliance wording. Nothing may be claimed that is not in the Privacy Policy. Check
+  whether a GDPR statement, data region, or cookie notice should be named here, and
+  whether a cookie policy link is needed.
+- Whether a postal address or business identifier is required or wanted.
+- Whether the app (signed-in) pages get a reduced footer or none.
+- Whether the language switch belongs in the footer, the top bar, or both.
+- Mobile layout: columns stack; the data facts become a two-by-two grid.
 
 ### Not yet drawn
 
@@ -227,7 +277,10 @@ pages, FAQ / How it works / About, the public demo.
 5. Light theme: when, and how close to the dark one?
 6. Typeface: confirm Hanken Grotesk after seeing it rendered, or pick another.
 7. Amount colours: with spending in red, does "over plan" in Budget Maker need a
-   different marker than colour?
+   different marker than colour? (The mock adds the word "over".)
+8. Footer: see the "To decide before build" list in the Footer section.
+9. Transactions: with every spending row red, is the type side line still needed, or
+   does it now duplicate the amount colour?
 
 ---
 
@@ -243,17 +296,23 @@ pages, FAQ / How it works / About, the public demo.
 
 ---
 
-## Mockup differences
+## Mockup status
 
-The page mockups still show these, which the decisions above have changed:
+The pages mockup (second pass) now reflects:
 
-- Negative amounts in white. They should be red.
-- Comparisons against December. They should be against the six-month average.
-- Monthly daily strip highlights the highest day. It should show an average line.
-- Mobile dock has text labels. It should be icons only.
-- Funds rows lead with progress. They should lead with the saved amount and carry the
-  activity side line.
-- Accounts leads with net worth and has flat rows. To be redrawn.
-- Transactions shows All / Spending / Income / Saving as the visible filters. The
-  visible set should be month/date, account, type and tags.
-- Budget Maker has three large summary figures. To be reduced.
+- Spending in red, income in green.
+- Comparisons and the dashed chart line against the six-month average.
+- Monthly daily strip with an average line and no highlighted day.
+- Icon-only mobile dock with Add in the middle.
+- Funds, Accounts and Budget Maker redrawn as described above.
+- Transactions with month, account, type and tags visible, and the type side line.
+- Landing with the proposed footer.
+
+Still not reflected or not drawn:
+
+- Light theme.
+- The footer on mobile, and on public pages other than the landing page.
+- Everything under "Not yet drawn" and every "Not yet decided" item in section 4.
+- The typeface has not been checked on a real screen.
+- The mockup source files are not in this repository; they exist only as the published
+  artifacts linked at the top.
