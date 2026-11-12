@@ -314,5 +314,4 @@ Still not reflected or not drawn:
 - The footer on mobile, and on public pages other than the landing page.
 - Everything under "Not yet drawn" and every "Not yet decided" item in section 4.
 - The typeface has not been checked on a real screen.
-- The mockup source files are not in this repository; they exist only as the published
-  artifacts linked at the top.
+- The mockup source files are in `docs/frontend/mockups/`; `pages.html` is the reference.
