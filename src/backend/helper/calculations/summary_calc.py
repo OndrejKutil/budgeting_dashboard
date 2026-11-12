@@ -1,5 +1,6 @@
 
 # imports
+import calendar
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
@@ -11,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 from pydantic import BaseModel, Field
 
 # schemas
-from ...schemas.base import CategoryInsight, PeriodComparison, SummaryData, TransactionData
+from ...schemas.base import CategoryInsight, PeriodComparison, SixMonthAverage, SummaryData, TransactionData
 from ..columns import TRANSACTIONS_COLUMNS
 
 # Create logger for this module
@@ -86,6 +87,31 @@ def _get_previous_period_dates(start_date: date | None, end_date: date | None) -
         return prev_start, prev_end
 
 
+_FETCH_PAGE_SIZE = 1000
+_AVERAGE_WINDOW_MONTHS = 6
+
+
+def _fetch_first_transaction_date(access_token: str) -> date | None:
+    """Date of the user's earliest transaction, or None when they have none."""
+    from ...data.database import get_db_client
+    try:
+        client = get_db_client(access_token)
+        response = (
+            client.table("fct_transactions")
+            .select(TRANSACTIONS_COLUMNS.DATE.value)
+            .order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
+            .limit(1)
+            .execute()
+        )
+        rows = cast(list[dict[Any, Any]], response.data or [])
+        if not rows or not rows[0].get(TRANSACTIONS_COLUMNS.DATE.value):
+            return None
+        return date.fromisoformat(str(rows[0][TRANSACTIONS_COLUMNS.DATE.value]))
+    except Exception as e:
+        logger.error(f'Database query failed for first transaction date: {str(e)}')
+        raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
+
+
 def _fetch_summary_transactions(
     access_token: str, 
     start_date: date | None, 
@@ -118,11 +144,21 @@ def _fetch_summary_transactions(
         if end_date:
             query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
             
-        # Order by date for consistency
-        query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
-        
-        response = query.execute()
-        return cast(list[dict[Any, Any]], response.data)
+        # Stable order (date, then id) so pages never overlap or skip rows
+        query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False).order(TRANSACTIONS_COLUMNS.ID.value, desc=False)
+
+        # The summary now reads up to seven months at once; PostgREST caps one response at
+        # 1000 rows, so page through the result.
+        rows: list[dict[Any, Any]] = []
+        offset = 0
+        while True:
+            response = query.range(offset, offset + _FETCH_PAGE_SIZE - 1).execute()
+            batch = cast(list[dict[Any, Any]], response.data or [])
+            rows.extend(batch)
+            if len(batch) < _FETCH_PAGE_SIZE:
+                break
+            offset += _FETCH_PAGE_SIZE
+        return rows
 
     except Exception as e:
         logger.error(f'Database query failed for summary transactions: {str(e)}')
@@ -294,39 +330,147 @@ def _calculate_period_comparison(current: SummaryTotals, previous: SummaryTotals
         cashflow_delta_pct=calc_pct(current.net_cash_flow, previous.net_cash_flow)
     )
 
-def _get_top_expenses(df: pl.DataFrame) -> list[CategoryInsight]:
+def _get_expense_categories(df: pl.DataFrame) -> list[CategoryInsight]:
     """
-    Get top 3 expense categories by total amount.
+    All expense categories by total amount, largest first.
     """
     if df.is_empty():
         return []
-        
+
     expense_df = df.filter(pl.col('category_type') == 'expense')
     if expense_df.is_empty():
         return []
-        
+
     total_expense = expense_df.select(pl.col('abs_amount').sum()).item() or 0.0
     if total_expense == 0:
         return []
 
-    # Group by category
-    top_cats = (
+    categories = (
         expense_df.group_by('category_name')
         .agg(pl.col('abs_amount').sum().alias('total'))
-        .sort('total', descending=True)
-        .head(3)
+        .sort(['total', 'category_name'], descending=[True, False])
     )
-    
-    results = []
-    for row in top_cats.iter_rows(named=True):
-        share = (row['total'] / total_expense) * 100
-        results.append(CategoryInsight(
+
+    return [
+        CategoryInsight(
             name=row['category_name'],
             total=round(row['total'], 2),
-            share_of_total=round(share, 1)
-        ))
-        
-    return results
+            share_of_total=round((row['total'] / total_expense) * 100, 1),
+        )
+        for row in categories.iter_rows(named=True)
+    ]
+
+
+def _get_top_expenses(df: pl.DataFrame) -> list[CategoryInsight]:
+    """
+    Get top 3 expense categories by total amount.
+    """
+    return _get_expense_categories(df)[:3]
+
+
+# ================================================================================================
+#                          Spending pace and six-month average (Overview)
+# ================================================================================================
+
+def _average_window_months(target_month: date) -> list[date]:
+    """First days of the six calendar months before target_month, oldest first."""
+    first = target_month.replace(day=1)
+    return [first - relativedelta(months=n) for n in range(_AVERAGE_WINDOW_MONTHS, 0, -1)]
+
+
+def _days_in_month(month_start: date) -> int:
+    return calendar.monthrange(month_start.year, month_start.month)[1]
+
+
+def _month_rows(df: pl.DataFrame, month_start: date) -> pl.DataFrame:
+    """Rows of df dated inside the calendar month starting at month_start (ISO date strings)."""
+    if df.is_empty():
+        return df
+    prefix = f'{month_start.year:04d}-{month_start.month:02d}'
+    return df.filter(pl.col('date').str.slice(0, 7) == prefix)
+
+
+def _months_with_history(months: list[date], first_data_date: date | None) -> list[date]:
+    """
+    Months that count towards the average: those that end on or after the user's first
+    transaction. A month before the user started has no history and must not drag the
+    average down; a month after they started with no transactions counts as zero.
+    """
+    if first_data_date is None:
+        return []
+    return [m for m in months if first_data_date <= m.replace(day=_days_in_month(m))]
+
+
+def _elapsed_days(month_start: date, today: date) -> int:
+    """How many days of the month are in the past or today (0 for a future month)."""
+    length = _days_in_month(month_start)
+    if today < month_start:
+        return 0
+    if today.year == month_start.year and today.month == month_start.month:
+        return min(today.day, length)
+    return length
+
+
+def _cumulative_expense_by_day(df: pl.DataFrame, month_start: date, days: int | None = None) -> list[float]:
+    """
+    Cumulative expenses (same definition as the expense total: category type 'expense',
+    absolute converted amount) for days 1..days of the month; days defaults to the whole month.
+    """
+    length = _days_in_month(month_start)
+    n = length if days is None else max(0, min(days, length))
+    daily = [0.0] * n
+    month_df = _month_rows(df, month_start)
+    if n and not month_df.is_empty():
+        expenses = month_df.filter(pl.col('category_type') == 'expense')
+        for iso_date, amount in expenses.select(['date', 'abs_amount']).iter_rows():
+            day = int(str(iso_date)[8:10])
+            if 1 <= day <= n:
+                daily[day - 1] += float(amount)
+    running = 0.0
+    cumulative: list[float] = []
+    for value in daily:
+        running += value
+        cumulative.append(round(running, 2))
+    return cumulative
+
+
+def _average_cumulative_expense(df: pl.DataFrame, months: list[date], target_days: int) -> list[float]:
+    """
+    Average cumulative expenses by day of month across `months`. A month shorter than the day
+    index does not contribute to that day. Empty when there are no months.
+    """
+    if not months:
+        return []
+    per_month = [_cumulative_expense_by_day(df, m) for m in months]
+    result: list[float] = []
+    for day in range(1, target_days + 1):
+        values = [series[day - 1] for series in per_month if len(series) >= day]
+        result.append(round(sum(values) / len(values), 2) if values else 0.0)
+    return result
+
+
+def _calculate_six_month_average(df: pl.DataFrame, months: list[date]) -> SixMonthAverage | None:
+    """
+    Average of the monthly totals (computed exactly like the current-period totals) over months.
+    """
+    if not months:
+        return None
+    totals = [_calculate_summary_totals(_month_rows(df, m)) for m in months]
+    count = len(totals)
+
+    def avg(values: list[float]) -> float:
+        return round(sum(values) / count, 2)
+
+    return SixMonthAverage(
+        months_counted=count,
+        income=avg([t.income for t in totals]),
+        expense=avg([t.expense for t in totals]),
+        saving=avg([t.saving for t in totals]),
+        investment=avg([t.investment for t in totals]),
+        profit=avg([t.profit for t in totals]),
+        net_cash_flow=avg([t.net_cash_flow for t in totals]),
+    )
+
 
 def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> CategoryInsight | None:
     """
@@ -433,9 +577,19 @@ def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> list[Transact
     return results
 
 
-def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> SummaryData:
+def _calculate_enriched_summary(
+    current_df: pl.DataFrame,
+    previous_df: pl.DataFrame,
+    history_df: pl.DataFrame | None = None,
+    target_month: date | None = None,
+    first_data_date: date | None = None,
+    today: date | None = None,
+) -> SummaryData:
     """
     Internal calculation logic separated from IO.
+
+    history_df holds the previous six calendar months plus the target month (already converted
+    to the base currency). Without it (or without target_month) the pace and average fields stay empty.
     """
     current_totals = _calculate_summary_totals(current_df)
     previous_totals = _calculate_summary_totals(previous_df)
@@ -454,7 +608,19 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
     top_expenses = _get_top_expenses(current_df)
     biggest_mover = _get_biggest_mover(current_df, previous_df)
     largest_transactions = _get_largest_transactions(current_df)
-    
+
+    daily_cumulative: list[float] = []
+    average_cumulative: list[float] = []
+    six_month_average: SixMonthAverage | None = None
+    if history_df is not None and target_month is not None:
+        month_start = target_month.replace(day=1)
+        window = _months_with_history(_average_window_months(month_start), first_data_date)
+        daily_cumulative = _cumulative_expense_by_day(
+            history_df, month_start, _elapsed_days(month_start, today or date.today())
+        )
+        average_cumulative = _average_cumulative_expense(history_df, window, _days_in_month(month_start))
+        six_month_average = _calculate_six_month_average(history_df, window)
+
     return SummaryData(
         total_income=current_totals.income,
         total_expense=current_totals.expense,
@@ -467,7 +633,11 @@ def _calculate_enriched_summary(current_df: pl.DataFrame, previous_df: pl.DataFr
         investment_rate=investment_rate,
         top_expenses=top_expenses,
         biggest_mover=biggest_mover,
-        largest_transactions=largest_transactions
+        largest_transactions=largest_transactions,
+        expense_categories=_get_expense_categories(current_df),
+        daily_cumulative_expense=daily_cumulative,
+        average_daily_cumulative_expense=average_cumulative,
+        six_month_average=six_month_average,
         # by_category removed
     )
 
@@ -497,10 +667,15 @@ def _summary_calc(
 
     prev_start_date, prev_end_date = _get_previous_period_dates(start_date, end_date)
 
-    # 2. Fetch both periods in one query, then split in memory
-    all_transactions = _fetch_summary_transactions(access_token, prev_start_date, end_date)
+    # 2. Fetch the previous period, the current one and the six months before the target
+    #    month in one query, then split in memory. The average window is anchored on the
+    #    calendar month of start_date.
+    window_start = _average_window_months(start_date)[0]
+    fetch_start = min(prev_start_date, window_start)
+    all_transactions = _fetch_summary_transactions(access_token, fetch_start, end_date)
     all_df = _prepare_transactions_dataframe(all_transactions)
     all_df = _apply_currency_conversion(all_df, base_currency)
+    first_data_date = _fetch_first_transaction_date(access_token)
 
     # 3. Split into current and previous periods
     if all_df.is_empty():
@@ -508,7 +683,17 @@ def _summary_calc(
         previous_df = all_df
     else:
         start_date_str = start_date.isoformat()
-        current_df = all_df.filter(pl.col('date') >= start_date_str)
-        previous_df = all_df.filter(pl.col('date') < start_date_str)
+        end_date_str = end_date.isoformat()
+        current_df = all_df.filter((pl.col('date') >= start_date_str) & (pl.col('date') <= end_date_str))
+        previous_df = all_df.filter(
+            (pl.col('date') >= prev_start_date.isoformat()) & (pl.col('date') < start_date_str)
+        )
 
-    return _calculate_enriched_summary(current_df, previous_df)
+    return _calculate_enriched_summary(
+        current_df,
+        previous_df,
+        history_df=all_df,
+        target_month=start_date,
+        first_data_date=first_data_date,
+        today=date.today(),
+    )

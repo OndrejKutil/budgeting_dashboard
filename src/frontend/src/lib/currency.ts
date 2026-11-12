@@ -67,6 +67,25 @@ export function formatMoney(amount: number, currency: string): string {
 }
 
 /**
+ * formatMoney split into Intl parts (so the currency symbol can be styled separately), with a
+ * configurable number of fraction digits. The Overview shows whole amounts: 0 digits.
+ */
+export function formatMoneyParts(amount: number, currency: string, fractionDigits = 0): Intl.NumberFormatPart[] {
+  const locale = CURRENCY_LOCALE[currency] ?? 'en-US';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).formatToParts(amount);
+}
+
+/** formatMoney without decimals, for headline-level figures. */
+export function formatMoneyWhole(amount: number, currency: string): string {
+  return formatMoneyParts(amount, currency, 0).map((part) => part.value).join('');
+}
+
+/**
  * formatMoney for an amount whose currency comes from outside the app's own set — a broker
  * position's quote currency, which is whatever its listing venue uses.
  *

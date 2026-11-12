@@ -219,6 +219,20 @@ export interface PeriodComparison {
 }
 
 /**
+ * Average monthly totals over the (up to) six months before the requested month.
+ * Matches backend SixMonthAverage schema
+ */
+export interface SixMonthAverage {
+    months_counted: number;
+    income: number;
+    expense: number;
+    saving: number;
+    investment: number;
+    profit: number;
+    net_cash_flow: number;
+}
+
+/**
  * Dashboard summary data
  * Matches backend SummaryData schema
  */
@@ -235,6 +249,14 @@ export interface SummaryData {
     top_expenses: CategoryInsight[];
     biggest_mover: CategoryInsight | null;
     largest_transactions: Transaction[];
+    /** All expense categories of the period, largest first. */
+    expense_categories: CategoryInsight[];
+    /** Cumulative expenses by day of month (index 0 = day 1); ends today for the current month. */
+    daily_cumulative_expense: number[];
+    /** Average cumulative expenses over the previous six months, one value per day of the month. Empty without history. */
+    average_daily_cumulative_expense: number[];
+    /** Null without history. */
+    six_month_average: SixMonthAverage | null;
 }
 
 // ================================================================================================
