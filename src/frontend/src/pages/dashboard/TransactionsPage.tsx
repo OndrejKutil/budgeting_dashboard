@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import type { OpenAddState } from '@/hooks/use-add-transaction';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useAvailableYears } from '@/hooks/use-available-years';
 import { motion } from 'framer-motion';
@@ -216,6 +217,7 @@ export default function TransactionsPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
   const [, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // URL State Management
   const [page, setPage] = useUrlState<number>('page', 1);
@@ -422,6 +424,15 @@ export default function TransactionsPage() {
   const error = transactionsError ? (transactionsError as Error).message : null;
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // The mobile dock's Add button and the global `N` shortcut navigate here with
+  // `{ openAdd: true }` location state; consume it once so a reload doesn't reopen the dialog.
+  useEffect(() => {
+    const state = location.state as OpenAddState | null;
+    if (!state?.openAdd) return;
+    setIsCreateModalOpen(true);
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+  }, [location, navigate]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   // Copy prefills the create form from an existing row; it only changes the modal's wording,
   // the submit path stays the create one (selectedTransaction is left null on purpose).
@@ -1755,16 +1766,6 @@ export default function TransactionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Mobile Floating Action Button */}
-      <Button
-        onClick={() => setIsCreateModalOpen(true)}
-        className="fixed bottom-[6.5rem] right-4 z-40 h-14 w-14 rounded-full shadow-xl sm:hidden"
-        size="icon"
-        aria-label={t('pages.transactions.add')}
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
     </div >
   );
 }
