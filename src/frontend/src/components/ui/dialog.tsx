@@ -78,8 +78,8 @@ const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
       // Sticks to the bottom of the scrolling dialog so the actions stay reachable when errors or
       // the on-screen keyboard make the form taller than the viewport. The negative margins cancel
       // the dialog padding so the backing reaches the edges.
-      "sticky bottom-0 z-10 -mx-6 -mb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col-reverse gap-2 bg-popover/90 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-md",
-      "sm:-mx-[26px] sm:-mb-[26px] sm:flex-row sm:justify-end sm:gap-0 sm:space-x-2 sm:px-[26px] sm:pb-[26px]",
+      "sticky -bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-6 -mb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] flex flex-col-reverse gap-2 bg-popover/90 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-md",
+      "sm:-bottom-[26px] sm:-mx-[26px] sm:-mb-[26px] sm:flex-row sm:justify-end sm:gap-0 sm:space-x-2 sm:px-[26px] sm:pb-[26px]",
       className,
     )}
     {...props}
