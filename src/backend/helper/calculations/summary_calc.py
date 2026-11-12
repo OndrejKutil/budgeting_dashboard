@@ -148,11 +148,12 @@ def _fetch_summary_transactions(
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False).order(TRANSACTIONS_COLUMNS.ID.value, desc=False)
 
         # The summary now reads up to seven months at once; PostgREST caps one response at
-        # 1000 rows, so page through the result.
+        # 1000 rows, so page through the result. postgrest 0.10.8 treats the END of range()
+        # as exclusive (it sends "Range: start-(end-1)"), so a page is range(offset, offset + size).
         rows: list[dict[Any, Any]] = []
         offset = 0
         while True:
-            response = query.range(offset, offset + _FETCH_PAGE_SIZE - 1).execute()
+            response = query.range(offset, offset + _FETCH_PAGE_SIZE).execute()
             batch = cast(list[dict[Any, Any]], response.data or [])
             rows.extend(batch)
             if len(batch) < _FETCH_PAGE_SIZE:
@@ -401,6 +402,11 @@ def _months_with_history(months: list[date], first_data_date: date | None) -> li
     return [m for m in months if first_data_date <= m.replace(day=_days_in_month(m))]
 
 
+def _is_whole_month(start: date, end: date) -> bool:
+    """True when start..end is exactly one calendar month (first day to last day)."""
+    return start.day == 1 and end == start.replace(day=_days_in_month(start))
+
+
 def _elapsed_days(month_start: date, today: date) -> int:
     """How many days of the month are in the past or today (0 for a future month)."""
     length = _days_in_month(month_start)
@@ -436,17 +442,25 @@ def _cumulative_expense_by_day(df: pl.DataFrame, month_start: date, days: int | 
 
 def _average_cumulative_expense(df: pl.DataFrame, months: list[date], target_days: int) -> list[float]:
     """
-    Average cumulative expenses by day of month across `months`. A month shorter than the day
-    index does not contribute to that day. Empty when there are no months.
+    Average cumulative expenses by day of month across `months`, one value per target day.
+
+    Each month's series is padded to target_days by repeating its final value (a short month
+    has simply finished spending) and the sum is divided by the number of months, so the series
+    never decreases and, for a target month at least as long as every counted month, its last
+    value equals the six-month average expense. A month longer than the target is cut at
+    target_days. Empty when there are no months.
     """
     if not months:
         return []
-    per_month = [_cumulative_expense_by_day(df, m) for m in months]
-    result: list[float] = []
-    for day in range(1, target_days + 1):
-        values = [series[day - 1] for series in per_month if len(series) >= day]
-        result.append(round(sum(values) / len(values), 2) if values else 0.0)
-    return result
+    totals = [0.0] * target_days
+    for m in months:
+        series = _cumulative_expense_by_day(df, m)[:target_days]
+        if not series:
+            continue
+        series = series + [series[-1]] * (target_days - len(series))
+        for i, value in enumerate(series):
+            totals[i] += value
+    return [round(v / len(months), 2) for v in totals]
 
 
 def _calculate_six_month_average(df: pl.DataFrame, months: list[date]) -> SixMonthAverage | None:
@@ -589,7 +603,8 @@ def _calculate_enriched_summary(
     Internal calculation logic separated from IO.
 
     history_df holds the previous six calendar months plus the target month (already converted
-    to the base currency). Without it (or without target_month) the pace and average fields stay empty.
+    to the base currency). Without it (or without target_month) the pace and average fields stay
+    empty; _summary_calc only supplies it for a request that is exactly one whole calendar month.
     """
     current_totals = _calculate_summary_totals(current_df)
     previous_totals = _calculate_summary_totals(previous_df)
@@ -667,15 +682,18 @@ def _summary_calc(
 
     prev_start_date, prev_end_date = _get_previous_period_dates(start_date, end_date)
 
-    # 2. Fetch the previous period, the current one and the six months before the target
-    #    month in one query, then split in memory. The average window is anchored on the
-    #    calendar month of start_date.
-    window_start = _average_window_months(start_date)[0]
-    fetch_start = min(prev_start_date, window_start)
+    # 2. Fetch the previous and the current period in one query, then split in memory. Only
+    #    when the request is exactly one whole calendar month do we also fetch the six months
+    #    before it, for the spending pace series and the six-month average; any other range
+    #    gets empty pace/average fields.
+    whole_month = _is_whole_month(start_date, end_date)
+    fetch_start = prev_start_date
+    if whole_month:
+        fetch_start = min(prev_start_date, _average_window_months(start_date)[0])
     all_transactions = _fetch_summary_transactions(access_token, fetch_start, end_date)
     all_df = _prepare_transactions_dataframe(all_transactions)
     all_df = _apply_currency_conversion(all_df, base_currency)
-    first_data_date = _fetch_first_transaction_date(access_token)
+    first_data_date = _fetch_first_transaction_date(access_token) if whole_month else None
 
     # 3. Split into current and previous periods
     if all_df.is_empty():
@@ -692,8 +710,10 @@ def _summary_calc(
     return _calculate_enriched_summary(
         current_df,
         previous_df,
-        history_df=all_df,
-        target_month=start_date,
+        history_df=all_df if whole_month else None,
+        target_month=start_date if whole_month else None,
         first_data_date=first_data_date,
+        # Server date (UTC): around local midnight at a month start the current month may
+        # briefly read as the previous or next one.
         today=date.today(),
     )

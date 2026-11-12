@@ -89,8 +89,33 @@ export function SeriesLineChart({
   const compareAtEnd = comparison[endIndex];
   const primaryAbove = compareAtEnd !== undefined && compareAtEnd < endValue;
   const comparisonEndIndex = comparison.length - 1;
-  const sameX = comparisonEndIndex === endIndex;
   const endLabelAnchor = x(endIndex) - MARGIN.left < 60 ? 'start' : 'end';
+
+  // End labels stay inside the plot (above the x-axis labels): prefer the requested side, flip
+  // when it does not fit, clamp as a last resort.
+  const labelLow = MARGIN.top + 10;
+  const labelHigh = MARGIN.top + innerHeight - 6;
+  const clampLabel = (value: number) => Math.min(labelHigh, Math.max(labelLow, value));
+  const placeLabel = (pointY: number, preferAbove: boolean) => {
+    const preferred = pointY + (preferAbove ? -10 : 20);
+    if (preferred >= labelLow && preferred <= labelHigh) return preferred;
+    const other = pointY + (preferAbove ? 20 : -10);
+    if (other >= labelLow && other <= labelHigh) return other;
+    return clampLabel(preferred);
+  };
+  const primaryLabelY = primary.length > 0 ? placeLabel(y(endValue), primaryAbove) : 0;
+  let comparisonLabelY = 0;
+  if (comparison.length > 0) {
+    const pointY = y(comparison[comparisonEndIndex]);
+    comparisonLabelY = placeLabel(pointY, !primaryAbove || comparisonEndIndex !== endIndex);
+    // Both labels end near the same x: keep them at least one text line apart.
+    const near = primary.length > 0 && Math.abs(x(comparisonEndIndex) - x(endIndex)) < 110;
+    if (near && Math.abs(comparisonLabelY - primaryLabelY) < 15) {
+      const away = comparisonLabelY >= primaryLabelY ? 15 : -15;
+      comparisonLabelY = clampLabel(primaryLabelY + away);
+      if (Math.abs(comparisonLabelY - primaryLabelY) < 15) comparisonLabelY = clampLabel(primaryLabelY - away);
+    }
+  }
 
   const onMove = (event: PointerEvent<SVGRectElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -153,7 +178,7 @@ export function SeriesLineChart({
           {comparison.length > 0 && (
             <text
               x={x(comparisonEndIndex) - 10}
-              y={y(comparison[comparisonEndIndex]) + (sameX && primaryAbove ? 20 : -10)}
+              y={comparisonLabelY}
               textAnchor="end"
               className="fill-muted-foreground/70 text-[11px]"
               style={blur}
@@ -166,7 +191,7 @@ export function SeriesLineChart({
               <circle cx={x(endIndex)} cy={y(endValue)} r={4.5} className="fill-primary" />
               <text
                 x={endLabelAnchor === 'end' ? x(endIndex) - 10 : x(endIndex) + 10}
-                y={y(endValue) + (primaryAbove ? -10 : 20)}
+                y={primaryLabelY}
                 textAnchor={endLabelAnchor}
                 className="fill-foreground text-[12.5px]"
                 style={blur}

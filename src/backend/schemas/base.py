@@ -170,13 +170,13 @@ class SummaryData(BaseModel):
     expense_categories: list[CategoryInsight] = Field(default_factory=list, description="All expense categories of the period, largest first")
     daily_cumulative_expense: list[float] = Field(
         default_factory=list,
-        description="Cumulative expenses by day of the month of start_date; index 0 is day 1. Ends at today for the current month, is empty for a future month",
+        description="Cumulative expenses by day of the month of start_date; index 0 is day 1. Ends at today for the current month, is empty for a future month. Only filled when the request is exactly one whole calendar month; empty for any other date range",
     )
     average_daily_cumulative_expense: list[float] = Field(
         default_factory=list,
-        description="Average cumulative expenses by day of month over the previous six calendar months, one value per day of the requested month. Empty without history",
+        description="Average cumulative expenses by day of month over the previous six calendar months, one value per day of the requested month. Each month is padded with its final value and the sum divided by the months counted, so the series never decreases. Empty without history or when the request is not exactly one whole calendar month",
     )
-    six_month_average: SixMonthAverage | None = Field(None, description="Average monthly totals over the previous six months; null without history")
+    six_month_average: SixMonthAverage | None = Field(None, description="Average monthly totals over the previous six months; null without history or when the request is not exactly one whole calendar month")
     
 
     

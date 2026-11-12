@@ -31,6 +31,8 @@ const pad = (value: number) => String(value).padStart(2, '0');
 const isoDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 /** Differences under half a unit disappear when amounts are shown whole. */
 const isZero = (value: number) => Math.abs(value) < 0.5;
+/** A value that displays as 0 is 0: no "-0", no red zero, no "0 short". */
+const whole = (value: number) => (isZero(value) ? 0 : value);
 
 const loadSummary = async (year: number, month: number, baseCurrency: string, fallbackMessage: string): Promise<SummaryData> => {
   const response = await summaryApi.get({
@@ -88,7 +90,7 @@ export default function DashboardOverview() {
     queryFn: async () => (await accountsApi.getAll()).data || [],
   });
 
-  // Warm the analytics pages this one links to.
+  // Warm the monthly analytics page the chart links to.
   useEffect(() => {
     queryClient.prefetchQuery({
       queryKey: ['monthly-analytics', { year, month, currency }],
@@ -96,14 +98,6 @@ export default function DashboardOverview() {
         const response = await analyticsApi.getMonthly({ year, month, base_currency: currency });
         if (response.success && response.data) return response.data;
         throw new Error(response.message || t('pages.overview.loadMonthlyFailed'));
-      },
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['yearly-analytics', year, currency],
-      queryFn: async () => {
-        const response = await analyticsApi.getYearly({ year, base_currency: currency });
-        if (response.success && response.data) return response.data;
-        throw new Error(response.message || t('pages.overview.loadYearlyFailed'));
       },
     });
   }, [month, year, currency, queryClient, t]);
@@ -115,14 +109,14 @@ export default function DashboardOverview() {
   const view = useMemo(() => {
     if (!data) return null;
 
-    const income = data.total_income;
-    const expense = data.total_expense;
-    const saving = data.total_saving;
-    const investing = data.total_investment;
+    const income = whole(data.total_income);
+    const expense = whole(data.total_expense);
+    const saving = whole(data.total_saving);
+    const investing = whole(data.total_investment);
     // Reused as the API defines them: profit = income - expenses - investing,
     // net cash flow ("left") = profit - saving.
-    const profit = data.profit;
-    const left = data.net_cash_flow;
+    const profit = whole(data.profit);
+    const left = whole(data.net_cash_flow);
 
     const figure = (value: number, tone?: 'negative') => (
       <LeadFigure tone={tone}>{formatMoneyWhole(value, currency)}</LeadFigure>
@@ -203,7 +197,7 @@ export default function DashboardOverview() {
     }));
 
     const average = data.six_month_average;
-    const leftVsAverage = average ? left - average.net_cash_flow : 0;
+    const leftVsAverage = average ? whole(left - average.net_cash_flow) : 0;
 
     const isEmpty =
       isZero(income) && isZero(expense) && isZero(saving) && isZero(investing) && sorted.length === 0;
@@ -388,6 +382,12 @@ export default function DashboardOverview() {
           ) : (
             <p className="py-12 text-sm text-muted-foreground">{t('pages.overview.noSpendingYet')}</p>
           )}
+          <Link
+            to={`/dashboard/analytics/monthly?month=${pad(month)}&year=${year}`}
+            className="mt-3 inline-block text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t('pages.overview.monthlyAnalytics')}
+          </Link>
         </div>
 
         <div className="mt-10 min-w-0 lg:mt-0">

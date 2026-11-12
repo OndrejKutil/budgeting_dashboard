@@ -26,9 +26,14 @@ from backend.helper.calculations.summary_calc import (  # noqa: E402
     _calculate_summary_totals,
     _cumulative_expense_by_day,
     _elapsed_days,
+    _fetch_first_transaction_date,
+    _fetch_summary_transactions,
     _get_expense_categories,
+    _get_previous_period_dates,
+    _is_whole_month,
     _month_rows,
     _months_with_history,
+    _summary_calc,
 )
 from backend.helper.calculations.summary_calc import (  # noqa: E402
     _prepare_transactions_dataframe as prepare_df,
@@ -69,6 +74,33 @@ def test_months_with_history_skips_months_before_first_transaction():
     # First transaction on 12 Dec 2025: Dec, Jan and Feb count, the three before do not.
     counted = _months_with_history(window, date(2025, 12, 12))
     assert counted == [date(2025, 12, 1), date(2026, 1, 1), date(2026, 2, 1)]
+
+
+def test_average_window_december_to_january_rollover():
+    assert _average_window_months(date(2027, 1, 20)) == [
+        date(2026, 7, 1), date(2026, 8, 1), date(2026, 9, 1),
+        date(2026, 10, 1), date(2026, 11, 1), date(2026, 12, 1),
+    ]
+    assert _average_window_months(date(2026, 12, 1))[0] == date(2026, 6, 1)
+
+
+def test_average_window_with_leap_february():
+    # Target Aug 2028: window Feb-Jul 2028, February has 29 days.
+    window = _average_window_months(date(2028, 8, 1))
+    assert window[0] == date(2028, 2, 1)
+    df = prepare_df([tx("2028-02-29", -90.0, "expense"), tx("2028-03-31", -10.0, "expense")])
+    series = _cumulative_expense_by_day(df, date(2028, 2, 1))
+    assert len(series) == 29 and series[-1] == 90.0
+    assert _months_with_history(window, date(2028, 2, 29))[0] == date(2028, 2, 1)
+    assert _months_with_history(window, date(2028, 3, 1))[0] == date(2028, 3, 1)
+
+
+def test_is_whole_month():
+    assert _is_whole_month(date(2026, 2, 1), date(2026, 2, 28))
+    assert _is_whole_month(date(2028, 2, 1), date(2028, 2, 29))
+    assert not _is_whole_month(date(2028, 2, 1), date(2028, 2, 28))
+    assert not _is_whole_month(date(2026, 3, 5), date(2026, 3, 31))      # mid-month start
+    assert not _is_whole_month(date(2026, 1, 1), date(2026, 2, 28))      # multi-month
 
 
 def test_months_with_history_no_transactions_at_all():
@@ -167,28 +199,8 @@ def test_average_cumulative_has_one_value_per_target_day_and_carries_totals_forw
     assert avg[30] == 200.0
 
 
-def test_average_cumulative_day_29_to_31_use_only_long_months():
-    df = prepare_df([
-        tx("2026-01-10", -300.0, "expense"),
-        tx("2026-02-10", -100.0, "expense"),
-    ])
-    months = [date(2026, 1, 1), date(2026, 2, 1)]
-    avg = _average_cumulative_expense(df, months, 31)
-    assert avg[27] == 200.0    # day 28: (300 + 100) / 2
-    assert avg[28] == 300.0    # day 29: only January
-    assert avg[30] == 300.0    # day 31: only January
-
-
-def test_average_cumulative_target_month_shorter_than_history_months():
-    # Target February (28 days) averaged over a 31-day January: the series stops at day 28.
-    df = prepare_df([tx("2026-01-31", -310.0, "expense")])
-    avg = _average_cumulative_expense(df, [date(2026, 1, 1)], 28)
-    assert len(avg) == 28
-    assert avg[-1] == 0.0   # January's 310 only lands on day 31
-
-
-def test_average_cumulative_31_day_month_against_shorter_months():
-    # Spending on the last day of each month: 31 (Jan), 28 (Feb), 30 (Apr).
+def test_average_cumulative_short_months_are_padded_with_their_final_value():
+    # Spending on the last day of each month: Jan 310 (31 days), Feb 280 (28), Apr 300 (30).
     df = prepare_df([
         tx("2026-01-31", -310.0, "expense"),
         tx("2026-02-28", -280.0, "expense"),
@@ -197,10 +209,32 @@ def test_average_cumulative_31_day_month_against_shorter_months():
     months = [date(2026, 1, 1), date(2026, 2, 1), date(2026, 4, 1)]
     avg = _average_cumulative_expense(df, months, 31)
     assert len(avg) == 31
-    assert avg[27] == round((0 + 280 + 0) / 3, 2)    # day 28: all three contribute
-    assert avg[28] == 0.0                              # day 29: Jan and Apr (Feb is too short)
-    assert avg[29] == 150.0                            # day 30: Jan (0) and Apr (300)
-    assert avg[30] == 310.0                            # day 31: only January
+    assert avg[27] == round(280 / 3, 2)               # day 28: only February has spent yet
+    assert avg[28] == round(280 / 3, 2)               # day 29: February is padded, others still 0
+    assert avg[29] == round((280 + 300) / 3, 2)       # day 30: April spent
+    assert avg[30] == round((310 + 280 + 300) / 3, 2)  # day 31: everyone done
+    assert all(y >= x for x, y in zip(avg, avg[1:], strict=False))   # never decreases
+
+
+def test_average_cumulative_last_value_equals_six_month_average_expense():
+    # Target Dec 2026, window Jun-Nov, one 100 expense on each month's last day.
+    rows = [tx(f"2026-{m:02d}-{d}", -100.0, "expense") for m, d in
+            [(6, 30), (7, 31), (8, 31), (9, 30), (10, 31), (11, 30)]]
+    df = prepare_df(rows)
+    window = _average_window_months(date(2026, 12, 1))
+    avg = _average_cumulative_expense(df, window, 31)
+    average = _calculate_six_month_average(df, window)
+    assert average is not None
+    assert avg[-1] == average.expense == 100.0
+    assert all(y >= x for x, y in zip(avg, avg[1:], strict=False))
+
+
+def test_average_cumulative_target_month_shorter_than_history_months():
+    # Target February (28 days): a 31-day month is cut at day 28.
+    df = prepare_df([tx("2026-01-31", -310.0, "expense")])
+    avg = _average_cumulative_expense(df, [date(2026, 1, 1)], 28)
+    assert len(avg) == 28
+    assert avg[-1] == 0.0
 
 
 def test_average_cumulative_month_without_transactions_counts_as_zero():
@@ -331,3 +365,138 @@ def test_enriched_summary_without_history_argument_keeps_old_behaviour():
     summary = _calculate_enriched_summary(empty_df(), empty_df())
     assert summary.daily_cumulative_expense == []
     assert summary.six_month_average is None
+
+
+# ================================================================================================
+#                                   Paging of the fetch
+# ================================================================================================
+
+class FakeQuery:
+    """Query builder double with postgrest 0.10.8 range semantics: range(a, b) returns rows a..b-1."""
+
+    def __init__(self, rows):
+        self.rows = rows
+        self.ranges = []
+        self._range = None
+        self._limit = None
+
+    def select(self, *a, **k):
+        return self
+
+    def gte(self, *a, **k):
+        return self
+
+    def lte(self, *a, **k):
+        return self
+
+    def order(self, *a, **k):
+        return self
+
+    def limit(self, n):
+        self._limit = n
+        return self
+
+    def range(self, start, end):
+        self._range = (start, end)
+        self.ranges.append((start, end))
+        return self
+
+    def execute(self):
+        rows = self.rows
+        if self._range is not None:
+            start, end = self._range
+            rows = rows[start:end]
+        if self._limit is not None:
+            rows = rows[: self._limit]
+
+        class Response:
+            data = rows
+
+        return Response()
+
+
+class FakeClient:
+    def __init__(self, rows):
+        self.query = FakeQuery(rows)
+
+    def table(self, name):
+        return self.query
+
+
+@pytest.mark.parametrize("count", [0, 1, 999, 1000, 1001, 2000, 2345])
+def test_fetch_summary_transactions_pages_through_all_rows(monkeypatch, count):
+    rows = [{"id_pk": i} for i in range(count)]
+    client = FakeClient(rows)
+    monkeypatch.setattr("backend.data.database.get_db_client", lambda token: client)
+    fetched = _fetch_summary_transactions("token", date(2026, 1, 1), date(2026, 3, 31))
+    assert fetched == rows                      # every row once, in order
+    assert len(client.query.ranges) == count // 1000 + 1   # terminates after the short/empty page
+
+
+def test_fetch_first_transaction_date(monkeypatch):
+    monkeypatch.setattr("backend.data.database.get_db_client", lambda token: FakeClient([]))
+    assert _fetch_first_transaction_date("token") is None
+    monkeypatch.setattr(
+        "backend.data.database.get_db_client", lambda token: FakeClient([{"date": "2025-03-14"}])
+    )
+    assert _fetch_first_transaction_date("token") == date(2025, 3, 14)
+
+
+# ================================================================================================
+#                                   _summary_calc end to end (mocked fetch)
+# ================================================================================================
+
+def _patch_fetch(monkeypatch, rows, first_date):
+    calls: dict = {}
+
+    def fake_fetch(token, start, end):
+        calls["range"] = (start, end)
+        return [r for r in rows if start.isoformat() <= r["date"] <= end.isoformat()]
+
+    def fake_first(token):
+        calls["first"] = True
+        return first_date
+
+    monkeypatch.setattr("backend.helper.calculations.summary_calc._fetch_summary_transactions", fake_fetch)
+    monkeypatch.setattr("backend.helper.calculations.summary_calc._fetch_first_transaction_date", fake_first)
+    return calls
+
+
+def test_summary_calc_existing_fields_ignore_the_wider_fetch(monkeypatch):
+    rows = [
+        tx("2026-03-10", 1000.0, "income", "Salary"),
+        tx("2026-03-11", -200.0, "expense", "Food"),
+        tx("2026-02-10", 500.0, "income", "Salary"),         # previous period
+        tx("2026-02-12", -100.0, "expense", "Food"),
+        tx("2025-12-10", 99999.0, "income", "Salary"),       # in the six-month window only
+        tx("2025-12-11", -77777.0, "expense", "Rent"),
+        tx("2026-04-02", -5555.0, "expense", "Later"),        # after the period
+    ]
+    calls = _patch_fetch(monkeypatch, rows, date(2025, 12, 10))
+    result = _summary_calc("token", date(2026, 3, 1), date(2026, 3, 31), "CZK")
+    assert calls["range"] == (date(2025, 9, 1), date(2026, 3, 31))
+    assert result.total_income == 1000.0
+    assert result.total_expense == 200.0
+    assert result.comparison.income_delta == 500.0       # vs February only
+    assert result.comparison.expense_delta == 100.0
+    assert [c.name for c in result.top_expenses] == ["Food"]
+    assert result.expense_categories[0].total == 200.0
+    assert result.six_month_average is not None
+    assert result.six_month_average.months_counted == 3   # Dec, Jan, Feb (history starts Dec 10)
+    assert len(result.average_daily_cumulative_expense) == 31
+
+
+@pytest.mark.parametrize("start,end", [
+    (date(2026, 3, 5), date(2026, 3, 31)),     # mid-month start
+    (date(2026, 1, 1), date(2026, 3, 31)),     # multi-month range
+])
+def test_summary_calc_non_whole_month_has_no_pace_or_average(monkeypatch, start, end):
+    rows = [tx("2026-03-10", -50.0, "expense"), tx("2025-10-10", -70.0, "expense")]
+    calls = _patch_fetch(monkeypatch, rows, date(2025, 10, 10))
+    result = _summary_calc("token", start, end, "CZK")
+    assert result.daily_cumulative_expense == []
+    assert result.average_daily_cumulative_expense == []
+    assert result.six_month_average is None
+    assert "first" not in calls                              # no extra query
+    assert calls["range"][0] == _get_previous_period_dates(start, end)[0]   # no six-month fetch
+    assert result.total_expense == 50.0
