@@ -33,6 +33,17 @@ section 1. Where a mockup and this document disagree, this document wins. See
 | Budget Maker | Primarily an editing tool; actuals are secondary |
 | Transactions filters | Tags, month/date, account and type stay visible; the rest behind a button |
 | Landing footer | Upgraded: closing call to action, data facts, link columns with contact, legal line |
+| Default for anything unlisted | Keep every existing feature and restyle it. Nothing is removed without an explicit decision |
+| Overview content | Only what the mockup shows: headline, split bar, Where it went, spending chart, Latest transactions. Largest Transactions, Spotlight, Share of Wallet and Category Top 3 are removed |
+| Overview "Latest" | New list of the most recent transactions |
+| Left this month | Income minus spending minus saving minus investing (net cash flow). Profit (income minus spending) stays visible as its own figure wherever the app distinguishes the two |
+| Average comparison | Built for real, including the backend change it needs |
+| Year-over-year on Monthly | Dropped; stays on the Yearly page |
+| Mobile dock slots | Overview, Transactions, Add, Accounts, More. Funds moves into More |
+| Fund target | Required field, but 0 is allowed and means "no target" |
+| Budget Maker difference | Shown as an amount, without per-row progress bars |
+| Transactions type side line | Kept, alongside red and green amounts |
+| Demo page | Rebuilt last, after the real pages |
 
 ---
 
