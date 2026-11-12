@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
+import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import {
   ShoppingCart,
   Home,
@@ -178,8 +180,11 @@ export default function CategoriesPage() {
     setIsModalOpen(true);
   };
 
+  const { errors: formErrors, show: showFormErrors, clear: clearFormError, reset: resetFormErrors } = useFormErrors<'name'>();
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    resetFormErrors();
     setSelectedCategory(null);
     setFormData(initialFormData);
   };
@@ -266,10 +271,7 @@ export default function CategoriesPage() {
 
   // ─── Form Submit ────────────────────────────────────────────
   const handleSubmit = () => {
-    if (!formData.category_name.trim()) {
-      toast({ title: t('common.validationError'), description: t('pages.categories.nameRequired'), variant: 'destructive' });
-      return;
-    }
+    if (!showFormErrors(formData.category_name.trim() ? {} : { name: t('pages.categories.nameRequired') })) return;
 
     const payload = {
       category_name: formData.category_name.trim(),
@@ -481,16 +483,26 @@ export default function CategoriesPage() {
               {selectedCategory ? t('pages.categories.editTitle') : t('pages.categories.addTitle')}
             </DialogTitle>
           </DialogHeader>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="category-name">{t('common.name')}</Label>
+            <Field htmlFor="category-name" label={t('common.name')} error={formErrors.name}>
               <Input
                 id="category-name"
                 placeholder={t('pages.categories.namePlaceholder')}
                 value={formData.category_name}
-                onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, category_name: e.target.value });
+                  clearFormError('name');
+                }}
+                {...fieldAria('category-name', formErrors.name)}
               />
-            </div>
+            </Field>
             <div className="space-y-2">
               <Label htmlFor="category-type">{t('common.type')}</Label>
               <Select
@@ -529,14 +541,15 @@ export default function CategoriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>
+            <Button type="button" variant="outline" onClick={handleCloseModal}>
               {t('common.cancel')}
             </Button>
             {/* Optimistic write + immediate close, so no pending gate is needed. */}
-            <Button onClick={handleSubmit}>
+            <Button type="submit">
               {selectedCategory ? t('common.save') : t('pages.categories.add')}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

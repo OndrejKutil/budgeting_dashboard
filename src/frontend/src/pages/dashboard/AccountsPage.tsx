@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
+import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import {
   Dialog,
   DialogContent,
@@ -410,28 +412,19 @@ export default function AccountsPage() {
     },
   });
 
+  const { errors: formErrors, show: showFormErrors, clear: clearFormError, reset: resetFormErrors } = useFormErrors<'name' | 'type' | 'group'>();
+
   const handleSubmit = async () => {
-    if (!formData.account_name || !formData.type) {
-      toast({
-        title: t('common.validationError'),
-        description: t('common.requiredFields'),
-        variant: 'destructive',
-      });
-      return;
-    }
+    const fieldErrors: { name?: string; type?: string; group?: string } = {};
+    if (!formData.account_name.trim()) fieldErrors.name = t('pages.accounts.nameRequired');
+    if (!formData.type) fieldErrors.type = t('pages.accounts.typeRequired');
+    if (groupSelection === 'new' && !newGroupName.trim()) fieldErrors.group = t('pages.accounts.groupNameRequired');
+    if (!showFormErrors(fieldErrors)) return;
 
     // A brand-new group must exist before the account can reference it, so this one path
     // waits for the round-trip instead of closing on the optimistic write like the rest.
     let account_group_id_fk: string | null = groupSelection === 'none' ? null : groupSelection;
     if (groupSelection === 'new') {
-      if (!newGroupName.trim()) {
-        toast({
-          title: t('common.validationError'),
-          description: t('common.requiredFields'),
-          variant: 'destructive',
-        });
-        return;
-      }
       try {
         const created = await createGroupMutation.mutateAsync({ group_name: newGroupName.trim() });
         account_group_id_fk = created.data?.account_groups_id_pk ?? null;
@@ -467,6 +460,7 @@ export default function AccountsPage() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    resetFormErrors();
     setSelectedAccount(null);
     setFormData({
       account_name: '',
@@ -987,23 +981,35 @@ export default function AccountsPage() {
               {selectedAccount ? t('pages.accounts.editTitle') : t('pages.accounts.addTitle')}
             </DialogTitle>
           </DialogHeader>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="account_name">{t('pages.accounts.accountName')}</Label>
+            <Field htmlFor="account_name" label={t('pages.accounts.accountName')} error={formErrors.name}>
               <Input
                 id="account_name"
                 placeholder={t('pages.accounts.accountNamePlaceholder')}
                 value={formData.account_name}
-                onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, account_name: e.target.value });
+                  clearFormError('name');
+                }}
+                {...fieldAria('account_name', formErrors.name)}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">{t('pages.accounts.accountType')}</Label>
+            </Field>
+            <Field htmlFor="type" label={t('pages.accounts.accountType')} error={formErrors.type}>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, type: value });
+                  clearFormError('type');
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="type" {...fieldAria('type', formErrors.type)}>
                   <SelectValue placeholder={t('common.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1014,14 +1020,14 @@ export default function AccountsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <div className="space-y-2">
               <Label htmlFor="currency">{t('common.currency')}</Label>
               <Select
                 value={formData.currency}
                 onValueChange={(value) => setFormData({ ...formData, currency: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="currency">
                   <SelectValue placeholder={t('profile.selectCurrency')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1066,24 +1072,38 @@ export default function AccountsPage() {
                 </SelectContent>
               </Select>
               {groupSelection === 'new' && (
-                <Input
-                  placeholder={t('pages.accounts.groupNamePlaceholder')}
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                />
+                <>
+                  <Input
+                    id="new_group_name"
+                    aria-label={t('pages.accounts.groupNamePlaceholder')}
+                    placeholder={t('pages.accounts.groupNamePlaceholder')}
+                    value={newGroupName}
+                    onChange={(e) => {
+                      setNewGroupName(e.target.value);
+                      clearFormError('group');
+                    }}
+                    {...fieldAria('new_group_name', formErrors.group)}
+                  />
+                  {formErrors.group && (
+                    <p id="new_group_name-error" role="alert" className="text-xs text-destructive">
+                      {formErrors.group}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeModal}>
+            <Button type="button" variant="outline" onClick={closeModal}>
               {t('common.cancel')}
             </Button>
             {/* The write is optimistic and the modal closes on click, so no pending gate is
                 needed here — gating on isPending would only block a quick second create. */}
-            <Button onClick={handleSubmit}>
+            <Button type="submit">
               {selectedAccount ? t('common.save') : t('pages.accounts.add')}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -1118,8 +1138,15 @@ export default function AccountsPage() {
           </DialogHeader>
           <div className="py-2">
             <Input
+              aria-label={t('pages.accounts.groupNamePlaceholder')}
               value={renameGroupName}
               onChange={(e) => setRenameGroupName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleRenameGroup();
+                }
+              }}
               placeholder={t('pages.accounts.groupNamePlaceholder')}
             />
           </div>

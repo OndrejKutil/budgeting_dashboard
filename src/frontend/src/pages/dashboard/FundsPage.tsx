@@ -32,7 +32,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
+import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import { Input } from '@/components/ui/input';
 import { tokenManager, ApiError, getErrorMessage } from '@/lib/api/client';
 import { fundsApi } from '@/lib/api/endpoints';
@@ -134,8 +135,11 @@ export default function FundsPage() {
     setIsModalOpen(true);
   };
 
+  const { errors: formErrors, show: showFormErrors, clear: clearFormError, reset: resetFormErrors } = useFormErrors<'name' | 'target'>();
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    resetFormErrors();
     setSelectedFund(null);
     setFormData({
       fund_name: '',
@@ -212,14 +216,12 @@ export default function FundsPage() {
   });
 
   const handleSubmit = async () => {
-    if (!formData.fund_name || !formData.target_amount) {
-      toast({
-        title: t('common.validationError'),
-        description: t('common.requiredFields'),
-        variant: 'destructive',
-      });
-      return;
-    }
+    const target = Number(formData.target_amount);
+    const fieldErrors: { name?: string; target?: string } = {};
+    if (!formData.fund_name.trim()) fieldErrors.name = t('pages.funds.nameRequired');
+    if (!formData.target_amount) fieldErrors.target = t('pages.funds.targetRequired');
+    else if (!Number.isFinite(target) || target <= 0) fieldErrors.target = t('pages.funds.targetInvalid');
+    if (!showFormErrors(fieldErrors)) return;
 
     const userId = tokenManager.getUserId();
     if (!userId) {
@@ -233,7 +235,7 @@ export default function FundsPage() {
 
     const payload = {
       user_id_fk: userId,
-      fund_name: formData.fund_name,
+      fund_name: formData.fund_name.trim(),
       target_amount: parseInt(formData.target_amount),
     };
 
@@ -564,36 +566,52 @@ export default function FundsPage() {
               {selectedFund ? t('pages.funds.editTitle') : t('pages.funds.createTitle')}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">{t('pages.funds.fundName')}</Label>
-              <Input
-                id="name"
-                placeholder={t('pages.funds.fundNamePlaceholder')}
-                value={formData.fund_name}
-                onChange={(e) => setFormData({ ...formData, fund_name: e.target.value })}
-              />
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
+            <div className="space-y-4 py-4">
+              <Field htmlFor="name" label={t('pages.funds.fundName')} error={formErrors.name}>
+                <Input
+                  id="name"
+                  placeholder={t('pages.funds.fundNamePlaceholder')}
+                  value={formData.fund_name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, fund_name: e.target.value });
+                    clearFormError('name');
+                  }}
+                  {...fieldAria('name', formErrors.name)}
+                />
+              </Field>
+              <Field htmlFor="target" label={t('pages.funds.targetAmount')} error={formErrors.target}>
+                <Input
+                  id="target"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  placeholder="5000"
+                  value={formData.target_amount}
+                  onChange={(e) => {
+                    setFormData({ ...formData, target_amount: e.target.value });
+                    clearFormError('target');
+                  }}
+                  {...fieldAria('target', formErrors.target)}
+                />
+              </Field>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="target">{t('pages.funds.targetAmount')}</Label>
-              <Input
-                id="target"
-                type="number"
-                placeholder="5000"
-                value={formData.target_amount}
-                onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>
-              {t('common.cancel')}
-            </Button>
-            {/* Optimistic write + immediate close, so no pending gate is needed. */}
-            <Button onClick={handleSubmit}>
-              {selectedFund ? t('common.save') : t('pages.funds.create')}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>
+                {t('common.cancel')}
+              </Button>
+              {/* Optimistic write + immediate close, so no pending gate is needed. */}
+              <Button type="submit">
+                {selectedFund ? t('common.save') : t('pages.funds.create')}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

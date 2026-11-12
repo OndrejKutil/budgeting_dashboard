@@ -123,9 +123,9 @@ export default function RegisterPage() {
       title="Create an account"
       subtitle="Create a workspace for your financial records"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {errors.general && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             {errors.general}
           </div>
         )}
@@ -174,6 +174,7 @@ export default function RegisterPage() {
           <Label htmlFor="fullName">Full Name (optional)</Label>
           <Input
             id="fullName"
+            autoComplete="name"
             type="text"
             placeholder="John Doe"
             value={fullName}
@@ -186,6 +187,9 @@ export default function RegisterPage() {
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
+            autoComplete="email"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
             type="email"
             placeholder="you@example.com"
             value={email}
@@ -194,7 +198,7 @@ export default function RegisterPage() {
             disabled={isLoading || isOAuthLoading}
           />
           {errors.email && (
-            <p className="text-xs text-destructive">{errors.email}</p>
+            <p id="email-error" role="alert" className="text-xs text-destructive">{errors.email}</p>
           )}
         </div>
 
@@ -203,6 +207,9 @@ export default function RegisterPage() {
           <div className="relative">
             <Input
               id="password"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? "password-error" : undefined}
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
@@ -224,7 +231,7 @@ export default function RegisterPage() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-xs text-destructive">{errors.password}</p>
+            <p id="password-error" role="alert" className="text-xs text-destructive">{errors.password}</p>
           )}
 
           {/* Password requirements */}

@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -40,6 +39,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Field, FormAlert } from '@/components/ui/field';
+import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import {
   Plus,
   Search,
@@ -53,7 +54,8 @@ import {
   ChevronRight,
   AlertCircle,
   Loader2,
-  Info,
+  ArrowLeftRight,
+  PiggyBank,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -374,6 +376,10 @@ export default function TransactionsPage() {
 
   const anyFilterActive = categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' || tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery;
 
+  const activeFilterCount = [categoryFilter, accountFilter, fundFilter, typeFilter, tagFilter, monthFilter]
+    .filter(value => value !== 'all').length + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   // The summary total mixes transactions from accounts in different currencies, so the
   // backend converts everything into the user's currency before summing.
   const { data: summaryData } = useQuery({
@@ -435,6 +441,12 @@ export default function TransactionsPage() {
     savings_fund_id_fk: '',
     tags: [] as number[],
   });
+
+  type TransactionField = 'amount' | 'category' | 'account' | 'toAccount' | 'destAmount' | 'fund';
+  const { errors: formErrors, show: showFormErrors, clear: clearFormError, reset: resetFormErrors } = useFormErrors<TransactionField>();
+  // A failed save keeps the modal open, so the reason is shown inside it rather than in a
+  // toast that lands behind the overlay and times out.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Create lookup maps for categories and accounts
   const categoryMap = useMemo(() => {
@@ -510,12 +522,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
-      toast({
-        title: t('common.error'),
-        description: message,
-        variant: 'destructive',
-      });
+      setSubmitError(getErrorMessage(err, t('pages.transactions.saveFailed')));
     }
   });
 
@@ -529,12 +536,7 @@ export default function TransactionsPage() {
       closeModal();
     },
     onError: (err: Error | ApiError) => {
-      const message = getErrorMessage(err, t('pages.transactions.saveFailed'));
-      toast({
-        title: t('common.error'),
-        description: message,
-        variant: 'destructive',
-      });
+      setSubmitError(getErrorMessage(err, t('pages.transactions.saveFailed')));
     }
   });
 
@@ -564,11 +566,7 @@ export default function TransactionsPage() {
       const message = err instanceof PartialTransferError
         ? t('pages.transactions.transferPartialFailed')
         : getErrorMessage(err, t('pages.transactions.transferFailed'));
-      toast({
-        title: t('common.error'),
-        description: message,
-        variant: 'destructive',
-      });
+      setSubmitError(message);
     },
   });
 
@@ -578,6 +576,8 @@ export default function TransactionsPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending || transferMutation.isPending;
 
   const handleSubmit = async () => {
+    setSubmitError(null);
+
     if (isTransfer) {
       const amount = parseDecimalInput(formData.amount);
       const sourceCurrency = accountMap[formData.account_id_fk]?.currency;
@@ -585,32 +585,20 @@ export default function TransactionsPage() {
       const isCrossCurrency = sourceCurrency && destCurrency && sourceCurrency !== destCurrency;
       const destAmount = isCrossCurrency ? parseDecimalInput(transferDestAmount) : null;
 
-      if (!formData.account_id_fk || !transferToAccountId || amount === null) {
-        toast({
-          title: t('common.validationError'),
-          description: t('pages.transactions.transferValidation'),
-          variant: 'destructive',
-        });
-        return;
-      }
-
+      const transferErrors: Partial<Record<TransactionField, string>> = {};
+      if (!formData.amount.trim()) transferErrors.amount = t('pages.transactions.amountRequired');
+      else if (amount === null || amount === 0) transferErrors.amount = t('pages.transactions.amountInvalid');
+      if (!formData.account_id_fk) transferErrors.account = t('pages.transactions.accountRequired');
+      if (!transferToAccountId) transferErrors.toAccount = t('pages.transactions.toAccountRequired');
       if (isCrossCurrency && (destAmount === null || destAmount <= 0)) {
-        toast({
-          title: t('common.validationError'),
-          description: t('pages.transactions.transferDestAmountRequired'),
-          variant: 'destructive',
-        });
-        return;
+        transferErrors.destAmount = t('pages.transactions.transferDestAmountRequired');
       }
+      if (!showFormErrors(transferErrors) || amount === null) return;
 
       // Find 'Exclude' category
       const excludeCategory = categories.find(c => c.category_name === 'Exclude');
       if (!excludeCategory) {
-        toast({
-          title: t('pages.transactions.configurationError'),
-          description: t('pages.transactions.excludeMissing'),
-          variant: 'destructive',
-        });
+        setSubmitError(t('pages.transactions.excludeMissing'));
         return;
       }
 
@@ -642,14 +630,20 @@ export default function TransactionsPage() {
 
     const amount = parseDecimalInput(formData.amount);
 
-    if (!formData.account_id_fk || !formData.category_id_fk || amount === null) {
-      toast({
-        title: t('common.validationError'),
-        description: t('common.requiredFields'),
-        variant: 'destructive',
-      });
+    // The withdrawal category is picked for the user, so there is no field to point at
+    // when it is missing — that one is a setup problem and goes to the form-level message.
+    if (isWithdrawal && !formData.category_id_fk) {
+      setSubmitError(t('pages.transactions.withdrawalCategoryMissing'));
       return;
     }
+
+    const fieldErrors: Partial<Record<TransactionField, string>> = {};
+    if (!formData.amount.trim()) fieldErrors.amount = t('pages.transactions.amountRequired');
+    else if (amount === null) fieldErrors.amount = t('pages.transactions.amountInvalid');
+    if (!formData.category_id_fk) fieldErrors.category = t('pages.transactions.categoryRequired');
+    if (!formData.account_id_fk) fieldErrors.account = t('pages.transactions.accountRequired');
+    if (isWithdrawal && !formData.savings_fund_id_fk) fieldErrors.fund = t('pages.transactions.fundRequired');
+    if (!showFormErrors(fieldErrors) || amount === null) return;
 
     const payload = {
       account_id_fk: formData.account_id_fk,
@@ -726,6 +720,8 @@ export default function TransactionsPage() {
     setIsTransfer(false);
     setTransferToAccountId('');
     setTransferDestAmount('');
+    resetFormErrors();
+    setSubmitError(null);
     setFormData({
       amount: '',
       date: new Date().toISOString().split('T')[0],
@@ -736,6 +732,30 @@ export default function TransactionsPage() {
       tags: [],
     });
   };
+
+  type TransactionMode = 'standard' | 'transfer' | 'withdrawal';
+  const mode: TransactionMode = isTransfer ? 'transfer' : isWithdrawal ? 'withdrawal' : 'standard';
+
+  const changeMode = (next: TransactionMode) => {
+    if (next === mode) return;
+    setIsTransfer(next === 'transfer');
+    setIsWithdrawal(next === 'withdrawal');
+    resetFormErrors();
+    setSubmitError(null);
+    // Withdrawals always post to their dedicated category; the other modes start with none
+    // (a transfer sets its own on save).
+    const withdrawalCat = next === 'withdrawal'
+      ? categories.find(c => c.category_name === 'Savings Funds Withdrawal')
+      : undefined;
+    setFormData(prev => ({ ...prev, category_id_fk: withdrawalCat ? withdrawalCat.categories_id_pk.toString() : '' }));
+  };
+
+  const modeOptions: { value: TransactionMode; label: string; icon: typeof Receipt; help: string | null }[] = [
+    { value: 'standard', label: t('pages.transactions.modeStandard'), icon: Receipt, help: null },
+    { value: 'transfer', label: t('pages.transactions.modeTransfer'), icon: ArrowLeftRight, help: t('pages.transactions.transferHelp') },
+    { value: 'withdrawal', label: t('pages.transactions.modeWithdrawal'), icon: PiggyBank, help: t('pages.transactions.withdrawalHelp') },
+  ];
+  const modeHelp = modeOptions.find(option => option.value === mode)?.help;
 
   const isAmountNegative = isNegativeAmountInput(formData.amount);
   const amountSignActionLabel = isAmountNegative
@@ -789,19 +809,38 @@ export default function TransactionsPage() {
               className="pl-10 bg-background/50 border-input/50 focus:bg-background transition-colors"
             />
           </div>
-          {!!anyFilterActive && (
+          <div className="flex gap-2">
+            {/* On a phone the nine filter controls used to fill the whole first screen, pushing
+                the list below the fold; they now sit behind this toggle there. */}
             <Button
               variant="outline"
-              onClick={clearFilters}
-              className="shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => setFiltersOpen(open => !open)}
+              aria-expanded={filtersOpen}
+              aria-controls="transaction-filters"
+              className="flex-1 sm:hidden"
             >
-              {t('pages.transactions.resetFilters')}
+              <Filter className="mr-2 h-4 w-4" />
+              {t('pages.transactions.filters')}
+              {activeFilterCount > 0 && (
+                <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground tabular-nums">
+                  {activeFilterCount}
+                </span>
+              )}
             </Button>
-          )}
+            {!!anyFilterActive && (
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                {t('pages.transactions.resetFilters')}
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Quick Date Presets */}
-        <div className="flex flex-wrap gap-2">
+        {/* Quick Date Presets — one swipeable row on a phone instead of wrapping to two. */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
           {[
             {
               label: t('pages.transactions.thisMonth'),
@@ -829,7 +868,7 @@ export default function TransactionsPage() {
               key={preset.label}
               variant="outline"
               size="sm"
-              className="h-7 text-xs bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+              className="h-8 shrink-0 text-xs bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors sm:h-7"
               onClick={preset.action}
             >
               <CalendarIcon className="mr-1.5 h-3 w-3" />
@@ -838,7 +877,10 @@ export default function TransactionsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
+        <div
+          id="transaction-filters"
+          className={cn("grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3 sm:grid", filtersOpen ? "grid" : "hidden")}
+        >
           {/* Picked months carry their own year, so the Year select has nothing left to say
               while any are selected. */}
           <Select value={yearFilter} onValueChange={setYearFilter} disabled={selectedMonths.length > 0}>
@@ -1247,7 +1289,54 @@ export default function TransactionsPage() {
                   : t('pages.transactions.addDescription')}
             </div>
           </DialogHeader>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!isSaving) handleSubmit();
+            }}
+          >
           <div className="space-y-4 py-4">
+            <FormAlert>{submitError}</FormAlert>
+
+            {/* What kind of entry this is. One control instead of two checkboxes that
+                silently cancelled each other; the help sits under it because a tooltip
+                is unreachable on touch. */}
+            <div className="space-y-2">
+              <div
+                role="radiogroup"
+                aria-label={t('pages.transactions.modeLabel')}
+                className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1"
+              >
+                {modeOptions.map(({ value, label, icon: Icon }) => {
+                  // An existing row cannot be turned into the two rows a transfer needs.
+                  const disabled = value === 'transfer' && !!selectedTransaction;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={mode === value}
+                      disabled={disabled}
+                      onClick={() => changeMode(value)}
+                      className={cn(
+                        "flex min-h-9 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        "disabled:cursor-not-allowed disabled:opacity-40",
+                        mode === value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {modeHelp && <p className="text-xs text-muted-foreground">{modeHelp}</p>}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="notes">{t('common.notes')}</Label>
               <Input
@@ -1257,9 +1346,8 @@ export default function TransactionsPage() {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount">{t('common.amount')}</Label>
+            <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2">
+              <Field htmlFor="amount" label={t('common.amount')} error={formErrors.amount}>
                 <div className="flex gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1290,16 +1378,22 @@ export default function TransactionsPage() {
                     enterKeyHint="done"
                     placeholder={formatNumber(0, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, amount: e.target.value });
+                      clearFormError('amount');
+                    }}
                     className="min-w-0 text-[16px] tabular-nums"
+                    {...fieldAria('amount', formErrors.amount)}
                   />
                 </div>
-              </div>
+              </Field>
               <div className="space-y-2">
                 <Label htmlFor="date">{t('common.date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
+                      id="date"
+                      type="button"
                       variant={"outline"}
                       className={cn(
                         "w-full pl-3 text-left font-normal bg-background/50 border-input/50",
@@ -1307,7 +1401,7 @@ export default function TransactionsPage() {
                       )}
                     >
                       {formData.date ? (
-                        formatDate(formData.date, { dateStyle: 'long' })
+                        formatDate(formData.date, { dateStyle: 'medium' })
                       ) : (
                         <span>{t('pages.transactions.pickDate')}</span>
                       )}
@@ -1337,82 +1431,17 @@ export default function TransactionsPage() {
                 </Popover>
               </div>
             </div>
-            <div className="flex items-center space-x-2 py-2">
-              <Checkbox
-                id="withdrawal"
-                checked={isWithdrawal}
-                onCheckedChange={(checked) => {
-                  setIsWithdrawal(checked === true);
-                  if (checked === true) {
-                    const withdrawalCat = categories.find(c => c.category_name === 'Savings Funds Withdrawal');
-                    if (withdrawalCat) {
-                      setFormData(prev => ({ ...prev, category_id_fk: withdrawalCat.categories_id_pk.toString() }));
-                    } else {
-                      console.warn('Savings Funds Withdrawal category not found');
-                    }
-                  } else {
-                    setFormData(prev => ({ ...prev, category_id_fk: '' }));
-                  }
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="withdrawal"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {t('pages.transactions.withdrawalFromFund')}
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">{t('pages.transactions.withdrawalHelp')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
 
-            <div className="flex items-center space-x-2 py-2">
-              <Checkbox
-                id="transfer"
-                checked={isTransfer}
-                disabled={!!selectedTransaction}
-                onCheckedChange={(checked) => {
-                  setIsTransfer(checked === true);
-                  if (checked === true) {
-                    setIsWithdrawal(false);
-                    // Clear category as it will be auto-set
-                    setFormData(prev => ({ ...prev, category_id_fk: '' }));
-                  }
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="transfer"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {t('pages.transactions.transferBetweenAccounts')}
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">{t('pages.transactions.transferHelp')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-
-            {!isWithdrawal && !isTransfer && (
-              <div className="space-y-2">
-                <Label htmlFor="category">{t('common.category')}</Label>
+            {mode === 'standard' && (
+              <Field htmlFor="category" label={t('common.category')} error={formErrors.category}>
                 <Select
                   value={formData.category_id_fk}
-                  onValueChange={(value) => setFormData({ ...formData, category_id_fk: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, category_id_fk: value });
+                    clearFormError('category');
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="category" {...fieldAria('category', formErrors.category)}>
                     <SelectValue placeholder={t('pages.transactions.selectCategory')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1443,22 +1472,28 @@ export default function TransactionsPage() {
                     })()}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="account">{t('common.account')}</Label>
+            <Field
+              htmlFor="account"
+              label={isTransfer ? t('pages.transactions.fromAccount') : t('common.account')}
+              error={formErrors.account}
+            >
               <AccountSelect
                 id="account"
                 accounts={accounts}
                 value={formData.account_id_fk}
-                onValueChange={(value) => setFormData({ ...formData, account_id_fk: value })}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, account_id_fk: value });
+                  clearFormError('account');
+                }}
                 placeholder={t('pages.transactions.selectAccount')}
+                {...fieldAria('account', formErrors.account)}
               />
-            </div>
+            </Field>
 
             {isTransfer && (
-              <div className="space-y-2">
-                <Label htmlFor="to-account">{t('pages.transactions.toAccount')}</Label>
+              <Field htmlFor="to-account" label={t('pages.transactions.toAccount')} error={formErrors.toAccount}>
                 <AccountSelect
                   id="to-account"
                   accounts={accounts}
@@ -1467,27 +1502,33 @@ export default function TransactionsPage() {
                   onValueChange={(value) => {
                     setTransferToAccountId(value);
                     setTransferDestAmount('');
+                    clearFormError('toAccount', 'destAmount');
                   }}
                   placeholder={t('pages.transactions.selectDestinationAccount')}
+                  {...fieldAria('to-account', formErrors.toAccount)}
                 />
-              </div>
+              </Field>
             )}
 
             {isTransfer && transferToAccountId && accountMap[formData.account_id_fk]?.currency && accountMap[transferToAccountId]?.currency && accountMap[formData.account_id_fk]?.currency !== accountMap[transferToAccountId]?.currency && (
-              <div className="space-y-2">
-                <Label htmlFor="dest-amount">
-                  {t('pages.transactions.receivedAmount')} ({accountMap[transferToAccountId]?.currency})
-                </Label>
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-                  {t('pages.transactions.crossCurrencyNote')}
-                </div>
+              <Field
+                htmlFor="dest-amount"
+                label={`${t('pages.transactions.receivedAmount')} (${accountMap[transferToAccountId]?.currency})`}
+                error={formErrors.destAmount}
+                hint={t('pages.transactions.crossCurrencyNote')}
+              >
                 <Input
                   id="dest-amount"
                   type="text"
                   inputMode="decimal"
                   placeholder="0.00"
                   value={transferDestAmount}
-                  onChange={(e) => setTransferDestAmount(e.target.value)}
+                  onChange={(e) => {
+                    setTransferDestAmount(e.target.value);
+                    clearFormError('destAmount');
+                  }}
+                  className="text-[16px] tabular-nums"
+                  {...fieldAria('dest-amount', formErrors.destAmount)}
                 />
                 {transferDestAmount && parseDecimalInput(formData.amount) && parseDecimalInput(transferDestAmount) && (() => {
                   // Both directions, always. Which one reads naturally depends on the pair
@@ -1506,27 +1547,24 @@ export default function TransactionsPage() {
                     </p>
                   );
                 })()}
-              </div>
+              </Field>
             )}
 
             {!isTransfer && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="fund">{isWithdrawal ? t('pages.transactions.savingsFund') : t('pages.transactions.savingsFundOptional')}</Label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">{t('pages.transactions.fundHelp')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+              <Field
+                htmlFor="fund"
+                label={isWithdrawal ? t('pages.transactions.savingsFund') : t('pages.transactions.savingsFundOptional')}
+                error={formErrors.fund}
+                hint={isWithdrawal ? undefined : t('pages.transactions.fundHelp')}
+              >
                 <Select
                   value={formData.savings_fund_id_fk || 'none'}
-                  onValueChange={(value) => setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, savings_fund_id_fk: value === 'none' ? '' : value });
+                    clearFormError('fund');
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="fund" {...fieldAria('fund', formErrors.fund)}>
                     <SelectValue placeholder={t('pages.transactions.selectFund')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1541,12 +1579,12 @@ export default function TransactionsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             )}
             {!isTransfer && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{t('pages.transactions.tags')}</Label>
+                  <Label htmlFor="tags">{t('pages.transactions.tags')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -1558,6 +1596,7 @@ export default function TransactionsPage() {
                   </Button>
                 </div>
                 <TagMultiSelect
+                  id="tags"
                   tags={tags}
                   value={formData.tags}
                   onChange={(ids) => setFormData(prev => ({ ...prev, tags: ids }))}
@@ -1566,17 +1605,19 @@ export default function TransactionsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeModal}>
+            <Button type="button" variant="outline" onClick={closeModal}>
               {t('common.cancel')}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSaving}
-            >
+            <Button type="submit" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {selectedTransaction ? t('common.save') : t('pages.transactions.add')}
+              {selectedTransaction
+                ? t('common.save')
+                : isTransfer
+                  ? t('pages.transactions.addTransfer')
+                  : t('pages.transactions.add')}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

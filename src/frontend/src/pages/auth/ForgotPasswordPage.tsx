@@ -90,9 +90,9 @@ export default function ForgotPasswordPage() {
             title="Forgot password?"
             subtitle="Enter your email address and we'll send you a reset link"
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
                 {errors.general && (
-                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                    <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                         {errors.general}
                     </div>
                 )}
@@ -101,6 +101,9 @@ export default function ForgotPasswordPage() {
                     <Label htmlFor="email">Email</Label>
                     <Input
                         id="email"
+                        autoComplete="email"
+                        aria-invalid={!!errors.email}
+                        aria-describedby={errors.email ? "email-error" : undefined}
                         type="email"
                         placeholder="you@example.com"
                         value={email}
@@ -109,7 +112,7 @@ export default function ForgotPasswordPage() {
                         disabled={isLoading}
                     />
                     {errors.email && (
-                        <p className="text-xs text-destructive">{errors.email}</p>
+                        <p id="email-error" role="alert" className="text-xs text-destructive">{errors.email}</p>
                     )}
                 </div>
 
