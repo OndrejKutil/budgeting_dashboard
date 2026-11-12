@@ -9,7 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { PrivacyModeProvider } from "@/contexts/PrivacyContext";
-import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
+import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton, OverviewSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -122,7 +122,7 @@ const AppContent = () => {
                 }
               >
                 {/* Routes living under the /dashboard/{...} */}
-                <Route index element={withSuspense(<DashboardOverview />, <DashboardSkeleton />)} />
+                <Route index element={withSuspense(<DashboardOverview />, <OverviewSkeleton />)} />
                 <Route path="transactions" element={withSuspense(<TransactionsPage />, <DashboardSkeleton />)} />
                 <Route path="recurring" element={withSuspense(<RecurringPage />, <DashboardSkeleton />)} />
                 <Route path="accounts" element={withSuspense(<AccountsPage />, <DashboardSkeleton />)} />

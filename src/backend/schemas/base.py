@@ -138,6 +138,17 @@ class PeriodComparison(BaseModel):
     cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous period")
 
 
+class SixMonthAverage(BaseModel):
+    """Average monthly totals over the (up to) six calendar months before the requested month"""
+    months_counted: int = Field(..., description="How many of the six previous months contributed (months before the user's first transaction are skipped)")
+    income: float = Field(..., description="Average monthly income (same definition as SummaryData.total_income)")
+    expense: float = Field(..., description="Average monthly expenses")
+    saving: float = Field(..., description="Average monthly net savings")
+    investment: float = Field(..., description="Average monthly investments")
+    profit: float = Field(..., description="Average monthly profit (same definition as SummaryData.profit)")
+    net_cash_flow: float = Field(..., description="Average monthly net cash flow")
+
+
 class SummaryData(BaseModel):
     """Schema for financial summary data"""
     total_income: float = Field(..., description="Total income amount")
@@ -154,6 +165,18 @@ class SummaryData(BaseModel):
     top_expenses: list[CategoryInsight] = Field(..., description="Top 3 expense categories")
     biggest_mover: CategoryInsight | None = Field(None, description="Category with largest absolute spending change vs previous period")
     largest_transactions: list[TransactionData] = Field(..., description="List of top 5 largest transactions")
+
+    # Overview redesign fields
+    expense_categories: list[CategoryInsight] = Field(default_factory=list, description="All expense categories of the period, largest first")
+    daily_cumulative_expense: list[float] = Field(
+        default_factory=list,
+        description="Cumulative expenses by day of the month of start_date; index 0 is day 1. Ends at today for the current month, is empty for a future month. Only filled when the request is exactly one whole calendar month; empty for any other date range",
+    )
+    average_daily_cumulative_expense: list[float] = Field(
+        default_factory=list,
+        description="Average cumulative expenses by day of month over the previous six calendar months, one value per day of the requested month. Each month is padded with its final value and the sum divided by the months counted, so the series never decreases. Empty without history or when the request is not exactly one whole calendar month",
+    )
+    six_month_average: SixMonthAverage | None = Field(None, description="Average monthly totals over the previous six months; null without history or when the request is not exactly one whole calendar month")
     
 
     
