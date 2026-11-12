@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronRight, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, GripVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import { useUser } from '@/contexts/user-context';
 import { cn } from '@/lib/utils';
 import type { Category, Tag } from '@/lib/api/types/base';
 import { BudgetRowFilters } from './BudgetRowFilters';
-import { isRowInvalid, parseAmount, type BudgetGroup, type LocalBudgetRow } from './budget-rows';
+import { budgetMoney, isRowInvalid, parseAmount, rowDelta, type BudgetGroup, type LocalBudgetRow } from './budget-rows';
 
 export type RowPatch = Partial<Pick<LocalBudgetRow, 'name' | 'amount' | 'include_in_total' | 'category_ids' | 'tags'>>;
 
@@ -42,17 +42,40 @@ interface SectionProps {
     onReorder: (rows: LocalBudgetRow[]) => void;
 }
 
-// Desktop column template, shared by header and rows so they line up.
-const GRID = 'md:grid md:grid-cols-[20px_minmax(0,1.3fr)_minmax(0,1.5fr)_120px_minmax(130px,1fr)_56px_40px_32px] md:items-center md:gap-x-3';
+// Desktop column template, shared by the column header, section rows and item rows so they line up.
+// handle | item | linked to | plan | actual | difference | total toggle | remove
+const GRID = 'lg:grid lg:grid-cols-[1.25rem_minmax(0,1.2fr)_minmax(0,1.4fr)_8.25rem_6.5rem_7.75rem_2.75rem_2rem] lg:items-center lg:gap-x-3';
 
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 const includedTotal = (rows: LocalBudgetRow[], pick: (r: LocalBudgetRow) => number | null) =>
     rows.filter(r => r.include_in_total).reduce((sum, r) => sum + (pick(r) ?? 0), 0);
 
+/** Column labels, drawn once above the sections (desktop only). */
+export function BudgetColumnHeader() {
+    const { t } = useUser();
+    return (
+        <div className={cn('hidden border-b border-border pb-2.5 text-[0.8125rem] text-muted-foreground', GRID)}>
+            <span />
+            <span>{t('pages.budgetMaker.item')}</span>
+            <span>{t('pages.budgetMaker.filters')}</span>
+            <span className="text-right">{t('metrics.planned')}</span>
+            <span className="text-right">{t('metrics.actual')}</span>
+            <span className="text-right">{t('metrics.diff')}</span>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="cursor-help text-center">{t('pages.budgetMaker.includeShort')}</span>
+                </TooltipTrigger>
+                <TooltipContent>{t('metrics.includeInTotal')}</TooltipContent>
+            </Tooltip>
+            <span />
+        </div>
+    );
+}
+
 export function BudgetSection(props: SectionProps) {
     const { title, group, rows, totalIncome, open, onOpenChange, onAdd, onReorder } = props;
-    const { formatCurrency, t } = useUser();
+    const { formatNumber, currency, t } = useUser();
     const [focusId, setFocusId] = useState<string | null>(null);
 
     const sensors = useSensors(
@@ -67,7 +90,8 @@ export function BudgetSection(props: SectionProps) {
     const tracked = rows.filter(r => r.include_in_total && r.actual != null);
     const actual = includedTotal(tracked, r => r.actual);
     const trackedPlanned = includedTotal(tracked, r => parseAmount(r.amount) || 0);
-    const pctOfIncome = totalIncome > 0 ? (planned / totalIncome) * 100 : 0;
+    const pctOfIncome = totalIncome > 0 ? planned / totalIncome : 0;
+    const actualOver = group === 'expense' && actual > trackedPlanned;
 
     const handleDragEnd = ({ active, over }: DragEndEvent) => {
         if (!over || active.id === over.id) return;
@@ -81,71 +105,61 @@ export function BudgetSection(props: SectionProps) {
         setFocusId(onAdd());
     };
 
+    const addButton = (
+        <button
+            type="button"
+            onClick={add}
+            className="rounded text-[0.84375rem] text-muted-foreground/80 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+            + {t('pages.budgetMaker.addRow')}
+        </button>
+    );
+
     return (
-        <Collapsible open={open} onOpenChange={onOpenChange} className="mb-6">
-            <div className="flex items-center justify-between gap-2 mb-2 px-2">
-                <h2 className="min-w-0">
+        <Collapsible open={open} onOpenChange={onOpenChange} className="mt-9 first:mt-4">
+            <div className={cn('items-center border-b border-foreground/20 pb-2 text-[0.9375rem] font-medium', GRID, 'max-lg:flex max-lg:justify-between max-lg:gap-3')}>
+                <h2 className="min-w-0 lg:col-span-3">
                     <CollapsibleTrigger asChild>
                         <button
                             type="button"
-                            className="flex items-center gap-3 text-left rounded-md group ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="group flex items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            <span className={cn('inline-flex p-1 rounded-md transition-transform text-muted-foreground/50 group-hover:text-primary', open && 'rotate-90')}>
-                                <ChevronRight className="h-5 w-5" />
-                            </span>
-                            <span className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
-                                <span className="text-2xl font-display font-bold tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{title}</span>
-                                <span className="text-xl font-mono font-medium tracking-tight text-muted-foreground group-hover:text-foreground transition-colors">
-                                    <SensitiveValue>{formatCurrency(planned)}</SensitiveValue>
-                                    {group !== 'income' && (
-                                        <span className="text-sm font-sans font-normal text-muted-foreground/60 ml-2">
-                                            (<SensitiveValue>{pctOfIncome.toFixed(1)}%</SensitiveValue>)
-                                        </span>
-                                    )}
+                            <ChevronRight
+                                className={cn('h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:text-foreground', open && 'rotate-90')}
+                                aria-hidden="true"
+                            />
+                            <span>{title}</span>
+                            {group !== 'income' && totalIncome > 0 && (
+                                <span className="text-[0.8125rem] font-normal tabular-nums text-muted-foreground">
+                                    <SensitiveValue>{formatNumber(pctOfIncome, { style: 'percent', maximumFractionDigits: 0 })}</SensitiveValue>
                                 </span>
-                                {tracked.length > 0 && (
-                                    <span className={cn(
-                                        'text-sm font-normal text-muted-foreground',
-                                        group === 'expense' && actual > trackedPlanned && 'text-destructive',
-                                    )}>
-                                        {t('metrics.actual')} <SensitiveValue className="font-mono">{formatCurrency(actual)}</SensitiveValue>
-                                    </span>
-                                )}
-                            </span>
+                            )}
                         </button>
                     </CollapsibleTrigger>
                 </h2>
-                <Button variant="ghost" size="sm" onClick={add} className="shrink-0 text-primary hover:text-primary/90 hover:bg-primary/10">
-                    <Plus className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">{t('pages.budgetMaker.addRow')}</span>
-                </Button>
+                <span className="flex items-baseline gap-4 tabular-nums max-lg:shrink-0 lg:contents">
+                    <span className="text-right">
+                        <SensitiveValue>{budgetMoney(planned, currency)}</SensitiveValue>
+                    </span>
+                    <span className={cn('text-right', actualOver && 'text-destructive')}>
+                        {tracked.length > 0 && (
+                            <>
+                                <span className="mr-1.5 text-[0.75rem] font-normal text-muted-foreground lg:hidden">{t('metrics.actual')}</span>
+                                <SensitiveValue>{budgetMoney(actual, currency)}</SensitiveValue>
+                            </>
+                        )}
+                    </span>
+                </span>
             </div>
 
             <CollapsibleContent>
                 {rows.length === 0 ? (
-                    <button
-                        type="button"
-                        onClick={add}
-                        className="w-full px-6 py-6 text-center text-muted-foreground text-sm bg-muted/30 rounded-xl border border-dashed border-border/50 hover:bg-muted/50 hover:text-foreground transition-colors"
-                    >
-                        {t('pages.budgetMaker.noItems')} <span className="text-primary">{t('pages.budgetMaker.addRowHint')}</span>
-                    </button>
+                    <div className="flex flex-wrap items-baseline gap-x-3 py-2.5 text-[0.84375rem] text-muted-foreground lg:pl-8">
+                        <span>{t('pages.budgetMaker.noItems')}</span>
+                        {addButton}
+                    </div>
                 ) : (
-                    <div className="space-y-2 md:space-y-0">
-                        <div className={cn('hidden px-2 pb-2 border-b border-border/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground/50', GRID)}>
-                            <span />
-                            <span className="pl-2">{t('common.name')}</span>
-                            <span>{t('pages.budgetMaker.filters')}</span>
-                            <span className="text-right pr-2">{t('metrics.planned')}</span>
-                            <span className="text-right">{t('metrics.actual')}</span>
-                            <span className="text-right">{t('metrics.diff')}</span>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <span className="text-center cursor-help">{t('pages.budgetMaker.includeShort')}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>{t('metrics.includeInTotal')}</TooltipContent>
-                            </Tooltip>
-                            <span />
-                        </div>
+                    <>
                         <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[verticalOnly]} onDragEnd={handleDragEnd}>
                             <SortableContext items={rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                                 {rows.map(row => (
@@ -158,7 +172,8 @@ export function BudgetSection(props: SectionProps) {
                                 ))}
                             </SortableContext>
                         </DndContext>
-                    </div>
+                        <div className="pt-2.5 lg:pl-8">{addButton}</div>
+                    </>
                 )}
             </CollapsibleContent>
         </Collapsible>
@@ -183,7 +198,6 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
     const invalid = isRowInvalid(row);
     const nameInvalid = invalid && row.name.trim() === '';
     const amountInvalid = invalid && !nameInvalid;
-    const overBudget = group === 'expense' && row.actual != null && row.actual > (parseAmount(row.amount) || 0);
 
     const handle = (
         <button
@@ -192,9 +206,9 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             {...attributes}
             {...listeners}
             aria-label={t('pages.budgetMaker.dragToReorder')}
-            className="flex h-8 w-5 items-center justify-center rounded text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover/row:opacity-100 md:focus-visible:opacity-100"
+            className="flex h-8 w-5 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
-            <GripVertical className="h-4 w-4" />
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
     );
 
@@ -204,8 +218,9 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             value={row.name}
             onChange={(e) => onUpdate(row.id, { name: e.target.value })}
             placeholder={t('pages.budgetMaker.itemName')}
+            aria-label={t('pages.budgetMaker.itemName')}
             aria-invalid={nameInvalid || undefined}
-            className={cn(GHOST_INPUT, 'font-medium')}
+            className={cn(GHOST_INPUT, 'text-[0.9375rem]')}
         />
     );
 
@@ -241,10 +256,10 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             variant="ghost"
             size="icon"
             aria-label={t('pages.budgetMaker.removeRow')}
-            className="h-8 w-8 text-muted-foreground/40 hover:text-destructive md:opacity-0 md:group-hover/row:opacity-100 md:focus-visible:opacity-100"
+            className="h-8 w-8 text-muted-foreground/50 hover:text-destructive lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover/row:opacity-100"
             onClick={() => onRemove(row.id)}
         >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
     );
 
@@ -253,46 +268,45 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             ref={setNodeRef}
             style={{ transform: CSS.Translate.toString(transform), transition }}
             className={cn(
-                'group/row relative rounded-xl border border-border/50 bg-card/50 md:rounded-none md:border-0 md:border-b md:border-border/30 md:bg-transparent transition-colors',
-                'hover:bg-muted/40 focus-within:bg-muted/30',
-                overBudget && 'bg-destructive/[0.04] md:bg-destructive/[0.04]',
-                isDragging && 'z-10 shadow-lg bg-card md:bg-card ring-1 ring-border',
+                'group/row relative border-b border-border transition-colors',
+                isDragging && 'z-10 border-transparent bg-background shadow-lg ring-1 ring-border',
             )}
         >
             {/* Desktop */}
-            <div className={cn('hidden px-2 py-1.5', GRID)}>
+            <div className={cn('hidden py-1.5', GRID)}>
                 {handle}
                 {renderName(0)}
-                <div className="min-w-0">{filters}</div>
+                <div className="min-w-0 overflow-hidden">{filters}</div>
                 {amount}
-                <ActualCell row={row} group={group} />
+                <ActualCell row={row} />
                 <DiffCell row={row} group={group} />
                 <div className="flex justify-center">{include}</div>
                 {remove}
             </div>
 
-            {/* Mobile */}
-            <div className="md:hidden p-3 space-y-2">
+            {/* Mobile: stacked rows separated by hairlines */}
+            <div className="space-y-1.5 py-3 lg:hidden">
                 <div className="flex items-center gap-1">
                     {handle}
-                    <div className="flex-1 min-w-0">{renderName(1)}</div>
+                    <div className="min-w-0 flex-1">{renderName(1)}</div>
                     {remove}
                 </div>
                 <div className="pl-6">{filters}</div>
-                <div className="pl-6 grid grid-cols-[1fr_auto] items-end gap-3">
-                    <div className="space-y-1">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">{t('metrics.planned')}</span>
+                <div className="flex flex-wrap items-end gap-x-5 gap-y-2 pl-6">
+                    <div className="w-[8.5rem] space-y-0.5">
+                        <span className="block text-[0.75rem] text-muted-foreground">{t('metrics.planned')}</span>
                         {amount}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">{t('metrics.actual')}</span>
-                        <div className="flex items-baseline gap-2">
-                            <ActualCell row={row} group={group} compact />
-                            <DiffCell row={row} group={group} />
-                        </div>
+                    <div className="space-y-0.5">
+                        <span className="block text-right text-[0.75rem] text-muted-foreground">{t('metrics.actual')}</span>
+                        <ActualCell row={row} />
+                    </div>
+                    <div className="space-y-0.5">
+                        <span className="block text-right text-[0.75rem] text-muted-foreground">{t('metrics.diff')}</span>
+                        <DiffCell row={row} group={group} />
                     </div>
                 </div>
-                <label className="pl-6 flex items-center gap-2 text-xs text-muted-foreground">
+                <label className="flex items-center gap-2 pl-6 pt-1 text-[0.8125rem] text-muted-foreground">
                     {include}
                     {t('metrics.includeInTotal')}
                 </label>
@@ -301,73 +315,98 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
     );
 }
 
-// Ghost inputs hide their line until hover; focus and invalid styling come from Input's own fieldLine.
-const GHOST_INPUT = 'h-8 px-2 border-b-transparent hover:border-foreground/40';
+// Item names sit on no line until hovered; focus and invalid styling come from Input's own fieldLine.
+const GHOST_INPUT = 'h-9 border-b-transparent hover:border-foreground/40';
 
-/** Text input (not type=number: no scroll-wheel surprises, accepts "1 234,50"); shows formatted currency when idle. */
+/**
+ * Text input (not type=number: no scroll-wheel surprises, accepts "1 234,50"); shows formatted
+ * currency when idle. Always on a hairline: this is the column that gets typed in.
+ * Enter moves to the next row's plan field.
+ */
 function AmountInput({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (v: string) => void }) {
-    const { formatCurrency } = useUser();
+    const { currency, t } = useUser();
     const { isPrivacyMode } = usePrivacyMode();
     const [focused, setFocused] = useState(false);
     const n = parseAmount(value);
-    const display = !focused && !invalid && Number.isFinite(n) ? formatCurrency(n) : value;
+    const display = !focused && !invalid && Number.isFinite(n) ? budgetMoney(n, currency) : value;
+
+    const focusNext = (input: HTMLInputElement) => {
+        const root = input.closest('[data-budget-table]');
+        if (!root) return;
+        const all = Array.from(root.querySelectorAll<HTMLInputElement>('input[data-plan-input]')).filter(el => el.offsetParent !== null);
+        all[all.indexOf(input) + 1]?.focus();
+    };
 
     return (
         <Input
             inputMode="decimal"
             autoComplete="off"
+            data-plan-input=""
             value={display}
             placeholder="0"
-            onFocus={(e) => { setFocused(true); requestAnimationFrame(() => e.target.select()); }}
+            aria-label={t('metrics.planned')}
+            onFocus={(e) => {
+                setFocused(true);
+                const el = e.target;
+                requestAnimationFrame(() => el.select());
+            }}
             onBlur={() => setFocused(false)}
             onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                focusNext(e.currentTarget);
+            }}
             aria-invalid={invalid || undefined}
-            className={cn(GHOST_INPUT, 'text-right font-mono tabular-nums', isPrivacyMode && !focused && 'blur-[6px]')}
+            className={cn('h-9 text-right text-[0.96875rem] tabular-nums', isPrivacyMode && !focused && 'blur-[6px]')}
         />
     );
 }
 
-function ActualCell({ row, group, compact = false }: { row: LocalBudgetRow; group: BudgetGroup; compact?: boolean }) {
-    const { formatCurrency, t } = useUser();
+function ActualCell({ row }: { row: LocalBudgetRow }) {
+    const { currency, t } = useUser();
 
     if (row.actual == null) {
         return (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <span className="block text-right text-sm text-muted-foreground/40 cursor-help">–</span>
+                    <span className="block cursor-help text-right text-[0.90625rem] text-muted-foreground/50">–</span>
                 </TooltipTrigger>
                 <TooltipContent>{t('pages.budgetMaker.noActualHint')}</TooltipContent>
             </Tooltip>
         );
     }
 
-    const planned = parseAmount(row.amount) || 0;
-    const ratio = planned > 0 ? row.actual / planned : row.actual > 0 ? Infinity : 0;
-    const barColor = group === 'expense'
-        ? (ratio > 1 ? 'bg-destructive' : ratio > 0.9 ? 'bg-warning' : 'bg-primary/70')
-        : (ratio >= 1 ? 'bg-success' : 'bg-primary/70');
-
     return (
-        <div className={cn('flex flex-col items-end gap-1', !compact && 'w-full')}>
-            <SensitiveValue className="font-mono text-sm font-medium text-muted-foreground">{formatCurrency(row.actual)}</SensitiveValue>
-            {!compact && (
-                <div className="h-1 w-full rounded-full bg-muted overflow-hidden" role="presentation">
-                    <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
-                </div>
-            )}
-        </div>
+        <SensitiveValue className="block whitespace-nowrap text-right text-[0.90625rem] text-muted-foreground">
+            {budgetMoney(row.actual, currency)}
+        </SensitiveValue>
     );
 }
 
+/**
+ * Actual minus plan, as an amount. Only an expense over plan gets colour (and the word "over");
+ * more income, savings or investing than planned is green; everything else is muted.
+ */
 function DiffCell({ row, group }: { row: LocalBudgetRow; group: BudgetGroup }) {
-    if (row.diff == null) return <span className="block text-right text-sm text-muted-foreground/40">–</span>;
-    const good = group === 'expense' ? row.diff <= 0 : row.diff >= 0;
+    const { currency, t } = useUser();
+    const delta = rowDelta(row);
+    if (delta == null) return <span className="block whitespace-nowrap text-right text-[0.90625rem] text-muted-foreground/50">–</span>;
+
+    const zeroText = budgetMoney(0, currency);
+    const absText = budgetMoney(Math.abs(delta), currency);
+    // An amount that displays as nothing is nothing: no "+0", no red zero.
+    const zero = Math.abs(delta) < 0.005 || absText === zeroText;
+    const amount = zero ? zeroText : `${delta > 0 ? '+' : '−'}${absText}`;
+    const over = !zero && group === 'expense' && delta > 0;
+    const favourable = !zero && group !== 'expense' && delta > 0;
+
     return (
         <SensitiveValue className={cn(
-            'block text-right font-mono text-sm',
-            row.diff === 0 ? 'text-muted-foreground' : good ? 'text-success' : 'text-destructive',
+            'block whitespace-nowrap text-right text-[0.90625rem]',
+            over ? 'text-destructive' : favourable ? 'text-success' : 'text-muted-foreground',
         )}>
-            {row.diff > 0 ? '+' : ''}{Number(row.diff).toFixed(0)}%
+            {over ? t('pages.budgetMaker.overAmount', { amount }) : amount}
         </SensitiveValue>
     );
 }

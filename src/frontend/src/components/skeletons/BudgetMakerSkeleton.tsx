@@ -1,82 +1,37 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
+const SECTION_ROWS = [3, 4, 2, 1];
+
+/** Placeholder shaped like the budget table: one quiet summary line, then four sections of hairline rows. */
 export function BudgetMakerSkeleton() {
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
-      {/* Page Header Skeleton */}
-      <div className="space-y-3">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-96" />
-      </div>
+    <div aria-hidden="true">
+      <Skeleton className="mt-5 h-4 w-full max-w-md" />
 
-      {/* Controls/Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-32" />
-      </div>
+      <div className="mt-6">
+        <div className="hidden items-center gap-x-3 border-b border-border pb-2.5 lg:flex">
+          <Skeleton className="h-3.5 w-20" />
+          <Skeleton className="ml-auto h-3.5 w-24" />
+        </div>
 
-      {/* Budget Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-border/30 bg-card/30 p-4">
-            <Skeleton className="h-4 w-24 mb-3" />
-            <Skeleton className="h-8 w-32 mb-2" />
-            <Skeleton className="h-4 w-16" />
+        {SECTION_ROWS.map((count, section) => (
+          <div key={section} className="mt-9 first:mt-4">
+            <div className="flex items-center justify-between gap-3 border-b border-foreground/20 pb-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            {Array.from({ length: count }, (_, row) => (
+              <div key={row} className="flex items-center gap-4 border-b border-border py-3.5">
+                <Skeleton className="h-4 w-4 shrink-0" />
+                <Skeleton className="h-4 w-32 sm:w-44" />
+                <Skeleton className="hidden h-3.5 w-36 lg:block" />
+                <Skeleton className="ml-auto h-4 w-20" />
+                <Skeleton className="hidden h-4 w-16 sm:block" />
+              </div>
+            ))}
+            <Skeleton className="mt-3 h-3.5 w-20" />
           </div>
         ))}
-      </div>
-
-      {/* Budget Table */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-        {/* Table Header */}
-        <div className="grid grid-cols-4 gap-4 p-4 border-b border-border/50 bg-muted/30">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-4 w-24" />
-          ))}
-        </div>
-
-        {/* Table Rows */}
-        <div className="divide-y divide-border/30">
-          {[...Array(8)].map((_, rowIdx) => (
-            <div
-              key={rowIdx}
-              className="grid grid-cols-4 gap-4 p-4 items-center hover:bg-muted/20 transition-colors"
-            >
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary Statistics */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <Skeleton className="h-5 w-40 mb-4" />
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <Skeleton className="h-5 w-40 mb-4" />
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

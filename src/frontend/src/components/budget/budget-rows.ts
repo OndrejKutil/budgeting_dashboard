@@ -1,5 +1,6 @@
 import type { BudgetPlan, BudgetPlanRow } from '@/lib/api/types/requests';
 import type { BudgetResponse, BudgetRowResponse } from '@/lib/api/types/responses';
+import { formatMoney, formatMoneyWhole } from '@/lib/currency';
 
 export const BUDGET_GROUPS = ['income', 'expense', 'saving', 'investment'] as const;
 export type BudgetGroup = (typeof BUDGET_GROUPS)[number];
@@ -162,4 +163,15 @@ export const mergeActuals = (rows: RowsByGroup, fresh: BudgetResponse, sentIds: 
         });
     }
     return next;
+};
+
+/** Whole amounts when there are no cents to show ("9 500 Kč"), full precision otherwise. */
+export const budgetMoney = (value: number, currency: string) =>
+    Math.abs(value - Math.round(value)) < 0.005 ? formatMoneyWhole(value, currency) : formatMoney(value, currency);
+
+/** Actual minus plan for a row (display only; the server's percentage is untouched). Null without an actual. */
+export const rowDelta = (r: LocalBudgetRow): number | null => {
+    if (r.actual == null) return null;
+    const planned = parseAmount(r.amount);
+    return r.actual - (Number.isFinite(planned) ? planned : 0);
 };
