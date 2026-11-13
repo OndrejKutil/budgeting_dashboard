@@ -77,7 +77,8 @@ work:
   reserved slots, controls disabled rather than hidden, previous data kept while loading.
 - The year-over-year comparison was removed from Monthly; it stays on Yearly.
 - A fund target is required but may be 0, which means "no target". Whole numbers only.
-- The Demo page is rebuilt last.
+- The Demo page was removed altogether (owner decision, 2026-11-13): no `/demo` route, no
+  demo data, no links. Do not bring it back.
 - Footer upgrade on the landing page and all public pages (spec section "Footer").
 
 ### 2.3 What is built (phases 1 to 3)
@@ -188,6 +189,21 @@ polishing.
 
 ### Phase 4: public pages
 
+**Built (awaiting owner sign-off).** Shared shell in `components/public/`: `PublicHeader`
+(brand, glass pill with How it works / FAQ / About, Log in + Create account or Open
+dashboard; links in a row under the bar below `lg`), `PublicFooter` (a panel within the page width with a darker
+background and rounded top: closing call to actionclosing call to action
+for signed-out visitors, link columns, contact `me@ondrejkutil.com` and
+GitHub, disclaimer and the Supabase Frankfurt / Render EU line) and `PublicLayout` /
+`PublicPageTitle`. Landing, FAQ, How it works, About, Terms, Privacy and NotFound use it;
+`AuthLayout` is a centred column without the decorative panel. Decisions taken while building:
+public pages stay English-only, so the footer has no language switch yet; the landing headline
+avoids "left" ("Know your cash flow before the month ends."); How it works and FAQ use the
+app's terms (Income, Expenses, Saved, Profit, Cash flow); the owner asked for little text (short landing line, no data facts in the footer) instead of "Clean Income" / "Net
+Savings"; the FAQ no longer mentions CSV import; reset password now needs 8 characters like
+registration (frontend and `schemas/requests.py`). `components/effects/ParticleWave.tsx` is
+unused: delete in phase 7. The Demo page has been removed; so has every "Try the demo" link.
+
 **4.1 Landing** — `pages/LandingPage.tsx`. Mockup: `pages.html`, screen `landing`.
 
 - Top: brand, glass pill with How it works / FAQ / About / Demo, Log in, amber
@@ -238,7 +254,7 @@ Mobile: columns stack, facts in a 2×2 grid.
 
 Done: Yearly, Recurring, Categories, Emergency Fund, Profile (see the table in 2.3; the
 notes below are kept for reference), plus Trading212 and Screenshot Import. Remaining
-order: Cash Flow, Investing and Dividend calculators, then Demo.
+order: Cash Flow, then the Investing and Dividend calculators.
 
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
@@ -318,13 +334,7 @@ order: Cash Flow, Investing and Dividend calculators, then Demo.
   (monthly ×12, quarterly ×4): say so in the labels. The Investing chart uses en-US
   compact ticks: use the user's locale.
 
-**5.8 Demo** — `pages/DemoPage.tsx` (about 1300 lines, a hand-built copy of the old
-dashboard with its own sidebar and data in `data/demo-data.ts`).
-
-- Preferred: stop duplicating. Render the real pages with a demo data provider (mock
-  the query layer with `demo-data.ts`) inside the real shell, read-only. If that is too
-  invasive, rebuild the demo with the new primitives.
-- Remove the `--sidebar-*` tokens and Tailwind `sidebar` colours once nothing uses them.
+**5.8 Demo** — removed (see 2.2).
 
 ### Phase 6: light theme
 

@@ -1,62 +1,30 @@
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { PublicLayout, PublicPageTitle } from '@/components/public/PublicLayout';
 
 export default function TermsPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_68%)]" />
-      {/* Header */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 shadow-sm backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold font-display">Budgeting Dashboard</span>
-          </Link>
-          <Button variant="ghost" asChild className="theme-text-muted-80 hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-white/10">
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Home
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <PublicLayout>
+      <PublicPageTitle title="Terms of Service" lead="Last updated: May 4, 2026" />
 
-      {/* Content */}
-      <main id="main-content" className="container mx-auto max-w-3xl px-4 pb-20 pt-32">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-10"
-        >
-          <div className="space-y-4 rounded-xl border border-border bg-card/80 p-6 shadow-[0_18px_50px_hsl(0_0%_0%/0.18),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-amber-500">Legal</p>
-            <h1 className="text-4xl font-bold font-display tracking-tight theme-text-strong sm:text-5xl">
-              Terms of Service
-            </h1>
-            <p className="text-sm theme-text-muted-60">Last updated: May 4, 2026</p>
-          </div>
-
-          <div className="space-y-8 rounded-xl border border-border bg-card/75 p-6 text-foreground/90 shadow-[0_18px_50px_hsl(0_0%_0%/0.16),0_1px_0_hsl(0_0%_100%/0.04)_inset] sm:p-8">
+      <div className="mt-10 max-w-[42rem] [&_section]:border-t [&_section]:border-border [&_section]:py-6 [&_h2]:mb-2 [&_h2]:text-[1.125rem] [&_h2]:font-medium [&_h2]:text-foreground [&_p]:text-[0.9375rem] [&_p]:leading-relaxed [&_p]:text-foreground/85 [&_li]:text-[0.9375rem] [&_li]:leading-relaxed [&_li]:text-foreground/85 [&_a]:text-foreground [&_a]:underline [&_a]:decoration-foreground/30 [&_a]:underline-offset-4">
             <section>
-              <h2 className="mb-3 text-xl font-semibold text-amber-500">Notice</h2>
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 shadow-[0_10px_28px_hsl(var(--primary)/0.08)]">
-                <p className="text-sm">
+              <h2>Notice</h2>
+              <div className="border-l-2 border-primary pl-4">
+                <p>
                   <strong>Budgeting Dashboard is a personal student project.</strong> While it is fully functional, it is provided "as-is" without the warranties or guarantees typical of commercial software.
                 </p>
               </div>
             </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">1. Acceptance of Terms</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>1. Acceptance of Terms</h2>
+                <p>
                   By accessing or using Budgeting Dashboard ("the Application"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Application.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">2. Nature of the Application</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>2. Nature of the Application</h2>
+                <p>
                   This Application is an independent portfolio and learning project. While we strive to maintain a high-quality experience, the Application:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
@@ -68,15 +36,15 @@ export default function TermsPage() {
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">3. No Financial Advice</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>3. No Financial Advice</h2>
+                <p>
                   The Application does not provide financial, investment, tax, legal, or accounting advice. Any analytics or metrics displayed are calculated strictly based on the data you provide. You remain entirely responsible for your own financial decisions.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">4. User Responsibility</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>4. User Responsibility</h2>
+                <p>
                   You understand and agree that:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
@@ -88,8 +56,8 @@ export default function TermsPage() {
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">5. Limitation of Liability</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>5. Limitation of Liability</h2>
+                <p>
                   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE DEVELOPER(S) SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
@@ -101,55 +69,33 @@ export default function TermsPage() {
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">6. No Warranty</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>6. No Warranty</h2>
+                <p>
                   THE APPLICATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">7. Data Handling</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>7. Data Handling</h2>
+                <p>
                   While the Application utilizes modern infrastructure (Supabase, Render) to store data securely, we make no absolute guarantees regarding the long-term persistence or invulnerability of your data.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">8. Changes to Terms</h2>
-                <p className="text-sm leading-relaxed">
+                <h2>8. Changes to Terms</h2>
+                <p>
                   These Terms may be modified at any time. Continued use of the Application constitutes acceptance of any modified terms.
                 </p>
               </section>
 
               <section>
-                <h2 className="mb-3 text-xl font-semibold">9. Contact</h2>
-                <p className="text-sm leading-relaxed">
-                  If you have any questions or encounter issues, please reach out via email at <a href="mailto:me@ondrejkutil.com" className="text-amber-500 hover:underline">me@ondrejkutil.com</a> or open an issue on the <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">GitHub repository</a>.
+                <h2>9. Contact</h2>
+                <p>
+                  If you have any questions or encounter issues, please reach out via email at <a href="mailto:me@ondrejkutil.com">me@ondrejkutil.com</a> or open an issue on the <a href="https://github.com/OndrejKutil/budgeting_dashboard" target="_blank" rel="noreferrer">GitHub repository</a>.
                 </p>
               </section>
-          </div>
-        </motion.div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-background-secondary/50 py-8">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 text-xs text-muted-foreground sm:flex-row sm:text-sm">
-          <span>Built by Ondřej Kutil</span>
-          <div className="flex items-center gap-6">
-            <Link to="/privacy" className="underline-offset-4 hover:text-foreground hover:underline transition-colors">
-              Privacy Policy
-            </Link>
-            <a
-              href="https://github.com/OndrejKutil"
-              target="_blank"
-              rel="noreferrer"
-              className="underline-offset-4 hover:text-foreground hover:underline transition-colors"
-            >
-              GitHub
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

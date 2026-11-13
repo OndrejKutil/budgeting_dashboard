@@ -47,7 +47,7 @@ section 1. Where a mockup and this document disagree, this document wins. See
 | Fund target | Required field, but 0 is allowed and means "no target" |
 | Budget Maker difference | Shown as an amount, without per-row progress bars |
 | Transactions type side line | Kept, alongside red and green amounts |
-| Demo page | Rebuilt last, after the real pages |
+| Demo page | Removed altogether (2026-11-13) |
 
 ---
 

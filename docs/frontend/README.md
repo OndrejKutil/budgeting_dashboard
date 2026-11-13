@@ -228,7 +228,7 @@ Pages driven by a month or year use the shared `components/period/PeriodNavigato
 ## Routing Structure
 
 ### Public Routes
-- `/` - Landing page, `/demo` - interactive demo, `/about`
+- `/` - Landing page, `/about`
 - `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback` (OAuth)
 - `/terms`, `/privacy`, `/faq`, `/how-it-works`
 
