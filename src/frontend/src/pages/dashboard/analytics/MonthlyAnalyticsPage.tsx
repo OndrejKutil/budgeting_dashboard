@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { MonthlyAnalyticsSkeleton } from '@/components/skeletons';
 import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { LineRows, type LineRow } from '@/components/data/LineRows';
 import { DayBars } from '@/components/data/DayBars';
-import { SensitiveValue } from '@/components/privacy/SensitiveValue';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
 import { CategoryBreakdownTable } from '@/components/analytics/CategoryBreakdownTable';
@@ -17,21 +17,16 @@ import { useUrlPeriod } from '@/hooks/use-url-state';
 import { analyticsApi } from '@/lib/api/endpoints';
 import type { CategoryBreakdownData, MonthlyAnalytics } from '@/lib/api/types/base';
 import { formatMoney, formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
-import { cn } from '@/lib/utils';
 
 const MAX_CATEGORY_ROWS = 5;
-/** Differences below this (percent, or percentage points) read as "in line with the average". */
-const NEGLIGIBLE_DIFFERENCE = 0.5;
 
 const SPENDING_TYPES = ['Core', 'Necessary', 'Fun', 'Future'] as const;
 
 /** A value that displays as 0 is 0: no "-0". */
 const whole = (value: number) => (Math.abs(value) < 0.5 ? 0 : value);
 
-type Direction = 'higherIsBetter' | 'lowerIsBetter';
-
 export default function MonthlyAnalyticsPage() {
-  const { formatDate, formatMonth, formatNumber, formatCurrency, locale, t, currency } = useUser();
+  const { formatDate, formatMonth, formatNumber, formatCurrency, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
   const { month, year, setPeriod } = useUrlPeriod();
   const years = useAvailableYears({ include: year });
@@ -56,8 +51,6 @@ export default function MonthlyAnalyticsPage() {
   const money = (value: number) => formatMoneyWhole(value, currency);
   const percent = (ratio: number, digits = 1) =>
     formatNumber(ratio, { style: 'percent', maximumFractionDigits: digits });
-  const signed = (value: number, options?: Intl.NumberFormatOptions) =>
-    formatNumber(value, { signDisplay: 'exceptZero', maximumFractionDigits: 1, ...options });
   const symbol = formatMoneyParts(0, currency, 0).find((part) => part.type === 'currency')?.value ?? currency;
 
   const header = (canExport: boolean) => (
@@ -181,127 +174,62 @@ export default function MonthlyAnalyticsPage() {
     );
   }
 
-  // ---- Comparison with the six-month average -------------------------------------------------
+  // ---- Figures, each compared with its six-month average ----------------------------------------
   const average = data.six_month_average;
-
-  /** Percent difference from the average, relative to its size so a negative average still reads the right way. */
-  const percentDifference = (value: number, averageValue: number | undefined): number | null => {
-    if (averageValue === undefined || Math.abs(averageValue) < 0.005) return null;
-    return ((value - averageValue) / Math.abs(averageValue)) * 100;
-  };
-  const rateDifference = average && average.savings_rate !== null && data.income > 0 ? data.savings_rate - average.savings_rate : null;
-
-  const pointsKey = (count: number) => {
-    const category = new Intl.PluralRules(locale).select(count);
-    if (category === 'one') return 'pages.monthlyAnalytics.vsAveragePointOne' as const;
-    if (category === 'few') return 'pages.monthlyAnalytics.vsAveragePointFew' as const;
-    if (category === 'many') return 'pages.monthlyAnalytics.vsAveragePointMany' as const;
-    return 'pages.monthlyAnalytics.vsAveragePointOther' as const;
-  };
-
-  /**
-   * The small line under a figure. `difference` is a percent of the average (amounts) or percentage
-   * points (savings rate); null means there is no history, and the line is left empty.
-   */
-  const comparison = (difference: number | null, unit: 'percent' | 'points', direction: Direction): ReactNode => {
-    if (difference === null) return <p className="mt-1 min-h-[1.25rem]" aria-hidden="true" />;
-    const negligible = Math.abs(difference) < NEGLIGIBLE_DIFFERENCE;
-    const favourable = direction === 'higherIsBetter' ? difference > 0 : difference < 0;
-    let text: string;
-    if (negligible) {
-      text = t('pages.monthlyAnalytics.inLineWithAverage');
-    } else if (unit === 'percent') {
-      text = t('pages.monthlyAnalytics.vsAverage', {
-        change: signed(difference / 100, { style: 'percent' }),
-      });
-    } else {
-      text = t(pointsKey(Math.round(Math.abs(difference) * 10) / 10), { change: signed(difference) });
-    }
-    return (
-      <p
-        className={cn(
-          'mt-1 text-[0.8125rem]',
-          negligible ? 'text-muted-foreground' : favourable ? 'text-success' : 'text-destructive',
-        )}
-      >
-        <SensitiveValue>{text}</SensitiveValue>
-      </p>
-    );
-  };
-
   const income = whole(data.income);
   const expenses = whole(data.expenses);
-  const left = whole(data.cashflow);
   const saved = whole(data.savings);
   const invested = whole(data.investments);
   const profit = whole(data.profit);
+  const cashflow = whole(data.cashflow);
+  const parts = (value: number) => formatMoneyParts(value, currency, 0);
+  const ofIncome = (rate: number) => (income > 0 ? t('metrics.ofIncome', { rate: percent(rate / 100) }) : undefined);
 
-  const figureClass =
-    'block whitespace-nowrap text-[1.375rem] font-normal leading-[1.2] tracking-[-0.03em] tabular-nums sm:text-[1.75rem] lg:text-[2.125rem]';
-  const cellClass = (index: number) =>
-    cn(
-      'min-w-0 py-1 pr-4 lg:px-7 lg:py-0',
-      index % 2 === 1 && 'border-l border-border pl-4',
-      index >= 2 && 'mt-4 border-t border-border pt-4 lg:mt-0 lg:border-t-0 lg:pt-0',
-      index === 0 ? 'lg:pl-0' : 'lg:border-l lg:border-border',
-      index === 3 && 'lg:pr-0',
-    );
-
-  const figures: { key: string; label: string; value: ReactNode; sub?: ReactNode; comparison: ReactNode }[] = [
+  const metrics: Metric[] = [
     {
       key: 'income',
       label: t('metrics.income'),
-      value: <span className={figureClass}><SensitiveValue>{money(income)}</SensitiveValue></span>,
-      comparison: comparison(percentDifference(data.income, average?.income), 'percent', 'higherIsBetter'),
+      value: income,
+      parts: parts(income),
+      comparison: { average: average?.income, direction: 'higherIsBetter', unit: 'percent' },
     },
     {
       key: 'expenses',
       label: t('metrics.expenses'),
-      value: <span className={figureClass}><SensitiveValue>{money(expenses)}</SensitiveValue></span>,
-      comparison: comparison(percentDifference(data.expenses, average?.expenses), 'percent', 'lowerIsBetter'),
+      value: expenses,
+      parts: parts(expenses),
+      comparison: { average: average?.expenses, direction: 'lowerIsBetter', unit: 'percent' },
     },
-    {
-      key: 'savingsRate',
-      label: t('pages.monthlyAnalytics.savingsRate'),
-      value: <span className={figureClass}><SensitiveValue>{percent(data.savings_rate / 100)}</SensitiveValue></span>,
-      comparison: comparison(rateDifference, 'points', 'higherIsBetter'),
-    },
-    {
-      key: 'left',
-      label: t('pages.monthlyAnalytics.left'),
-      sub: <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.monthlyAnalytics.leftHint')}</p>,
-      value: (
-        <span className={cn(figureClass, left < 0 ? 'text-destructive' : 'text-primary')}>
-          <SensitiveValue>{money(left)}</SensitiveValue>
-        </span>
-      ),
-      comparison: comparison(percentDifference(data.cashflow, average?.cashflow), 'percent', 'higherIsBetter'),
-    },
-  ];
-
-  // Supporting figures: what the four above are made of, and profit, which differs from cash flow.
-  const supporting = [
     {
       key: 'saved',
-      label: t('pages.monthlyAnalytics.saved'),
-      amount: money(saved),
-      sub: t('pages.monthlyAnalytics.savedRate', { rate: percent(data.savings_rate / 100) }),
-      difference: percentDifference(data.savings, average?.savings),
+      label: t('metrics.saved'),
+      value: saved,
+      parts: parts(saved),
+      sub: ofIncome(data.savings_rate),
+      comparison: { average: average?.savings, direction: 'higherIsBetter', unit: 'percent' },
     },
     {
       key: 'invested',
-      label: t('pages.monthlyAnalytics.invested'),
-      amount: money(invested),
-      sub: t('pages.monthlyAnalytics.investedRate', { rate: percent(data.investment_rate / 100) }),
-      difference: percentDifference(data.investments, average?.investments),
+      label: t('metrics.invested'),
+      value: invested,
+      parts: parts(invested),
+      sub: ofIncome(data.investment_rate),
+      comparison: { average: average?.investments, direction: 'higherIsBetter', unit: 'percent' },
     },
     {
       key: 'profit',
-      label: t('pages.monthlyAnalytics.profit'),
-      amount: money(profit),
-      sub: t('pages.monthlyAnalytics.profitHint'),
-      difference: percentDifference(data.profit, average?.profit),
-      negative: profit < 0,
+      label: t('metrics.profit'),
+      value: profit,
+      parts: parts(profit),
+      comparison: { average: average?.profit, direction: 'higherIsBetter', unit: 'amount' },
+    },
+    {
+      key: 'cashflow',
+      label: t('metrics.cashFlow'),
+      value: cashflow,
+      parts: parts(cashflow),
+      accent: true,
+      comparison: { average: average?.cashflow, direction: 'higherIsBetter', unit: 'amount' },
     },
   ];
 
@@ -315,13 +243,7 @@ export default function MonthlyAnalyticsPage() {
   const hasSpending = dailyValues.some((value) => value > 0);
   // The month's own average spending per elapsed day (expenses / days elapsed), from the API.
   const dailyAverage = elapsedDays > 0 ? data.run_rate.average_daily_spend : null;
-  const partialMonth = elapsedDays > 0 && elapsedDays < daysInMonth;
-  const averageLabel =
-    dailyAverage === null
-      ? ''
-      : t(partialMonth ? 'pages.monthlyAnalytics.averageDaySoFar' : 'pages.monthlyAnalytics.averageDay', {
-          amount: money(dailyAverage),
-        });
+  const averageLabel = dailyAverage === null ? '' : t('pages.monthlyAnalytics.averageLine', { amount: money(dailyAverage) });
   const chartAria = [
     t('pages.monthlyAnalytics.chartAria', { month: monthLong }),
     !isPrivacyMode && dailyAverage !== null
@@ -397,35 +319,7 @@ export default function MonthlyAnalyticsPage() {
         {header(true)}
 
         <section aria-label={t('pages.monthlyAnalytics.title')}>
-          <div className="grid grid-cols-2 lg:grid-cols-4">
-            {figures.map((figure, index) => (
-              <div key={figure.key} className={cellClass(index)}>
-                <div className="text-[0.8125rem] text-muted-foreground">{figure.label}</div>
-                {figure.value}
-                {figure.sub}
-                {figure.comparison}
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 grid gap-y-5 border-t border-border pt-5 sm:grid-cols-3">
-            {supporting.map((item, index) => (
-              <div key={item.key} className={cn('min-w-0 sm:px-7', index === 0 && 'sm:pl-0', index > 0 && 'sm:border-l sm:border-border')}>
-                <div className="text-[0.8125rem] text-muted-foreground">{item.label}</div>
-                <span
-                  className={cn(
-                    'block whitespace-nowrap text-[1.25rem] font-normal tabular-nums tracking-[-0.02em]',
-                    'negative' in item && item.negative ? 'text-destructive' : 'text-foreground',
-                  )}
-                >
-                  <SensitiveValue>{item.amount}</SensitiveValue>
-                </span>
-                <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-                  {item.key === 'profit' ? item.sub : <SensitiveValue>{item.sub}</SensitiveValue>}
-                </p>
-                {comparison(item.difference, 'percent', 'higherIsBetter')}
-              </div>
-            ))}
-          </div>
+          <MetricGrid metrics={metrics} className="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" formatAmount={money} />
         </section>
 
         <section className="mt-11">
@@ -439,6 +333,7 @@ export default function MonthlyAnalyticsPage() {
               average={dailyAverage}
               averageLabel={averageLabel}
               formatValue={(value) => formatMoney(value, currency)}
+              formatAxis={(value) => formatNumber(value, { notation: 'compact', maximumFractionDigits: 1 })}
               dayTitle={(index) =>
                 formatDate(new Date(year, month - 1, index + 1), { weekday: 'short', month: 'short', day: 'numeric' })
               }

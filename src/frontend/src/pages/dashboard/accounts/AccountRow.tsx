@@ -50,7 +50,7 @@ export function AccountRow({ account, typeLabel, onEdit, onDelete, onActivate }:
       )}
     >
       <div className="order-1 min-w-0">
-        <div className="truncate text-[0.9375rem]">{account.account_name}</div>
+        <div className="truncate text-base">{account.account_name}</div>
         <div className="truncate text-[0.8125rem] text-muted-foreground">
           {typeLabel}
           {inactive && ` · ${t('states.inactive')}`}
@@ -70,7 +70,7 @@ export function AccountRow({ account, typeLabel, onEdit, onDelete, onActivate }:
       <MoneyFigure
         amount={account.current_balance || 0}
         currency={currency}
-        className="order-2 text-right min-w-0 text-[1.5rem] font-normal tracking-[-0.03em] sm:text-[1.75rem] lg:order-4 lg:leading-none"
+        className="order-2 min-w-0 text-right text-[1.0625rem] font-normal tracking-[-0.01em] lg:order-4"
       />
 
       <DropdownMenu>

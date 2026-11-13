@@ -540,9 +540,16 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
             {t('pages.transactions.title')}
           </h1>
+          {/* Count and total for the current filter. Always shown, so changing a filter
+              updates the numbers in place instead of adding or removing a line. */}
           {summaryData && (
-            <span className="text-sm text-muted-foreground tabular-nums">
+            <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
               {t(transactionCountKey(locale, summaryData.count), { count: formatNumber(summaryData.count) })}
+              <span aria-hidden="true"> · </span>
+              {t('pages.transactions.summaryTotal')}{' '}
+              <span className="text-foreground">
+                <SensitiveValue>{formatCurrency(summaryData.total_amount)}</SensitiveValue>
+              </span>
             </span>
           )}
         </div>
@@ -603,16 +610,6 @@ export default function TransactionsPage() {
         anyFilterActive={anyFilterActive}
         onReset={clearFilters}
       />
-
-      {/* Filtered summary: a quiet line, not a panel. */}
-      {anyFilterActive && summaryData && (
-        <p className="text-[0.8125rem] text-muted-foreground" aria-live="polite">
-          {t('pages.transactions.summaryTotal')}{' '}
-          <span className="tabular-nums text-foreground">
-            <SensitiveValue>{formatCurrency(summaryData.total_amount)}</SensitiveValue>
-          </span>
-        </p>
-      )}
 
       <TransactionList
         transactions={transactions}

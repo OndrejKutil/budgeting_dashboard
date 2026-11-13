@@ -37,8 +37,14 @@ Dark, amber, "quiet glass". In full in `redesign-spec.md` section 2; the short f
 
 - **No cards or boxes around content.** Structure comes from type size, whitespace and
   1px hairlines.
-- **One very large, light figure per page** with one plain sentence under it that says
-  what the number is made of.
+- **Labelled figures, not sentences.** A page opens with a row of labelled figures
+  (`components/data/MetricGrid`): label over a hairline, the amount, one short line under
+  it (difference from the six-month average, or a short note). Use the app's own terms:
+  Income, Expenses, Saved, Invested, Profit, Cash flow, Net worth. No narrative sentences
+  ("you earned … and spent …", "Left this month"). Owner decision, 2026-11-13.
+- **Three levels of size:** summary figures (large) > group/section heading with its
+  total (about 1.125–1.25rem) > rows (body size). A row amount must never be larger than
+  the total of the group it sits in.
 - **Glass only on floating chrome:** top bar, menus, dialogs, sheets, mobile dock.
 - **Amber** marks the primary action and at most one data point per view.
 - **Amounts:** negative red, income / favourable green, neutral muted. Errors are also
@@ -62,9 +68,13 @@ work:
 
 - Dark is the default theme; the user can switch to light. Light has not had a design
   pass.
-- "Left this month" is net cash flow (income − spending − investing − saving). Profit
-  (income − spending − investing, the app's existing definition) must stay visible as
-  its own labelled figure wherever the app distinguishes the two.
+- Net cash flow (income − spending − investing − saving) is labelled **Cash flow**, never
+  "Left". Profit (income − spending − investing) is always shown beside it as its own
+  labelled figure.
+- Charts keep a y-axis; reference lines are labelled at their end ("avg 1 240 Kč"), not
+  in a caption above the chart.
+- Controls that change data (filters, ranges) must not move the layout: fixed widths,
+  reserved slots, controls disabled rather than hidden, previous data kept while loading.
 - The year-over-year comparison was removed from Monthly; it stays on Yearly.
 - A fund target is required but may be 0, which means "no target". Whole numbers only.
 - The Demo page is rebuilt last.
@@ -91,7 +101,7 @@ work:
 - `components/layout/nav-config.ts`, `use-nav.ts`: single source for navigation items.
 - `hooks/use-add-transaction.ts`: `N` shortcut and the dock's Add both navigate to
   Transactions with location state `{ openAdd: true }`.
-- Content column max width `72.5rem`.
+- Content column max width `82rem` (was 72.5rem; widened at the owner's request).
 
 **Shared primitives**
 
@@ -99,7 +109,8 @@ work:
   DropdownMenu / Select content; Input, Textarea, SelectTrigger as label-over-line via
   `components/ui/field-line.ts`; pill buttons; boxless Table; sticky DialogFooter;
   `Field` and `FormAlert` in `components/ui/field.tsx` with `hooks/use-form-errors.ts`.
-- `components/data/*`: `BigFigure`, `LeadSentence` / `LeadFigure`, `SplitBar`,
+- `components/data/*`: `MetricGrid` (labelled figures with a six-month comparison or a
+  note; the standard page summary), `BigFigure` / `FigureParts`, `SplitBar`,
   `LineRows` (rows with a proportional line; optional `detail`, `barClassName`),
   `RowList` / `RowListItem`, `SeriesLineChart` (zero-based cumulative line with a
   dashed comparison), `ChartLegend`, `DayBars` (one bar per day with an average line),
@@ -112,7 +123,7 @@ work:
 
 | Page | Files | Notes |
 |---|---|---|
-| Overview | `pages/dashboard/DashboardOverview.tsx` | Month navigation, Left headline, sentence, split bar, Where it went, spending line vs six-month average, Latest, link to Monthly analytics |
+| Overview | `pages/dashboard/DashboardOverview.tsx` | Month navigation, Cash flow + Profit, then Income / Expenses / Saved / Invested (each vs six-month average), split bar, Where it went, spending line vs six-month average, Latest, link to Monthly analytics |
 | Transactions | `pages/dashboard/TransactionsPage.tsx` + `transactions/*` | Visible filters: date, account, type, tags; rest behind More. Type side line. Dialog with amount as headline |
 | Accounts | `pages/dashboard/AccountsPage.tsx` (CRLF) + `accounts/*` | Groups as headings with totals, balance largest on the row, net worth secondary with a collapsible chart |
 | Funds | `pages/dashboard/FundsPage.tsx` + `funds/*` | Saved amount as the row figure, side line by 30-day activity |
@@ -149,7 +160,7 @@ work:
 
 1. In hide-amounts mode, should direction also be hidden (green/red side lines and
    "more"/"less" wording on Funds, Accounts, Monthly)?
-2. Overview split bar: when money is withdrawn from savings, Spent % + Left % exceed
+2. Overview split bar: when money is withdrawn from savings, Spent % + Cash flow % exceed
    100 %. Show the withdrawal as its own segment?
 3. Budget Maker colours accepted without the owner's confirmation: expense under plan is
    muted (was green); savings/investment shortfall is muted (was red).
@@ -218,8 +229,8 @@ then tools, then Demo.
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
 
-- Headline: the year's net cash flow as the big figure, sentence with income, spending,
-  saved, invested. Profit visible and labelled.
+- Summary: `MetricGrid` with Income, Expenses, Saved, Invested, Profit, Cash flow for the
+  year, as on Monthly.
 - Year-over-year comparison stays here (it was removed from Monthly).
 - Monthly breakdown as a boxless table: one row per month, columns income, expenses,
   saved, invested, left; current month marked; row links to that month's Monthly page.
@@ -237,14 +248,15 @@ then tools, then Demo.
   colours with one amber path for "left", node labels as plain text with tabular
   amounts, privacy-aware. Make it scale with the root font size (it uses d3-sankey with
   measured width).
-- Period navigation as on Overview. Headline: what was left, with the sentence.
+- Period navigation as on Overview. Summary: `MetricGrid` with Income, Expenses, Saved,
+  Invested, Cash flow.
 - On mobile a Sankey is hard to read: offer the same data as a `LineRows` list below
   it, or instead of it under a width threshold.
 
 **5.3 Recurring** — `pages/dashboard/RecurringPage.tsx`.
 
-- Headline: monthly recurring total (the page has monthly, annual, active counts);
-  sentence with annual total and number of templates.
+- Summary: `MetricGrid` with Monthly total, Annual total, Templates (the page already
+  has these three numbers).
 - Two lists as rows with a side line: "Due" (amber or red side line when overdue, with
   a "Post" action that is the amber element on the page) and "Upcoming".
   Row: notes, "category · account · cadence", next date as relative text, amount.
@@ -264,8 +276,8 @@ then tools, then Demo.
 
 **5.5 Emergency Fund** — `analytics/EmergencyFundPage.tsx`.
 
-- Headline: months of runway as the big figure ("4.8 months"), sentence with the fund
-  balance and average monthly core spending.
+- Summary: `MetricGrid` with Runway (months, e.g. "4.8 months"), Fund balance, Average
+  monthly core spending.
 - One progress line toward the target months; scenario rows (3 / 6 / 12 months) as
   `LineRows`.
 - The page only counts funds whose name contains "Emergency Fund". Keep the rule, state
@@ -288,7 +300,7 @@ then tools, then Demo.
 - Trading212 (`Trading212Page.tsx`, behind `t212_integration`): portfolio value as the
   headline, positions as a boxless table, history with `NetWorthChart`.
 - Investing and Dividend calculators: inputs in line style on the left, result as the
-  big figure with a sentence, chart frameless. Dividend yields are per payment
+  labelled figures (`MetricGrid`), chart frameless. Dividend yields are per payment
   (monthly ×12, quarterly ×4): say so in the labels. The Investing chart uses en-US
   compact ticks: use the user's locale.
 

@@ -5,14 +5,12 @@ import { AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverviewSkeleton } from '@/components/skeletons';
 import { PeriodNavigator } from '@/components/period/PeriodNavigator';
-import { BigFigure } from '@/components/data/BigFigure';
-import { LeadFigure, LeadSentence, type LeadSegment } from '@/components/data/LeadSentence';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
 import { SplitBar, type SplitSegment } from '@/components/data/SplitBar';
 import { LineRows, type LineRow } from '@/components/data/LineRows';
 import { RowList, RowListItem } from '@/components/data/RowList';
 import { ChartLegend } from '@/components/data/ChartLegend';
 import { SeriesLineChart } from '@/components/data/SeriesLineChart';
-import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 import { useUser } from '@/contexts/user-context';
 import { accountsApi, analyticsApi, categoriesApi, summaryApi, transactionsApi } from '@/lib/api/endpoints';
@@ -113,63 +111,64 @@ export default function DashboardOverview() {
     const expense = whole(data.total_expense);
     const saving = whole(data.total_saving);
     const investing = whole(data.total_investment);
-    // Reused as the API defines them: profit = income - expenses - investing,
-    // net cash flow ("left") = profit - saving.
+    // As the API defines them: profit = income - expenses - investing,
+    // net cash flow = profit - saving.
     const profit = whole(data.profit);
     const left = whole(data.net_cash_flow);
 
-    const figure = (value: number, tone?: 'negative') => (
-      <LeadFigure tone={tone}>{formatMoneyWhole(value, currency)}</LeadFigure>
-    );
-    const shortfall = left < 0 ? figure(Math.abs(left), 'negative') : null;
+    const average = data.six_month_average;
+    const parts = (value: number) => formatMoneyParts(value, currency, 0);
+    const ofIncome = (value: number) =>
+      income > 0 ? t('metrics.ofIncome', { rate: percentOf(value, income) }) : undefined;
 
-    const segments: LeadSegment[] = [
+    const leadMetrics: Metric[] = [
       {
-        template: t('pages.overview.leadEarnedSpent'),
-        values: { income: figure(income), expense: figure(expense) },
+        key: 'cashFlow',
+        label: t('metrics.cashFlow'),
+        value: left,
+        parts: parts(left),
+        comparison: { average: average?.net_cash_flow, direction: 'higherIsBetter', unit: 'amount' },
+      },
+      {
+        key: 'profit',
+        label: t('metrics.profit'),
+        value: profit,
+        parts: parts(profit),
+        comparison: { average: average?.profit, direction: 'higherIsBetter', unit: 'amount' },
       },
     ];
-
-    if (!isZero(investing)) {
-      segments.push(
-        profit >= 0
-          ? {
-              template: t('pages.overview.leadProfitAfterInvesting'),
-              values: { investing: figure(investing), profit: figure(profit) },
-            }
-          : {
-              template: t('pages.overview.leadLossAfterInvesting'),
-              values: { investing: figure(investing), loss: figure(Math.abs(profit), 'negative') },
-            },
-      );
-    } else {
-      segments.push(
-        profit >= 0
-          ? { template: t('pages.overview.leadProfit'), values: { profit: figure(profit) } }
-          : { template: t('pages.overview.leadLoss'), values: { loss: figure(Math.abs(profit), 'negative') } },
-      );
-    }
-
-    const leftValue = figure(Math.max(left, 0));
-    if (isZero(saving)) {
-      segments.push(
-        left >= 0
-          ? { template: t('pages.overview.leadNothingSavedLeft'), values: { left: leftValue } }
-          : { template: t('pages.overview.leadNothingSavedShort'), values: { shortfall } },
-      );
-    } else if (saving > 0) {
-      segments.push(
-        left >= 0
-          ? { template: t('pages.overview.leadSavedLeft'), values: { saving: figure(saving), left: leftValue } }
-          : { template: t('pages.overview.leadSavedShort'), values: { saving: figure(saving), shortfall } },
-      );
-    } else {
-      segments.push(
-        left >= 0
-          ? { template: t('pages.overview.leadWithdrawnLeft'), values: { saving: figure(Math.abs(saving)), left: leftValue } }
-          : { template: t('pages.overview.leadWithdrawnShort'), values: { saving: figure(Math.abs(saving)), shortfall } },
-      );
-    }
+    const detailMetrics: Metric[] = [
+      {
+        key: 'income',
+        label: t('metrics.income'),
+        value: income,
+        parts: parts(income),
+        comparison: { average: average?.income, direction: 'higherIsBetter', unit: 'percent' },
+      },
+      {
+        key: 'expenses',
+        label: t('metrics.expenses'),
+        value: expense,
+        parts: parts(expense),
+        comparison: { average: average?.expense, direction: 'lowerIsBetter', unit: 'percent' },
+      },
+      {
+        key: 'saved',
+        label: t('metrics.saved'),
+        value: saving,
+        parts: parts(saving),
+        sub: ofIncome(saving),
+        comparison: { average: average?.saving, direction: 'higherIsBetter', unit: 'percent' },
+      },
+      {
+        key: 'invested',
+        label: t('metrics.invested'),
+        value: investing,
+        parts: parts(investing),
+        sub: ofIncome(investing),
+        comparison: { average: average?.investment, direction: 'higherIsBetter', unit: 'percent' },
+      },
+    ];
 
     const splitSegments: SplitSegment[] =
       income > 0
@@ -196,13 +195,10 @@ export default function DashboardOverview() {
       ratio: largest > 0 ? row.value / largest : 0,
     }));
 
-    const average = data.six_month_average;
-    const leftVsAverage = average ? whole(left - average.net_cash_flow) : 0;
-
     const isEmpty =
       isZero(income) && isZero(expense) && isZero(saving) && isZero(investing) && sorted.length === 0;
 
-    return { left, segments, splitSegments, categoryRows, leftVsAverage, hasAverage: average !== null, isEmpty };
+    return { leadMetrics, detailMetrics, splitSegments, categoryRows, isEmpty };
     // percentOf only depends on formatNumber.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currency, data, formatNumber, t]);
@@ -311,30 +307,19 @@ export default function DashboardOverview() {
   const categoryName = (categoryId: number) =>
     categories.find((category) => category.categories_id_pk === categoryId)?.category_name ?? '';
 
-  const averageDiff = view.hasAverage && !isZero(view.leftVsAverage) ? view.leftVsAverage : null;
-
   return (
     <div>
       {header}
 
-      <section className="items-end gap-x-[4.5rem] lg:grid lg:grid-cols-[1.25fr_1fr]">
+      <section className="items-start gap-x-[4.5rem] lg:grid lg:grid-cols-[1.25fr_1fr]">
         <div className="min-w-0">
-          <BigFigure
-            label={isCurrentMonth ? t('pages.overview.leftThisMonth') : t('pages.overview.leftIn', { month: monthYear })}
-            parts={formatMoneyParts(view.left, currency, 0)}
-            negative={view.left < 0}
+          <MetricGrid metrics={view.leadMetrics} size="lg" className="grid-cols-2" formatAmount={money} />
+          <MetricGrid
+            metrics={view.detailMetrics}
+            className="mt-6 grid-cols-2 sm:grid-cols-4 lg:grid-cols-2"
+            formatAmount={money}
           />
-          <LeadSentence segments={view.segments} />
-          {averageDiff !== null && (
-            <p className={`mt-2 text-[0.8125rem] ${averageDiff > 0 ? 'text-success' : 'text-destructive'}`}>
-              <SensitiveValue>
-                {t(averageDiff > 0 ? 'pages.overview.aboveAverage' : 'pages.overview.belowAverage', {
-                  amount: money(Math.abs(averageDiff)),
-                })}
-              </SensitiveValue>
-            </p>
-          )}
-          <div className="mt-7">
+          <div className="mt-8">
             {view.splitSegments.length > 0 ? (
               <SplitBar segments={view.splitSegments} />
             ) : (

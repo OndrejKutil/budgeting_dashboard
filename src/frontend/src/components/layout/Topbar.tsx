@@ -90,7 +90,9 @@ export function Topbar() {
 
   return (
     <header className="safe-top sticky top-0 z-40 bg-gradient-to-b from-background from-60% to-transparent pb-3">
-      <div className="mx-auto grid w-full max-w-[72.5rem] grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 lg:grid-cols-[1fr_auto_1fr] lg:px-14 lg:pt-5">
+      {/* Full window width: brand at the left edge, actions at the right edge. The equal 1fr
+          side columns keep the nav pill centred, in line with the centred content column. */}
+      <div className="grid w-full grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 lg:grid-cols-[1fr_auto_1fr] lg:px-8 lg:pt-5">
         <Link
           to="/dashboard"
           className="justify-self-start whitespace-nowrap rounded-md text-base font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

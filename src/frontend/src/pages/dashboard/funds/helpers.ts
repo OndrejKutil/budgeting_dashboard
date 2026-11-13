@@ -51,10 +51,11 @@ export function sortFunds(funds: SavingsFund[], sort: FundSortKey): SavingsFund[
   });
 }
 
-/** Which "the N targets add up to" string fits this count in this locale (Czech has three forms). */
-export function targetsKey(locale: string, count: number): DashboardTranslationKey {
+type CountPrefix = 'pages.funds.inFunds' | 'pages.funds.goalsReached';
+
+/** Which "...One / ...Few / ...Many" string fits this count in this locale (Czech has three forms). */
+export function countKey(locale: string, count: number, prefix: CountPrefix): DashboardTranslationKey {
   const category = new Intl.PluralRules(locale).select(count);
-  if (category === 'one') return 'pages.funds.leadTargetsOne';
-  if (category === 'few') return 'pages.funds.leadTargetsFew';
-  return 'pages.funds.leadTargetsMany';
+  const suffix = category === 'one' ? 'One' : category === 'few' ? 'Few' : 'Many';
+  return `${prefix}${suffix}` as DashboardTranslationKey;
 }

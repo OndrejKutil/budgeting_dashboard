@@ -243,21 +243,28 @@ export function TransactionFilters(props: TransactionFiltersProps) {
       <span className={cn('border-b-2 pb-[0.1875rem]', hiddenActiveCount > 0 ? 'border-primary' : 'border-transparent')}>
         {t('pages.transactions.more')}
       </span>
-      {hiddenActiveCount > 0 && (
-        <span
-          aria-label={t('pages.transactions.moreActiveCount', { count: hiddenActiveCount })}
-          className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold leading-none text-primary-foreground tabular-nums"
-        >
-          {hiddenActiveCount}
-        </span>
-      )}
+      {/* The badge's slot is always there, so the bar does not shift when it appears. */}
+      <span
+        aria-label={hiddenActiveCount > 0 ? t('pages.transactions.moreActiveCount', { count: hiddenActiveCount }) : undefined}
+        aria-hidden={hiddenActiveCount > 0 ? undefined : true}
+        className={cn(
+          'inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold leading-none text-primary-foreground tabular-nums',
+          hiddenActiveCount === 0 && 'invisible',
+        )}
+      >
+        {hiddenActiveCount || 0}
+      </span>
     </>
   );
 
+  // Every control has a fixed width (its label truncates), and nothing appears or disappears
+  // when a filter changes: the bar keeps its shape whatever is picked.
+  const filterTrigger = 'w-full justify-between lg:w-[9.5rem]';
+
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-        <div className="relative min-w-[12.5rem] flex-1 basis-full md:basis-0">
+      <div className="flex flex-col gap-y-1 xl:flex-row xl:items-center xl:gap-x-6">
+        <div className="relative min-w-0 xl:flex-1">
           <Search
             className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
@@ -272,9 +279,10 @@ export function TransactionFilters(props: TransactionFiltersProps) {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-0">
+        <div className="grid shrink-0 grid-cols-2 items-center gap-x-5 lg:flex">
           <MultiSelect
             variant="quiet"
+            className={filterTrigger}
             ariaLabel={t('pages.transactions.dateFilter')}
             groups={monthOptionGroups}
             selected={selectedMonths}
@@ -285,6 +293,7 @@ export function TransactionFilters(props: TransactionFiltersProps) {
           />
           <MultiSelect
             variant="quiet"
+            className={filterTrigger}
             ariaLabel={t('common.account')}
             groups={accountOptionGroups}
             selected={parseFilter(accountFilter)}
@@ -293,6 +302,7 @@ export function TransactionFilters(props: TransactionFiltersProps) {
           />
           <MultiSelect
             variant="quiet"
+            className={filterTrigger}
             ariaLabel={t('common.type')}
             groups={typeOptionGroups}
             selected={parseFilter(typeFilter)}
@@ -301,6 +311,7 @@ export function TransactionFilters(props: TransactionFiltersProps) {
           />
           <MultiSelect
             variant="quiet"
+            className={filterTrigger}
             ariaLabel={t('pages.transactions.tags')}
             groups={tagOptionGroups}
             selected={parseFilter(tagFilter)}
@@ -331,15 +342,15 @@ export function TransactionFilters(props: TransactionFiltersProps) {
             </Popover>
           )}
 
-          {anyFilterActive && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="rounded-sm py-2 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {t('pages.transactions.resetFilters')}
-            </button>
-          )}
+          {/* Always present; disabled while there is nothing to reset. */}
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={!anyFilterActive}
+            className="justify-self-end whitespace-nowrap rounded-sm py-2 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+          >
+            {t('pages.transactions.resetFilters')}
+          </button>
         </div>
       </div>
 

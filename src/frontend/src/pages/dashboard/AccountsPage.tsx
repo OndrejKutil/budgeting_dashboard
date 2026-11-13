@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ChevronDown, Info, Plus, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,30 +28,40 @@ import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useUser } from '@/contexts/user-context';
 import { usePrivacyMode } from '@/contexts/privacy-context';
-import { formatMoneyCompact } from '@/lib/currency';
+import { formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
 import { cn } from '@/lib/utils';
 import { AccountGroupSection } from './accounts/AccountGroupSection';
 import { AccountRow } from './accounts/AccountRow';
 import { AccountsSkeleton } from './accounts/AccountsSkeleton';
 import { NetWorthChart } from './accounts/NetWorthChart';
-import { NetWorthSummary } from './accounts/NetWorthSummary';
-import { getDateRange, pluralKey, sortAccounts, sumBase, type NetWorthRange } from './accounts/helpers';
+import {
+  getDateRange,
+  NET_WORTH_RANGES,
+  pluralKey,
+  sortAccounts,
+  sumBase,
+  type NetWorthRange,
+} from './accounts/helpers';
 
 const ACCOUNT_TYPES = ['cash', 'checking', 'credit', 'investment', 'savings'];
 const CURRENCIES = ['AUD', 'CAD', 'CZK', 'EUR', 'GBP', 'PLN', 'USD'];
 
 export default function AccountsPage() {
   const queryClient = useQueryClient();
-  const { locale, t, currency: userCurrency, formatCurrency, formatNumber } = useUser();
+  const { locale, t, currency: userCurrency, formatCurrency, formatCurrencyCompact, formatNumber } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
-  const [netWorthRange, setNetWorthRange] = useState<NetWorthRange>('1y');
-  const [chartOpen, setChartOpen] = useState(false);
+  const [netWorthRange, setNetWorthRange] = useState<NetWorthRange>('90d');
   const [inactiveOpen, setInactiveOpen] = useState(false);
-  const chartId = useId();
   const inactiveId = useId();
 
   const { start: nwStart, end: nwEnd } = getDateRange(netWorthRange);
-  const { data: netWorthData, isLoading: netWorthLoading } = useQuery({
+  const {
+    data: netWorthData,
+    isLoading: netWorthLoading,
+    isPlaceholderData: netWorthSwitching,
+  } = useQuery({
     queryKey: ['net-worth', netWorthRange, userCurrency],
     queryFn: async () => {
       const res = await netWorthApi.getTimeline({
@@ -61,6 +71,9 @@ export default function AccountsPage() {
       });
       return res.data;
     },
+    // Switching the range keeps the current line (dimmed) until the new one arrives, so the
+    // figure and chart never collapse into a loading state and back.
+    placeholderData: keepPreviousData,
   });
 
   const netWorthDates = netWorthData?.dates ?? [];
@@ -396,7 +409,7 @@ export default function AccountsPage() {
   const activeCount = activeAccounts.length;
 
   const header = (
-    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-5">
+    <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
         <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
           {t('pages.accounts.title')}
@@ -407,43 +420,111 @@ export default function AccountsPage() {
           </span>
         )}
       </div>
-      <div className="flex items-end gap-6 max-lg:contents">
-        <NetWorthSummary
-          range={netWorthRange}
-          onRangeChange={setNetWorthRange}
-          loading={netWorthLoading}
-          values={netWorthValues}
-          investments={netWorthData?.investments}
-          expanded={chartOpen}
-          onToggle={() => setChartOpen((open) => !open)}
-          chartId={chartOpen && netWorthValues.length > 0 ? chartId : undefined}
-          className="max-lg:order-3 max-lg:w-full lg:max-w-[28rem]"
-        />
-        <Button
-          variant="outline"
-          onClick={() => setIsModalOpen(true)}
-          className="h-11 px-4 max-lg:order-2"
-        >
-          <Plus aria-hidden="true" />
-          {t('pages.accounts.add')}
-        </Button>
-      </div>
+      <Button variant="outline" onClick={() => setIsModalOpen(true)} className="h-11 px-4">
+        <Plus aria-hidden="true" />
+        {t('pages.accounts.add')}
+      </Button>
     </header>
   );
 
-  const chartPanel = chartOpen && netWorthValues.length > 0 && (
-    <div id={chartId} className="mt-6 animate-in fade-in">
-      <NetWorthChart
-        dates={netWorthDates}
-        values={netWorthValues}
-        locale={locale}
-        formatAxis={(value) => formatMoneyCompact(value, userCurrency)}
-        formatValue={formatCurrency}
-        name={t('pages.netWorth.title')}
-        ariaLabel={netWorthAria}
+  // ---- Summary: net worth first, then this month's flow and (if synced) investments --------------
+  const money = (value: number) => formatMoneyWhole(value, userCurrency);
+  const parts = (value: number) => formatMoneyParts(value, userCurrency, 0);
+  // The timeline's last point is today's net worth; until it loads the account balances stand in.
+  const netWorthNow =
+    netWorthValues.length > 0 ? netWorthEnd : (sumBase(activeAccounts, a => a.current_balance_base).total ?? 0);
+  const rawChange = netWorthValues.length > 1 ? netWorthEnd - netWorthValues[0] : 0;
+  // Whole amounts are shown, so anything under half a unit is no change (no "+0", no green zero).
+  const netWorthChange = Math.abs(rawChange) < 0.5 ? 0 : rawChange;
+  const investments = netWorthData?.investments;
+
+  const summaryMetrics: Metric[] = [
+    {
+      key: 'netWorth',
+      label: t('pages.netWorth.title'),
+      value: netWorthNow,
+      parts: parts(netWorthNow),
+      loading: netWorthLoading,
+      note: t(pluralKey(locale, activeCount, 'pages.accounts.across'), { count: formatNumber(activeCount) }),
+    },
+    {
+      // Follows the range picked above the chart.
+      key: 'change',
+      label: t('pages.netWorth.change'),
+      value: netWorthChange,
+      parts: parts(netWorthChange),
+      signed: true,
+      loading: netWorthLoading,
+      note: netWorthPeriod,
+    },
+    ...(investments
+      ? [
+          {
+            key: 'invested',
+            label: t('pages.accounts.invested'),
+            value: investments.total_value,
+            parts: parts(investments.total_value),
+            note: investments.is_stale ? t('pages.netWorth.investedStale') : t('pages.accounts.investedHint'),
+          },
+        ]
+      : []),
+  ];
+
+  const summary = (
+    <section aria-label={t('pages.netWorth.title')} className="mt-8 lg:mt-10">
+      <MetricGrid
+        metrics={summaryMetrics}
+        size="lg"
+        className={investments ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2'}
+        formatAmount={money}
       />
-    </div>
+
+      <div className="mt-8 flex items-baseline justify-between gap-4">
+        <h2 className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.netWorth.overTime')}</h2>
+        <div role="group" aria-label={t('pages.netWorth.rangeLabel')} className="flex gap-4 text-[0.8125rem]">
+          {NET_WORTH_RANGES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              aria-pressed={netWorthRange === r}
+              onClick={() => setNetWorthRange(r)}
+              className={cn(
+                'border-b-2 pb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                netWorthRange === r
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t(`pages.netWorth.range${r.charAt(0).toUpperCase() + r.slice(1)}` as 'pages.netWorth.range30d')}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Fixed height in every state, so switching range or loading never moves the page. */}
+      <div className="mt-2 h-[13.125rem]">
+        {netWorthValues.length > 0 ? (
+          <div className={cn('transition-opacity', netWorthSwitching && 'opacity-50')} aria-busy={netWorthSwitching}>
+            <NetWorthChart
+              dates={netWorthDates}
+              values={netWorthValues}
+              locale={locale}
+              formatAxis={formatCurrencyCompact}
+              formatValue={formatCurrency}
+              name={t('pages.netWorth.title')}
+              ariaLabel={netWorthAria}
+            />
+          </div>
+        ) : netWorthLoading ? (
+          <Skeleton className="h-full w-full" />
+        ) : (
+          <p className="flex h-full items-center justify-center text-[0.8125rem] text-muted-foreground">
+            {t('pages.netWorth.noData')}
+          </p>
+        )}
+      </div>
+    </section>
   );
+  const showSummary = !isLoading && !groupsLoading && accounts.length > 0;
 
   let body;
   if (isLoading || groupsLoading) {
@@ -542,8 +623,8 @@ export default function AccountsPage() {
   return (
     <div>
       {header}
-      {chartPanel}
-      <div className="mt-10 lg:mt-12">{body}</div>
+      {showSummary && summary}
+      <div className="mt-12 lg:mt-14">{body}</div>
 
       {/* Create/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>

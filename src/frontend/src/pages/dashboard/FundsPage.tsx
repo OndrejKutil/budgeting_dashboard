@@ -34,8 +34,7 @@ import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-import { BigFigure } from '@/components/data/BigFigure';
-import { LeadFigure, LeadSentence, type LeadSegment } from '@/components/data/LeadSentence';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
 import { RowList } from '@/components/data/RowList';
 import { FundRow } from './funds/FundRow';
 import { FundsSkeleton } from './funds/FundsSkeleton';
@@ -43,12 +42,13 @@ import {
   FUND_SORT_KEYS,
   FUND_SORT_LABELS,
   FUND_SORT_STORAGE_KEY,
+  countKey,
   hasTarget,
   isZero,
+  progressOf,
   readStoredSort,
   savedOf,
   sortFunds,
-  targetsKey,
   type FundSortKey,
 } from './funds/helpers';
 
@@ -295,25 +295,50 @@ export default function FundsPage() {
     </RowList>
   );
 
+  // ---- Summary: what is saved, how it moved in 30 days, and the goals ---------------------------
   const money = (value: number) => formatMoneyWhole(value, currency);
+  const parts = (value: number) => formatMoneyParts(value, currency, 0);
   const change = isZero(totalFlow) ? 0 : totalFlow;
-  const figure = (value: number) => <LeadFigure>{money(value)}</LeadFigure>;
-  const segments: LeadSegment[] = [
-    change === 0
-      ? { template: t('pages.funds.leadSame'), values: {} }
-      : {
-          template: t(change > 0 ? 'pages.funds.leadMore' : 'pages.funds.leadLess'),
-          values: { change: figure(Math.abs(change)) },
-        },
-  ];
-  if (targetedFunds.length > 0) {
-    segments.push({
-      template: t(targetsKey(locale, targetedFunds.length), { count: formatNumber(targetedFunds.length) }),
-      values: { target: figure(totalTarget) },
-    });
-  }
   const targetPercent =
     totalTarget > 0 ? formatNumber(totalCurrentTargeted / totalTarget, { style: 'percent', maximumFractionDigits: 0 }) : null;
+
+  const summaryMetrics: Metric[] = [
+    {
+      key: 'saved',
+      label: t('pages.funds.savedAcross'),
+      value: totalCurrent,
+      parts: parts(totalCurrent),
+      note: t(countKey(locale, activeFunds.length, 'pages.funds.inFunds'), { count: formatNumber(activeFunds.length) }),
+    },
+    {
+      key: 'flow',
+      label: t('pages.funds.last30Days'),
+      value: change,
+      parts: parts(change),
+      note: t('pages.funds.last30DaysHint'),
+    },
+    ...(targetedFunds.length > 0
+      ? [
+          {
+            key: 'goals',
+            label: t('pages.funds.goals'),
+            value: totalTarget,
+            parts: parts(totalTarget),
+            note: t(countKey(locale, targetedFunds.length, 'pages.funds.goalsReached'), {
+              percent: targetPercent ?? '',
+              count: formatNumber(targetedFunds.length),
+            }),
+          },
+        ]
+      : []),
+  ];
+
+  // Funds grouped by where they stand, so the list has landmarks. The sort applies inside each group.
+  const fundGroups = [
+    { key: 'progress', title: t('pages.funds.groupInProgress'), funds: activeFunds.filter(f => hasTarget(f) && progressOf(f) < 100) },
+    { key: 'reached', title: t('pages.funds.goalReached'), funds: activeFunds.filter(f => hasTarget(f) && progressOf(f) >= 100) },
+    { key: 'none', title: t('pages.funds.noTarget'), funds: activeFunds.filter(f => !hasTarget(f)) },
+  ].filter(group => group.funds.length > 0);
 
   return (
     <div>
@@ -335,27 +360,20 @@ export default function FundsPage() {
             />
           ) : (
             <>
-              <section>
-                <BigFigure
-                  label={t('pages.funds.savedAcross')}
-                  parts={formatMoneyParts(totalCurrent, currency, 0)}
-                  negative={totalCurrent < 0}
+              <section aria-label={t('pages.funds.savedAcross')} className="mt-8 lg:mt-10">
+                <MetricGrid
+                  metrics={summaryMetrics}
+                  size="lg"
+                  className={targetedFunds.length > 0 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2'}
+                  formatAmount={money}
                 />
-                <LeadSentence segments={segments} />
-                {targetPercent && (
-                  <p className="mt-2 text-[0.8125rem] text-muted-foreground">
-                    <SensitiveValue>
-                      {t('pages.funds.leadProgress', { percent: targetPercent })}
-                    </SensitiveValue>
-                  </p>
-                )}
               </section>
 
-              <section className="mt-10 lg:mt-12">
+              <section className="mt-12 lg:mt-14">
                 <div
                   role="group"
                   aria-label={t('pages.funds.sortBy')}
-                  className="mb-1 flex flex-wrap items-baseline gap-x-5 gap-y-1"
+                  className="mb-6 flex flex-wrap items-baseline gap-x-5 gap-y-1"
                 >
                   <span className="text-[0.8125rem] text-muted-foreground/80">{t('pages.funds.sortBy')}</span>
                   {FUND_SORT_KEYS.map(key => (
@@ -375,7 +393,25 @@ export default function FundsPage() {
                     </button>
                   ))}
                 </div>
-                {renderRows(activeFunds)}
+                {fundGroups.map(group => (
+                  <section key={group.key} aria-labelledby={`fund-group-${group.key}`} className="mt-10 first-of-type:mt-0">
+                    <div className="flex items-baseline justify-between gap-4 border-b border-foreground/30 pb-3">
+                      <h2 id={`fund-group-${group.key}`} className="text-[1.125rem] font-medium tracking-[-0.01em]">
+                        {group.title}
+                        <span className="ml-2.5 text-[0.8125rem] font-normal text-muted-foreground tabular-nums">
+                          {formatNumber(group.funds.length)}
+                        </span>
+                      </h2>
+                      <span className="whitespace-nowrap text-[1.25rem] tabular-nums tracking-[-0.02em]">
+                        <span className="sr-only">{t('statement.total')}: </span>
+                        <SensitiveValue>
+                          {money(group.funds.reduce((sum, f) => sum + savedOf(f), 0))}
+                        </SensitiveValue>
+                      </span>
+                    </div>
+                    {renderRows(group.funds)}
+                  </section>
+                ))}
               </section>
             </>
           )}

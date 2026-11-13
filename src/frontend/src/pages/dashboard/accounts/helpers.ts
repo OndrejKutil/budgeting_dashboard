@@ -56,7 +56,11 @@ export function sortAccounts(accounts: Account[], baseCurrency: string): Account
     );
 }
 
-type PluralPrefix = 'pages.accounts.active' | 'pages.accounts.groupCaption' | 'pages.accounts.excluded';
+type PluralPrefix =
+  | 'pages.accounts.active'
+  | 'pages.accounts.across'
+  | 'pages.accounts.groupCaption'
+  | 'pages.accounts.excluded';
 
 /** Which "...One / ...Few / ...Many" string fits this count in this locale. */
 export function pluralKey(locale: string, count: number, prefix: PluralPrefix): DashboardTranslationKey {

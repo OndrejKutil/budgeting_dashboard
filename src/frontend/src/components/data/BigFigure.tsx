@@ -32,27 +32,37 @@ export function BigFigure({ label, parts, negative = false, className }: BigFigu
         )}
       >
         <SensitiveValue>
-          {parts.map((part, index) => {
-            if (part.type === 'currency') {
-              return (
-                <span
-                  key={index}
-                  className={cn(
-                    'text-[0.38em] tracking-[-0.02em] text-muted-foreground',
-                    index === 0 ? 'mr-[0.25em]' : 'ml-[0.25em]',
-                  )}
-                >
-                  {part.value}
-                </span>
-              );
-            }
-            // The space between number and currency symbol is replaced by the margin above.
-            const neighbourIsCurrency = parts[index - 1]?.type === 'currency' || parts[index + 1]?.type === 'currency';
-            if (part.type === 'literal' && neighbourIsCurrency) return null;
-            return <span key={index}>{part.value}</span>;
-          })}
+          <FigureParts parts={parts} />
         </SensitiveValue>
       </div>
     </div>
+  );
+}
+
+/**
+ * An amount from Intl parts with the currency symbol set smaller and muted beside the number.
+ * `currencyScale` is the symbol's size relative to the number.
+ */
+export function FigureParts({ parts, currencyScale = '0.38em' }: { parts: Intl.NumberFormatPart[]; currencyScale?: string }) {
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === 'currency') {
+          return (
+            <span
+              key={index}
+              className={cn('tracking-[-0.02em] text-muted-foreground', index === 0 ? 'mr-[0.25em]' : 'ml-[0.25em]')}
+              style={{ fontSize: currencyScale }}
+            >
+              {part.value}
+            </span>
+          );
+        }
+        // The space between number and currency symbol is replaced by the margin above.
+        const neighbourIsCurrency = parts[index - 1]?.type === 'currency' || parts[index + 1]?.type === 'currency';
+        if (part.type === 'literal' && neighbourIsCurrency) return null;
+        return <span key={index}>{part.value}</span>;
+      })}
+    </>
   );
 }
