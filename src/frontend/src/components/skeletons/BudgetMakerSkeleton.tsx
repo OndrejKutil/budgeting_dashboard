@@ -14,6 +14,7 @@ export function BudgetMakerSkeleton() {
           <Skeleton className="ml-auto h-3.5 w-24" />
         </div>
 
+        <div>
         {SECTION_ROWS.map((count, section) => (
           <div key={section} className="mt-9 first:mt-4">
             <div className="flex items-center justify-between gap-3 border-b border-foreground/20 pb-2">
@@ -32,6 +33,7 @@ export function BudgetMakerSkeleton() {
             <Skeleton className="mt-3 h-3.5 w-20" />
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

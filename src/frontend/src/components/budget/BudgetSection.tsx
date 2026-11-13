@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
     DndContext,
     KeyboardSensor,
@@ -45,6 +45,15 @@ interface SectionProps {
 // Desktop column template, shared by the column header, section rows and item rows so they line up.
 // handle | item | linked to | plan | actual | difference | total toggle | remove
 const GRID = 'lg:grid lg:grid-cols-[1.25rem_minmax(0,1.2fr)_minmax(0,1.4fr)_8.25rem_6.5rem_7.75rem_2.75rem_2rem] lg:items-center lg:gap-x-3';
+
+/** True from the `lg` breakpoint up. Only one row layout is rendered, so the drag activator exists once. */
+const DESKTOP_QUERY = '(min-width: 1024px)';
+const subscribeDesktop = (cb: () => void) => {
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    mq.addEventListener('change', cb);
+    return () => mq.removeEventListener('change', cb);
+};
+const useIsDesktop = () => useSyncExternalStore(subscribeDesktop, () => window.matchMedia(DESKTOP_QUERY).matches, () => true);
 
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
@@ -131,7 +140,7 @@ export function BudgetSection(props: SectionProps) {
                             <span>{title}</span>
                             {group !== 'income' && totalIncome > 0 && (
                                 <span className="text-[0.8125rem] font-normal tabular-nums text-muted-foreground">
-                                    <SensitiveValue>{formatNumber(pctOfIncome, { style: 'percent', maximumFractionDigits: 0 })}</SensitiveValue>
+                                    <SensitiveValue>{formatNumber(pctOfIncome, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })}</SensitiveValue>
                                 </span>
                             )}
                         </button>
@@ -187,6 +196,7 @@ interface RowProps extends SectionProps {
 
 function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFocus }: RowProps) {
     const { t } = useUser();
+    const isDesktop = useIsDesktop();
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
     // The name input renders twice (desktop + mobile layouts); focus whichever is visible.
     const nameRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -206,7 +216,7 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             {...attributes}
             {...listeners}
             aria-label={t('pages.budgetMaker.dragToReorder')}
-            className="flex h-8 w-5 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            className="flex h-8 w-5 cursor-grab max-lg:h-10 max-lg:w-6 touch-none items-center justify-center rounded text-muted-foreground/40 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
             <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -256,7 +266,7 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
             variant="ghost"
             size="icon"
             aria-label={t('pages.budgetMaker.removeRow')}
-            className="h-8 w-8 text-muted-foreground/50 hover:text-destructive lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover/row:opacity-100"
+            className="h-8 w-8 max-lg:h-10 max-lg:w-10 text-muted-foreground/50 hover:text-destructive lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover/row:opacity-100"
             onClick={() => onRemove(row.id)}
         >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -272,8 +282,8 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
                 isDragging && 'z-10 border-transparent bg-background shadow-lg ring-1 ring-border',
             )}
         >
-            {/* Desktop */}
-            <div className={cn('hidden py-1.5', GRID)}>
+            {isDesktop ? (
+            <div className={cn('py-1.5', GRID)}>
                 {handle}
                 {renderName(0)}
                 <div className="min-w-0 overflow-hidden">{filters}</div>
@@ -283,16 +293,16 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
                 <div className="flex justify-center">{include}</div>
                 {remove}
             </div>
-
-            {/* Mobile: stacked rows separated by hairlines */}
-            <div className="space-y-1.5 py-3 lg:hidden">
+            ) : (
+            /* Mobile: stacked rows separated by hairlines */
+            <div className="space-y-1.5 py-3">
                 <div className="flex items-center gap-1">
                     {handle}
                     <div className="min-w-0 flex-1">{renderName(1)}</div>
                     {remove}
                 </div>
-                <div className="pl-6">{filters}</div>
-                <div className="flex flex-wrap items-end gap-x-5 gap-y-2 pl-6">
+                <div className="pl-7">{filters}</div>
+                <div className="flex flex-wrap items-end gap-x-5 gap-y-2 pl-7">
                     <div className="w-[8.5rem] space-y-0.5">
                         <span className="block text-[0.75rem] text-muted-foreground">{t('metrics.planned')}</span>
                         {amount}
@@ -306,11 +316,12 @@ function SortableRow({ row, group, categories, tags, onUpdate, onRemove, autoFoc
                         <DiffCell row={row} group={group} />
                     </div>
                 </div>
-                <label className="flex items-center gap-2 pl-6 pt-1 text-[0.8125rem] text-muted-foreground">
+                <label className="flex items-center gap-2 pl-7 pt-1 text-[0.8125rem] text-muted-foreground">
                     {include}
                     {t('metrics.includeInTotal')}
                 </label>
             </div>
+            )}
         </div>
     );
 }
@@ -400,11 +411,13 @@ function DiffCell({ row, group }: { row: LocalBudgetRow; group: BudgetGroup }) {
     const amount = zero ? zeroText : `${delta > 0 ? '+' : '−'}${absText}`;
     const over = !zero && group === 'expense' && delta > 0;
     const favourable = !zero && group !== 'expense' && delta > 0;
+    // Earning less than planned is bad news; savings and investing shortfalls stay quiet.
+    const incomeShort = !zero && group === 'income' && delta < 0;
 
     return (
         <SensitiveValue className={cn(
             'block whitespace-nowrap text-right text-[0.90625rem]',
-            over ? 'text-destructive' : favourable ? 'text-success' : 'text-muted-foreground',
+            over || incomeShort ? 'text-destructive' : favourable ? 'text-success' : 'text-muted-foreground',
         )}>
             {over ? t('pages.budgetMaker.overAmount', { amount }) : amount}
         </SensitiveValue>

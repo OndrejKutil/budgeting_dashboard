@@ -47,7 +47,7 @@ export function BudgetRowFilters({ group, categoryIds, tagIds, categories, tags,
             <button
                 type="button"
                 aria-label={`${t('common.delete')} ${label}`}
-                className="rounded-sm text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100"
+                className="relative rounded-sm text-muted-foreground/70 max-lg:before:absolute max-lg:before:-inset-3.5 max-lg:before:content-[''] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100"
                 onClick={(e) => { e.stopPropagation(); onRemove(); }}
                 onPointerDown={(e) => e.stopPropagation()}
             >
@@ -68,7 +68,7 @@ export function BudgetRowFilters({ group, categoryIds, tagIds, categories, tags,
                         type="button"
                         aria-label={t('pages.budgetMaker.addFilter')}
                         className={cn(
-                            'inline-flex shrink-0 items-center gap-1 rounded text-[0.84375rem] text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                            'relative inline-flex shrink-0 items-center gap-1 rounded max-lg:before:absolute max-lg:before:-inset-3.5 max-lg:before:content-[""] text-[0.84375rem] text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
                             // Keep the empty state discoverable; once there are names, only show on row hover.
                             hasAny && 'lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100',
                             open && 'opacity-100',

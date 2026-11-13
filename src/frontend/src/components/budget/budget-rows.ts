@@ -172,6 +172,8 @@ export const budgetMoney = (value: number, currency: string) =>
 /** Actual minus plan for a row (display only; the server's percentage is untouched). Null without an actual. */
 export const rowDelta = (r: LocalBudgetRow): number | null => {
     if (r.actual == null) return null;
+    // An empty or invalid plan has no difference to show.
     const planned = parseAmount(r.amount);
-    return r.actual - (Number.isFinite(planned) ? planned : 0);
+    if (r.amount.trim() === '' || !Number.isFinite(planned)) return null;
+    return r.actual - planned;
 };

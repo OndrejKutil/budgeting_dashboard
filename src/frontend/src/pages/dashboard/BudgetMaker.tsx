@@ -483,6 +483,7 @@ export default function BudgetMaker() {
 
                     <div data-budget-table="" className="mt-6">
                         <BudgetColumnHeader />
+                        <div>
                         {BUDGET_GROUPS.map(group => (
                             <BudgetSection
                                 key={group}
@@ -500,6 +501,7 @@ export default function BudgetMaker() {
                                 onReorder={(next) => setGroup(group, () => next)}
                             />
                         ))}
+                        </div>
                     </div>
                 </motion.div>
             )}
