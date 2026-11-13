@@ -256,8 +256,9 @@ Done: Yearly, Recurring, Categories, Emergency Fund, Profile (see the table in 2
 notes below are kept for reference), plus Trading212, Screenshot Import and Cash Flow
 (six figures like Monthly, frameless neutral Sankey with only the cash-flow path amber,
 rem-scaled, keyboard-focusable nodes, amounts hidden in hide-amounts mode; ranked rows instead
-of the Sankey below `md`). Remaining: the Investing and Dividend calculators (checked for
-layout only; owner wants them done later).
+of the Sankey below `md`) and the Investing and Dividend calculators (quick pass: line-style
+inputs, `MetricGrid` results, Investing chart on `SeriesLineChart` with locale-aware axis,
+boxless holdings table with the per-payment yield note). Phase 5 is complete.
 
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
@@ -371,7 +372,8 @@ closed (mode switch is a radio group with arrow keys; tag chips have their own r
 Transaction writes now refresh every derived query via `lib/query-invalidation.ts` (account
 balances were staying stale after adding a transaction).
 
-Left: px sizes in the calculators (they are redesigned later).
+Nothing left: the calculators were redone afterwards, and `ui/card` and `ui/chart` were then
+removed as unused.
 
 ## 5. How to build a page
 

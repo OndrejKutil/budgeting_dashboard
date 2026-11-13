@@ -1,35 +1,15 @@
-"use client"
-
-import { useState, useMemo } from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Calculator, TrendingUp, RotateCcw } from "lucide-react"
+import { useMemo } from "react"
+import { RotateCcw } from "lucide-react"
 import { useSearchParams, useLocation } from "react-router-dom"
 import { useUrlState } from "@/hooks/use-url-state"
 import { Button } from "@/components/ui/button"
-
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import {
-    ChartConfig,
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart"
-import { useUser } from '@/contexts/user-context';
+import { Field } from "@/components/ui/field"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MetricGrid, type Metric } from "@/components/data/MetricGrid"
+import { SeriesLineChart } from "@/components/data/SeriesLineChart"
+import { formatMoneyParts, formatMoneyWhole } from "@/lib/currency"
+import { useUser } from '@/contexts/user-context'
 
 // --- Constants & Types ---
 
@@ -55,18 +35,7 @@ const PERIODS_PER_YEAR: Record<Frequency, number> = {
 export default function InvestingCalculator() {
 
     // --- State & Form ---
-    const { formatCurrency, t } = useUser()
-    const chartConfig = useMemo(() => ({
-        invested: {
-            label: t('pages.investingCalculator.totalInvested'),
-            color: "hsl(var(--muted-foreground))",
-        },
-        balance: {
-            label: t('pages.investingCalculator.totalBalance'),
-            color: "hsl(var(--primary))",
-        },
-    } satisfies ChartConfig), [t])
-
+    const { t, currency, formatNumber, formatCurrencyCompact } = useUser()
     // URL State management
     const [startingAmount, setStartingAmount] = useUrlState<number>('start', 10000)
     const [addedAmount, setAddedAmount] = useUrlState<number>('added', 500)
@@ -153,210 +122,117 @@ export default function InvestingCalculator() {
 
     // --- Render ---
 
+    const money = (value: number) => formatMoneyWhole(value, currency)
+    const growth = results.finalBalance - results.totalInvested
+    const metrics: Metric[] = [
+        {
+            key: "balance",
+            label: t('pages.investingCalculator.futureBalance'),
+            value: results.finalBalance,
+            parts: formatMoneyParts(results.finalBalance, currency, 0),
+            accent: true,
+            note: `${t('pages.investingCalculator.afterYears', { years })}${Number(inflation) > 0 ? ` (${t('pages.investingCalculator.adjustingForInflation', { inflation })})` : ""}`,
+        },
+        {
+            key: "invested",
+            label: t('pages.investingCalculator.totalContributed'),
+            value: results.totalInvested,
+            parts: formatMoneyParts(results.totalInvested, currency, 0),
+            note: t('pages.investingCalculator.principalPlus', { years }),
+        },
+        {
+            key: "growth",
+            label: t('pages.investingCalculator.growth'),
+            value: growth,
+            parts: formatMoneyParts(growth, currency, 0),
+            signed: true,
+            note: t('pages.investingCalculator.growthHint'),
+        },
+    ]
+
+    const numberField = (id: string, label: string, value: number, onChange: (value: number) => void, step?: string) => (
+        <Field htmlFor={id} label={label}>
+            <Input
+                id={id}
+                type="number"
+                inputMode="decimal"
+                step={step}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="tabular-nums"
+            />
+        </Field>
+    )
+
+    const yearLabel = (index: number) => t('pages.investingCalculator.yearLabel', { year: results.data[index]?.year ?? index })
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                    <Calculator className="h-6 w-6 text-primary" />
-                </div>
-                <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">
-                    {t('pages.investingCalculator.title')}
-                </h1>
-            </div>
+        <div>
+            <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+                {t('pages.investingCalculator.title')}
+            </h1>
+            <p className="mt-1 text-[0.8125rem] text-muted-foreground">{t('pages.investingCalculator.parametersDescription')}</p>
 
-            <div className="grid gap-6 lg:grid-cols-12">
-                {/* --- Left Column: Input Form --- */}
-                <Card className="lg:col-span-4 border-border/50 shadow-sm">
-                    <CardHeader>
-                        <CardTitle>{t('pages.investingCalculator.parameters')}</CardTitle>
-                        <CardDescription>
-                            {t('pages.investingCalculator.parametersDescription')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>{t('pages.investingCalculator.startingAmount')}</Label>
-                                <Input
-                                    type="number"
-                                    value={startingAmount}
-                                    onChange={(e) => setStartingAmount(Number(e.target.value))}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>{t('pages.investingCalculator.contribution')}</Label>
-                                    <Input
-                                        type="number"
-                                        value={addedAmount}
-                                        onChange={(e) => setAddedAmount(Number(e.target.value))}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>{t('pages.investingCalculator.frequency')}</Label>
-                                    <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={FREQUENCIES.DAILY}>{t('pages.investingCalculator.daily')}</SelectItem>
-                                            <SelectItem value={FREQUENCIES.WEEKLY}>{t('pages.investingCalculator.weekly')}</SelectItem>
-                                            <SelectItem value={FREQUENCIES.MONTHLY}>{t('pages.investingCalculator.monthly')}</SelectItem>
-                                            <SelectItem value={FREQUENCIES.QUARTERLY}>{t('pages.investingCalculator.quarterly')}</SelectItem>
-                                            <SelectItem value={FREQUENCIES.YEARLY}>{t('pages.investingCalculator.yearly')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>{t('pages.investingCalculator.interestRate')}</Label>
-                                    <Input
-                                        type="number"
-                                        value={interestRate}
-                                        onChange={(e) => setInterestRate(Number(e.target.value))}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>{t('pages.investingCalculator.inflation')}</Label>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        value={inflation}
-                                        onChange={(e) => setInflation(Number(e.target.value))}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>{t('pages.investingCalculator.timePeriod')}</Label>
-                                <Input
-                                    type="number"
-                                    value={years}
-                                    onChange={(e) => setYears(Number(e.target.value))}
-                                />
-                            </div>
-
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={handleReset}
-                            >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                {t('pages.investingCalculator.reset')}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* --- Right Column: Results & Chart --- */}
-                <div className="lg:col-span-8 space-y-6">
-                    {/* Summary Cards */}
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Card className="border-border/50 shadow-sm bg-primary/5">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{t('pages.investingCalculator.futureBalance')}</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-primary" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold text-primary">
-                                    {formatCurrency(results.finalBalance)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {t('pages.investingCalculator.afterYears', { years })} {inflation > 0 && `(${t('pages.investingCalculator.adjustingForInflation', { inflation })})`}
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border/50 shadow-sm">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{t('pages.investingCalculator.totalContributed')}</CardTitle>
-                                <Calculator className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {formatCurrency(results.totalInvested)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {t('pages.investingCalculator.principalPlus', { years })}
-                                </p>
-                            </CardContent>
-                        </Card>
+            <div className="mt-8 grid gap-x-14 gap-y-10 lg:mt-10 lg:grid-cols-[18rem_minmax(0,1fr)]">
+                <section aria-label={t('pages.investingCalculator.parameters')} className="space-y-5">
+                    {numberField("calc-start", t('pages.investingCalculator.startingAmount'), startingAmount, setStartingAmount)}
+                    <div className="grid grid-cols-2 gap-5">
+                        {numberField("calc-added", t('pages.investingCalculator.contribution'), addedAmount, setAddedAmount)}
+                        <Field htmlFor="calc-frequency" label={t('pages.investingCalculator.frequency')}>
+                            <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
+                                <SelectTrigger id="calc-frequency">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={FREQUENCIES.DAILY}>{t('pages.investingCalculator.daily')}</SelectItem>
+                                    <SelectItem value={FREQUENCIES.WEEKLY}>{t('pages.investingCalculator.weekly')}</SelectItem>
+                                    <SelectItem value={FREQUENCIES.MONTHLY}>{t('pages.investingCalculator.monthly')}</SelectItem>
+                                    <SelectItem value={FREQUENCIES.QUARTERLY}>{t('pages.investingCalculator.quarterly')}</SelectItem>
+                                    <SelectItem value={FREQUENCIES.YEARLY}>{t('pages.investingCalculator.yearly')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </Field>
                     </div>
+                    <div className="grid grid-cols-2 gap-5">
+                        {numberField("calc-rate", t('pages.investingCalculator.interestRate'), interestRate, setInterestRate, "0.1")}
+                        {numberField("calc-inflation", t('pages.investingCalculator.inflation'), inflation, setInflation, "0.1")}
+                    </div>
+                    {numberField("calc-years", t('pages.investingCalculator.timePeriod'), years, setYears)}
+                    <Button variant="ghost" className="h-10 px-3 text-muted-foreground" onClick={handleReset}>
+                        <RotateCcw aria-hidden="true" />
+                        {t('pages.investingCalculator.reset')}
+                    </Button>
+                </section>
 
-                    {/* Chart Area */}
-                    <Card className="border-border/50 shadow-sm">
-                        <CardHeader>
-                            <CardTitle>{t('pages.investingCalculator.growthProjection')}</CardTitle>
-                            <CardDescription>
-                                {t('pages.investingCalculator.growthDescription')}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ChartContainer config={chartConfig} className="h-[400px] w-full">
-                                <AreaChart
-                                    data={results.data}
-                                    margin={{
-                                        top: 10,
-                                        right: 10,
-                                        left: 0,
-                                        bottom: 0,
-                                    }}
-                                >
-                                    <defs>
-                                        <linearGradient id="fillBalance" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="var(--color-balance)" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="var(--color-balance)" stopOpacity={0.1} />
-                                        </linearGradient>
-                                        <linearGradient id="fillInvested" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="var(--color-invested)" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="var(--color-invested)" stopOpacity={0.1} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
-                                    <XAxis
-                                        dataKey="year"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickMargin={8}
-                                        tickFormatter={(value) => t('pages.investingCalculator.yearLabel', { year: value })}
-                                        className="text-muted-foreground text-xs"
-                                    />
-                                    <YAxis
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(value) =>
-                                            new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(value)
-                                        }
-                                        className="text-muted-foreground text-xs"
-                                        width={60}
-                                    />
-                                    <ChartTooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent indicator="dot" />}
-                                    />
-                                    <Area
-                                        dataKey="balance"
-                                        type="monotone"
-                                        fill="url(#fillBalance)"
-                                        fillOpacity={0.4}
-                                        stroke="var(--color-balance)"
-                                        stackId="1" // Independent layers because balance includes invested
-                                    />
-                                    <Area
-                                        dataKey="invested"
-                                        type="monotone"
-                                        fill="url(#fillInvested)"
-                                        fillOpacity={0.4}
-                                        stroke="var(--color-invested)"
-                                        stackId="2"
-                                    />
-                                </AreaChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-                </div>
+                <section aria-label={t('pages.investingCalculator.growthProjection')} className="min-w-0">
+                    <MetricGrid metrics={metrics} size="lg" className="grid-cols-1 sm:grid-cols-3" formatAmount={money} />
+                    <div className="mb-1.5 mt-10 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <h2 className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.investingCalculator.growthProjection')}</h2>
+                        <ul className="flex gap-4 text-[0.8125rem] text-muted-foreground">
+                            <li className="flex items-center gap-2">
+                                <span aria-hidden="true" className="inline-block h-[2px] w-3.5 rounded-full bg-primary" />
+                                {t('pages.investingCalculator.totalBalance')}
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span aria-hidden="true" className="inline-block w-3.5 border-t-2 border-dashed border-muted-foreground/60" />
+                                {t('pages.investingCalculator.totalInvested')}
+                            </li>
+                        </ul>
+                    </div>
+                    <SeriesLineChart
+                        length={results.data.length}
+                        primary={results.data.map((point) => point.balance)}
+                        comparison={results.data.map((point) => point.invested)}
+                        formatAxis={formatCurrencyCompact}
+                        formatValue={money}
+                        xLabel={yearLabel}
+                        tooltipTitle={yearLabel}
+                        primaryName={t('pages.investingCalculator.totalBalance')}
+                        comparisonName={t('pages.investingCalculator.totalInvested')}
+                        ariaLabel={t('pages.investingCalculator.chartAria', { years, amount: formatNumber(Math.round(results.finalBalance)) })}
+                        height={300}
+                    />
+                </section>
             </div>
         </div>
     )
