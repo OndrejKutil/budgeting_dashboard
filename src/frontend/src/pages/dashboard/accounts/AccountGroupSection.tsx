@@ -10,6 +10,7 @@ import {
 import { useUser } from '@/contexts/user-context';
 import type { AccountGroup } from '@/lib/api/types';
 import { FlowText } from './FlowText';
+import { pluralKey } from './helpers';
 import { MoneyFigure } from './MoneyFigure';
 
 interface AccountGroupSectionProps {
@@ -19,6 +20,8 @@ interface AccountGroupSectionProps {
   total: number | null;
   /** This month's combined flow in the base currency; null when unknown. */
   flow: number | null;
+  /** Accounts left out of the total and flow because they have no base-currency value. */
+  skipped?: number;
   /** Present for real groups only: rename / delete live behind a quiet menu in the heading. */
   group?: AccountGroup;
   onRename?: (group: AccountGroup) => void;
@@ -32,19 +35,20 @@ export function AccountGroupSection({
   caption,
   total,
   flow,
+  skipped = 0,
   group,
   onRename,
   onDelete,
   children,
 }: AccountGroupSectionProps) {
-  const { t, currency } = useUser();
+  const { t, currency, locale, formatNumber } = useUser();
   const headingId = useId();
 
   return (
     <section aria-labelledby={headingId} className="mt-10 first:mt-0">
       <div className="flex items-baseline gap-x-3.5 border-b border-foreground/30 pb-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3.5 gap-y-0.5">
-          <h2 id={headingId} className="min-w-0 truncate text-[1.375rem] font-medium tracking-[-0.02em]">
+          <h2 id={headingId} className="min-w-0 break-words text-[1.375rem] font-medium tracking-[-0.02em]">
             {title}
           </h2>
           {caption && <span className="text-[0.8125rem] text-muted-foreground">{caption}</span>}
@@ -62,6 +66,11 @@ export function AccountGroupSection({
               </>
             )}
           </div>
+          {skipped > 0 && (
+            <div className="text-[0.75rem] text-muted-foreground">
+              {t(pluralKey(locale, skipped, 'pages.accounts.excluded'), { count: formatNumber(skipped) })}
+            </div>
+          )}
           {flow !== null && <FlowText value={flow} currency={currency} className="text-[0.8125rem]" />}
         </div>
         <div className="-mr-2 h-8 w-8 shrink-0 self-start lg:mr-0">

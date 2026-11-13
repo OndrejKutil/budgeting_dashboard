@@ -137,6 +137,12 @@ export default function AccountsPage() {
     return t(pluralKey(locale, count, 'pages.accounts.groupCaption'), { count: formatNumber(count) });
   };
 
+  const groupTotals = (members: Account[]) => {
+    const balance = sumBase(members, a => a.current_balance_base);
+    const flow = sumBase(members, a => a.net_flow_mtd_base);
+    return { total: balance.total, flow: flow.total, skipped: Math.max(balance.skipped, flow.skipped) };
+  };
+
   const renderRows = (list: Account[]) =>
     list.map(account => (
       <AccountRow
@@ -410,7 +416,7 @@ export default function AccountsPage() {
           investments={netWorthData?.investments}
           expanded={chartOpen}
           onToggle={() => setChartOpen((open) => !open)}
-          chartId={chartId}
+          chartId={chartOpen && netWorthValues.length > 0 ? chartId : undefined}
           className="max-lg:order-3 max-lg:w-full lg:max-w-[28rem]"
         />
         <Button
@@ -430,7 +436,6 @@ export default function AccountsPage() {
       <NetWorthChart
         dates={netWorthDates}
         values={netWorthValues}
-        range={netWorthRange}
         locale={locale}
         formatAxis={(value) => formatMoneyCompact(value, userCurrency)}
         formatValue={formatCurrency}
@@ -489,8 +494,9 @@ export default function AccountsPage() {
             key={group.account_groups_id_pk}
             title={group.group_name}
             caption={groupCaption(members)}
-            total={sumBase(members, a => a.current_balance_base)}
-            flow={sumBase(members, a => a.net_flow_mtd_base)}
+            total={groupTotals(members).total}
+            flow={groupTotals(members).flow}
+            skipped={groupTotals(members).skipped}
             group={group}
             onRename={openRenameGroup}
             onDelete={setDeleteGroupConfirmId}
@@ -502,8 +508,9 @@ export default function AccountsPage() {
           <AccountGroupSection
             title={groupSections.length > 0 ? t('pages.accounts.otherAccounts') : t('pages.accounts.allAccounts')}
             caption={groupSections.length > 0 ? t('pages.accounts.notInGroup') : undefined}
-            total={sumBase(otherAccounts, a => a.current_balance_base)}
-            flow={sumBase(otherAccounts, a => a.net_flow_mtd_base)}
+            total={groupTotals(otherAccounts).total}
+            flow={groupTotals(otherAccounts).flow}
+            skipped={groupTotals(otherAccounts).skipped}
           >
             {renderRows(otherAccounts)}
           </AccountGroupSection>

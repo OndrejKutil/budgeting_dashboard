@@ -26,7 +26,10 @@ export const isZeroAmount = (value: number) => Math.abs(value) < 0.005;
  * left out rather than counted as 0 or mixed in from another currency; null when none count,
  * so the caller can show a dash instead of a misleading 0.
  */
-export function sumBase(accounts: Account[], pick: (account: Account) => number | null | undefined): number | null {
+export function sumBase(
+  accounts: Account[],
+  pick: (account: Account) => number | null | undefined,
+): { total: number | null; skipped: number } {
   let total = 0;
   let counted = 0;
   for (const account of accounts) {
@@ -36,7 +39,7 @@ export function sumBase(accounts: Account[], pick: (account: Account) => number 
       counted += 1;
     }
   }
-  return counted > 0 ? total : null;
+  return { total: counted > 0 ? total : null, skipped: accounts.length - counted };
 }
 
 /** Main currency before foreign, then by currency code and name (same order as the account pickers). */
@@ -53,7 +56,7 @@ export function sortAccounts(accounts: Account[], baseCurrency: string): Account
     );
 }
 
-type PluralPrefix = 'pages.accounts.active' | 'pages.accounts.groupCaption';
+type PluralPrefix = 'pages.accounts.active' | 'pages.accounts.groupCaption' | 'pages.accounts.excluded';
 
 /** Which "...One / ...Few / ...Many" string fits this count in this locale. */
 export function pluralKey(locale: string, count: number, prefix: PluralPrefix): DashboardTranslationKey {

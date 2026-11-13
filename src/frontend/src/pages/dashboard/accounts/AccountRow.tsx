@@ -45,7 +45,7 @@ export function AccountRow({ account, typeLabel, onEdit, onDelete, onActivate }:
     <li
       className={cn(
         'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-2 border-b border-border py-4',
-        'lg:grid-cols-[minmax(0,1fr)_6.25rem_13.125rem_minmax(0,14.375rem)_2rem] lg:gap-x-6 lg:pl-[1.375rem]',
+        'lg:grid-cols-[minmax(8rem,1fr)_minmax(0,6.25rem)_minmax(min-content,13.125rem)_minmax(min-content,14.375rem)_2rem] lg:gap-x-6 lg:pl-[1.375rem]',
         (inactive || pending) && 'opacity-60',
       )}
     >
@@ -54,11 +54,15 @@ export function AccountRow({ account, typeLabel, onEdit, onDelete, onActivate }:
         <div className="truncate text-[0.8125rem] text-muted-foreground">
           {typeLabel}
           {inactive && ` · ${t('states.inactive')}`}
-          {foreign && isFiniteNumber(baseBalance) && (
-            <>
-              {' · '}
-              <SensitiveValue>{formatMoney(baseBalance, baseCurrency)}</SensitiveValue>
-            </>
+          {isFiniteNumber(baseBalance) ? (
+            foreign && (
+              <>
+                {' · '}
+                <SensitiveValue>{formatMoney(baseBalance, baseCurrency)}</SensitiveValue>
+              </>
+            )
+          ) : (
+            <span title={t('pages.accounts.excludedHint')}> · {t('pages.accounts.excludedHint')}</span>
           )}
         </div>
       </div>

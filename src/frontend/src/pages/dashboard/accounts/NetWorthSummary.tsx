@@ -15,7 +15,8 @@ interface NetWorthSummaryProps {
   investments: InvestmentContribution | null | undefined;
   expanded: boolean;
   onToggle: () => void;
-  chartId: string;
+  /** Set only while the chart is rendered. */
+  chartId?: string;
   className?: string;
 }
 
@@ -76,9 +77,9 @@ export function NetWorthSummary({
           onClick={onToggle}
           aria-expanded={expanded}
           aria-controls={chartId}
-          aria-label={t(expanded ? 'pages.netWorth.hideChart' : 'pages.netWorth.showChart')}
           className="mt-1 flex max-w-full items-center gap-3.5 rounded-md py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
+          <span className="sr-only">{t(expanded ? 'pages.netWorth.hideChart' : 'pages.netWorth.showChart')}</span>
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
             <span className="whitespace-nowrap text-[1.1875rem] tracking-[-0.02em] tabular-nums">
               <SensitiveValue>{formatCurrency(current)}</SensitiveValue>

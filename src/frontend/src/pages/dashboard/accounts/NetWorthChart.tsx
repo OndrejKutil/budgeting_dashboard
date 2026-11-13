@@ -1,12 +1,10 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
-import type { NetWorthRange } from './helpers';
 
 interface NetWorthChartProps {
   dates: string[];
   values: number[];
-  range: NetWorthRange;
   locale: string;
   formatAxis: (value: number) => string;
   formatValue: (value: number) => string;
@@ -40,7 +38,6 @@ const parseDate = (value: string) => new Date(`${value}T12:00:00`);
 export function NetWorthChart({
   dates,
   values,
-  range,
   locale,
   formatAxis,
   formatValue,
@@ -93,12 +90,14 @@ export function NetWorthChart({
 
   const xTickCount = width < 32.5 * rem ? 3 : 5;
   const xTicks = [...new Set(Array.from({ length: xTickCount }, (_, i) => Math.round((i * (count - 1)) / (xTickCount - 1))))];
-  const longRange = range === '1y' || range === 'all';
+  // Label format follows the actual span, and consecutive identical labels collapse.
+  const spanDays = count > 1 ? (parseDate(dates[count - 1]).getTime() - parseDate(dates[0]).getTime()) / 86_400_000 : 0;
   const xLabel = (index: number) =>
     parseDate(dates[index]).toLocaleDateString(
       locale,
-      longRange ? { month: 'short', year: '2-digit' } : { month: 'short', day: 'numeric' },
+      spanDays > 150 ? { month: 'short', year: '2-digit' } : { month: 'short', day: 'numeric' },
     );
+  const labelledTicks = xTicks.filter((index, i) => i === 0 || xLabel(index) !== xLabel(xTicks[i - 1]));
 
   const endIndex = count - 1;
   const endValue = values[endIndex];
@@ -128,7 +127,7 @@ export function NetWorthChart({
               </text>
             </g>
           ))}
-          {xTicks.map((index) => (
+          {labelledTicks.map((index) => (
             <text
               key={index}
               x={x(index)}
