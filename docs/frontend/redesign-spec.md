@@ -1,6 +1,10 @@
 # Frontend redesign spec (draft)
 
-Status: draft for editing. Nothing in this document is implemented yet.
+> **Continuing the build?** Start with `redesign-handoff.md`. It records what is built,
+> what remains and how to build it. This spec stays the source for decisions and style
+> rules; where its navigation section and the handoff disagree, the handoff is right.
+
+Status: phases 1 to 3 are implemented (see `redesign-handoff.md`).
 Last updated: 2026-11-12.
 
 Reference mockups (private Claude artifacts, sample data):
