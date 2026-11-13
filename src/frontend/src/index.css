@@ -25,6 +25,8 @@
     --primary-foreground: 38 68% 6%;
     --primary-hover: 37 91% 62%;
     --primary-muted: 37 80% 26%;
+    /* Amber used as text, underline or line (in dark it is the fill colour itself) */
+    --primary-text: 37 91% 55%;
 
     /* ---- Secondary (Bright Charcoal) ---- */
     --secondary: 220 6% 14%;
@@ -104,8 +106,10 @@
     /* ---- Primary (Amber/Orange) ---- */
     --primary: 38 92% 45%;
     --primary-foreground: 38 68% 6%;
-    --primary-hover: 24 95% 48%;
+    --primary-hover: 34 92% 41%;
     --primary-muted: 38 92% 88%;
+    /* Bright amber is only ~2.4:1 on white: text, underlines and lines use this darker one (~5.9:1) */
+    --primary-text: 30 90% 32%;
 
     /* ---- Secondary ---- */
     --secondary: 0 0% 92%;
@@ -113,20 +117,21 @@
 
     /* ---- Muted ---- */
     --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 42%;
+    --muted-foreground: 0 0% 37%;
 
     /* ---- Accent ---- */
     --accent: 0 0% 91%;
     --accent-foreground: 0 0% 12%;
 
     /* ---- Destructive ---- */
-    --destructive: 351 84% 52%;
+    --destructive: 351 75% 44%;
     --destructive-foreground: 0 0% 100%;
 
     /* ---- Status Colors ---- */
-    --success: 158 58% 38%;
+    /* Text-strength green, red and amber for amounts and messages on white (all >= 4.5:1) */
+    --success: 158 64% 29%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 45%;
+    --warning: 30 90% 34%;
     --warning-foreground: 0 0% 10%;
     --info: 0 0% 38%;
     --info-foreground: 0 0% 100%;
@@ -149,7 +154,7 @@
     /* ---- Border/Input ---- */
     --border: 220 8% 88%;
     --input: 220 8% 88%;
-    --ring: 38 92% 45%;
+    --ring: 30 90% 38%; /* focus outline needs >= 3:1 on white */
 
     /* ---- Sidebar ---- */
     --sidebar-background: 0 0% 96%;
@@ -223,6 +228,22 @@
 
   .light .glass-dense {
     background-image: linear-gradient(rgb(255 255 255 / 0.88), rgb(255 255 255 / 0.88));
+  }
+
+  /* ---- Light theme: amber as text / line uses the darker --primary-text; fills stay bright ---- */
+  .light .text-primary,
+  .light .hover\:text-primary:hover {
+    color: hsl(var(--primary-text));
+  }
+  .light .fill-primary {
+    fill: hsl(var(--primary-text));
+  }
+  .light .stroke-primary {
+    stroke: hsl(var(--primary-text));
+  }
+  .light .border-primary,
+  .light .border-l-primary {
+    border-color: hsl(var(--primary-text));
   }
 
   /* ---- Dashboard shell: faint amber glow behind the top of the page (dark only) ---- */

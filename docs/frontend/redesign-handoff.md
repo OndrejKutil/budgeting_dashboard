@@ -253,8 +253,11 @@ Mobile: columns stack, facts in a 2×2 grid.
 ### Phase 5: remaining app pages
 
 Done: Yearly, Recurring, Categories, Emergency Fund, Profile (see the table in 2.3; the
-notes below are kept for reference), plus Trading212 and Screenshot Import. Remaining
-order: Cash Flow, then the Investing and Dividend calculators.
+notes below are kept for reference), plus Trading212, Screenshot Import and Cash Flow
+(six figures like Monthly, frameless neutral Sankey with only the cash-flow path amber,
+rem-scaled, keyboard-focusable nodes, amounts hidden in hide-amounts mode; ranked rows instead
+of the Sankey below `md`). Remaining: the Investing and Dividend calculators (checked for
+layout only; owner wants them done later).
 
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
@@ -337,6 +340,15 @@ order: Cash Flow, then the Investing and Dividend calculators.
 **5.8 Demo** — removed (see 2.2).
 
 ### Phase 6: light theme
+
+**First pass done (token level), needs an eye check in the browser.** In `index.css`
+(`.light`): `--primary-text` (darker amber, ~5.9:1 on white) is used by `.light
+.text-primary`, `hover:text-primary`, `fill-primary`, `stroke-primary`, `border-primary`,
+`border-l-primary`, while `bg-primary` fills keep the bright amber; darker `--success`,
+`--destructive`, `--warning` and `--ring`; `--muted-foreground` 42% -> 37%. The redesigned
+pages use `foreground/…` tokens throughout, so neutrals already flip. Not covered: amber text
+with an opacity modifier (`text-primary/70`, none in use today) and the calculators' legacy
+`kpi-card`. The original notes:
 
 - Go through every page in light mode. Known weak points: muted text is pale on the
   light background; glass needs enough contrast over white; chart neutrals
