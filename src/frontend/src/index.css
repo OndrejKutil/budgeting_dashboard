@@ -74,18 +74,7 @@
 
     --radius: 1rem; /* 16px */
 
-    /* ---- Sidebar ---- */
-    --sidebar-background: 220 13% 6%;
-    --sidebar-foreground: 216 3% 61%;
-    --sidebar-primary: 37 91% 55%;
-    --sidebar-primary-foreground: 38 68% 6%;
-    --sidebar-accent: 220 6% 12%;
-    --sidebar-accent-foreground: 60 5% 95%;
-    --sidebar-border: 220 4% 14%;
-    --sidebar-ring: 37 91% 55%;
 
-    /* ---- Legacy Alias ---- */
-    --accent-gold: 37 91% 55%;
   }
 
   .light {
@@ -156,18 +145,7 @@
     --input: 220 8% 88%;
     --ring: 30 90% 38%; /* focus outline needs >= 3:1 on white */
 
-    /* ---- Sidebar ---- */
-    --sidebar-background: 0 0% 96%;
-    --sidebar-foreground: 0 0% 38%;
-    --sidebar-primary: 38 92% 45%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 90%;
-    --sidebar-accent-foreground: 0 0% 12%;
-    --sidebar-border: 220 8% 88%;
-    --sidebar-ring: 38 92% 45%;
 
-    /* ---- Legacy Alias ---- */
-    --accent-gold: 38 92% 45%;
   }
 }
 
@@ -257,74 +235,6 @@
     background-image: none;
   }
 
-  /* ---- Card Shadow ---- */
-  .shadow-card {
-    box-shadow:
-      0 1px 2px hsl(0 0% 0% / 0.16),
-      0 1px 0 hsl(0 0% 100% / 0.03) inset;
-  }
-
-  /* ---- Focus Ring ---- */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
-  }
-
-  /* ---- Skeleton Animation ---- */
-  .skeleton-shimmer {
-    background: linear-gradient(90deg,
-        hsl(var(--muted)) 0%,
-        hsl(var(--muted-foreground) / 0.1) 50%,
-        hsl(var(--muted)) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  /* ---- Transitions ---- */
-  .transition-base {
-    @apply transition-all duration-200 ease-out;
-  }
-
-  .transition-slow {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  /* ---- Chart Grid ---- */
-  .chart-grid {
-    stroke: hsl(var(--border) / 0.3);
-  }
-
-  /* ---- Dot Pattern ---- */
-  .bg-dotted-pattern {
-    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  /* ---- Theme-aware marketing surface aliases ---- */
-  .theme-text-strong { @apply text-foreground dark:text-white; }
-  .theme-text-strong-90 { @apply text-foreground/90 dark:text-white/90; }
-  .theme-text-muted { @apply text-muted-foreground dark:text-white/50; }
-  .theme-text-muted-80 { @apply text-muted-foreground/80 dark:text-white/80; }
-  .theme-text-muted-70 { @apply text-muted-foreground/70 dark:text-white/70; }
-  .theme-text-muted-60 { @apply text-muted-foreground/70 dark:text-white/60; }
-  .theme-text-muted-50 { @apply text-muted-foreground dark:text-white/50; }
-  .theme-text-muted-40 { @apply text-muted-foreground/80 dark:text-white/40; }
-  .theme-text-muted-35 { @apply text-muted-foreground/70 dark:text-white/35; }
-  .theme-text-muted-30 { @apply text-muted-foreground/60 dark:text-white/30; }
-  .theme-border-subtle { @apply border-border dark:border-white/10; }
-  .theme-bg-subtle { @apply bg-muted/40 dark:bg-white/[0.02]; }
-  .theme-bg-panel { @apply bg-card/85 dark:bg-white/5; }
-  .theme-bg-chip { @apply bg-muted/60 dark:bg-white/5; }
-  .theme-ring-subtle { @apply ring-border dark:ring-white/10; }
 }
 
 @media (prefers-reduced-motion: reduce) {

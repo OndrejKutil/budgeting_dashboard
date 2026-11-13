@@ -51,6 +51,7 @@ import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { AccountSelect } from '@/components/AccountSelect';
 import { formatMoney, formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
 import { daysDiff, toLocalDateString } from '@/lib/dates';
+import { invalidateTransactionData } from '@/lib/query-invalidation';
 
 const DECIMAL_INPUT_PATTERN = '-?[0-9]*([.,][0-9]*)?';
 
@@ -126,10 +127,7 @@ export default function RecurringPage() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['recurring'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['accounts'] });
-    queryClient.invalidateQueries({ queryKey: ['summary'] });
-    queryClient.invalidateQueries({ queryKey: ['net-worth'] });
+    invalidateTransactionData(queryClient);
   };
 
   // Only the template list itself is written optimistically. The other four query families the

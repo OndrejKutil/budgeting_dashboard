@@ -18,15 +18,21 @@ frontend/src/
 ├── App.tsx              # Root component, providers, routes
 ├── main.tsx             # Entry point
 ├── components/          # Reusable UI components
-│   ├── ui/              # shadcn/ui primitives
-│   ├── layout/          # DashboardLayout, Sidebar, Topbar
-│   └── dashboard/       # Domain-specific components
+│   ├── ui/              # shadcn/ui primitives, restyled (glass menus/dialogs, line-style fields)
+│   ├── data/            # Display primitives: MetricGrid, LineRows, SplitBar, DayBars,
+│   │                    #   SeriesLineChart, ValueLineChart, BigFigure/FigureParts, RowList
+│   ├── layout/          # DashboardLayout, Topbar (desktop), MobileDock (phones), nav-config
+│   ├── public/          # PublicLayout, PublicHeader, PublicFooter (landing + public pages)
+│   ├── analytics/       # SankeyChart, YearlyHeatmap, MonthlyBreakdownTable, StatementDocument, …
+│   └── budget/          # Budget Maker parts
 ├── pages/               # Route components
-│   ├── auth/            # Login, Register
-│   └── dashboard/       # All dashboard pages
-├── contexts/            # React contexts (Auth, User)
+│   ├── auth/            # Login, Register, password reset, OAuth callback
+│   └── dashboard/       # All dashboard pages (+ per-page folders: accounts/, funds/, transactions/)
+├── contexts/            # React contexts (Auth, User, Privacy)
 ├── hooks/               # Custom hooks
 └── lib/
+    ├── i18n.ts          # en-US and cs-CZ strings for the dashboard (public pages are English only)
+    ├── query-invalidation.ts  # invalidateTransactionData(): refresh everything derived from transactions
     └── api/             # API client and endpoints
         ├── client.ts    # HTTP client, token management
         ├── endpoints/   # Domain-specific API functions
@@ -150,6 +156,17 @@ Individual queries can override these defaults when needed.
 
 ---
 
+### Refreshing after transaction writes
+
+Account balances, net worth, fund balances, the overview summary and every analytics page are
+computed from transactions, and the global 5-minute `staleTime` keeps showing old numbers unless
+those queries are invalidated. Any write that creates, edits or deletes transactions (the
+transaction form, transfers, fund withdrawals, posting a recurring template, screenshot import)
+must call `invalidateTransactionData(queryClient)` from `lib/query-invalidation.ts`. When a new
+query is computed from transactions, add its key there.
+
+---
+
 ## Optimistic Mutations
 
 `lib/optimistic.ts` wraps the standard React Query optimistic recipe — `cancelQueries` →
@@ -228,17 +245,19 @@ Pages driven by a month or year use the shared `components/period/PeriodNavigato
 ## Routing Structure
 
 ### Public Routes
-- `/` - Landing page, `/about`
-- `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback` (OAuth)
-- `/terms`, `/privacy`, `/faq`, `/how-it-works`
+- `/` - Landing page; `/how-it-works`, `/faq`, `/about`, `/terms`, `/privacy` (all in `PublicLayout`)
+- `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback` (OAuth), in `AuthLayout`
+- There is no demo page (removed on purpose).
 
 ### Protected Routes (require auth)
 All under `/dashboard`:
 - `/dashboard` - Overview
 - `/dashboard/transactions`, `/recurring` - ledger + recurring templates
 - `/dashboard/accounts`, `/categories`, `/funds` - dimension management
-- `/dashboard/analytics/monthly`, `/analytics/yearly`, `/analytics/emergency-fund`
-- `/dashboard/budget-maker`, `/investing-calculator`, `/dividend-calculator` - tools
+- `/dashboard/analytics/monthly`, `/analytics/yearly`, `/analytics/cashflow`, `/analytics/emergency-fund`
+- `/dashboard/budget-maker` - plan
+- `/dashboard/import/screenshot`, `/trading212` - tools behind feature flags (`screenshot_import`, `t212_integration`)
+- `/dashboard/investing-calculator`, `/dividend-calculator` - calculators
 - `/dashboard/profile`
 
 `RequireAuth` wrapper redirects to login if not authenticated. Routes are lazy-loaded
@@ -278,20 +297,29 @@ Mirrors backend schema structure:
 
 ## Component Patterns
 
+The visual rules (no boxes around content, labelled figures, three size levels, amber for
+one thing per view, frameless charts, line-style fields) are in
+[`redesign-handoff.md`](redesign-handoff.md) section 2 and [`redesign-spec.md`](redesign-spec.md).
+
 ### UI Components
 
-Uses shadcn/ui as the component library. Components in `components/ui/` are generated primitives (Button, Card, Input, etc.).
+`components/ui/` holds the shadcn/ui primitives that are in use, restyled for the design (glass
+dialogs, menus and sheets; label-over-a-line inputs; pill buttons). Unused generated primitives
+were deleted; regenerate one with the shadcn CLI if it is needed again.
 
-### Dashboard Components
+### Data components
 
-Domain-specific components live in `components/dashboard/`. These compose UI primitives for specific use cases.
+`components/data/` holds the display building blocks the pages share. A page summary is a
+`MetricGrid` (labelled figures with a six-month comparison or a note); lists with proportions
+are `LineRows`; value-over-time charts are `ValueLineChart` (axis fits the data) or
+`SeriesLineChart` (cumulative from zero).
 
 ### Layout
 
-`DashboardLayout` provides:
-- Sidebar navigation
-- Top bar with user menu
-- Main content area with outlet for nested routes
+`DashboardLayout` provides the floating glass `Topbar` from `lg` up (Overview, Transactions,
+Accounts, Funds, and the Analytics / Plan / Tools menus), the `MobileDock` below `lg`, and the
+content column (max width `82rem`). Navigation items come from `layout/nav-config.ts`.
+Public pages use `components/public/PublicLayout` (top bar + footer panel).
 
 ---
 

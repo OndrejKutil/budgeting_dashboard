@@ -246,9 +246,6 @@ export interface SummaryData {
     comparison: PeriodComparison;
     savings_rate: number;
     investment_rate: number;
-    top_expenses: CategoryInsight[];
-    biggest_mover: CategoryInsight | null;
-    largest_transactions: Transaction[];
     /** All expense categories of the period, largest first. */
     expense_categories: CategoryInsight[];
     /** Cumulative expenses by day of month (index 0 = day 1); ends today for the current month. */

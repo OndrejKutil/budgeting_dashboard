@@ -15,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
 import { formatMoney } from '@/lib/currency';
 import { useDebounce } from '@/hooks/use-debounce';
+import { invalidateTransactionData } from '@/lib/query-invalidation';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import {
   AlertDialog,
@@ -265,10 +266,7 @@ export default function TransactionsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => transactionsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      // Also invalidate summary/analytics if needed
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      invalidateTransactionData(queryClient);
       toast({
         title: t('pages.transactions.deleted'),
         description: t('pages.transactions.deletedDescription'),
@@ -291,9 +289,7 @@ export default function TransactionsPage() {
   const createMutation = useMutation({
     mutationFn: (payload: CreateTransactionRequest) => transactionsApi.create(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      invalidateTransactionData(queryClient);
       toast({ title: t('pages.transactions.created') });
       closeModal();
     },
@@ -305,9 +301,7 @@ export default function TransactionsPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateTransactionRequest }) => transactionsApi.update(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      invalidateTransactionData(queryClient);
       toast({ title: t('pages.transactions.updated') });
       closeModal();
     },
@@ -326,19 +320,13 @@ export default function TransactionsPage() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] }); // Update account balances
+      invalidateTransactionData(queryClient);
       toast({ title: t('pages.transactions.transferCompleted') });
       closeModal();
     },
     onError: (err: Error | ApiError) => {
       // One leg may have landed — refetch so the list reflects whatever actually posted.
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      invalidateTransactionData(queryClient);
 
       const message = err instanceof PartialTransferError
         ? t('pages.transactions.transferPartialFailed')

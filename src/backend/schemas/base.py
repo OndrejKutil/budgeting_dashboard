@@ -162,9 +162,6 @@ class SummaryData(BaseModel):
     comparison: PeriodComparison = Field(..., description="Period-over-period comparison metrics")
     savings_rate: float = Field(..., description="Savings rate as percentage of income")
     investment_rate: float = Field(..., description="Investment rate as percentage of income")
-    top_expenses: list[CategoryInsight] = Field(..., description="Top 3 expense categories")
-    biggest_mover: CategoryInsight | None = Field(None, description="Category with largest absolute spending change vs previous period")
-    largest_transactions: list[TransactionData] = Field(..., description="List of top 5 largest transactions")
 
     # Overview redesign fields
     expense_categories: list[CategoryInsight] = Field(default_factory=list, description="All expense categories of the period, largest first")
@@ -203,13 +200,6 @@ class SummaryData(BaseModel):
                 },
                 "savings_rate": 20.0,
                 "investment_rate": 10.0,
-                "top_expenses": [
-                     {"name": "Rent", "total": 1500.0, "share_of_total": 42.8},
-                     {"name": "Groceries", "total": 600.0, "share_of_total": 17.1},
-                     {"name": "Utilities", "total": 200.0, "share_of_total": 5.7}
-                ],
-                "biggest_mover": {"name": "Travel", "total": 500.0, "share_of_total": 14.2},
-                "largest_transactions": [],
                 "by_category": {
                     "Salary": 5000.00,
                     "Groceries": -800.00,

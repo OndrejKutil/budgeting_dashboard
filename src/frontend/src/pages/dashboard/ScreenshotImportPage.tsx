@@ -42,6 +42,7 @@ import type { Category, DraftTransaction, FieldSource, NoTransactionsReason, Tag
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
+import { invalidateTransactionData } from '@/lib/query-invalidation';
 import type { DashboardTranslationKey } from '@/lib/i18n';
 
 const FEATURE_KEY = 'screenshot_import';
@@ -471,9 +472,7 @@ export default function ScreenshotImportPage() {
       return screenshotImportApi.import(buildImportPayload(toImport, newTagIds));
     },
     onSuccess: (body) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      invalidateTransactionData(queryClient);
       toast({
         title: t('pages.screenshotImport.importSuccess', { count: body.data?.length ?? drafts.length }),
       });

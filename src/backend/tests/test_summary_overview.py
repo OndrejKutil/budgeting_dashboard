@@ -479,7 +479,7 @@ def test_summary_calc_existing_fields_ignore_the_wider_fetch(monkeypatch):
     assert result.total_expense == 200.0
     assert result.comparison.income_delta == 500.0       # vs February only
     assert result.comparison.expense_delta == 100.0
-    assert [c.name for c in result.top_expenses] == ["Food"]
+    assert [c.name for c in result.expense_categories] == ["Food"]
     assert result.expense_categories[0].total == 200.0
     assert result.six_month_average is not None
     assert result.six_month_average.months_counted == 3   # Dec, Jan, Feb (history starts Dec 10)

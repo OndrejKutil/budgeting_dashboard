@@ -3,7 +3,6 @@
 import calendar
 import logging
 from datetime import date, timedelta
-from decimal import Decimal
 from typing import Any, cast
 
 # from data.database import get_db_client # Moved inside function
@@ -12,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from pydantic import BaseModel, Field
 
 # schemas
-from ...schemas.base import CategoryInsight, PeriodComparison, SixMonthAverage, SummaryData, TransactionData
+from ...schemas.base import CategoryInsight, PeriodComparison, SixMonthAverage, SummaryData
 from ..columns import TRANSACTIONS_COLUMNS
 
 # Create logger for this module
@@ -362,13 +361,6 @@ def _get_expense_categories(df: pl.DataFrame) -> list[CategoryInsight]:
     ]
 
 
-def _get_top_expenses(df: pl.DataFrame) -> list[CategoryInsight]:
-    """
-    Get top 3 expense categories by total amount.
-    """
-    return _get_expense_categories(df)[:3]
-
-
 # ================================================================================================
 #                          Spending pace and six-month average (Overview)
 # ================================================================================================
@@ -486,111 +478,6 @@ def _calculate_six_month_average(df: pl.DataFrame, months: list[date]) -> SixMon
     )
 
 
-def _get_biggest_mover(current_df: pl.DataFrame, previous_df: pl.DataFrame) -> CategoryInsight | None:
-    """
-    Identify the category with the largest absolute change in spending (increase or decrease).
-    """
-    # Helper to aggregate expenses by category
-    def agg_expenses(df):
-        if df.is_empty(): 
-            return pl.DataFrame(
-                schema={'category_name': pl.Utf8, 'total': pl.Float64}
-            )
-        return (
-            df.filter(pl.col('category_type') == 'expense')
-            .group_by('category_name')
-            .agg(pl.col('abs_amount').sum().alias('total'))
-        )
-
-    curr_agg = agg_expenses(current_df)
-    prev_agg = agg_expenses(previous_df)
-    
-    if curr_agg.is_empty() and prev_agg.is_empty():
-        return None
-        
-    # Join on category name. We need outer join to capture new categories or dropped ones.
-    # Polars join only supports left, right, inner, outer, cross, anti, semi, asof
-    
-    # Simple approach: convert to dicts and compare in python or use join
-    # Using join for robustness
-    
-    # Rename for join
-    curr_agg = curr_agg.rename({'total': 'curr_total'})
-    prev_agg = prev_agg.rename({'total': 'prev_total'})
-    
-    joined = curr_agg.join(prev_agg, on='category_name', how='full', coalesce=True)
-    
-    # Fill nulls
-    joined = joined.with_columns([
-        pl.col('curr_total').fill_null(0.0),
-        pl.col('prev_total').fill_null(0.0)
-    ])
-
-    # Calculate delta
-    joined = joined.with_columns(
-        (pl.col('curr_total') - pl.col('prev_total')).alias('delta')
-    )
-
-    # Only consider categories with actual spending this month
-    joined = joined.filter(pl.col('curr_total') > 0)
-
-    if joined.is_empty():
-        return None
-
-    # Find max absolute delta
-    # Sort by absolute delta desc
-    biggest = joined.sort(pl.col('delta').abs(), descending=True).row(0, named=True)
-    
-    # Should we return the details of the 'current' period for this category?
-    # The requirement says: "name + total + share of total expenses" (implied format for insights, though 'biggest mover' might just need name & delta)
-    # The schema for CategoryInsight has name, total, share.
-    # Let's interpret: Total = current total, Share = current share.
-    
-    current_total_expenses = current_df.filter(pl.col('category_type') == 'expense').select(pl.col('abs_amount').sum()).item() or 0.0
-    
-    share = 0.0
-    if current_total_expenses > 0:
-        share = (biggest['curr_total'] / current_total_expenses) * 100
-        
-    return CategoryInsight(
-        name=biggest['category_name'],
-        total=round(biggest['curr_total'], 2), # Showing current spending
-        share_of_total=round(share, 1)
-    )
-
-def _get_largest_transactions(df: pl.DataFrame, limit: int = 5) -> list[TransactionData]:
-    """
-    Get list of largest transactions by amount.
-    """
-    if df.is_empty():
-        return []
-        
-    # Filter out income? Typically largest transactions of interest are expenses.
-    outgoing = df.filter(pl.col('category_type').is_in(['expense', 'investment']))
-    
-    if outgoing.is_empty():
-        return []
-        
-    top_tx = outgoing.sort(pl.col('abs_amount'), descending=True).head(limit)
-    
-    results = []
-    for row in top_tx.iter_rows(named=True):
-        tx_data = TransactionData(
-            id_pk=str(row.get('id_pk', '')) if row.get('id_pk') else None,
-            user_id_fk=str(row.get('user_id_fk', '')) if row.get('user_id_fk') else None,
-            account_id_fk=str(row.get('account_id_fk', '')),
-            category_id_fk=int(row.get('category_id_fk', 0)),
-            amount=Decimal(str(row.get('amount', 0))), # Original signed amount
-            date=date.fromisoformat(row['date']) if row.get('date') else date.today(),
-            notes=row.get('notes'),
-            created_at=None, # Optional
-            savings_fund_id_fk=row.get('savings_funds')
-        )
-        results.append(tx_data)
-        
-    return results
-
-
 def _calculate_enriched_summary(
     current_df: pl.DataFrame,
     previous_df: pl.DataFrame,
@@ -620,9 +507,6 @@ def _calculate_enriched_summary(
     if current_totals.income > 0:
         investment_rate = round((current_totals.investment / current_totals.income), 4)
         
-    top_expenses = _get_top_expenses(current_df)
-    biggest_mover = _get_biggest_mover(current_df, previous_df)
-    largest_transactions = _get_largest_transactions(current_df)
 
     daily_cumulative: list[float] = []
     average_cumulative: list[float] = []
@@ -646,14 +530,10 @@ def _calculate_enriched_summary(
         comparison=comparison,
         savings_rate=savings_rate,
         investment_rate=investment_rate,
-        top_expenses=top_expenses,
-        biggest_mover=biggest_mover,
-        largest_transactions=largest_transactions,
         expense_categories=_get_expense_categories(current_df),
         daily_cumulative_expense=daily_cumulative,
         average_daily_cumulative_expense=average_cumulative,
         six_month_average=six_month_average,
-        # by_category removed
     )
 
 

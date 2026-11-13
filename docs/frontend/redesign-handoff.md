@@ -27,7 +27,7 @@ Then:
 | `docs/frontend/redesign-inventory.md` | Every element and behaviour on every existing page | Use as a checklist per page. The Decision column was never filled in; the rule in 2.1 replaces it. |
 | `docs/frontend/mockups/pages.html` | Visual reference for the chosen style | Drawn for Overview, Transactions, add form, Accounts, Funds, Monthly, Budget Maker, menus, landing + footer, mobile. Not drawn for the remaining pages. |
 | `docs/frontend/mockups/*.html` (others) | Earlier explorations | History only |
-| `docs/frontend/agent-briefs/` | Briefs used for builder and reviewer subagents, a mock-API harness, conventions | Reuse; replace the `/tmp/...` paths |
+| `docs/frontend/agent-briefs/` | Briefs for builder/reviewer subagents and a mock-API harness | Deleted in phase 7 (in git history) |
 
 ## 2. What the design is
 
@@ -359,17 +359,24 @@ with an opacity modifier (`text-primary/70`, none in use today) and the calculat
 
 ### Phase 7: clean-up
 
-- Remove unused i18n keys, `components/effects` if unused, the unused summary fields
-  (`top_expenses`, `biggest_mover`, `largest_transactions`) after checking consumers.
-- Convert remaining px sizes in non-rebuilt components to rem.
-- Update `docs/frontend/README.md` (it still describes the sidebar) and delete
-  `docs/frontend/agent-briefs/` and the exploration mockups if no longer wanted.
-- Close the keyboard gaps noted in the spec.
+**Done (2026-11-13):** unused i18n keys removed (en and cs have identical key sets);
+`components/effects`, `NavLink`, `kpi-card`, `page-header` and 21 unused shadcn primitives
+deleted with their 18 npm packages; `--sidebar-*` / `--accent-gold` tokens, the Tailwind
+`sidebar` colours and unused CSS utilities (`theme-*`, `shadow-card`, `focus-ring`,
+`skeleton-shimmer`, `transition-base/slow`, `chart-grid`, `bg-dotted-pattern`) removed; the
+summary fields `top_expenses`, `biggest_mover`, `largest_transactions` removed from backend,
+schema, test and frontend types; `docs/frontend/README.md` rewritten for the current layout;
+`agent-briefs/` and the three exploration mockups deleted. The keyboard gaps were already
+closed (mode switch is a radio group with arrow keys; tag chips have their own remove buttons).
+Transaction writes now refresh every derived query via `lib/query-invalidation.ts` (account
+balances were staying stale after adding a transaction).
+
+Left: px sizes in the calculators (they are redesigned later).
 
 ## 5. How to build a page
 
-The process that worked, per page: one builder, one separate reviewer, fixes, merge.
-The briefs are in `docs/frontend/agent-briefs/`.
+The process that worked, per page: build, check, fix, then the owner tests it in the
+browser on their own running stack and signs off before the commit.
 
 **Conventions (all learned the hard way)**
 
@@ -406,22 +413,11 @@ The briefs are in `docs/frontend/agent-briefs/`.
 - No page errors, no horizontal overflow.
 - Walk the page's inventory rows one by one and account for each.
 
-**Running without a backend**
+**Running the app**
 
-`docs/frontend/agent-briefs/mock-harness.cjs` fakes a signed-in session and mocks the
-API with Playwright:
-
-```
-cd src/frontend
-VITE_API_BASE_URL=http://api.mock npx vite --host 127.0.0.1 --port 5199 --strictPort
-```
-
-then `require` the harness from a script and call
-`open({ width, height, mobile, authed, overrides })`. Its default data covers
-transactions, accounts, categories, funds and tags only; extend a copy with the
-response shape of the page under test (read `lib/api/types` and the backend schemas).
-Pages whose endpoints are not mocked will crash on empty shapes: that is the mock, not
-the app.
+The owner runs the frontend and the backend (Docker container `budget`) locally and tests the
+UI there. Agents run the code checks only: `npm run check`, `npm run lint`, and `ruff`, `mypy`,
+`pytest` for the backend.
 
 ## 6. Suggested first steps in the new session
 

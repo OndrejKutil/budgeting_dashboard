@@ -95,7 +95,7 @@ export default defineConfig({
             return "vendor-charts";
           }
 
-          if (packageName.startsWith("@radix-ui/") || packageName === "cmdk" || packageName === "vaul") {
+          if (packageName.startsWith("@radix-ui/") || packageName === "cmdk") {
             return "vendor-radix";
           }
 
