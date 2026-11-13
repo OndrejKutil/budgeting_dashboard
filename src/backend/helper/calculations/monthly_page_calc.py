@@ -3,7 +3,7 @@
 import calendar
 import logging
 from datetime import date
-from typing import Any, cast
+from typing import cast
 
 # from data.database import get_db_client # Moved inside function
 import polars as pl
@@ -18,10 +18,20 @@ from ...schemas.base import (
     DaySplit,
     MonthlyAnalyticsData,
     MonthlyPeriodComparison,
+    MonthlySixMonthAverage,
     RunRateForecast,
     SpendingTypeBreakdownData,
 )
-from ..columns import TRANSACTIONS_COLUMNS
+
+# The six-month window, the first-transaction rule and the paged fetch are shared with the
+# Overview so both pages agree on what the "six-month average" means.
+from .summary_calc import (
+    _average_window_months,
+    _fetch_first_transaction_date,
+    _fetch_summary_transactions,
+    _month_rows,
+    _months_with_history,
+)
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -53,41 +63,6 @@ def _get_month_date_range(year: int, month: int) -> tuple[date, date]:
     last_day = calendar.monthrange(year, month)[1]
     end_date = date(year, month, last_day)
     return start_date, end_date
-
-
-def _fetch_monthly_transactions(access_token: str, start_date: date, end_date: date) -> list[dict]:
-    """
-    Fetch transactions from the database for a specific date range.
-    """
-    from ...data.database import get_db_client
-    try:
-        user_supabase_client = get_db_client(access_token)
-
-        monthly_fields = ",".join([
-            TRANSACTIONS_COLUMNS.ID.value,
-            TRANSACTIONS_COLUMNS.USER_ID.value,
-            TRANSACTIONS_COLUMNS.ACCOUNT_ID.value,
-            TRANSACTIONS_COLUMNS.CATEGORY_ID.value,
-            TRANSACTIONS_COLUMNS.AMOUNT.value,
-            TRANSACTIONS_COLUMNS.DATE.value,
-            TRANSACTIONS_COLUMNS.NOTES.value,
-            TRANSACTIONS_COLUMNS.SAVINGS_FUND_ID.value
-        ])
-
-        query = user_supabase_client.table('fct_transactions').select(
-            f"{monthly_fields}, dim_categories_users(type, category_name, spending_type), dim_accounts(currency)"
-        )
-        query = query.gte(TRANSACTIONS_COLUMNS.DATE.value, start_date.isoformat())
-        query = query.lte(TRANSACTIONS_COLUMNS.DATE.value, end_date.isoformat())
-        query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=False)
-        
-        response = query.execute()
-        return cast(list[dict[Any, Any]], response.data)
-
-    except Exception as e:
-        logger.error(f'Database query failed for monthly transactions: {str(e)}')
-        logger.info(f'Query parameters - start_date: {start_date}, end_date: {end_date}')
-        raise ConnectionError('Failed to fetch transactions from database. Please check your connection or try again later.')
 
 
 def _prepare_transactions_dataframe(transactions: list[dict]) -> pl.DataFrame:
@@ -366,6 +341,40 @@ def _calculate_comparison(current: MonthlyTotals, previous: MonthlyTotals) -> Mo
         cashflow_delta_pct=delta_pct(current.cashflow, previous.cashflow)
     )
 
+def _savings_rate(totals: MonthlyTotals) -> float | None:
+    """Savings as a percentage of income, or None for a month without income."""
+    if totals.income <= 0:
+        return None
+    return totals.savings / totals.income * 100
+
+
+def _calculate_six_month_average(df: pl.DataFrame, months: list[date]) -> MonthlySixMonthAverage | None:
+    """
+    Average of the monthly totals (computed exactly like the current-month totals) over months.
+    The savings rate is the mean of the monthly rates of the months that had income, so a
+    month without income does not count as a 0 % rate.
+    """
+    if not months:
+        return None
+    totals = [_calculate_monthly_totals(_month_rows(df, m)) for m in months]
+    count = len(totals)
+
+    def avg(values: list[float]) -> float:
+        return round(sum(values) / count, 2)
+
+    rates = [rate for rate in (_savings_rate(t) for t in totals) if rate is not None]
+    return MonthlySixMonthAverage(
+        months_counted=count,
+        income=avg([t.income for t in totals]),
+        expenses=avg([t.expenses for t in totals]),
+        savings=avg([t.savings for t in totals]),
+        investments=avg([t.investments for t in totals]),
+        profit=avg([t.profit for t in totals]),
+        cashflow=avg([t.cashflow for t in totals]),
+        savings_rate=round(sum(rates) / len(rates), 2) if rates else None,
+    )
+
+
 def _calculate_daily_spending_heatmap(df: pl.DataFrame) -> list[DailySpendingData]:
     """
     Calculate daily spending amounts for heatmap visualization.
@@ -455,42 +464,31 @@ def _monthly_analytics(access_token: str, year: int, month: int, base_currency: 
     """
     Calculate comprehensive monthly analytics for a specific month and year.
     """
-    # 1. Get dates for current month
+    # 1. Dates: the requested month, the previous month and the six-month average window
     start_date, end_date = _get_month_date_range(year, month)
-
-    # 2. Get dates for previous month
     prev_date = start_date - relativedelta(months=1)
-    prev_year, prev_month = prev_date.year, prev_date.month
-    prev_start_date, prev_end_date = _get_month_date_range(prev_year, prev_month)
+    window = _average_window_months(start_date)
 
-    # 3. Get dates for same month last year (YoY comparison)
-    yoy_start_date, yoy_end_date = _get_month_date_range(year - 1, month)
+    # 2. One paged fetch for the six months before plus the month itself (the previous month
+    #    is the last month of the window), and the first transaction date for the history rule.
+    all_transactions = _fetch_summary_transactions(access_token, window[0], end_date)
+    first_data_date = _fetch_first_transaction_date(access_token)
 
-    # 4. Fetch data
-    current_transactions = _fetch_monthly_transactions(access_token, start_date, end_date)
-    previous_transactions = _fetch_monthly_transactions(access_token, prev_start_date, prev_end_date)
-    yoy_transactions = _fetch_monthly_transactions(access_token, yoy_start_date, yoy_end_date)
+    # 3. Prepare the frame and convert amounts to base_currency
+    all_df = _prepare_transactions_dataframe(all_transactions)
+    all_df = _apply_currency_conversion(all_df, base_currency)
+    current_df = _month_rows(all_df, start_date)
+    previous_df = _month_rows(all_df, prev_date)
 
-    # 5. Prepare DFs
-    current_df = _prepare_transactions_dataframe(current_transactions)
-    previous_df = _prepare_transactions_dataframe(previous_transactions)
-    yoy_df = _prepare_transactions_dataframe(yoy_transactions)
-
-    # 5b. Convert amounts to base_currency
-    current_df = _apply_currency_conversion(current_df, base_currency)
-    previous_df = _apply_currency_conversion(previous_df, base_currency)
-    yoy_df = _apply_currency_conversion(yoy_df, base_currency)
-
-    # 6. Calculate Metrics
+    # 4. Calculate Metrics
     totals = _calculate_monthly_totals(current_df)
     prev_totals = _calculate_monthly_totals(previous_df)
-    yoy_totals = _calculate_monthly_totals(yoy_df)
+    six_month_average = _calculate_six_month_average(all_df, _months_with_history(window, first_data_date))
 
     run_rate = _calculate_run_rate(current_df, year, month)
     day_split = _calculate_day_split(current_df)
     concentration = _calculate_concentration(current_df)
     comparison = _calculate_comparison(totals, prev_totals)
-    yoy_comparison = _calculate_comparison(totals, yoy_totals) if not yoy_df.is_empty() else None
 
     daily_heatmap = _calculate_daily_spending_heatmap(current_df)
 
@@ -521,7 +519,7 @@ def _monthly_analytics(access_token: str, year: int, month: int, base_currency: 
         day_split=day_split,
         category_concentration=concentration,
         comparison=comparison,
-        yoy_comparison=yoy_comparison,
+        six_month_average=six_month_average,
         daily_spending_heatmap=daily_heatmap,
         income_breakdown=income_breakdown,
         expenses_breakdown=expenses_breakdown,

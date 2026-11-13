@@ -374,6 +374,18 @@ class MonthlyPeriodComparison(BaseModel):
     cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous month")
 
 
+class MonthlySixMonthAverage(BaseModel):
+    """Average monthly totals over the (up to) six calendar months before the requested month"""
+    months_counted: int = Field(..., description="How many of the six previous months contributed (months before the user's first transaction are skipped)")
+    income: float = Field(..., description="Average monthly income (same definition as MonthlyAnalyticsData.income)")
+    expenses: float = Field(..., description="Average monthly expenses")
+    savings: float = Field(..., description="Average monthly net savings")
+    investments: float = Field(..., description="Average monthly investments")
+    profit: float = Field(..., description="Average monthly profit")
+    cashflow: float = Field(..., description="Average monthly net cash flow")
+    savings_rate: float | None = Field(None, description="Average of the monthly savings rates (percent of income) over the counted months that had income; null when none had income")
+
+
 class MonthlyAnalyticsData(BaseModel):
     """Schema for monthly analytics data"""
     year: int = Field(..., description="Year of the analysis")
@@ -393,7 +405,7 @@ class MonthlyAnalyticsData(BaseModel):
     day_split: DaySplit = Field(..., description="Weekday vs Weekend spending split")
     category_concentration: CategoryConcentration = Field(..., description="Category concentration insights")
     comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
-    yoy_comparison: MonthlyPeriodComparison | None = Field(None, description="Year-over-year comparison (vs same month last year)")
+    six_month_average: MonthlySixMonthAverage | None = Field(None, description="Average of the six months before this one; null when the user has no history before this month")
 
     daily_spending_heatmap: list[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
     # breakdown: List[CategoryBreakdownData] # REMOVED
