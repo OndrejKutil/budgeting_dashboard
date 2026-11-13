@@ -25,7 +25,7 @@ interface FieldProps {
  */
 function Field({ htmlFor, label, error, hint, labelAction, className, children }: FieldProps) {
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor={htmlFor} className={cn(error && "text-destructive")}>
           {label}

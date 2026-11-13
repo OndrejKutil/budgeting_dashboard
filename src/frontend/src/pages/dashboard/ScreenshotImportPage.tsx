@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -25,18 +21,16 @@ import { Calendar } from '@/components/ui/calendar';
 import {
   ScanLine,
   Upload,
-  ImageIcon,
   Loader2,
   X,
-  AlertTriangle,
   AlertCircle,
   ClipboardPaste,
   Trash2,
   CalendarIcon,
   History,
   Info,
-  Wand2,
 } from 'lucide-react';
+import { fieldLine } from '@/components/ui/field-line';
 import { cn } from '@/lib/utils';
 import { getCurrencyFlag, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { AccountSelect } from '@/components/AccountSelect';
@@ -48,6 +42,7 @@ import type { Category, DraftTransaction, FieldSource, NoTransactionsReason, Tag
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
+import { invalidateTransactionData } from '@/lib/query-invalidation';
 import type { DashboardTranslationKey } from '@/lib/i18n';
 
 const FEATURE_KEY = 'screenshot_import';
@@ -262,8 +257,8 @@ function CategorySelectItems({ categories, t }: { categories: Category[]; t: Ret
           <SelectGroup key={g.type}>
             <SelectLabel
               className={cn(
-                'px-2 pb-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/50 pl-2',
-                gi > 0 && 'mt-1 border-t border-border/40 pt-2'
+                'px-2 pb-1 text-xs font-normal text-muted-foreground',
+                gi > 0 && 'mt-1 border-t border-border pt-2'
               )}
             >
               {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
@@ -280,23 +275,22 @@ function CategorySelectItems({ categories, t }: { categories: Category[]; t: Ret
 }
 
 function fieldRingClass(source: FieldSource | undefined): string {
-  return source === 'none' ? 'border-destructive/60 focus-visible:ring-destructive/40' : '';
+  return source === 'none' ? 'border-destructive' : '';
 }
 
 /**
- * Small provenance indicator shown next to a field's label -- silent when the model resolved
- * the field normally, since that's the expected case and doesn't need calling out. Clears once
- * the user edits the field (see `updateDraft`), so a fixed field doesn't stay flagged forever.
+ * Small provenance note on a field's label row -- silent when the model resolved the field
+ * normally, since that's the expected case. "Needs your input" is not shown here: it is the
+ * field's error line (icon + text), so it does not rely on colour alone. Clears once the user
+ * edits the field (see `updateDraft`), so a fixed field doesn't stay flagged forever.
  */
 function FieldStatus({
   source,
-  needsInputLabel,
   defaultedLabel,
   fromHistoryLabel,
   fromHistoryHint,
 }: {
   source: FieldSource | undefined;
-  needsInputLabel: string;
   defaultedLabel: string;
   fromHistoryLabel?: string;
   fromHistoryHint?: string;
@@ -305,10 +299,13 @@ function FieldStatus({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className="h-4 gap-1 px-1.5 text-[10px] font-normal text-primary">
-            <History className="h-2.5 w-2.5" />
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-sm text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <History className="h-3 w-3" aria-hidden="true" />
             {fromHistoryLabel}
-          </Badge>
+          </button>
         </TooltipTrigger>
         {fromHistoryHint && (
           <TooltipContent>
@@ -318,15 +315,8 @@ function FieldStatus({
       </Tooltip>
     );
   }
-  if (source === 'none') {
-    return <span className="text-[10px] font-medium text-destructive">{needsInputLabel}</span>;
-  }
   if (source === 'default') {
-    return (
-      <Badge variant="outline" className="h-4 px-1.5 text-[10px] font-normal text-muted-foreground">
-        {defaultedLabel}
-      </Badge>
-    );
+    return <span className="text-xs text-muted-foreground">{defaultedLabel}</span>;
   }
   return null;
 }
@@ -482,9 +472,7 @@ export default function ScreenshotImportPage() {
       return screenshotImportApi.import(buildImportPayload(toImport, newTagIds));
     },
     onSuccess: (body) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
+      invalidateTransactionData(queryClient);
       toast({
         title: t('pages.screenshotImport.importSuccess', { count: body.data?.length ?? drafts.length }),
       });
@@ -565,22 +553,25 @@ export default function ScreenshotImportPage() {
     setBulk(EMPTY_BULK);
   };
 
+  const title = (
+    <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+      {t('pages.screenshotImport.title')}
+    </h1>
+  );
+
   if (flagLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div aria-busy="true">
+        {title}
+        <Skeleton className="mt-10 h-64 w-full" />
       </div>
     );
   }
 
   if (!enabled) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('pages.screenshotImport.title')}
-          description={t('pages.screenshotImport.description')}
-        />
+      <div>
+        {title}
         <EmptyState
           icon={<ScanLine className="h-8 w-8 text-muted-foreground" />}
           title={t('pages.screenshotImport.notEnabledTitle')}
@@ -592,27 +583,18 @@ export default function ScreenshotImportPage() {
 
   const needsReviewCount = drafts.filter(draftNeedsReview).length;
   const allReadyToImport = drafts.length > 0 && drafts.every(draftIsReadyToImport);
+  const needsInput = (source: FieldSource | undefined) => (source === 'none' ? t('pages.screenshotImport.needsInput') : undefined);
+  const sectionHeading = 'text-[1.125rem] font-medium tracking-[-0.01em]';
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <PageHeader
-          title={t('pages.screenshotImport.title')}
-          description={t('pages.screenshotImport.description')}
-        />
-        {inferenceModel && (
-          <p className="font-mono text-xs text-muted-foreground/70">
-            {t('pages.screenshotImport.inferenceModelLabel')}: {inferenceModel}
-          </p>
-        )}
-      </div>
+    <div>
+      <header>
+        {title}
+        <p className="mt-1 max-w-[65ch] text-[0.8125rem] text-muted-foreground">{t('pages.screenshotImport.description')}</p>
+      </header>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="rounded-xl border border-border bg-card p-6 shadow-sm"
-      >
+      {/* Upload: the screenshot on the left, instructions and the extract action on the right. */}
+      <section aria-label={t('pages.screenshotImport.dropTitle')} className="mt-8 grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -625,21 +607,17 @@ export default function ScreenshotImportPage() {
             acceptFile(e.dataTransfer.files?.[0]);
           }}
           className={cn(
-            'flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors',
-            isDragging
-              ? 'border-primary bg-primary/5'
-              : fileError
-                ? 'border-destructive/60 bg-destructive/5'
-                : 'border-border bg-background/50'
+            'flex min-h-[16rem] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-colors',
+            isDragging ? 'border-primary bg-primary/5' : fileError ? 'border-destructive' : 'border-foreground/20',
           )}
         >
           {previewUrl ? (
-            <div className="w-full space-y-4">
-              <div className="relative mx-auto max-w-md">
+            <div className="w-full space-y-3">
+              <div className="relative mx-auto max-w-sm">
                 <img
                   src={previewUrl}
                   alt={t('pages.screenshotImport.previewAlt')}
-                  className="max-h-80 w-full rounded-lg border border-border object-contain"
+                  className="max-h-72 w-full rounded-lg object-contain"
                 />
                 <Button
                   type="button"
@@ -652,23 +630,16 @@ export default function ScreenshotImportPage() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="truncate text-sm text-muted-foreground">
+              <p className="truncate text-[0.8125rem] text-muted-foreground">
                 {file?.name} · {Math.round((file?.size ?? 0) / 1024)} kB
               </p>
             </div>
           ) : (
             <>
-              <div className="rounded-full bg-muted p-4">
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="mt-4 text-lg font-semibold text-foreground font-display">
-                {t('pages.screenshotImport.dropTitle')}
-              </h3>
-              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                {t('pages.screenshotImport.dropDescription')}
-              </p>
-              <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ClipboardPaste className="h-3.5 w-3.5" />
+              <p className="text-[1.0625rem]">{t('pages.screenshotImport.dropTitle')}</p>
+              <p className="mt-1.5 max-w-sm text-[0.8125rem] text-muted-foreground">{t('pages.screenshotImport.dropDescription')}</p>
+              <p className="mt-3 flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                <ClipboardPaste className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('pages.screenshotImport.pasteHint')}
               </p>
             </>
@@ -688,71 +659,64 @@ export default function ScreenshotImportPage() {
             className="hidden"
             onChange={(e) => acceptFile(e.target.files?.[0])}
           />
+          <Button type="button" variant="outline" className="mt-5 h-10 px-4" onClick={() => fileInputRef.current?.click()}>
+            <Upload aria-hidden="true" />
+            {file ? t('pages.screenshotImport.replace') : t('pages.screenshotImport.choose')}
+          </Button>
+        </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" />
-              {file ? t('pages.screenshotImport.replace') : t('pages.screenshotImport.choose')}
-            </Button>
-
+        <div className="flex min-w-0 flex-col">
+          <Field
+            htmlFor="screenshot-instructions"
+            label={t('pages.screenshotImport.instructionsLabel')}
+            labelAction={
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {instructions.length}/{MAX_INSTRUCTIONS_CHARS}
+              </span>
+            }
+            hint={t('pages.screenshotImport.instructionsHint')}
+          >
+            <Textarea
+              id="screenshot-instructions"
+              value={instructions}
+              maxLength={MAX_INSTRUCTIONS_CHARS}
+              rows={4}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder={t('pages.screenshotImport.instructionsPlaceholder')}
+              className="resize-y"
+            />
+          </Field>
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
             <Button
               type="button"
+              className="h-11 px-5"
               disabled={!file || extractMutation.isPending}
               onClick={() => file && extractMutation.mutate({ file, instructions })}
             >
-              {extractMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <ScanLine className="mr-2 h-4 w-4" />
-              )}
+              {extractMutation.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <ScanLine aria-hidden="true" />}
               {t('pages.screenshotImport.extract')}
             </Button>
+            {inferenceModel && (
+              <span className="font-mono text-xs text-muted-foreground/70">
+                {t('pages.screenshotImport.inferenceModelLabel')}: {inferenceModel}
+              </span>
+            )}
           </div>
+          {errorMessage && (
+            <p role="alert" className="mt-4 flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {errorMessage}
+            </p>
+          )}
         </div>
-
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="screenshot-instructions">{t('pages.screenshotImport.instructionsLabel')}</Label>
-            <span className="text-[10px] tabular-nums text-muted-foreground">
-              {instructions.length}/{MAX_INSTRUCTIONS_CHARS}
-            </span>
-          </div>
-          <Textarea
-            id="screenshot-instructions"
-            value={instructions}
-            maxLength={MAX_INSTRUCTIONS_CHARS}
-            rows={2}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder={t('pages.screenshotImport.instructionsPlaceholder')}
-            className="resize-y bg-background/50"
-          />
-          <p className="text-xs text-muted-foreground">{t('pages.screenshotImport.instructionsHint')}</p>
-        </div>
-      </motion.div>
-
-      {errorMessage && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
+      </section>
 
       {extracted && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-4"
-        >
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground font-display">
-              {t('pages.screenshotImport.reviewTitle')}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t('pages.screenshotImport.reviewSubtitle', {
-                count: drafts.length,
-                needsReview: needsReviewCount,
-              })}
+        <section aria-labelledby="screenshot-review" className="mt-14">
+          <div className="border-b border-foreground/30 pb-3">
+            <h2 id="screenshot-review" className={sectionHeading}>{t('pages.screenshotImport.reviewTitle')}</h2>
+            <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+              {t('pages.screenshotImport.reviewSubtitle', { count: drafts.length, needsReview: needsReviewCount })}
             </p>
           </div>
 
@@ -767,19 +731,13 @@ export default function ScreenshotImportPage() {
               )}
             />
           ) : (
-            <div className="space-y-3">
+            <>
               {drafts.length > 1 && (
-                <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-primary" />
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {t('pages.screenshotImport.applyToAllTitle')}
-                    </h4>
-                  </div>
-                  <p className="mb-3 text-xs text-muted-foreground">{t('pages.screenshotImport.applyToAllHint')}</p>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="bulk-account">{t('common.account')}</Label>
+                <div className="border-b border-border py-6">
+                  <h3 className="text-[0.9375rem]">{t('pages.screenshotImport.applyToAllTitle')}</h3>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.screenshotImport.applyToAllHint')}</p>
+                  <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+                    <Field htmlFor="bulk-account" label={t('common.account')}>
                       <AccountSelect
                         id="bulk-account"
                         accounts={accounts}
@@ -787,13 +745,9 @@ export default function ScreenshotImportPage() {
                         onValueChange={(value) => setBulk((b) => ({ ...b, account_id_fk: value }))}
                         placeholder={t('pages.screenshotImport.keepAsIs')}
                       />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="bulk-category">{t('common.category')}</Label>
-                      <Select
-                        value={bulk.category_id_fk}
-                        onValueChange={(value) => setBulk((b) => ({ ...b, category_id_fk: value }))}
-                      >
+                    </Field>
+                    <Field htmlFor="bulk-category" label={t('common.category')}>
+                      <Select value={bulk.category_id_fk} onValueChange={(value) => setBulk((b) => ({ ...b, category_id_fk: value }))}>
                         <SelectTrigger id="bulk-category">
                           <SelectValue placeholder={t('pages.screenshotImport.keepAsIs')} />
                         </SelectTrigger>
@@ -801,13 +755,9 @@ export default function ScreenshotImportPage() {
                           <CategorySelectItems categories={categories} t={t} />
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="bulk-fund">{t('pages.transactions.savingsFundOptional')}</Label>
-                      <Select
-                        value={bulk.savings_fund_id_fk}
-                        onValueChange={(value) => setBulk((b) => ({ ...b, savings_fund_id_fk: value }))}
-                      >
+                    </Field>
+                    <Field htmlFor="bulk-fund" label={t('pages.transactions.savingsFundOptional')}>
+                      <Select value={bulk.savings_fund_id_fk} onValueChange={(value) => setBulk((b) => ({ ...b, savings_fund_id_fk: value }))}>
                         <SelectTrigger id="bulk-fund">
                           <SelectValue placeholder={t('pages.screenshotImport.keepAsIs')} />
                         </SelectTrigger>
@@ -820,9 +770,8 @@ export default function ScreenshotImportPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="bulk-tags">{t('pages.transactions.tags')}</Label>
+                    </Field>
+                    <Field htmlFor="bulk-tags" label={t('pages.transactions.tags')}>
                       <TagMultiSelect
                         id="bulk-tags"
                         tags={tags}
@@ -832,303 +781,293 @@ export default function ScreenshotImportPage() {
                         onPendingNamesChange={(names) => setBulk((b) => ({ ...b, new_tag_names: names }))}
                         pendingLabel={t('pages.screenshotImport.newTag')}
                       />
-                    </div>
+                    </Field>
                   </div>
-                  <div className="mt-3 flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={bulkIsEmpty}
-                      onClick={() => setBulk(EMPTY_BULK)}
-                    >
+                  <div className="mt-5 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" disabled={bulkIsEmpty} onClick={() => setBulk(EMPTY_BULK)}>
                       {t('common.cancel')}
                     </Button>
-                    <Button type="button" size="sm" disabled={bulkIsEmpty} onClick={applyBulk}>
+                    <Button type="button" variant="outline" disabled={bulkIsEmpty} onClick={applyBulk}>
                       {t('pages.screenshotImport.applyToAllButton')}
                     </Button>
                   </div>
                 </div>
               )}
 
-              {drafts.map((draft, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'rounded-xl border bg-card p-4 shadow-sm transition-colors',
-                    draftNeedsReview(draft) ? 'border-destructive/30' : 'border-border'
-                  )}
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {draftNeedsReview(draft) && (
-                        <Badge variant="destructive" className="text-[10px]">
-                          {t('pages.screenshotImport.needsInput')}
-                        </Badge>
+              <ol>
+                {drafts.map((draft, i) => {
+                  const flagged = draftNeedsReview(draft);
+                  return (
+                    <li
+                      key={i}
+                      className={cn(
+                        'border-b border-border py-6 pl-4',
+                        // The side line marks a draft that still needs input; the heading says so in words too.
+                        flagged ? 'border-l-[3px] border-l-destructive' : 'border-l-[3px] border-l-transparent',
                       )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeDraft(i)}
-                      aria-label={t('pages.screenshotImport.removeDraft')}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {draft.warnings.length > 0 && (
-                    <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                      <p className="mb-1 flex items-center gap-1.5 font-medium">
-                        <Info className="h-3.5 w-3.5" />
-                        {t('pages.screenshotImport.warningsTitle')}
-                      </p>
-                      <ul className="list-disc space-y-0.5 pl-5">
-                        {draft.warnings.map((warning, wi) => (
-                          <li key={wi}>{warning}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor={`notes-${i}`}>{t('common.notes')}</Label>
-                        <FieldStatus
-                          source={draft.field_sources.notes}
-                          needsInputLabel={t('pages.screenshotImport.needsInput')}
-                          defaultedLabel={t('pages.screenshotImport.defaulted')}
-                        />
-                      </div>
-                      <Input
-                        id={`notes-${i}`}
-                        value={draft.notes}
-                        onChange={(e) => updateDraft(i, { notes: e.target.value })}
-                        placeholder={t('pages.transactions.notesPlaceholder')}
-                        className={cn(fieldRingClass(draft.field_sources.notes))}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor={`amount-${i}`}>{t('common.amount')}</Label>
-                        <FieldStatus
-                          source={draft.field_sources.amount}
-                          needsInputLabel={t('pages.screenshotImport.needsInput')}
-                          defaultedLabel={t('pages.screenshotImport.defaulted')}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              aria-label={
-                                isNegativeAmountInput(draft.amount)
-                                  ? t('pages.transactions.setAmountPositive')
-                                  : t('pages.transactions.setAmountNegative')
-                              }
-                              onClick={() => updateDraft(i, { amount: toggleAmountSign(draft.amount) })}
-                              className={cn(
-                                'h-10 w-10 shrink-0 bg-background/50 text-base font-semibold tabular-nums',
-                                isNegativeAmountInput(draft.amount) &&
-                                  'border-destructive/60 text-destructive hover:text-destructive'
-                              )}
-                            >
-                              {isNegativeAmountInput(draft.amount) ? '-' : '+'}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {isNegativeAmountInput(draft.amount)
-                                ? t('pages.transactions.setAmountPositive')
-                                : t('pages.transactions.setAmountNegative')}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Input
-                          id={`amount-${i}`}
-                          type="text"
-                          inputMode="decimal"
-                          pattern={DECIMAL_INPUT_PATTERN}
-                          value={draft.amount}
-                          onChange={(e) => updateDraft(i, { amount: e.target.value })}
-                          className={cn('min-w-0 text-[16px] tabular-nums', fieldRingClass(draft.field_sources.amount))}
-                        />
-                        <Select
-                          value={draft.currency}
-                          onValueChange={(value) => updateDraft(i, { currency: value })}
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <h3 className="text-[0.9375rem]">{t('pages.screenshotImport.draftNumber', { n: i + 1 })}</h3>
+                          {flagged && (
+                            <span className="inline-flex items-center gap-1 text-[0.8125rem] text-destructive">
+                              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                              {t('pages.screenshotImport.needsInput')}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeDraft(i)}
+                          aria-label={t('pages.screenshotImport.removeDraft')}
                         >
-                          <SelectTrigger className={cn('w-24 shrink-0', fieldRingClass(draft.field_sources.currency))}>
-                            <SelectValue placeholder={t('common.currency')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SUPPORTED_CURRENCIES.map((currency) => (
-                              <SelectItem key={currency} value={currency}>
-                                {getCurrencyFlag(currency)} {currency}
-                              </SelectItem>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {draft.warnings.length > 0 && (
+                        <div className="mb-5 text-[0.8125rem] text-warning">
+                          <p className="flex items-center gap-1.5">
+                            <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                            {t('pages.screenshotImport.warningsTitle')}
+                          </p>
+                          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                            {draft.warnings.map((warning, wi) => (
+                              <li key={wi}>{warning}</li>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                          </ul>
+                        </div>
+                      )}
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor={`date-${i}`}>{t('common.date')}</Label>
-                        <FieldStatus
-                          source={draft.field_sources.date}
-                          needsInputLabel={t('pages.screenshotImport.needsInput')}
-                          defaultedLabel={t('pages.screenshotImport.defaulted')}
-                        />
-                      </div>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id={`date-${i}`}
-                            type="button"
-                            variant="outline"
-                            className={cn(
-                              'w-full justify-start pl-3 text-left font-normal bg-background/50 border-input/50',
-                              !draft.date && 'text-muted-foreground',
-                              fieldRingClass(draft.field_sources.date)
-                            )}
-                          >
-                            {draft.date ? (
-                              formatDate(draft.date, { dateStyle: 'long' })
-                            ) : (
-                              <span>{t('pages.transactions.pickDate')}</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={draft.date ? new Date(draft.date) : undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                // Adjust for timezone offset to prevent date shifting when converting to string
-                                const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-                                updateDraft(i, { date: offsetDate.toISOString().split('T')[0] });
-                              }
-                            }}
-                            disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                            initialFocus
+                      <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+                        <Field
+                          htmlFor={`notes-${i}`}
+                          label={t('common.notes')}
+                          error={needsInput(draft.field_sources.notes)}
+                          labelAction={<FieldStatus source={draft.field_sources.notes} defaultedLabel={t('pages.screenshotImport.defaulted')} />}
+                        >
+                          <Input
+                            id={`notes-${i}`}
+                            value={draft.notes}
+                            onChange={(e) => updateDraft(i, { notes: e.target.value })}
+                            placeholder={t('pages.transactions.notesPlaceholder')}
+                            className={cn(fieldRingClass(draft.field_sources.notes))}
                           />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                        </Field>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor={`account-${i}`}>{t('common.account')}</Label>
-                        <FieldStatus
-                          source={draft.field_sources.account_id_fk}
-                          needsInputLabel={t('pages.screenshotImport.needsInput')}
-                          defaultedLabel={t('pages.screenshotImport.defaulted')}
-                          fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
-                          fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
-                        />
+                        <Field
+                          htmlFor={`amount-${i}`}
+                          label={t('common.amount')}
+                          error={needsInput(draft.field_sources.amount) ?? needsInput(draft.field_sources.currency)}
+                          labelAction={<FieldStatus source={draft.field_sources.amount} defaultedLabel={t('pages.screenshotImport.defaulted')} />}
+                        >
+                          <div className="flex items-end gap-3">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label={
+                                    isNegativeAmountInput(draft.amount)
+                                      ? t('pages.transactions.setAmountPositive')
+                                      : t('pages.transactions.setAmountNegative')
+                                  }
+                                  onClick={() => updateDraft(i, { amount: toggleAmountSign(draft.amount) })}
+                                  className={cn(
+                                    'flex h-[42px] w-8 shrink-0 items-center justify-center text-lg tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    fieldLine,
+                                    isNegativeAmountInput(draft.amount) ? 'text-destructive' : 'text-success',
+                                  )}
+                                >
+                                  {isNegativeAmountInput(draft.amount) ? '−' : '+'}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {isNegativeAmountInput(draft.amount)
+                                    ? t('pages.transactions.setAmountPositive')
+                                    : t('pages.transactions.setAmountNegative')}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Input
+                              id={`amount-${i}`}
+                              type="text"
+                              inputMode="decimal"
+                              pattern={DECIMAL_INPUT_PATTERN}
+                              value={draft.amount}
+                              onChange={(e) => updateDraft(i, { amount: e.target.value })}
+                              className={cn('min-w-0 flex-1 tabular-nums', fieldRingClass(draft.field_sources.amount))}
+                            />
+                            <Select value={draft.currency} onValueChange={(value) => updateDraft(i, { currency: value })}>
+                              <SelectTrigger
+                                aria-label={t('common.currency')}
+                                className={cn('w-[5.5rem] shrink-0', fieldRingClass(draft.field_sources.currency))}
+                              >
+                                <SelectValue placeholder={t('common.currency')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SUPPORTED_CURRENCIES.map((currency) => (
+                                  <SelectItem key={currency} value={currency}>
+                                    {getCurrencyFlag(currency)} {currency}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </Field>
+
+                        <Field
+                          htmlFor={`date-${i}`}
+                          label={t('common.date')}
+                          error={needsInput(draft.field_sources.date)}
+                          labelAction={<FieldStatus source={draft.field_sources.date} defaultedLabel={t('pages.screenshotImport.defaulted')} />}
+                        >
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                id={`date-${i}`}
+                                type="button"
+                                className={cn(
+                                  'flex h-[42px] w-full items-center justify-between gap-2 py-0 text-left text-base md:text-[15px]',
+                                  fieldLine,
+                                  !draft.date && 'text-muted-foreground',
+                                  fieldRingClass(draft.field_sources.date),
+                                )}
+                              >
+                                <span className="truncate">
+                                  {draft.date ? formatDate(draft.date, { dateStyle: 'long' }) : t('pages.transactions.pickDate')}
+                                </span>
+                                <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={draft.date ? new Date(draft.date) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    // Adjust for timezone offset to prevent date shifting when converting to string
+                                    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+                                    updateDraft(i, { date: offsetDate.toISOString().split('T')[0] });
+                                  }
+                                }}
+                                disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </Field>
+
+                        <Field
+                          htmlFor={`account-${i}`}
+                          label={t('common.account')}
+                          error={needsInput(draft.field_sources.account_id_fk)}
+                          labelAction={
+                            <FieldStatus
+                              source={draft.field_sources.account_id_fk}
+                              defaultedLabel={t('pages.screenshotImport.defaulted')}
+                              fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
+                              fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
+                            />
+                          }
+                        >
+                          <AccountSelect
+                            id={`account-${i}`}
+                            accounts={accounts}
+                            value={draft.account_id_fk}
+                            onValueChange={(value) => updateDraft(i, { account_id_fk: value })}
+                            placeholder={t('pages.transactions.selectAccount')}
+                            className={cn(fieldRingClass(draft.field_sources.account_id_fk))}
+                          />
+                        </Field>
+
+                        <Field
+                          htmlFor={`category-${i}`}
+                          label={t('common.category')}
+                          error={needsInput(draft.field_sources.category_id_fk)}
+                          labelAction={
+                            <FieldStatus
+                              source={draft.field_sources.category_id_fk}
+                              defaultedLabel={t('pages.screenshotImport.defaulted')}
+                              fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
+                              fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
+                            />
+                          }
+                        >
+                          <Select value={draft.category_id_fk} onValueChange={(value) => updateDraft(i, { category_id_fk: value })}>
+                            <SelectTrigger id={`category-${i}`} className={cn(fieldRingClass(draft.field_sources.category_id_fk))}>
+                              <SelectValue placeholder={t('pages.transactions.selectCategory')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <CategorySelectItems categories={categories} t={t} />
+                            </SelectContent>
+                          </Select>
+                        </Field>
+
+                        <Field htmlFor={`fund-${i}`} label={t('pages.transactions.savingsFundOptional')}>
+                          <Select
+                            value={draft.savings_fund_id_fk || NO_FUND}
+                            onValueChange={(value) => updateDraft(i, { savings_fund_id_fk: value === NO_FUND ? '' : value })}
+                          >
+                            <SelectTrigger id={`fund-${i}`}>
+                              <SelectValue placeholder={t('pages.transactions.selectFund')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NO_FUND}>{t('common.none')}</SelectItem>
+                              {activeFunds.map((fund) => (
+                                <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
+                                  {fund.fund_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+
+                        <Field htmlFor={`tags-${i}`} label={t('pages.transactions.tags')}>
+                          <TagMultiSelect
+                            id={`tags-${i}`}
+                            tags={tags}
+                            value={draft.tags}
+                            onChange={(ids) => updateDraft(i, { tags: ids })}
+                            pendingNames={draft.new_tag_names}
+                            onPendingNamesChange={(names) => updateDraft(i, { new_tag_names: names })}
+                            pendingLabel={t('pages.screenshotImport.newTag')}
+                          />
+                        </Field>
                       </div>
-                      <AccountSelect
-                        id={`account-${i}`}
-                        accounts={accounts}
-                        value={draft.account_id_fk}
-                        onValueChange={(value) => updateDraft(i, { account_id_fk: value })}
-                        placeholder={t('pages.transactions.selectAccount')}
-                        className={cn(fieldRingClass(draft.field_sources.account_id_fk))}
-                      />
-                    </div>
-
-                    <div className="space-y-2 sm:col-span-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor={`category-${i}`}>{t('common.category')}</Label>
-                        <FieldStatus
-                          source={draft.field_sources.category_id_fk}
-                          needsInputLabel={t('pages.screenshotImport.needsInput')}
-                          defaultedLabel={t('pages.screenshotImport.defaulted')}
-                          fromHistoryLabel={t('pages.screenshotImport.fromHistory')}
-                          fromHistoryHint={t('pages.screenshotImport.fromHistoryHint')}
-                        />
-                      </div>
-                      <Select
-                        value={draft.category_id_fk}
-                        onValueChange={(value) => updateDraft(i, { category_id_fk: value })}
-                      >
-                        <SelectTrigger id={`category-${i}`} className={cn(fieldRingClass(draft.field_sources.category_id_fk))}>
-                          <SelectValue placeholder={t('pages.transactions.selectCategory')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <CategorySelectItems categories={categories} t={t} />
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`fund-${i}`}>{t('pages.transactions.savingsFundOptional')}</Label>
-                      <Select
-                        value={draft.savings_fund_id_fk || NO_FUND}
-                        onValueChange={(value) =>
-                          updateDraft(i, { savings_fund_id_fk: value === NO_FUND ? '' : value })
-                        }
-                      >
-                        <SelectTrigger id={`fund-${i}`}>
-                          <SelectValue placeholder={t('pages.transactions.selectFund')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NO_FUND}>{t('common.none')}</SelectItem>
-                          {activeFunds.map((fund) => (
-                            <SelectItem key={fund.savings_funds_id_pk} value={fund.savings_funds_id_pk}>
-                              {fund.fund_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`tags-${i}`}>{t('pages.transactions.tags')}</Label>
-                      <TagMultiSelect
-                        id={`tags-${i}`}
-                        tags={tags}
-                        value={draft.tags}
-                        onChange={(ids) => updateDraft(i, { tags: ids })}
-                        pendingNames={draft.new_tag_names}
-                        onPendingNamesChange={(names) => updateDraft(i, { new_tag_names: names })}
-                        pendingLabel={t('pages.screenshotImport.newTag')}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-dashed border-border bg-card/50 p-4">
+          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
             {drafts.length > 0 && !allReadyToImport && (
-              <p className="text-xs text-muted-foreground">{t('pages.screenshotImport.importHint')}</p>
+              <p className="mr-auto flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('pages.screenshotImport.importHint')}
+              </p>
             )}
-            <Button type="button" variant="outline" onClick={clearSelection} disabled={importMutation.isPending}>
+            <Button type="button" variant="outline" onClick={clearSelection} disabled={importMutation.isPending} className="h-11 px-4">
               {t('common.cancel')}
             </Button>
             {drafts.length > 0 && (
               <Button
                 type="button"
+                className="h-11 px-5"
                 disabled={!allReadyToImport || importMutation.isPending}
                 onClick={() => importMutation.mutate(drafts)}
               >
-                {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {importMutation.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
                 {t('pages.screenshotImport.importButton', { count: drafts.length })}
               </Button>
             )}
           </div>
-        </motion.div>
+        </section>
       )}
     </div>
   );

@@ -1,33 +1,21 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
-import {
-    TrendingUp,
-    PlusCircle,
-    Trash2,
-    Save,
-    Loader2,
-    CircleDollarSign,
-    Pencil,
-    AlertTriangle,
-    RefreshCcw,
-} from "lucide-react"
+import { AlertCircle, Loader2, Plus, Save, Trash2 } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { dividendApi } from "@/lib/api/endpoints/dividends"
 import type { DividendStockRow, DividendYieldFrequency } from "@/lib/api/types/base"
 import type { DividendPortfolioRequest } from "@/lib/api/types/requests"
 import { getErrorMessage } from "@/lib/api/client"
 
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Field } from "@/components/ui/field"
+import { Skeleton } from "@/components/ui/skeleton"
+import { MetricGrid, type Metric } from "@/components/data/MetricGrid"
+import { SensitiveValue } from "@/components/privacy/SensitiveValue"
+import { formatMoneyParts, formatMoneyWhole } from "@/lib/currency"
+import { cn } from "@/lib/utils"
 import {
     Select,
     SelectContent,
@@ -95,40 +83,11 @@ function calcResults(portfolioValue: number, rows: LocalStockRow[]): CalculatedR
 }
 
 // ================================================================================================
-//                                   Sub-components
-// ================================================================================================
-
-interface StatCardProps {
-    title: string
-    value: string
-    subtitle?: string
-    icon: React.ReactNode
-    accent?: boolean
-}
-
-function StatCard({ title, value, subtitle, icon, accent }: StatCardProps) {
-    return (
-        <Card className={`border-border/50 shadow-sm ${accent ? "bg-primary/5" : ""}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                {icon}
-            </CardHeader>
-            <CardContent>
-                <div className={`text-2xl font-bold ${accent ? "text-primary" : ""}`}>{value}</div>
-                {subtitle && (
-                    <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-                )}
-            </CardContent>
-        </Card>
-    )
-}
-
-// ================================================================================================
 //                                   Main Component
 // ================================================================================================
 
 export default function DividendCalculator() {
-    const { formatCurrency, t } = useUser()
+    const { t, locale, formatNumber, currency: userCurrency } = useUser()
     const { toast } = useToast()
     const queryClient = useQueryClient()
 
@@ -275,229 +234,207 @@ export default function DividendCalculator() {
 
     // -------------------------------- Render --------------------------------
 
+    const title = (
+        <div className="min-w-0">
+            <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+                {t('pages.dividendCalculator.title')}
+            </h1>
+            <p className="mt-1 text-[0.8125rem] text-muted-foreground">{t('pages.dividendCalculator.description')}</p>
+        </div>
+    )
+
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div aria-busy="true">
+                {title}
+                <div className="mt-10 grid grid-cols-2 gap-8 lg:grid-cols-4">
+                    {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+                </div>
+                <Skeleton className="mt-10 h-48 w-full" />
             </div>
         )
     }
 
     if (fetchError) {
         return (
-            <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground">
-                <AlertTriangle className="h-10 w-10 text-destructive" />
-                <p>{t('pages.dividendCalculator.loadFailed')}</p>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ["dividend-portfolio"] })}
-                >
-                    <RefreshCcw className="mr-2 h-4 w-4" /> {t('common.retry')}
-                </Button>
+            <div>
+                {title}
+                <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+                    <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+                    <p className="font-medium">{t('pages.dividendCalculator.loadFailed')}</p>
+                    <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ["dividend-portfolio"] })}>
+                        {t('common.retry')}
+                    </Button>
+                </div>
             </div>
         )
     }
 
-    return (
-        <div className="space-y-6">
-            {/* Page header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <CircleDollarSign className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">
-                            {t('pages.dividendCalculator.title')}
-                        </h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                            {t('pages.dividendCalculator.description')}
-                        </p>
-                    </div>
-                </div>
+    const currency = userCurrency
+    const money = (value: number) => formatMoneyWhole(value, currency)
+    const percent = (value: number) => formatNumber(value / 100, { style: "percent", maximumFractionDigits: 2 })
+    const percentParts = (value: number) =>
+        new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 2 }).formatToParts(value / 100)
 
-                {/* Action buttons */}
-                <div className="flex items-center gap-2">
+    const metrics: Metric[] = [
+        {
+            key: "value",
+            label: t('pages.dividendCalculator.portfolioValue'),
+            value: portfolioValue,
+            parts: formatMoneyParts(portfolioValue, currency, 0),
+            note: t('pages.dividendCalculator.valueSubtitle'),
+        },
+        {
+            key: "yield",
+            label: t('pages.dividendCalculator.weightedAvgYield'),
+            value: calc.weightedAvgYield,
+            parts: percentParts(calc.weightedAvgYield),
+            note: t('pages.dividendCalculator.weightedSubtitle'),
+        },
+        {
+            key: "annual",
+            label: t('pages.dividendCalculator.annualIncome'),
+            value: calc.annualIncome,
+            parts: formatMoneyParts(calc.annualIncome, currency, 0),
+            accent: true,
+            note: t('pages.dividendCalculator.annualSubtitle'),
+        },
+        {
+            key: "monthly",
+            label: t('pages.dividendCalculator.monthlyIncome'),
+            value: calc.monthlyIncome,
+            parts: formatMoneyParts(calc.monthlyIncome, currency, 0),
+            note: t('pages.dividendCalculator.monthlySubtitle'),
+        },
+    ]
+
+    const payouts = [
+        { key: "daily", label: t('pages.dividendCalculator.daily'), value: calc.annualIncome / 365 },
+        { key: "monthly", label: t('pages.dividendCalculator.monthly'), value: calc.monthlyIncome },
+        { key: "quarterly", label: t('pages.dividendCalculator.quarterly'), value: calc.annualIncome / 4 },
+        { key: "annual", label: t('pages.dividendCalculator.annual'), value: calc.annualIncome },
+    ]
+
+    const headCell = "py-2.5 text-[0.8125rem] font-normal text-muted-foreground"
+
+    return (
+        <div>
+            <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+                {title}
+                <div className="flex items-center gap-2.5">
                     <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
                         onClick={handleDelete}
                         disabled={isBusy}
-                        className="text-destructive hover:text-destructive hover:border-destructive"
+                        className="h-11 px-4 text-muted-foreground hover:text-destructive"
                     >
-                        {deleteMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Trash2 className="h-4 w-4" />
-                        )}
-                        <span className="ml-1.5 hidden sm:inline">{t('pages.dividendCalculator.clear')}</span>
+                        {deleteMutation.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+                        {t('pages.dividendCalculator.clear')}
                     </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isBusy || !isDirty}
-                    >
-                        {saveMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Save className="h-4 w-4" />
-                        )}
-                        <span className="ml-1.5">{t('pages.dividendCalculator.save')}</span>
+                    <Button onClick={handleSave} disabled={isBusy || !isDirty} className="h-11 px-5">
+                        {saveMutation.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
+                        {t('pages.dividendCalculator.save')}
                     </Button>
                 </div>
-            </div>
+            </header>
 
-            {/* Summary cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title={t('pages.dividendCalculator.portfolioValue')}
-                    value={formatCurrency(portfolioValue)}
-                    subtitle={t('pages.dividendCalculator.valueSubtitle')}
-                    icon={<CircleDollarSign className="h-4 w-4 text-muted-foreground" />}
-                />
-                <StatCard
-                    title={t('pages.dividendCalculator.weightedAvgYield')}
-                    value={`${calc.weightedAvgYield.toFixed(2)}%`}
-                    subtitle={t('pages.dividendCalculator.weightedSubtitle')}
-                    icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-                    accent
-                />
-                <StatCard
-                    title={t('pages.dividendCalculator.annualIncome')}
-                    value={formatCurrency(calc.annualIncome)}
-                    subtitle={t('pages.dividendCalculator.annualSubtitle')}
-                    icon={<TrendingUp className="h-4 w-4 text-primary" />}
-                    accent
-                />
-                <StatCard
-                    title={t('pages.dividendCalculator.monthlyIncome')}
-                    value={formatCurrency(calc.monthlyIncome)}
-                    subtitle={t('pages.dividendCalculator.monthlySubtitle')}
-                    icon={<CircleDollarSign className="h-4 w-4 text-muted-foreground" />}
-                />
-            </div>
+            <section aria-label={t('pages.dividendCalculator.title')} className="mt-8 lg:mt-10">
+                <MetricGrid metrics={metrics} size="lg" className="grid-cols-2 lg:grid-cols-4" formatAmount={money} />
+            </section>
 
-            {/* Portfolio value input row */}
-            <Card className="border-border/50 shadow-sm">
-                <CardHeader>
-                    <CardTitle className="text-base">{t('pages.dividendCalculator.settings')}</CardTitle>
-                    <CardDescription>{t('pages.dividendCalculator.settingsDescription')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-3 max-w-xs">
-                        <Label htmlFor="portfolio-value" className="whitespace-nowrap">
-                            {t('pages.dividendCalculator.totalValue')}
-                        </Label>
-                        <Input
-                            id="portfolio-value"
-                            type="number"
-                            min={0}
-                            step={100}
-                            value={portfolioValue}
-                            onChange={(e) => handlePortfolioValueChange(Number(e.target.value))}
-                            placeholder="e.g. 50000"
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <section aria-label={t('pages.dividendCalculator.settings')} className="mt-10 max-w-xs">
+                <Field htmlFor="portfolio-value" label={t('pages.dividendCalculator.totalValue')} hint={t('pages.dividendCalculator.settingsDescription')}>
+                    <Input
+                        id="portfolio-value"
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step={100}
+                        value={portfolioValue}
+                        onChange={(e) => handlePortfolioValueChange(Number(e.target.value))}
+                        className="tabular-nums"
+                    />
+                </Field>
+            </section>
 
-            {/* Stock table */}
-            <Card className="border-border/50 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                    <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Pencil className="h-4 w-4" />
+            <section aria-labelledby="dividend-holdings" className="mt-12">
+                <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-foreground/30 pb-3">
+                    <div className="min-w-0">
+                        <h2 id="dividend-holdings" className="text-[1.125rem] font-medium tracking-[-0.01em]">
                             {t('pages.dividendCalculator.holdings')}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                            {t('pages.dividendCalculator.holdingsDescription')}
-                        </CardDescription>
+                        </h2>
+                        <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.dividendCalculator.yieldHint')}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={addRow}>
-                        <PlusCircle className="h-4 w-4 mr-1.5" />
+                    <Button variant="outline" onClick={addRow} className="h-10 px-4">
+                        <Plus aria-hidden="true" />
                         {t('pages.dividendCalculator.addStock')}
                     </Button>
-                </CardHeader>
+                </div>
 
-                <CardContent className="overflow-x-auto">
-                    {/* Weight validation banner */}
-                    {weightError && (
-                        <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                            Weights sum to <strong className="mx-1">{calc.totalWeight.toFixed(2)}%</strong>
-                            - {t('pages.dividendCalculator.weightsMustEqual')}
-                        </div>
-                    )}
+                {weightError && (
+                    <p role="alert" className="mt-3 flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {t('pages.dividendCalculator.weightsSum', { total: percent(calc.totalWeight) })}
+                    </p>
+                )}
 
-                    <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[36rem] text-sm">
                         <thead>
-                            <tr className="text-left text-muted-foreground border-b border-border/50">
-                                <th className="pb-2 pr-3 font-medium">{t('pages.dividendCalculator.ticker')}</th>
-                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.weight')}</th>
-                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.yield')}</th>
-                                <th className="pb-2 px-3 font-medium">{t('pages.dividendCalculator.frequency')}</th>
-                                <th className="pb-2 px-3 font-medium text-right">{t('pages.dividendCalculator.annualIncome')}</th>
-                                <th className="pb-2 pl-3 font-medium w-10"></th>
+                            <tr className="border-b border-border text-left">
+                                <th className={cn(headCell, "pr-3")}>{t('pages.dividendCalculator.ticker')}</th>
+                                <th className={cn(headCell, "px-3")}>{t('pages.dividendCalculator.weight')}</th>
+                                <th className={cn(headCell, "px-3")}>{t('pages.dividendCalculator.yieldPerPayment')}</th>
+                                <th className={cn(headCell, "px-3")}>{t('pages.dividendCalculator.frequency')}</th>
+                                <th className={cn(headCell, "px-3 text-right")}>{t('pages.dividendCalculator.annualIncome')}</th>
+                                <th className="w-10"><span className="sr-only">{t('common.actions')}</span></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border/30">
+                        <tbody>
                             {rows.map((row, idx) => (
-                                <tr key={row._id} className="group">
-                                    {/* Ticker */}
+                                <tr key={row._id} className="border-b border-border">
                                     <td className="py-2 pr-3">
                                         <Input
                                             id={`ticker-${row._id}`}
-                                            placeholder="e.g. AAPL"
+                                            aria-label={t('pages.dividendCalculator.ticker')}
+                                            placeholder="AAPL"
                                             value={row.ticker}
-                                            onChange={(e) =>
-                                                handleRowChange(row._id, "ticker", e.target.value.toUpperCase())
-                                            }
-                                            className="h-8 w-28 uppercase font-mono"
+                                            onChange={(e) => handleRowChange(row._id, "ticker", e.target.value.toUpperCase())}
+                                            className="w-28 font-mono uppercase"
                                             maxLength={10}
                                         />
                                     </td>
-
-                                    {/* Weight */}
-                                    <td className="py-2 px-3">
+                                    <td className="px-3 py-2">
                                         <Input
                                             id={`weight-${row._id}`}
+                                            aria-label={t('pages.dividendCalculator.weight')}
                                             type="number"
                                             min={0}
                                             max={100}
                                             step={0.1}
                                             value={row.weight_pct}
-                                            onChange={(e) =>
-                                                handleRowChange(row._id, "weight_pct", e.target.value)
-                                            }
-                                            className="h-8 w-24"
+                                            onChange={(e) => handleRowChange(row._id, "weight_pct", e.target.value)}
+                                            className="w-24 tabular-nums"
                                         />
                                     </td>
-
-                                    {/* Yield */}
-                                    <td className="py-2 px-3">
+                                    <td className="px-3 py-2">
                                         <Input
                                             id={`yield-${row._id}`}
+                                            aria-label={t('pages.dividendCalculator.yield')}
                                             type="number"
                                             min={0}
                                             step={0.01}
                                             value={row.dividend_yield}
-                                            onChange={(e) =>
-                                                handleRowChange(row._id, "dividend_yield", e.target.value)
-                                            }
-                                            className="h-8 w-24"
+                                            onChange={(e) => handleRowChange(row._id, "dividend_yield", e.target.value)}
+                                            className="w-24 tabular-nums"
                                         />
                                     </td>
-
-                                    {/* Frequency */}
-                                    <td className="py-2 px-3">
+                                    <td className="px-3 py-2">
                                         <Select
                                             value={row.yield_frequency}
-                                            onValueChange={(v) =>
-                                                handleRowChange(row._id, "yield_frequency", v as DividendYieldFrequency)
-                                            }
+                                            onValueChange={(v) => handleRowChange(row._id, "yield_frequency", v as DividendYieldFrequency)}
                                         >
-                                            <SelectTrigger className="h-8 w-28" id={`freq-${row._id}`}>
+                                            <SelectTrigger className="w-32" id={`freq-${row._id}`} aria-label={t('pages.dividendCalculator.frequency')}>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -507,19 +444,15 @@ export default function DividendCalculator() {
                                             </SelectContent>
                                         </Select>
                                     </td>
-
-                                    {/* Per-stock income */}
-                                    <td className="py-2 px-3 text-right tabular-nums font-mono text-muted-foreground">
-                                        {formatCurrency(calc.perStockAnnualIncome[idx] ?? 0)}
+                                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                                        <SensitiveValue>{money(calc.perStockAnnualIncome[idx] ?? 0)}</SensitiveValue>
                                     </td>
-
-                                    {/* Delete */}
                                     <td className="py-2 pl-3">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            aria-label={t('common.delete')}
-                                            className="h-8 w-8 opacity-100 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
+                                            aria-label={`${t('common.delete')}: ${row.ticker || t('pages.dividendCalculator.ticker')}`}
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => removeRow(row._id)}
                                             id={`delete-row-${row._id}`}
                                         >
@@ -529,73 +462,43 @@ export default function DividendCalculator() {
                                 </tr>
                             ))}
                         </tbody>
-
-                        {/* Footer totals */}
                         {rows.some((r) => r.ticker.trim()) && (
                             <tfoot>
-                                <tr className="border-t border-border text-muted-foreground font-medium">
-                                    <td className="pt-3 pr-3 text-xs uppercase tracking-wide">{t('pages.dividendCalculator.total')}</td>
-                                    <td className={`pt-3 px-3 tabular-nums ${weightError ? "text-destructive font-bold" : "text-foreground"}`}>
-                                        {calc.totalWeight.toFixed(2)}%
+                                <tr>
+                                    <td className={cn(headCell, "pr-3 pt-3")}>{t('pages.dividendCalculator.total')}</td>
+                                    <td className={cn("px-3 pt-3 tabular-nums", weightError ? "text-destructive" : "text-foreground")}>
+                                        {percent(calc.totalWeight)}
                                     </td>
-                                    <td className="pt-3 px-3 tabular-nums">
-                                        {calc.weightedAvgYield.toFixed(2)}%
-                                    </td>
-                                    <td className="pt-3 px-3"></td>
-                                    <td className="pt-3 px-3 text-right tabular-nums font-mono text-foreground">
-                                        {formatCurrency(calc.annualIncome)}
+                                    <td className="px-3 pt-3 tabular-nums text-muted-foreground">{percent(calc.weightedAvgYield)}</td>
+                                    <td className="px-3 pt-3"></td>
+                                    <td className="px-3 pt-3 text-right tabular-nums text-foreground">
+                                        <SensitiveValue>{money(calc.annualIncome)}</SensitiveValue>
                                     </td>
                                     <td></td>
                                 </tr>
                             </tfoot>
                         )}
                     </table>
+                </div>
+            </section>
 
-                    {/* Add row button below table */}
-                    <div className="mt-4">
-                        <Button variant="outline" size="sm" onClick={addRow} className="w-full">
-                            <PlusCircle className="h-4 w-4 mr-2" />
-                            {t('pages.dividendCalculator.addAnotherStock')}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Monthly breakdown callout */}
             {calc.annualIncome > 0 && (
-                <Card className="border-primary/20 bg-primary/5 shadow-sm">
-                    <CardContent className="py-4">
-                        <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-                            <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.daily')}</p>
-                                <p className="text-lg font-bold text-primary">
-                                    {formatCurrency(calc.annualIncome / 365)}
-                                </p>
+                <section aria-labelledby="dividend-payouts" className="mt-12">
+                    <h2 id="dividend-payouts" className="mb-1.5 text-[0.8125rem] font-normal text-muted-foreground">
+                        {t('pages.dividendCalculator.payouts')}
+                    </h2>
+                    <dl className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
+                        {payouts.map((payout) => (
+                            <div key={payout.key} className="border-t border-border pt-2.5">
+                                <dt className="text-[0.8125rem] text-muted-foreground">{payout.label}</dt>
+                                <dd className="text-[1.125rem] tabular-nums">
+                                    <SensitiveValue>{money(payout.value)}</SensitiveValue>
+                                </dd>
                             </div>
-                            <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.monthly')}</p>
-                                <p className="text-lg font-bold text-primary">
-                                    {formatCurrency(calc.monthlyIncome)}
-                                </p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.quarterly')}</p>
-                                <p className="text-lg font-bold text-primary">
-                                    {formatCurrency(calc.annualIncome / 4)}
-                                </p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('pages.dividendCalculator.annual')}</p>
-                                <p className="text-lg font-bold text-primary">
-                                    {formatCurrency(calc.annualIncome)}
-                                </p>
-                            </div>
-                            <p className="text-xs text-muted-foreground ml-auto hidden md:block">
-                                {t('pages.dividendCalculator.estimatesNote')}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        ))}
+                    </dl>
+                    <p className="mt-3 text-[0.8125rem] text-muted-foreground">{t('pages.dividendCalculator.estimatesNote')}</p>
+                </section>
             )}
         </div>
     )

@@ -7,54 +7,56 @@
 @layer base {
   :root {
     /* ---- Core Backgrounds ---- */
-    --background: 0 0% 10%;
-    --background-secondary: 0 0% 12%;
-    --foreground: 60 5% 96%;
+    --background: 220 13% 5%;
+    --background-secondary: 220 13% 6%;
+    --foreground: 60 5% 95%;
 
     /* ---- Card/Surface ---- */
-    --card: 0 0% 14%;
-    --card-foreground: 60 5% 96%;
-    --card-elevated: 0 0% 16%;
+    --card: 220 13% 6%;
+    --card-foreground: 60 5% 95%;
+    --card-elevated: 220 12% 8%;
 
     /* ---- Popover ---- */
-    --popover: 0 0% 14%;
-    --popover-foreground: 60 5% 96%;
+    --popover: 220 13% 7%;
+    --popover-foreground: 60 5% 95%;
 
     /* ---- Primary (Amber/Orange) ---- */
-    --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 10%;
-    --primary-hover: 24 95% 53%;
-    --primary-muted: 38 92% 30%;
+    --primary: 37 91% 55%;
+    --primary-foreground: 38 68% 6%;
+    --primary-hover: 37 91% 62%;
+    --primary-muted: 37 80% 26%;
+    /* Amber used as text, underline or line (in dark it is the fill colour itself) */
+    --primary-text: 37 91% 55%;
 
     /* ---- Secondary (Bright Charcoal) ---- */
-    --secondary: 0 0% 25%;
-    --secondary-foreground: 60 5% 96%;
+    --secondary: 220 6% 14%;
+    --secondary-foreground: 60 5% 95%;
 
     /* ---- Muted ---- */
-    --muted: 0 0% 20%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 220 6% 12%;
+    --muted-foreground: 216 3% 61%;
 
     /* ---- Accent (Bright Charcoal) ---- */
-    --accent: 0 0% 25%;
-    --accent-foreground: 60 5% 96%;
+    --accent: 220 6% 14%;
+    --accent-foreground: 60 5% 95%;
 
     /* ---- Destructive ---- */
-    --destructive: 351 95% 71%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 5 100% 75%;
+    --destructive-foreground: 5 60% 8%;
 
     /* ---- Status Colors ---- */
-    --success: 158 64% 52%;
-    --success-foreground: 0 0% 10%;
-    --warning: 38 92% 50%;
+    --success: 150 56% 64%;
+    --success-foreground: 150 40% 7%;
+    --warning: 37 91% 55%;
     --warning-foreground: 0 0% 0%;
-    --info: 0 0% 35%;
-    --info-foreground: 60 5% 96%;
+    --info: 220 6% 28%;
+    --info-foreground: 60 5% 95%;
 
     /* ---- Chart Colors (semantic finance palette) ---- */
-    --chart-income: 158 64% 52%;
-    --chart-expense: 351 95% 71%;
+    --chart-income: 150 56% 64%;
+    --chart-expense: 5 100% 75%;
     --chart-savings: 199 89% 58%;
-    --chart-investment: 38 92% 50%;
+    --chart-investment: 37 91% 55%;
     --chart-profit: 158 58% 45%;
     --chart-cashflow: 185 70% 45%;
     --chart-core: 24 95% 58%;
@@ -66,24 +68,13 @@
     --chart-teal: var(--chart-cashflow);
 
     /* ---- Border/Input ---- */
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 38 92% 50%;
+    --border: 220 4% 14%; /* white at ~10% over the page background */
+    --input: 220 4% 14%;
+    --ring: 37 91% 55%;
 
     --radius: 1rem; /* 16px */
 
-    /* ---- Sidebar ---- */
-    --sidebar-background: 0 0% 12%;
-    --sidebar-foreground: 240 5% 65%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 60 5% 96%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 38 92% 50%;
 
-    /* ---- Legacy Alias ---- */
-    --accent-gold: 38 92% 50%;
   }
 
   .light {
@@ -103,9 +94,11 @@
 
     /* ---- Primary (Amber/Orange) ---- */
     --primary: 38 92% 45%;
-    --primary-foreground: 0 0% 10%;
-    --primary-hover: 24 95% 48%;
+    --primary-foreground: 38 68% 6%;
+    --primary-hover: 34 92% 41%;
     --primary-muted: 38 92% 88%;
+    /* Bright amber is only ~2.4:1 on white: text, underlines and lines use this darker one (~5.9:1) */
+    --primary-text: 30 90% 32%;
 
     /* ---- Secondary ---- */
     --secondary: 0 0% 92%;
@@ -113,20 +106,21 @@
 
     /* ---- Muted ---- */
     --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 42%;
+    --muted-foreground: 0 0% 37%;
 
     /* ---- Accent ---- */
     --accent: 0 0% 91%;
     --accent-foreground: 0 0% 12%;
 
     /* ---- Destructive ---- */
-    --destructive: 351 84% 52%;
+    --destructive: 351 75% 44%;
     --destructive-foreground: 0 0% 100%;
 
     /* ---- Status Colors ---- */
-    --success: 158 58% 38%;
+    /* Text-strength green, red and amber for amounts and messages on white (all >= 4.5:1) */
+    --success: 158 64% 29%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 45%;
+    --warning: 30 90% 34%;
     --warning-foreground: 0 0% 10%;
     --info: 0 0% 38%;
     --info-foreground: 0 0% 100%;
@@ -147,22 +141,11 @@
     --chart-teal: var(--chart-cashflow);
 
     /* ---- Border/Input ---- */
-    --border: 0 0% 84%;
-    --input: 0 0% 84%;
-    --ring: 38 92% 45%;
+    --border: 220 8% 88%;
+    --input: 220 8% 88%;
+    --ring: 30 90% 38%; /* focus outline needs >= 3:1 on white */
 
-    /* ---- Sidebar ---- */
-    --sidebar-background: 0 0% 96%;
-    --sidebar-foreground: 0 0% 38%;
-    --sidebar-primary: 38 92% 45%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 90%;
-    --sidebar-accent-foreground: 0 0% 12%;
-    --sidebar-border: 0 0% 84%;
-    --sidebar-ring: 38 92% 45%;
 
-    /* ---- Legacy Alias ---- */
-    --accent-gold: 38 92% 45%;
   }
 }
 
@@ -173,6 +156,10 @@
 
   html {
     @apply scroll-smooth;
+    /* Fluid root size: the user's default (100%, 16px normally) up to a 1440px viewport, then
+       +0.00536px per extra viewport px (18.6px at 1920, 22px at 2560), capped at 137.5%. Every
+       rem-based size, spacing and arbitrary [x.xrem] value scales with it. */
+    font-size: clamp(100%, calc(100% + (100vw - 1440px) * 0.00536), 137.5%);
   }
 
   body {
@@ -191,74 +178,63 @@
 
 @layer utilities {
 
-  /* ---- Card Shadow ---- */
-  .shadow-card {
+  /* ---- Glass: floating chrome only (top bar, menus, dock, sheets) ---- */
+  .glass {
+    background-image: linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06));
+    border: 1px solid rgb(255 255 255 / 0.1);
+    -webkit-backdrop-filter: blur(26px) saturate(140%);
+    backdrop-filter: blur(26px) saturate(140%);
     box-shadow:
-      0 1px 2px hsl(0 0% 0% / 0.16),
-      0 1px 0 hsl(0 0% 100% / 0.03) inset;
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      0 24px 50px -26px rgb(0 0 0 / 0.8);
   }
 
-  /* ---- Focus Ring ---- */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+  /* Denser variant for surfaces that sit over text (menus, sheets) */
+  .glass-dense {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06)),
+      linear-gradient(rgb(22 23 27 / 0.72), rgb(22 23 27 / 0.72));
   }
 
-  /* ---- Skeleton Animation ---- */
-  .skeleton-shimmer {
-    background: linear-gradient(90deg,
-        hsl(var(--muted)) 0%,
-        hsl(var(--muted-foreground) / 0.1) 50%,
-        hsl(var(--muted)) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+  .light .glass {
+    background-image: linear-gradient(rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.72));
+    border-color: rgb(0 0 0 / 0.08);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 20px 44px -24px rgb(0 0 0 / 0.28);
   }
 
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-
-    100% {
-      background-position: -200% 0;
-    }
+  .light .glass-dense {
+    background-image: linear-gradient(rgb(255 255 255 / 0.88), rgb(255 255 255 / 0.88));
   }
 
-  /* ---- Transitions ---- */
-  .transition-base {
-    @apply transition-all duration-200 ease-out;
+  /* ---- Light theme: amber as text / line uses the darker --primary-text; fills stay bright ---- */
+  .light .text-primary,
+  .light .hover\:text-primary:hover {
+    color: hsl(var(--primary-text));
+  }
+  .light .fill-primary {
+    fill: hsl(var(--primary-text));
+  }
+  .light .stroke-primary {
+    stroke: hsl(var(--primary-text));
+  }
+  .light .border-primary,
+  .light .border-l-primary {
+    border-color: hsl(var(--primary-text));
   }
 
-  .transition-slow {
-    @apply transition-all duration-300 ease-out;
+  /* ---- Dashboard shell: faint amber glow behind the top of the page (dark only) ---- */
+  .app-shell {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(56.25rem 37.5rem at 78% -20%, rgb(245 165 36 / 0.1), transparent 70%);
+    background-repeat: no-repeat;
   }
 
-  /* ---- Chart Grid ---- */
-  .chart-grid {
-    stroke: hsl(var(--border) / 0.3);
+  .light .app-shell {
+    background-image: none;
   }
 
-  /* ---- Dot Pattern ---- */
-  .bg-dotted-pattern {
-    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.3) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  /* ---- Theme-aware marketing surface aliases ---- */
-  .theme-text-strong { @apply text-foreground dark:text-white; }
-  .theme-text-strong-90 { @apply text-foreground/90 dark:text-white/90; }
-  .theme-text-muted { @apply text-muted-foreground dark:text-white/50; }
-  .theme-text-muted-80 { @apply text-muted-foreground/80 dark:text-white/80; }
-  .theme-text-muted-70 { @apply text-muted-foreground/70 dark:text-white/70; }
-  .theme-text-muted-60 { @apply text-muted-foreground/70 dark:text-white/60; }
-  .theme-text-muted-50 { @apply text-muted-foreground dark:text-white/50; }
-  .theme-text-muted-40 { @apply text-muted-foreground/80 dark:text-white/40; }
-  .theme-text-muted-35 { @apply text-muted-foreground/70 dark:text-white/35; }
-  .theme-text-muted-30 { @apply text-muted-foreground/60 dark:text-white/30; }
-  .theme-border-subtle { @apply border-border dark:border-white/10; }
-  .theme-bg-subtle { @apply bg-muted/40 dark:bg-white/[0.02]; }
-  .theme-bg-panel { @apply bg-card/85 dark:bg-white/5; }
-  .theme-bg-chip { @apply bg-muted/60 dark:bg-white/5; }
-  .theme-ring-subtle { @apply ring-border dark:ring-white/10; }
 }
 
 @media (prefers-reduced-motion: reduce) {

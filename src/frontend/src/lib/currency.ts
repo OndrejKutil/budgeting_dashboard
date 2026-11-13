@@ -46,14 +46,20 @@ const CURRENCY_LOCALE: Record<string, string> = {
  * amounts either overlap each other or force the plot to give up its width. Exact
  * figures stay in tooltips, tables and KPIs.
  */
-export function formatMoneyCompact(amount: number, currency: string): string {
-  const locale = CURRENCY_LOCALE[currency] ?? 'en-US';
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
+export function formatMoneyCompact(amount: number, currency: string, displayLocale?: string): string {
+  const currencyLocale = CURRENCY_LOCALE[currency] ?? 'en-US';
+  // Compact notation spells out words ("120K" / "120 tis."), so the number follows the app's
+  // language; only the symbol and its side come from the currency's own locale.
+  const number = new Intl.NumberFormat(displayLocale ?? currencyLocale, {
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(amount);
+  }).format(Math.abs(amount));
+  const parts = new Intl.NumberFormat(currencyLocale, { style: 'currency', currency }).formatToParts(1);
+  const symbol = parts.find((part) => part.type === 'currency')?.value ?? currency;
+  const symbolFirst =
+    parts.findIndex((part) => part.type === 'currency') < parts.findIndex((part) => part.type === 'integer');
+  const sign = amount < 0 ? '-' : '';
+  return symbolFirst ? `${sign}${symbol}${number}` : `${sign}${number} ${symbol}`;
 }
 
 export function formatMoney(amount: number, currency: string): string {
@@ -64,6 +70,25 @@ export function formatMoney(amount: number, currency: string): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+/**
+ * formatMoney split into Intl parts (so the currency symbol can be styled separately), with a
+ * configurable number of fraction digits. The Overview shows whole amounts: 0 digits.
+ */
+export function formatMoneyParts(amount: number, currency: string, fractionDigits = 0): Intl.NumberFormatPart[] {
+  const locale = CURRENCY_LOCALE[currency] ?? 'en-US';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).formatToParts(amount);
+}
+
+/** formatMoney without decimals, for headline-level figures. */
+export function formatMoneyWhole(amount: number, currency: string): string {
+  return formatMoneyParts(amount, currency, 0).map((part) => part.value).join('');
 }
 
 /**

@@ -197,7 +197,7 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     """Schema for resetting password with access token"""
     access_token: str = Field(..., description="Access token from password reset email link")
-    new_password: str = Field(..., min_length=6, description="New password (minimum 6 characters)")
+    new_password: str = Field(..., min_length=8, description="New password (minimum 8 characters, same rule as registration)")
 
     model_config = ConfigDict(
         json_schema_extra={

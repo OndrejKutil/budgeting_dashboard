@@ -176,7 +176,6 @@ export default function LoginPage() {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={cn(errors.email && 'border-destructive focus-visible:ring-destructive')}
             disabled={isLoading || isOAuthLoading}
           />
           {errors.email && (
@@ -203,7 +202,6 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className={cn(
                 'pr-10',
-                errors.password && 'border-destructive focus-visible:ring-destructive'
               )}
               disabled={isLoading || isOAuthLoading}
             />

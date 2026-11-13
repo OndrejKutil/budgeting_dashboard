@@ -17,6 +17,8 @@ interface MonthlyBreakdownTableProps {
   rows: MonthlyBreakdownRow[];
   formatCurrency: (value: number) => string;
   onMonthClick?: (month: string) => void;
+  /** Display name for a month key (the API sends English abbreviations). */
+  monthLabel?: (month: string) => string;
   labels: {
     month: string;
     income: string;
@@ -46,6 +48,7 @@ export function MonthlyBreakdownTable({
   rows,
   formatCurrency,
   onMonthClick,
+  monthLabel = (month) => month,
   labels,
 }: MonthlyBreakdownTableProps) {
   // Every month is shown, including empty ones: a gap in the year is itself worth seeing,
@@ -68,7 +71,7 @@ export function MonthlyBreakdownTable({
   const signClass = (value: number) => (value < 0 ? 'text-destructive' : 'text-foreground');
 
   const Head = ({ label, dot }: { label: string; dot?: string }) => (
-    <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+    <th className="whitespace-nowrap px-4 py-2.5 text-right text-[0.8125rem] font-normal text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
         {dot && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dot }} aria-hidden />}
         {label}
@@ -82,7 +85,7 @@ export function MonthlyBreakdownTable({
       <span className="block font-medium tabular-nums text-foreground">
         <SensitiveValue>{formatCurrency(amount)}</SensitiveValue>
       </span>
-      <span className="block text-[11px] tabular-nums text-muted-foreground">
+      <span className="block text-[0.75rem] tabular-nums text-muted-foreground">
         <SensitiveValue>{rate.toFixed(1)}%</SensitiveValue>
       </span>
     </td>
@@ -92,8 +95,8 @@ export function MonthlyBreakdownTable({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-border">
-            <th className="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <tr className="border-b border-foreground/30">
+            <th className="whitespace-nowrap py-2.5 pl-0 pr-4 text-left text-[0.8125rem] font-normal text-muted-foreground">
               {labels.month}
             </th>
             <Head label={labels.income} dot="hsl(var(--chart-income))" />
@@ -113,12 +116,11 @@ export function MonthlyBreakdownTable({
               // button in the month cell -- a bare onClick on a <tr> is unreachable by Tab.
               onClick={onMonthClick ? () => onMonthClick(row.month) : undefined}
               className={cn(
-                'border-b border-border/40 transition-colors',
-                index % 2 === 1 && 'bg-muted/20',
-                onMonthClick && 'cursor-pointer hover:bg-muted/60',
+                'border-b border-border transition-colors',
+                onMonthClick && 'cursor-pointer hover:bg-foreground/[0.04]',
               )}
             >
-              <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-muted-foreground">
+              <td className="whitespace-nowrap py-2.5 pl-0 pr-4 text-foreground">
                 {onMonthClick ? (
                   <button
                     type="button"
@@ -128,24 +130,24 @@ export function MonthlyBreakdownTable({
                     }}
                     className="rounded-sm underline-offset-4 ring-offset-background hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    {row.month}
+                    {monthLabel(row.month)}
                   </button>
                 ) : (
-                  row.month
+                  monthLabel(row.month)
                 )}
               </td>
-              <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums text-foreground">
+              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-foreground">
                 <SensitiveValue>{formatCurrency(row.income)}</SensitiveValue>
               </td>
-              <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums text-foreground">
+              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-foreground">
                 <SensitiveValue>{formatCurrency(row.expenses)}</SensitiveValue>
               </td>
               <RateCell amount={row.savings} rate={row.savingsRate} />
               <RateCell amount={row.investments} rate={row.investmentRate} />
-              <td className={cn('whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums', signClass(row.profit))}>
+              <td className={cn('whitespace-nowrap px-4 py-2.5 text-right tabular-nums', signClass(row.profit))}>
                 <SensitiveValue>{formatCurrency(row.profit)}</SensitiveValue>
               </td>
-              <td className={cn('whitespace-nowrap px-4 py-2.5 text-right font-medium tabular-nums', signClass(row.cashflow))}>
+              <td className={cn('whitespace-nowrap px-4 py-2.5 text-right tabular-nums', signClass(row.cashflow))}>
                 <SensitiveValue>{formatCurrency(row.cashflow)}</SensitiveValue>
               </td>
             </tr>
@@ -154,36 +156,36 @@ export function MonthlyBreakdownTable({
 
         {rows.length > 0 && (
           <tfoot>
-            <tr className="border-t-2 border-border">
-              <td className="whitespace-nowrap px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <tr className="border-t border-foreground/30">
+              <td className="whitespace-nowrap py-3 pl-0 pr-4 text-[0.8125rem] font-normal text-muted-foreground">
                 {labels.total}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums text-foreground">
+              <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums text-foreground">
                 <SensitiveValue>{formatCurrency(totals.income)}</SensitiveValue>
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums text-foreground">
+              <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums text-foreground">
                 <SensitiveValue>{formatCurrency(totals.expenses)}</SensitiveValue>
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right">
-                <span className="block font-bold tabular-nums text-foreground">
+                <span className="block font-medium tabular-nums text-foreground">
                   <SensitiveValue>{formatCurrency(totals.savings)}</SensitiveValue>
                 </span>
-                <span className="block text-[11px] tabular-nums text-muted-foreground">
+                <span className="block text-[0.75rem] tabular-nums text-muted-foreground">
                   <SensitiveValue>{totalSavingsRate.toFixed(1)}%</SensitiveValue>
                 </span>
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right">
-                <span className="block font-bold tabular-nums text-foreground">
+                <span className="block font-medium tabular-nums text-foreground">
                   <SensitiveValue>{formatCurrency(totals.investments)}</SensitiveValue>
                 </span>
-                <span className="block text-[11px] tabular-nums text-muted-foreground">
+                <span className="block text-[0.75rem] tabular-nums text-muted-foreground">
                   <SensitiveValue>{totalInvestmentRate.toFixed(1)}%</SensitiveValue>
                 </span>
               </td>
-              <td className={cn('whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums', signClass(totals.profit))}>
+              <td className={cn('whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums', signClass(totals.profit))}>
                 <SensitiveValue>{formatCurrency(totals.profit)}</SensitiveValue>
               </td>
-              <td className={cn('whitespace-nowrap px-4 py-3 text-right font-bold tabular-nums', signClass(totals.cashflow))}>
+              <td className={cn('whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums', signClass(totals.cashflow))}>
                 <SensitiveValue>{formatCurrency(totals.cashflow)}</SensitiveValue>
               </td>
             </tr>

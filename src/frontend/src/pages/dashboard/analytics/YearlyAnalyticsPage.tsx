@@ -1,27 +1,7 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useUrlState } from '@/hooks/use-url-state';
-import { useAvailableYears } from '@/hooks/use-available-years';
-import { PeriodNavigator } from '@/components/period/PeriodNavigator';
-import { PageHeader } from '@/components/ui/page-header';
-import { Button } from '@/components/ui/button';
-import { AnalyticsSkeleton } from '@/components/skeletons';
-import {
-  TrendingUp,
-  TrendingDown,
-  PiggyBank,
-  Briefcase,
-  Wallet,
-  Calendar,
-  Activity,
-  Target,
-  Zap,
-  Info,
-  Minus,
-  DollarSign,
-  FileDown,
-} from 'lucide-react';
+import { AlertCircle, FileDown } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -29,14 +9,19 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   BarChart,
   Bar,
-  LabelList,
+  CartesianGrid,
   ReferenceLine,
 } from 'recharts';
+import { useUrlState } from '@/hooks/use-url-state';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
+import { Button } from '@/components/ui/button';
+import { AnalyticsSkeleton } from '@/components/skeletons';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
+import type { TrendDirectionItem } from '@/lib/api/types/base';
 import { DeferredRender } from '@/components/performance/DeferredRender';
 import { YearlyHeatmap } from '@/components/analytics/YearlyHeatmap';
 import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
@@ -45,8 +30,11 @@ import { usePrivacyMode } from '@/contexts/privacy-context';
 import { CHART_COLORS } from '@/lib/chart-colors';
 import { MonthlyBreakdownTable } from '@/components/analytics/MonthlyBreakdownTable';
 import { SignedBarFacet } from '@/components/analytics/SignedBarFacet';
-
-
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
+import { LineRows, type LineRow } from '@/components/data/LineRows';
+import { SplitBar, type SplitSegment } from '@/components/data/SplitBar';
+import { formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
+import { cn } from '@/lib/utils';
 
 /**
  * Gutter reserved for money axis ticks. Compact ticks still run to ~11 characters
@@ -55,38 +43,56 @@ import { SignedBarFacet } from '@/components/analytics/SignedBarFacet';
  */
 const MONEY_AXIS_WIDTH = 88;
 
-const MONTH_MAP: Record<string, string> = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+/** The API names months by English abbreviation; this maps them to a 0-based index. */
+const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
 };
 
+const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))', fontSize: 11 };
+const GRID_STROKE = 'hsl(var(--foreground) / 0.07)';
+const TOOLTIP_STYLE = {
+  backgroundColor: 'hsl(var(--popover))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: '0.75rem',
+  color: 'hsl(var(--popover-foreground))',
+  fontSize: '0.75rem',
+};
 
+/** A value that displays as 0 is 0: no "-0". */
+const whole = (value: number) => (Math.abs(value) < 0.5 ? 0 : value);
 
 export default function YearlyAnalyticsPage() {
-  const { formatCurrency, formatCurrencyCompact, t, currency } = useUser();
+  const { formatCurrency, formatCurrencyCompact, formatMonth, formatNumber, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
   const navigate = useNavigate();
   const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
   const selectedYearNumber = parseInt(selectedYear);
+  const years = useAvailableYears({ include: selectedYearNumber });
 
-  const handleMonthClick = (monthAbbr: string) => {
-    const monthNum = MONTH_MAP[monthAbbr];
-    if (monthNum) {
-      navigate(`/dashboard/analytics/monthly?year=${selectedYear}&month=${monthNum}`);
-    }
+  const monthHref = (monthAbbr: string) => {
+    const index = MONTH_INDEX[monthAbbr];
+    return index === undefined
+      ? null
+      : `/dashboard/analytics/monthly?year=${selectedYear}&month=${String(index + 1).padStart(2, '0')}`;
   };
+  const handleMonthClick = (monthAbbr: string) => {
+    const href = monthHref(monthAbbr);
+    if (href) navigate(href);
+  };
+  const monthShort = (monthAbbr: string) =>
+    MONTH_INDEX[monthAbbr] === undefined ? monthAbbr : formatMonth(MONTH_INDEX[monthAbbr], 'short');
+  const monthLong = (monthAbbr: string) =>
+    MONTH_INDEX[monthAbbr] === undefined ? monthAbbr : formatMonth(MONTH_INDEX[monthAbbr], 'long');
 
-  const years = useAvailableYears();
-
-  const { data, isLoading: loading, error } = useQuery({
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['yearly-analytics', selectedYearNumber, currency],
     queryFn: async () => {
       const response = await analyticsApi.getYearly({ year: selectedYearNumber, base_currency: currency });
       if (response.success && response.data) {
         return response.data;
       }
-      throw new Error(response.message || t('common.unknownError'));
+      throw new Error(response.message || t('pages.yearlyAnalytics.loadFailed'));
     },
     placeholderData: keepPreviousData,
   });
@@ -110,15 +116,15 @@ export default function YearlyAnalyticsPage() {
     // Mirrors the backend's yearly totals: profit is income net of expenses and
     // investments; cash flow additionally nets out what went into savings. The monthly
     // arrays already use income-without-savings-withdrawals and net savings, so summing
-    // these columns reconciles with the KPIs at the top of the page.
+    // these columns reconciles with the figures at the top of the page.
     const profit = income - expenses - investments;
 
     return {
       month,
-      income: income,
-      expenses: expenses,
-      savings: savings,
-      investments: investments,
+      income,
+      expenses,
+      savings,
+      investments,
       profit,
       cashflow: profit - savings,
       savingsRate: income > 0 ? (savings / income) * 100 : 0,
@@ -137,90 +143,65 @@ export default function YearlyAnalyticsPage() {
   );
   const spendingTypeData = useMemo(() => data?.months.map((month, index) => ({
     month,
-      Core: data.monthly_core_expense[index] || 0,
-      Fun: data.monthly_fun_expense[index] || 0,
-      Future: data.monthly_future_expense[index] || 0,
+    Core: data.monthly_core_expense[index] || 0,
+    Fun: data.monthly_fun_expense[index] || 0,
+    Future: data.monthly_future_expense[index] || 0,
   })) ?? [], [data]);
 
-  const categoryBreakdownData = useMemo(() => Object.entries(data?.expense_by_category ?? {})
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value), [data]);
+  const header = (canExport: boolean) => (
+    <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:mb-10">
+      <h1 className="min-w-0 text-[1.5rem] font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+        {selectedYear}
+        <span className="ml-3 whitespace-nowrap text-[1rem] font-normal text-muted-foreground">
+          {t('pages.yearlyAnalytics.title')}
+        </span>
+      </h1>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <PeriodNavigator
+          mode="year"
+          year={selectedYearNumber}
+          years={years}
+          onChange={(_, y) => setSelectedYear(String(y))}
+          className="[&>div:first-child]:gap-1 [&>div:first-child]:border-transparent [&>div:first-child]:bg-transparent [&>div:first-child]:p-0 [&>div:first-child]:shadow-none"
+        />
+        <Button variant="outline" className="h-11 px-4" onClick={() => window.print()} disabled={!canExport}>
+          <FileDown className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" />
+          {t('pages.yearlyAnalytics.exportPdf')}
+        </Button>
+      </div>
+    </div>
+  );
 
-  /** Row pitch that keeps bars legible however many categories the year has. */
-  const categoryChartHeight = Math.max(340, categoryBreakdownData.length * 34);
-
-  const balanceData = useMemo(() => {
-    if (!data) return [];
-
-    return [
-      { name: t('types.core'), value: data.spending_balance.core_share_pct, color: CHART_COLORS.core },
-      { name: t('types.fun'), value: data.spending_balance.fun_share_pct, color: CHART_COLORS.fun },
-      { name: t('types.future'), value: data.spending_balance.future_share_pct, color: CHART_COLORS.future },
-    ].filter(d => d.value > 0);
-  }, [data, t]);
-
-  const { left: leftDomain, right: rightDomain } = useMemo(() => {
-    const keysLeft = ['savings', 'investments'];
-    const keysRight = ['savingsRate', 'investmentRate'];
-
-    const minLeft = Math.min(...monthlyTrendsData.map(d => Math.min(...keysLeft.map(k => d[k] || 0))), 0);
-    const maxLeft = Math.max(...monthlyTrendsData.map(d => Math.max(...keysLeft.map(k => d[k] || 0))), 0);
-    const minRight = Math.min(...monthlyTrendsData.map(d => Math.min(...keysRight.map(k => d[k] || 0))), 0);
-    const maxRight = Math.max(...monthlyTrendsData.map(d => Math.max(...keysRight.map(k => d[k] || 0))), 0);
-
-    const niceScale = (min: number, max: number) => {
-      const range = max - min;
-      const roughStep = range / 4;
-      const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep || 1)));
-      const normalizedStep = roughStep / magnitude;
-      let step = 1;
-      if (normalizedStep > 5) step = 10;
-      else if (normalizedStep > 2) step = 5;
-      else if (normalizedStep > 1) step = 2;
-      step *= magnitude;
-
-      const newMax = Math.ceil(max / step) * step;
-      const newMin = Math.floor(min / step) * step;
-      return [newMin, newMax];
-    };
-
-    let [niceLMin, niceLMax] = niceScale(minLeft, maxLeft);
-    let [niceRMin, niceRMax] = niceScale(minRight, maxRight);
-
-    niceLMax = Math.max(niceLMax, 0); niceLMin = Math.min(niceLMin, 0);
-    niceRMax = Math.max(niceRMax, 0); niceRMin = Math.min(niceRMin, 0);
-
-    const ratioL = niceLMax === 0 ? 1000 : Math.abs(niceLMin) / niceLMax;
-    const ratioR = niceRMax === 0 ? 1000 : Math.abs(niceRMin) / niceRMax;
-    const finalRatio = Math.max(ratioL, ratioR);
-
-    if (ratioL < finalRatio) {
-      niceLMin = -niceLMax * finalRatio;
-    }
-
-    if (ratioR < finalRatio) {
-      niceRMin = -niceRMax * finalRatio;
-    }
-
-    return {
-      left: [niceLMin, niceLMax],
-      right: [niceRMin, niceRMax]
-    };
-  }, [monthlyTrendsData]);
-
-  if (loading) {
-    return <AnalyticsSkeleton />;
-  }
-
-  if (error || !data) {
+  if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error instanceof Error ? error.message : t('states.noDataAvailable')}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>{t('common.retry')}</Button>
+      <div className="screen-content">
+        {header(false)}
+        <AnalyticsSkeleton />
       </div>
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="screen-content">
+        {header(false)}
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium">{t('pages.yearlyAnalytics.errorTitle')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : t('states.noDataAvailable')}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Print statement ---------------------------------------------------------------------------
   const buildTable = (title: string, rec: Record<string, number>): StatementTable => {
     const entries = Object.entries(rec).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a);
     return {
@@ -230,491 +211,7 @@ export default function YearlyAnalyticsPage() {
     };
   };
 
-  const statementTables: StatementTable[] = [
-    buildTable(t('statement.incomeByCategory'), data.income_by_category),
-    buildTable(t('statement.expensesByCategory'), data.expense_by_category),
-    buildTable(t('statement.savingsByCategory'), data.saving_by_category),
-    buildTable(t('statement.investmentsByCategory'), data.investment_by_category),
-  ];
-
-  return (
-    <>
-    <div className="screen-content space-y-6">
-      <PageHeader
-        title={t('pages.yearlyAnalytics.title')}
-        description={t('pages.yearlyAnalytics.description', { year: selectedYear })}
-        actions={
-          <div className="flex gap-2 no-print">
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <FileDown className="h-4 w-4 mr-2" />
-              {t('pages.yearlyAnalytics.exportPdf')}
-            </Button>
-            <PeriodNavigator mode="year" year={selectedYearNumber} years={years} onChange={(_, y) => setSelectedYear(String(y))} />
-          </div>
-        }
-      />
-
-      <div className="space-y-8">
-        {/* Unified Financial Header with Inline Trends */}
-        <div className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-4">
-          {/* Core Flows */}
-          <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <TrendingUp className="h-3 w-3 text-chart-income" /> {t('metrics.income')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_income)}</SensitiveValue></p>
-                <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.income_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-income" /> : data.trend_directions?.income_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.income_trend?.direction === 'growing' ? 'text-chart-income' : data.trend_directions?.income_trend?.direction === 'declining' ? 'text-destructive' : 'text-chart-neutral'}`}>
-                    {data.trend_directions?.income_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.income_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.income_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_expense)}</SensitiveValue></p>
-                <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.core_expense_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-chart-income" /> : data.trend_directions?.core_expense_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-expense" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.core_expense_trend?.direction === 'declining' ? 'text-chart-income' : data.trend_directions?.core_expense_trend?.direction === 'growing' ? 'text-chart-expense' : 'text-chart-neutral'}`}>
-                    {data.trend_directions?.core_expense_trend?.direction === 'growing' ? t('states.creeping') : data.trend_directions?.core_expense_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.core_expense_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Wealth Generation */}
-          <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <PiggyBank className="h-3 w-3 text-chart-savings" /> {t('metrics.savings')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_saving)}</SensitiveValue></p>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? <TrendingUp className="h-3 w-3 text-chart-income" /> : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? <TrendingDown className="h-3 w-3 text-chart-expense" /> : <Minus className="h-3 w-3 text-chart-neutral" />}
-                  <span className={`text-[10px] font-medium ${data.trend_directions?.savings_rate_trend?.direction === 'growing' ? 'text-chart-income' : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? 'text-chart-expense' : 'text-chart-neutral'}`}>
-                    {data.trend_directions?.savings_rate_trend?.direction === 'growing' ? t('states.growing') : data.trend_directions?.savings_rate_trend?.direction === 'declining' ? t('states.declining') : t('states.stable')} <SensitiveValue>{(data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0) > 0 ? '+' : ''}{data.trend_directions?.savings_rate_trend?.avg_monthly_change_pct ?? 0}%/mo</SensitiveValue>
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Briefcase className="h-3 w-3 text-chart-investment" /> {t('metrics.investments')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.total_investment)}</SensitiveValue></p>
-                  <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.investment_rate.toFixed(1)}%</SensitiveValue></span>
-                </div>
-                <div className="h-4 mt-1"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Outcomes */}
-          <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <DollarSign className="h-3 w-3 text-chart-profit" /> {t('metrics.profit')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                <Wallet className="h-3 w-3 text-chart-cashflow" /> {t('metrics.cashFlow')}
-              </p>
-              <div className="flex flex-col mt-1">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.net_cash_flow)}</SensitiveValue></p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Highlights */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <h3 className="mb-6 text-lg font-semibold font-display flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            {t('pages.yearlyAnalytics.records')}
-          </h3>
-
-          <div className="grid gap-6 sm:grid-cols-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.bestCashflow')}</span>
-              <div className="mt-1">
-                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_cashflow_month.month}</span>
-              </div>
-              <div className="text-sm font-medium text-chart-income">
-                <SensitiveValue>+{formatCurrency(data.highlights.highest_cashflow_month.value)}</SensitiveValue>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.highestSpend')}</span>
-              <div className="mt-1">
-                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_expense_month.month}</span>
-              </div>
-              <div className="text-sm font-medium text-destructive">
-                <SensitiveValue>-{formatCurrency(data.highlights.highest_expense_month.value)}</SensitiveValue>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1 sm:border-l sm:border-border/50 sm:pl-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{t('pages.yearlyAnalytics.topSavingsRate')}</span>
-              <div className="mt-1">
-                <span className="text-2xl font-bold font-display tracking-tight text-foreground">{data.highlights.highest_savings_rate_month.month}</span>
-              </div>
-              <div className="text-sm font-medium text-primary">
-                <SensitiveValue>{data.highlights.highest_savings_rate_month.value.toFixed(1)}%</SensitiveValue>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Long Term Trends Section */}
-        <div className="mt-16 mb-8 border-t border-border/40 pt-12">
-          <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">{t('pages.yearlyAnalytics.longTermTrends')}</h2>
-          <p className="text-muted-foreground mt-1 text-lg">{t('pages.yearlyAnalytics.longTermDescription')}</p>
-        </div>
-
-        {/* Charts Grid */}
-        <DeferredRender
-          className="grid gap-8 lg:grid-cols-2"
-          fallback={<div className="min-h-[368px] rounded-xl border border-border/50 bg-card lg:col-span-2" />}
-        >
-          {/* Income vs Expenses Chart */}
-          <div
-            className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-lg font-semibold font-display">{t('pages.yearlyAnalytics.incomeVsCosts')}</h3>
-                <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.monthlyCashFlowGap')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickPoint')}</span></p>
-              </div>
-            </div>
-            <div className={`h-[368px] ${sensitiveChartClass}`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyTrendsData} margin={{ top: 5, right: 24, left: 0, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                    tickFormatter={formatCurrencyCompact}
-                    width={MONEY_AXIS_WIDTH}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    itemStyle={{ padding: 0 }}
-                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
-                  />
-                  <Legend iconType="circle" />
-                  <Line
-                    type="monotone"
-                    dataKey="income"
-                    name={t('metrics.income')}
-                    stroke={CHART_COLORS.income}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="expenses"
-                    name={t('metrics.expenses')}
-                    stroke={CHART_COLORS.expense}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Wealth Generation Chart — absolute amounts only. The savings/investment rates
-              are still available per month in the breakdown table below. */}
-          <div
-            className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-lg font-semibold font-display">{t('pages.yearlyAnalytics.wealthGeneration')}</h3>
-                <p className="text-sm text-muted-foreground">{t('pages.yearlyAnalytics.savingsInvestments')} · <span className="text-primary/70">{t('pages.yearlyAnalytics.clickBar')}</span></p>
-              </div>
-            </div>
-            <div className={`h-[368px] ${sensitiveChartClass}`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyTrendsData} barGap={2} margin={{ top: 5, right: 24, left: 0, bottom: 5 }} onClick={(e) => e?.activeLabel && handleMonthClick(e.activeLabel)} style={{ cursor: 'pointer' }}>
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                    tickFormatter={formatCurrencyCompact}
-                    width={MONEY_AXIS_WIDTH}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
-                    formatter={(value: number, name: string) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, name]}
-                  />
-                  <Legend iconType="circle" />
-                  <ReferenceLine y={0} stroke="hsl(var(--border))" strokeWidth={1} />
-                  <Bar dataKey="savings" name={t('metrics.savings')} fill={CHART_COLORS.savings} maxBarSize={18} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="investments" name={t('metrics.investments')} fill={CHART_COLORS.investment} maxBarSize={18} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-          </div>
-        </DeferredRender>
-
-        {/* Profit & Cash Flow — one panel each. See SignedBarFacet for why they aren't
-            two series on a single plot. */}
-        <DeferredRender
-          className="mt-4"
-          fallback={<div className="min-h-[300px] rounded-xl border border-border/50 bg-card" />}
-        >
-          <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold font-display">{t('pages.yearlyAnalytics.profitAndCashFlow')}</h3>
-              <p className="text-sm text-muted-foreground">
-                <span className="text-primary/70">{t('pages.yearlyAnalytics.clickBar')}</span>
-              </p>
-            </div>
-
-            <div className={`flex flex-col gap-8 md:flex-row ${sensitiveChartClass}`}>
-              <SignedBarFacet
-                title={t('metrics.profit')}
-                total={formatCurrency(data.profit)}
-                data={profitSeries}
-                formatCurrency={formatCurrency}
-                formatCompact={formatCurrencyCompact}
-                onMonthClick={handleMonthClick}
-              />
-              <SignedBarFacet
-                title={t('metrics.cashFlow')}
-                total={formatCurrency(data.net_cash_flow)}
-                data={cashflowSeries}
-                formatCurrency={formatCurrency}
-                formatCompact={formatCurrencyCompact}
-                onMonthClick={handleMonthClick}
-              />
-            </div>
-          </div>
-        </DeferredRender>
-
-        {/* Monthly breakdown — the numbers behind every chart above, in one place. */}
-        <DeferredRender
-          className="mt-12 pt-8"
-          fallback={<div className="min-h-[420px] rounded-xl border border-border/50 bg-card" />}
-        >
-          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-2">{t('pages.yearlyAnalytics.monthlyBreakdown')}</h2>
-          <p className="text-muted-foreground text-sm mb-6">{t('pages.yearlyAnalytics.monthlyBreakdownDescription')}</p>
-          <div className="rounded-xl border border-border/50 bg-card py-2 shadow-sm">
-            <MonthlyBreakdownTable
-              rows={monthlyTrendsData}
-              formatCurrency={formatCurrency}
-              onMonthClick={handleMonthClick}
-              labels={{
-                month: t('analytics.month'),
-                income: t('metrics.income'),
-                expenses: t('metrics.expenses'),
-                savings: t('metrics.savings'),
-                investments: t('metrics.investments'),
-                profit: t('metrics.profit'),
-                cashFlow: t('metrics.cashFlow'),
-                total: t('analytics.total'),
-              }}
-            />
-          </div>
-        </DeferredRender>
-
-        {/* Composition Section */}
-        <DeferredRender className="mt-12 pt-8" fallback={<div className="min-h-[420px] rounded-xl border border-border/50 bg-card" />}>
-          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-6">{t('pages.yearlyAnalytics.compositionBalance')}</h2>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Balance Stats */}
-            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.spendingBalance')}</h3>
-              <div className="flex items-center justify-around">
-                {balanceData.map((item) => (
-                  <div key={item.name} className="text-center">
-                    <div className="text-2xl font-bold text-foreground">
-                      <SensitiveValue>{item.value.toFixed(1)}%</SensitiveValue>
-                    </div>
-                    <div className="mt-1 flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
-                      {item.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-secondary/50">
-                {balanceData.map((item) => (
-                  <div
-                    key={item.name}
-                    style={{ width: `${item.value}%`, backgroundColor: item.color }}
-                    className="h-full first:rounded-l-full last:rounded-r-full"
-                  />
-                ))}
-              </div>
-              <div className="mt-3 text-xs text-center text-muted-foreground/60">
-                {t('pages.yearlyAnalytics.targetBalance')}
-              </div>
-            </div>
-
-            {/* Spending Type Trend */}
-            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.spendingTypeHistory')}</h3>
-              <div className={`h-[250px] w-full ${sensitiveChartClass}`}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={spendingTypeData} stackOffset="expand" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      interval={0}
-                      dy={4}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      width={40}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.1 }}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--popover-foreground))'
-                      }}
-                      formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, '']}
-                    />
-                    <Legend iconType="circle" />
-                    {/* 2px surface stroke = the gap that separates touching segments. */}
-                    <Bar dataKey="Core" name={t('types.core')} stackId="a" fill={CHART_COLORS.core} stroke="hsl(var(--card))" strokeWidth={2} />
-                    <Bar dataKey="Fun" name={t('types.fun')} stackId="a" fill={CHART_COLORS.fun} stroke="hsl(var(--card))" strokeWidth={2} />
-                    <Bar dataKey="Future" name={t('types.future')} stackId="a" fill={CHART_COLORS.future} stroke="hsl(var(--card))" strokeWidth={2} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Expense distribution — horizontal bars rather than a donut: many slices of
-              similar size are near-impossible to rank by arc, and the category names are too
-              long to sit on one. One series, so one colour for every bar.
-
-              It gets its own full-width row because its height is data-dependent: pairing a
-              list that grows with the category count against fixed-height cards means one
-              column always ends up ragged. Full width also buys the category names real
-              room instead of a 118px gutter. */}
-          <div className="mt-6 rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-            <h3 className="mb-6 text-lg font-semibold font-display">{t('pages.yearlyAnalytics.expenseDistribution')}</h3>
-            <div className={sensitiveChartClass} style={{ height: categoryChartHeight }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={categoryBreakdownData}
-                  layout="vertical"
-                  margin={{ top: 0, right: 104, left: 0, bottom: 0 }}
-                >
-                  <XAxis type="number" hide domain={[0, 'dataMax']} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    tickFormatter={(name: string) => (name.length > 26 ? `${name.slice(0, 25)}…` : name)}
-                    width={168}
-                    interval={0}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--popover-foreground))',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
-                    formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.expenses')]}
-                  />
-                  <Bar dataKey="value" fill={CHART_COLORS.expense} maxBarSize={18} radius={[0, 4, 4, 0]}>
-                    <LabelList
-                      dataKey="value"
-                      position="right"
-                      formatter={(v: number) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                      fill="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </DeferredRender>
-
-        {/* Yearly Spending Heatmap */}
-        <DeferredRender
-          className="mt-12 pt-8"
-          fallback={<div className="min-h-[160px] rounded-xl border border-border/50 bg-card" />}
-        >
-          <h2 className="text-xl font-bold font-display tracking-tight text-foreground mb-2">{t('pages.yearlyAnalytics.yearlyHeatmap')}</h2>
-          <p className="text-muted-foreground text-sm mb-6">{t('pages.yearlyAnalytics.heatmapDescription')}</p>
-          <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
-            {heatmapData && heatmapData.length > 0 ? (
-              <YearlyHeatmap data={heatmapData} year={selectedYearNumber} />
-            ) : (
-              <div className="flex h-24 items-center justify-center text-muted-foreground text-sm">
-                {t('pages.yearlyAnalytics.heatmapNoData')}
-              </div>
-            )}
-          </div>
-        </DeferredRender>
-      </div>
-    </div>
-
+  const statement = (
     <div className="print-statement">
       <StatementDocument
         brand={t('appName')}
@@ -728,9 +225,441 @@ export default function YearlyAnalyticsPage() {
           { label: t('metrics.profit'), value: formatCurrency(data.profit), emphasis: true, tone: data.profit >= 0 ? 'income' : 'expense' },
           { label: t('metrics.cashFlow'), value: formatCurrency(data.net_cash_flow) },
         ]}
-        tables={statementTables}
+        tables={[
+          buildTable(t('statement.incomeByCategory'), data.income_by_category),
+          buildTable(t('statement.expensesByCategory'), data.expense_by_category),
+          buildTable(t('statement.savingsByCategory'), data.saving_by_category),
+          buildTable(t('statement.investmentsByCategory'), data.investment_by_category),
+        ]}
       />
     </div>
+  );
+
+  const isEmpty =
+    whole(data.total_income) === 0 &&
+    whole(data.total_expense) === 0 &&
+    whole(data.total_saving) === 0 &&
+    whole(data.total_investment) === 0;
+
+  if (isEmpty) {
+    return (
+      <>
+        <div className="screen-content">
+          {header(true)}
+          <div className="flex min-h-[20rem] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-[1.1875rem] font-light">{t('pages.yearlyAnalytics.emptyTitle', { year: selectedYear })}</p>
+            <p className="max-w-[40ch] text-sm text-muted-foreground">{t('pages.yearlyAnalytics.emptyDescription')}</p>
+          </div>
+        </div>
+        {statement}
+      </>
+    );
+  }
+
+  // ---- Summary figures ---------------------------------------------------------------------------
+  const money = (value: number) => formatMoneyWhole(value, currency);
+  const parts = (value: number) => formatMoneyParts(value, currency, 0);
+  const percent = (value: number) => formatNumber(value / 100, { style: 'percent', maximumFractionDigits: 1 });
+
+  /**
+   * "Growing · +1.2 % a month". `rising` says whether growth is good news (income, savings rate)
+   * or bad news (core spending), which decides the colour; "Creeping" is the word for spending.
+   */
+  const trendNote = (prefix: string, item: TrendDirectionItem | undefined, rising: 'good' | 'bad'): ReactNode => {
+    if (!item) return null;
+    const word =
+      item.direction === 'growing'
+        ? t(rising === 'bad' ? 'states.creeping' : 'states.growing')
+        : item.direction === 'declining'
+          ? t('states.declining')
+          : t('states.stable');
+    const tone =
+      item.direction === 'stable'
+        ? 'text-muted-foreground'
+        : (item.direction === 'growing') === (rising === 'good')
+          ? 'text-success'
+          : 'text-destructive';
+    const change = formatNumber(item.avg_monthly_change_pct / 100, {
+      style: 'percent',
+      signDisplay: 'exceptZero',
+      maximumFractionDigits: 1,
+    });
+    return (
+      <span className={tone}>
+        {prefix}: {word.toLowerCase()}
+        {' · '}
+        <SensitiveValue>{t('pages.yearlyAnalytics.perMonth', { change })}</SensitiveValue>
+      </span>
+    );
+  };
+
+  const income = whole(data.total_income);
+  const ofIncome = (rate: number) => (income > 0 ? t('metrics.ofIncome', { rate: percent(rate) }) : undefined);
+  const trends = data.trend_directions;
+
+  const metrics: Metric[] = [
+    {
+      key: 'income',
+      label: t('metrics.income'),
+      value: income,
+      parts: parts(income),
+      note: trendNote(t('pages.yearlyAnalytics.trendIncome'), trends?.income_trend, 'good'),
+    },
+    {
+      key: 'expenses',
+      label: t('metrics.expenses'),
+      value: whole(data.total_expense),
+      parts: parts(whole(data.total_expense)),
+      note: trendNote(t('pages.yearlyAnalytics.trendCore'), trends?.core_expense_trend, 'bad'),
+    },
+    {
+      key: 'saved',
+      label: t('metrics.saved'),
+      value: whole(data.total_saving),
+      parts: parts(whole(data.total_saving)),
+      sub: ofIncome(data.savings_rate),
+      note: trendNote(t('pages.yearlyAnalytics.trendSavingsRate'), trends?.savings_rate_trend, 'good'),
+    },
+    {
+      key: 'invested',
+      label: t('metrics.invested'),
+      value: whole(data.total_investment),
+      parts: parts(whole(data.total_investment)),
+      sub: ofIncome(data.investment_rate),
+      note: null,
+    },
+    {
+      key: 'profit',
+      label: t('metrics.profit'),
+      value: whole(data.profit),
+      parts: parts(whole(data.profit)),
+      note: null,
+    },
+    {
+      key: 'cashflow',
+      label: t('metrics.cashFlow'),
+      value: whole(data.net_cash_flow),
+      parts: parts(whole(data.net_cash_flow)),
+      accent: true,
+      note: null,
+    },
+  ];
+
+  // ---- Records: the year's best and worst months, each linking to that month -------------------
+  const records = [
+    {
+      key: 'cashflow',
+      label: t('pages.yearlyAnalytics.bestCashflow'),
+      month: data.highlights.highest_cashflow_month.month,
+      value: money(data.highlights.highest_cashflow_month.value),
+      tone: data.highlights.highest_cashflow_month.value >= 0 ? 'text-success' : 'text-destructive',
+    },
+    {
+      key: 'spend',
+      label: t('pages.yearlyAnalytics.highestSpend'),
+      month: data.highlights.highest_expense_month.month,
+      value: money(data.highlights.highest_expense_month.value),
+      tone: 'text-muted-foreground',
+    },
+    {
+      key: 'rate',
+      label: t('pages.yearlyAnalytics.topSavingsRate'),
+      month: data.highlights.highest_savings_rate_month.month,
+      value: percent(data.highlights.highest_savings_rate_month.value),
+      tone: 'text-muted-foreground',
+    },
+  ];
+
+  // ---- Composition -------------------------------------------------------------------------------
+  const balance = data.spending_balance;
+  const shareText = (value: number) => percent(value);
+  const balanceSegments: SplitSegment[] = [
+    { key: 'core', label: t('types.core'), value: balance.core_share_pct, percent: shareText(balance.core_share_pct), tone: 'strong' },
+    { key: 'fun', label: t('types.fun'), value: balance.fun_share_pct, percent: shareText(balance.fun_share_pct), tone: 'medium' },
+    { key: 'future', label: t('types.future'), value: balance.future_share_pct, percent: shareText(balance.future_share_pct), tone: 'accent' },
+  ];
+
+  const expenseSorted = Object.entries(data.expense_by_category ?? {})
+    .map(([name, value]) => ({ name, value: Number(value) }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const expenseTotal = expenseSorted.reduce((sum, item) => sum + item.value, 0);
+  const expenseLargest = expenseSorted[0]?.value ?? 0;
+  const expenseRows: LineRow[] = expenseSorted.map((item) => ({
+    key: item.name,
+    label: item.name,
+    detail: expenseTotal > 0 ? percent((item.value / expenseTotal) * 100) : undefined,
+    amount: money(item.value),
+    ratio: expenseLargest > 0 ? item.value / expenseLargest : 0,
+  }));
+
+  const sectionHeading = 'text-[1.125rem] font-medium tracking-[-0.01em]';
+  const chartHeading = 'text-[0.8125rem] font-normal text-muted-foreground';
+  const clickHint = <span className="text-muted-foreground/70"> · {t('pages.yearlyAnalytics.clickMonth')}</span>;
+
+  return (
+    <>
+      <div className="screen-content">
+        {header(true)}
+
+        <section aria-label={t('pages.yearlyAnalytics.title')} className={cn('transition-opacity', isFetching && 'opacity-60')}>
+          <MetricGrid metrics={metrics} className="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" formatAmount={money} />
+        </section>
+
+        {/* Records */}
+        <section aria-labelledby="yearly-records" className="mt-12">
+          <h2 id="yearly-records" className={cn(chartHeading, 'mb-1.5')}>{t('pages.yearlyAnalytics.records')}</h2>
+          <div className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
+            {records.map((record) => {
+              const href = monthHref(record.month);
+              const name = monthLong(record.month);
+              return (
+                <div key={record.key} className="min-w-0 border-t border-border pt-3">
+                  <div className="text-[0.8125rem] text-muted-foreground">{record.label}</div>
+                  <div className="mt-1 text-[1.25rem] tracking-[-0.01em]">
+                    {href ? (
+                      <Link to={href} className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        {name}
+                      </Link>
+                    ) : (
+                      name
+                    )}
+                  </div>
+                  <div className={cn('text-[0.8125rem] tabular-nums', record.tone)}>
+                    <SensitiveValue>{record.value}</SensitiveValue>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Month by month */}
+        <DeferredRender
+          className="mt-14 grid gap-x-14 gap-y-12 lg:grid-cols-2"
+          fallback={<div className="mt-14 min-h-[22rem]" />}
+        >
+          <section aria-labelledby="yearly-income-costs" className="min-w-0">
+            <h2 id="yearly-income-costs" className={cn(chartHeading, 'mb-3')}>
+              {t('pages.yearlyAnalytics.incomeVsCosts')}
+              {clickHint}
+            </h2>
+            <div className={`h-[18rem] ${sensitiveChartClass}`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={monthlyTrendsData}
+                  margin={{ top: 5, right: 12, left: 0, bottom: 0 }}
+                  onClick={(e) => e?.activeLabel && handleMonthClick(String(e.activeLabel))}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CartesianGrid vertical={false} stroke={GRID_STROKE} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={AXIS_TICK} tickFormatter={monthShort} dy={8} />
+                  <YAxis axisLine={false} tickLine={false} tick={AXIS_TICK} tickFormatter={formatCurrencyCompact} width={MONEY_AXIS_WIDTH} />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => monthLong(String(label))}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
+                    formatter={(value: number, name: string) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, name]}
+                  />
+                  <Line type="monotone" dataKey="income" name={t('metrics.income')} stroke={CHART_COLORS.income} strokeWidth={2} dot={false} />
+                  <Line
+                    type="monotone"
+                    dataKey="expenses"
+                    name={t('metrics.expenses')}
+                    stroke={CHART_COLORS.expense}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <Legend
+              items={[
+                { label: t('metrics.income'), color: CHART_COLORS.income },
+                { label: t('metrics.expenses'), color: CHART_COLORS.expense },
+              ]}
+            />
+          </section>
+
+          <section aria-labelledby="yearly-wealth" className="min-w-0">
+            <h2 id="yearly-wealth" className={cn(chartHeading, 'mb-3')}>
+              {t('pages.yearlyAnalytics.wealthGeneration')}
+              {clickHint}
+            </h2>
+            <div className={`h-[18rem] ${sensitiveChartClass}`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={monthlyTrendsData}
+                  barGap={2}
+                  margin={{ top: 5, right: 12, left: 0, bottom: 0 }}
+                  onClick={(e) => e?.activeLabel && handleMonthClick(String(e.activeLabel))}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CartesianGrid vertical={false} stroke={GRID_STROKE} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={AXIS_TICK} tickFormatter={monthShort} dy={8} />
+                  <YAxis axisLine={false} tickLine={false} tick={AXIS_TICK} tickFormatter={formatCurrencyCompact} width={MONEY_AXIS_WIDTH} />
+                  <Tooltip
+                    cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => monthLong(String(label))}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
+                    formatter={(value: number, name: string) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, name]}
+                  />
+                  <ReferenceLine y={0} stroke="hsl(var(--foreground) / 0.2)" strokeWidth={1} />
+                  <Bar dataKey="savings" name={t('metrics.savings')} fill={CHART_COLORS.savings} maxBarSize={12} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="investments" name={t('metrics.investments')} fill={CHART_COLORS.investment} maxBarSize={12} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <Legend
+              items={[
+                { label: t('metrics.savings'), color: CHART_COLORS.savings },
+                { label: t('metrics.investments'), color: CHART_COLORS.investment },
+              ]}
+            />
+          </section>
+
+          {/* Profit & Cash Flow — one panel each. See SignedBarFacet for why they aren't
+              two series on a single plot. */}
+          <section aria-labelledby="yearly-profit" className="min-w-0 lg:col-span-2">
+            <h2 id="yearly-profit" className={cn(chartHeading, 'mb-3')}>
+              {t('pages.yearlyAnalytics.profitAndCashFlow')}
+              {clickHint}
+            </h2>
+            <div className={`flex flex-col gap-10 md:flex-row ${sensitiveChartClass}`}>
+              <SignedBarFacet
+                title={t('metrics.profit')}
+                total={formatCurrency(data.profit)}
+                data={profitSeries}
+                formatCurrency={formatCurrency}
+                formatCompact={formatCurrencyCompact}
+                onMonthClick={handleMonthClick}
+                monthLabel={monthShort}
+              />
+              <SignedBarFacet
+                title={t('metrics.cashFlow')}
+                total={formatCurrency(data.net_cash_flow)}
+                data={cashflowSeries}
+                formatCurrency={formatCurrency}
+                formatCompact={formatCurrencyCompact}
+                onMonthClick={handleMonthClick}
+                monthLabel={monthShort}
+              />
+            </div>
+          </section>
+        </DeferredRender>
+
+        {/* Monthly breakdown — the numbers behind every chart above, in one place. */}
+        <DeferredRender className="mt-16" fallback={<div className="mt-16 min-h-[26rem]" />}>
+          <section aria-labelledby="yearly-breakdown">
+            <h2 id="yearly-breakdown" className={sectionHeading}>{t('pages.yearlyAnalytics.monthlyBreakdown')}</h2>
+            <p className="mb-4 mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.yearlyAnalytics.monthlyBreakdownDescription')}</p>
+            <MonthlyBreakdownTable
+              rows={monthlyTrendsData}
+              formatCurrency={formatCurrency}
+              onMonthClick={handleMonthClick}
+              monthLabel={monthLong}
+              labels={{
+                month: t('analytics.month'),
+                income: t('metrics.income'),
+                expenses: t('metrics.expenses'),
+                savings: t('metrics.savings'),
+                investments: t('metrics.investments'),
+                profit: t('metrics.profit'),
+                cashFlow: t('metrics.cashFlow'),
+                total: t('analytics.total'),
+              }}
+            />
+          </section>
+        </DeferredRender>
+
+        {/* Composition */}
+        <DeferredRender className="mt-16" fallback={<div className="mt-16 min-h-[26rem]" />}>
+          <h2 className={cn(sectionHeading, 'border-b border-foreground/30 pb-3')}>{t('pages.yearlyAnalytics.compositionBalance')}</h2>
+          <div className="mt-6 grid gap-x-14 gap-y-12 lg:grid-cols-2">
+            <section aria-labelledby="yearly-balance" className="min-w-0">
+              <h3 id="yearly-balance" className={cn(chartHeading, 'mb-3')}>{t('pages.yearlyAnalytics.spendingBalance')}</h3>
+              <SplitBar segments={balanceSegments} />
+              <p className="mt-3 text-[0.8125rem] text-muted-foreground">{t('pages.yearlyAnalytics.targetBalance')}</p>
+            </section>
+
+            <section aria-labelledby="yearly-type-history" className="min-w-0">
+              <h3 id="yearly-type-history" className={cn(chartHeading, 'mb-3')}>{t('pages.yearlyAnalytics.spendingTypeHistory')}</h3>
+              <div className={`h-[14rem] w-full ${sensitiveChartClass}`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={spendingTypeData} stackOffset="expand" margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={AXIS_TICK} tickFormatter={monthShort} interval={0} dy={4} />
+                    <YAxis
+                      tickFormatter={(v: number) => formatNumber(v, { style: 'percent', maximumFractionDigits: 0 })}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={AXIS_TICK}
+                      width={40}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }}
+                      contentStyle={TOOLTIP_STYLE}
+                      labelFormatter={(label) => monthLong(String(label))}
+                      formatter={(value: number, name: string) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, name]}
+                    />
+                    {/* 1px background stroke = the gap that separates touching segments. */}
+                    <Bar dataKey="Core" name={t('types.core')} stackId="a" fill="hsl(var(--foreground) / 0.45)" stroke="hsl(var(--background))" strokeWidth={1} />
+                    <Bar dataKey="Fun" name={t('types.fun')} stackId="a" fill="hsl(var(--foreground) / 0.25)" stroke="hsl(var(--background))" strokeWidth={1} />
+                    <Bar dataKey="Future" name={t('types.future')} stackId="a" fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={1} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <Legend
+                items={[
+                  { label: t('types.core'), color: 'hsl(var(--foreground) / 0.45)' },
+                  { label: t('types.fun'), color: 'hsl(var(--foreground) / 0.25)' },
+                  { label: t('types.future'), color: 'hsl(var(--primary))' },
+                ]}
+              />
+            </section>
+          </div>
+
+          {/* Expense distribution — ranked rows rather than a donut: many slices of similar
+              size are near-impossible to rank by arc, and category names are too long to sit on one. */}
+          <section aria-labelledby="yearly-expense-distribution" className="mt-12">
+            <h3 id="yearly-expense-distribution" className={cn(chartHeading, 'mb-1.5')}>{t('pages.yearlyAnalytics.expenseDistribution')}</h3>
+            {expenseRows.length > 0 ? (
+              <LineRows rows={expenseRows} className="lg:columns-2 lg:gap-x-14 [&>li]:break-inside-avoid" barClassName="bg-foreground/50" />
+            ) : (
+              <p className="py-3 text-sm text-muted-foreground">{t('pages.monthlyAnalytics.noExpenseData')}</p>
+            )}
+          </section>
+        </DeferredRender>
+
+        {/* Full-year spending heatmap */}
+        <DeferredRender className="mt-16" fallback={<div className="mt-16 min-h-[10rem]" />}>
+          <section aria-labelledby="yearly-heatmap">
+            <h2 id="yearly-heatmap" className={sectionHeading}>{t('pages.yearlyAnalytics.yearlyHeatmap')}</h2>
+            <p className="mb-4 mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.yearlyAnalytics.heatmapDescription')}</p>
+            {heatmapData && heatmapData.length > 0 ? (
+              <YearlyHeatmap data={heatmapData} year={selectedYearNumber} />
+            ) : (
+              <p className="py-8 text-sm text-muted-foreground">{t('pages.yearlyAnalytics.heatmapNoData')}</p>
+            )}
+          </section>
+        </DeferredRender>
+      </div>
+
+      {statement}
     </>
+  );
+}
+
+/** Inline legend: a short line in each series' colour, then its name. */
+function Legend({ items }: { items: { label: string; color: string }[] }) {
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[0.8125rem] text-muted-foreground">
+      {items.map((item) => (
+        <li key={item.label} className="flex items-center gap-2">
+          <span aria-hidden="true" className="inline-block h-[2px] w-3.5 rounded-full" style={{ backgroundColor: item.color }} />
+          {item.label}
+        </li>
+      ))}
+    </ul>
   );
 }

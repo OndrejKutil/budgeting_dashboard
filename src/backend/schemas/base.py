@@ -138,6 +138,17 @@ class PeriodComparison(BaseModel):
     cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous period")
 
 
+class SixMonthAverage(BaseModel):
+    """Average monthly totals over the (up to) six calendar months before the requested month"""
+    months_counted: int = Field(..., description="How many of the six previous months contributed (months before the user's first transaction are skipped)")
+    income: float = Field(..., description="Average monthly income (same definition as SummaryData.total_income)")
+    expense: float = Field(..., description="Average monthly expenses")
+    saving: float = Field(..., description="Average monthly net savings")
+    investment: float = Field(..., description="Average monthly investments")
+    profit: float = Field(..., description="Average monthly profit (same definition as SummaryData.profit)")
+    net_cash_flow: float = Field(..., description="Average monthly net cash flow")
+
+
 class SummaryData(BaseModel):
     """Schema for financial summary data"""
     total_income: float = Field(..., description="Total income amount")
@@ -151,9 +162,18 @@ class SummaryData(BaseModel):
     comparison: PeriodComparison = Field(..., description="Period-over-period comparison metrics")
     savings_rate: float = Field(..., description="Savings rate as percentage of income")
     investment_rate: float = Field(..., description="Investment rate as percentage of income")
-    top_expenses: list[CategoryInsight] = Field(..., description="Top 3 expense categories")
-    biggest_mover: CategoryInsight | None = Field(None, description="Category with largest absolute spending change vs previous period")
-    largest_transactions: list[TransactionData] = Field(..., description="List of top 5 largest transactions")
+
+    # Overview redesign fields
+    expense_categories: list[CategoryInsight] = Field(default_factory=list, description="All expense categories of the period, largest first")
+    daily_cumulative_expense: list[float] = Field(
+        default_factory=list,
+        description="Cumulative expenses by day of the month of start_date; index 0 is day 1. Ends at today for the current month, is empty for a future month. Only filled when the request is exactly one whole calendar month; empty for any other date range",
+    )
+    average_daily_cumulative_expense: list[float] = Field(
+        default_factory=list,
+        description="Average cumulative expenses by day of month over the previous six calendar months, one value per day of the requested month. Each month is padded with its final value and the sum divided by the months counted, so the series never decreases. Empty without history or when the request is not exactly one whole calendar month",
+    )
+    six_month_average: SixMonthAverage | None = Field(None, description="Average monthly totals over the previous six months; null without history or when the request is not exactly one whole calendar month")
     
 
     
@@ -180,13 +200,6 @@ class SummaryData(BaseModel):
                 },
                 "savings_rate": 20.0,
                 "investment_rate": 10.0,
-                "top_expenses": [
-                     {"name": "Rent", "total": 1500.0, "share_of_total": 42.8},
-                     {"name": "Groceries", "total": 600.0, "share_of_total": 17.1},
-                     {"name": "Utilities", "total": 200.0, "share_of_total": 5.7}
-                ],
-                "biggest_mover": {"name": "Travel", "total": 500.0, "share_of_total": 14.2},
-                "largest_transactions": [],
                 "by_category": {
                     "Salary": 5000.00,
                     "Groceries": -800.00,
@@ -351,6 +364,18 @@ class MonthlyPeriodComparison(BaseModel):
     cashflow_delta_pct: float = Field(..., description="Percentage change in cashflow vs previous month")
 
 
+class MonthlySixMonthAverage(BaseModel):
+    """Average monthly totals over the (up to) six calendar months before the requested month"""
+    months_counted: int = Field(..., description="How many of the six previous months contributed (months before the user's first transaction are skipped)")
+    income: float = Field(..., description="Average monthly income (same definition as MonthlyAnalyticsData.income)")
+    expenses: float = Field(..., description="Average monthly expenses")
+    savings: float = Field(..., description="Average monthly net savings")
+    investments: float = Field(..., description="Average monthly investments")
+    profit: float = Field(..., description="Average monthly profit")
+    cashflow: float = Field(..., description="Average monthly net cash flow")
+    savings_rate: float | None = Field(None, description="Average of the monthly savings rates (percent of income) over the counted months that had income; null when none had income")
+
+
 class MonthlyAnalyticsData(BaseModel):
     """Schema for monthly analytics data"""
     year: int = Field(..., description="Year of the analysis")
@@ -370,7 +395,7 @@ class MonthlyAnalyticsData(BaseModel):
     day_split: DaySplit = Field(..., description="Weekday vs Weekend spending split")
     category_concentration: CategoryConcentration = Field(..., description="Category concentration insights")
     comparison: MonthlyPeriodComparison = Field(..., description="Comparison with previous month")
-    yoy_comparison: MonthlyPeriodComparison | None = Field(None, description="Year-over-year comparison (vs same month last year)")
+    six_month_average: MonthlySixMonthAverage | None = Field(None, description="Average of the six months before this one; null when the user has no history before this month")
 
     daily_spending_heatmap: list[DailySpendingData] = Field(..., description="Daily spending data for heatmap")
     # breakdown: List[CategoryBreakdownData] # REMOVED

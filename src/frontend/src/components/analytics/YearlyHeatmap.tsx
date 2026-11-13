@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { DailySpendingData } from '@/lib/api/types/base';
 import { useUser } from '@/contexts/user-context';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 interface Props {
     data: DailySpendingData[];
@@ -70,8 +71,8 @@ export function YearlyHeatmap({ data, year }: Props) {
     const svgHeight = LABEL_OFFSET_Y + 7 * STEP + 4;
 
     const expenseColor = (intensity: 0 | 1 | 2 | 3 | 4): string => {
-        if (intensity === 0) return 'hsl(var(--muted))';
-        const stops = ['', 'hsl(var(--chart-expense) / 0.25)', 'hsl(var(--chart-expense) / 0.45)', 'hsl(var(--chart-expense) / 0.65)', 'hsl(var(--chart-expense) / 0.9)'];
+        if (intensity === 0) return 'hsl(var(--foreground) / 0.06)';
+        const stops = ['', 'hsl(var(--primary) / 0.22)', 'hsl(var(--primary) / 0.42)', 'hsl(var(--primary) / 0.66)', 'hsl(var(--primary) / 0.95)'];
         return stops[intensity];
     };
 
@@ -141,23 +142,23 @@ export function YearlyHeatmap({ data, year }: Props) {
             {/* HTML tooltip — positioned in CSS pixels so it tracks correctly regardless of SVG scaling */}
             {tooltip && (
                 <div
-                    className="pointer-events-none absolute z-10 rounded-md border border-border bg-popover px-2.5 py-1.5 shadow-md whitespace-nowrap"
+                    className="glass glass-dense pointer-events-none absolute z-10 whitespace-nowrap rounded-xl px-3 py-2"
                     style={{
                         left: Math.min(tooltip.x + 12, (wrapRef.current?.clientWidth ?? 0) - 150),
                         top: Math.max(tooltip.y - 44, 0),
                     }}
                 >
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[0.75rem] text-muted-foreground">
                         {formatDate(tooltip.day, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
-                    <p className="text-xs font-semibold text-popover-foreground">
-                        {tooltip.amount > 0 ? formatCurrency(tooltip.amount) : '—'}
+                    <p className="text-xs tabular-nums text-foreground">
+                        {tooltip.amount > 0 ? <SensitiveValue>{formatCurrency(tooltip.amount)}</SensitiveValue> : '—'}
                     </p>
                 </div>
             )}
 
             {/* Legend */}
-            <div className="flex items-center gap-1.5 mt-3 text-[10px] text-muted-foreground">
+            <div className="mt-3 flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
                 <span>{t('pages.yearlyAnalytics.heatmapLess')}</span>
                 {([0, 1, 2, 3, 4] as const).map((i) => (
                     <span

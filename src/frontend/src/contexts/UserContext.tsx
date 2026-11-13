@@ -85,8 +85,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }, [currency]);
 
     const formatCurrencyCompact = useCallback((amount: number) => {
-        return formatMoneyCompact(amount, currency);
-    }, [currency]);
+        return formatMoneyCompact(amount, currency, locale);
+    }, [currency, locale]);
 
     const formatNumber = useCallback((value: number, options?: Intl.NumberFormatOptions) => {
         return new Intl.NumberFormat(locale, options).format(value);

@@ -41,8 +41,8 @@ export default function ResetPasswordPage() {
 
         if (!password) {
             newErrors.password = 'Password is required';
-        } else if (password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
+        } else if (password.length < 8) {
+            newErrors.password = 'Password must be at least 8 characters';
         }
 
         if (!confirmPassword) {
@@ -91,7 +91,7 @@ export default function ResetPasswordPage() {
                 subtitle="Your password has been updated"
             >
                 <div className="space-y-6">
-                    <div className="flex flex-col items-center gap-4 rounded-lg border border-border/50 bg-card/50 p-8 text-center">
+                    <div className="flex flex-col items-center gap-4 py-4 text-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
                             <CheckCircle className="h-8 w-8 text-success" />
                         </div>
@@ -174,7 +174,6 @@ export default function ResetPasswordPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             className={cn(
                                 'pr-10',
-                                errors.password && 'border-destructive focus-visible:ring-destructive'
                             )}
                             disabled={isLoading}
                         />
@@ -207,7 +206,6 @@ export default function ResetPasswordPage() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className={cn(
                                 'pr-10',
-                                errors.confirmPassword && 'border-destructive focus-visible:ring-destructive'
                             )}
                             disabled={isLoading}
                         />

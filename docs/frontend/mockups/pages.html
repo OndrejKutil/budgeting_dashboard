@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Budgeting Dashboard redesign pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one screen at a time, picked from a strip of tabs. Desktop screens are drawn
+   at 1160px and scaled to fit. The style under test: no boxes, one large figure per page,
+   hairlines for structure, glass only on navigation and overlays, amber for one thing. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0b0d;
+  --ink: #f2f2f0;
+  --muted: #9a9c9f;
+  --faint: #63666b;
+  --line: rgba(255,255,255,.1);
+  --amber: #f5a524;
+  --amber-ink: #1a1205;
+  --pos: #6fd6a3;
+  --neg: #ff8a80;
+  --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.mut { color: var(--muted); } .pos { color: var(--pos); } .neg { color: var(--neg); } .amb { color: var(--amber); }
+[hidden] { display: none !important; }
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 56px; display: flex; flex-direction: column; gap: 16px; }
+.intro h1 { font-size: 24px; line-height: 1.2; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 68ch; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills button { cursor: pointer; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--muted); font-weight: 500; }
+.pills button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.say { margin: 0; color: var(--muted); max-width: 80ch; min-height: 3em; }
+
+.fit { width: 100%; overflow: hidden; border-radius: 14px; border: 1px solid var(--line); }
+.desk {
+  width: 1160px; min-height: 740px; transform-origin: 0 0; position: relative; isolation: isolate; overflow: hidden; padding: 22px 56px 48px;
+  background: radial-gradient(900px 600px at 78% -20%, rgba(245,165,36,.1), transparent 70%), #0a0b0d;
+}
+.glass {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  -webkit-backdrop-filter: blur(26px) saturate(140%); backdrop-filter: blur(26px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 24px 50px -26px rgba(0,0,0,.8);
+}
+svg.lucide { width: 18px; height: 18px; flex: none; }
+svg text { fill: var(--faint); font: 11px var(--font); }
+svg text.lab { fill: var(--ink); font-size: 12.5px; }
+
+/* top bar */
+.bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.brand { font-weight: 600; letter-spacing: -.01em; }
+.tabs { display: flex; gap: 2px; padding: 5px; border-radius: 999px; font-size: 14px; }
+.tabs span { padding: 7px 14px; border-radius: 999px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tabs span svg { width: 14px; height: 14px; }
+.tabs .on { color: var(--ink); background: rgba(255,255,255,.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.16); }
+.right { display: flex; justify-content: flex-end; align-items: center; gap: 16px; font-size: 14px; color: var(--muted); }
+.ava { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); display: grid; place-items: center; font-size: 11.5px; font-weight: 600; color: var(--ink); flex: none; }
+
+/* shared pieces */
+.cap { font-size: 13px; color: var(--muted); }
+.h { font-size: 13px; color: var(--muted); margin: 0 0 6px; font-weight: 400; display: flex; justify-content: space-between; gap: 12px; }
+.big { font-size: 104px; line-height: .95; font-weight: 300; letter-spacing: -.045em; margin: 6px 0 18px; white-space: nowrap; }
+.big span { font-size: 40px; letter-spacing: -.02em; color: var(--muted); margin-left: 10px; }
+.big.m { font-size: 72px; } .big.m span { font-size: 30px; }
+.lead { font-size: 19px; line-height: 1.45; color: var(--muted); max-width: 32ch; margin: 0 0 28px; }
+.lead b { color: var(--ink); font-weight: 500; }
+.two { display: grid; grid-template-columns: 1.25fr 1fr; gap: 72px; }
+.mt1 { margin-top: 54px; } .mt2 { margin-top: 44px; }
+.rows { display: grid; }
+.r { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 14.5px; align-items: baseline; }
+.r:first-child { border-top: 0; }
+.r small { color: var(--muted); font-size: 13px; margin-left: 8px; }
+.cat { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 0 12px; font-size: 14.5px; position: relative; }
+.cat::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line); }
+.cat::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: var(--w); background: var(--c, var(--amber)); }
+.cat small { color: var(--muted); font-size: 13px; margin-left: 8px; }
+.flow { display: flex; height: 8px; gap: 3px; }
+.flow i { display: block; height: 100%; border-radius: 2px; }
+.flowlab { display: flex; gap: 3px; font-size: 13px; margin-top: 8px; }
+.flowlab span { min-width: 0; }
+.flowlab b { display: block; font-weight: 500; font-size: 15px; }
+.legend { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--amber); vertical-align: middle; margin-right: 6px; }
+.legend i.d { border-top: 2px dashed var(--faint); }
+.add { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 999px; background: var(--amber); color: var(--amber-ink); font-weight: 600; font-size: 14.5px; white-space: nowrap; }
+.kbd { font: 500 11px var(--font); border: 1px solid rgba(26,18,5,.35); border-radius: 5px; padding: 1px 5px; }
+.ghost { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); font-size: 14.5px; font-weight: 500; white-space: nowrap; }
+.fab { position: absolute; right: 40px; bottom: 32px; }
+.phead { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-top: 46px; }
+.phead h2 { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
+.phead h2 span { color: var(--faint); }
+.phead .acts { display: flex; gap: 10px; align-items: center; }
+.txt { display: flex; gap: 20px; font-size: 14px; color: var(--muted); }
+.txt .on { color: var(--ink); text-decoration: underline; text-decoration-color: var(--amber); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+
+/* tables */
+table.t { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.t th { text-align: left; font-weight: 400; font-size: 13px; color: var(--faint); padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+.t td { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.t th.n, .t td.n { text-align: right; }
+.t td i.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--d); margin-right: 8px; vertical-align: middle; }
+.t tr.grp td { padding: 26px 0 8px; font-size: 13px; color: var(--muted); border-bottom: 1px solid rgba(255,255,255,.22); }
+.t tr.grp:first-child td { padding-top: 16px; }
+.t tr.sum td { font-weight: 500; border-bottom: 0; }
+.find { display: flex; gap: 22px; align-items: center; border-bottom: 1px solid var(--line); padding: 22px 0 12px; font-size: 14px; color: var(--faint); }
+.find .q { flex: 1; display: flex; gap: 10px; align-items: center; }
+.tf { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); padding-top: 14px; }
+
+.txt.drop span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.txt.drop svg.lucide { width: 14px; height: 14px; }
+.t td.side { padding-left: 14px; box-shadow: inset 2px 0 0 var(--s); }
+.side-r { padding-left: 16px; box-shadow: inset 2px 0 0 var(--s); }
+/* stat row: figures split by hairlines, no boxes */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 34px; }
+.stats div { padding: 0 28px; border-left: 1px solid var(--line); }
+.stats div:first-child { padding-left: 0; border-left: 0; }
+.stats span { font-size: 13px; color: var(--muted); display: block; }
+.stats b { display: block; font-size: 34px; font-weight: 400; letter-spacing: -.03em; line-height: 1.2; }
+.stats small { font-size: 13px; color: var(--muted); }
+
+.bud td { padding: 10px 0; }
+.bud .grip { font-size: 12px; letter-spacing: -2px; color: var(--faint); }
+.bud .edit { display: inline-block; min-width: 96px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.3); font-size: 15.5px; }
+.bud tr.addr td { color: var(--faint); font-size: 13.5px; border-bottom: 0; padding: 8px 0 0; }
+.bud tr.grp td { font-size: 15px; color: var(--ink); font-weight: 500; }
+/* fund rows */
+.frow { display: grid; grid-template-columns: 3px 1fr 200px 240px; gap: 0 22px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); position: relative; font-size: 15px; }
+.frow .fl { align-self: stretch; background: var(--s); border-radius: 2px; }
+.frow b { font-size: 18px; font-weight: 500; letter-spacing: -.01em; }
+.frow small { display: block; color: var(--muted); font-size: 13px; }
+.frow > span:nth-of-type(3) { text-align: right; font-size: 13.5px; }
+.frow .fsum { text-align: right; font-size: 34px; font-weight: 400; letter-spacing: -.03em; }
+.frow .fsum span { font-size: .5em; color: var(--muted); margin-left: 6px; }
+.frow > i { position: absolute; left: 25px; bottom: -1px; height: 1px; max-width: calc(100% - 25px); background: rgba(255,255,255,.55); }
+/* accounts */
+.agroup { margin-top: 40px; }
+.ahead { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.28); }
+.ahead b { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+.atot { font-size: 22px; letter-spacing: -.02em; }
+.atot span, .arow b span { font-size: .6em; color: var(--muted); margin-left: 5px; }
+.arow { display: grid; grid-template-columns: 1fr 100px 210px 230px; gap: 24px; align-items: center; padding: 16px 0 16px 22px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.arow small { display: block; color: var(--muted); font-size: 13px; }
+.arow > span:nth-of-type(2) { text-align: right; font-size: 13.5px; }
+.arow b { text-align: right; font-size: 28px; font-weight: 400; letter-spacing: -.03em; }
+/* funds */
+.fundrow { display: grid; grid-template-columns: 1fr 190px 120px 70px; gap: 24px; align-items: baseline; padding: 18px 0 16px; position: relative; font-size: 15px; }
+.fundrow::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255,255,255,.1); }
+.fundrow::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: var(--w); background: var(--ink); }
+.fundrow.near::after { background: var(--amber); }
+.fundrow b { font-size: 19px; font-weight: 500; letter-spacing: -.01em; }
+.fundrow > :not(:first-child) { text-align: right; }
+.fundrow .pct { font-size: 19px; }
+
+/* dialog and menus */
+.scrim { position: absolute; inset: 0; background: rgba(4,5,7,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: grid; place-items: center; z-index: 3; }
+.dialog { width: 460px; border-radius: 26px; padding: 26px; display: grid; gap: 18px; background: rgba(30,31,35,.74); }
+.dialog h3 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
+.seg { display: flex; gap: 22px; font-size: 14.5px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.seg .on { color: var(--ink); text-decoration: underline; text-decoration-color: var(--amber); text-decoration-thickness: 2px; text-underline-offset: 14px; }
+.amt { font-size: 56px; font-weight: 300; letter-spacing: -.04em; line-height: 1; white-space: nowrap; }
+.amt span { font-size: 24px; color: var(--muted); margin-left: 6px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label { font-size: 13px; color: var(--muted); }
+.ctrl { height: 42px; border: 0; border-bottom: 1px solid rgba(255,255,255,.22); background: transparent; padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 400 16px var(--font); width: 100%; color: var(--ink); text-align: left; border-radius: 0; }
+.ctrl .ph { color: var(--faint); }
+.field.bad label, .err { color: var(--neg); }
+.field.bad .ctrl { border-bottom: 2px solid var(--neg); }
+.err { font-size: 13px; }
+.f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.dacts { display: flex; justify-content: flex-end; gap: 10px; }
+.menus { display: grid; grid-template-columns: repeat(3, 230px); gap: 16px; justify-content: center; align-items: start; margin-top: 16px; }
+.menu { border-radius: 18px; padding: 8px; font-size: 14.5px; }
+.menu p { margin: 0; padding: 8px 12px 6px; font-size: 13px; color: var(--muted); }
+.menu span { display: flex; justify-content: space-between; padding: 9px 12px; border-radius: 11px; }
+.menu span.on { background: rgba(255,255,255,.09); }
+.menu span small { color: var(--faint); }
+
+/* landing */
+.hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 72px; align-items: center; margin-top: 76px; }
+.hero h2 { font-size: 68px; line-height: .98; font-weight: 300; letter-spacing: -.04em; margin: 0 0 22px; text-wrap: balance; }
+.hero h2 em { font-style: normal; color: var(--amber); }
+.hero p { font-size: 19px; color: var(--muted); max-width: 40ch; margin: 0 0 30px; }
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 84px; }
+.feats div { padding: 0 32px; border-left: 1px solid var(--line); }
+.feats div:first-child { padding-left: 0; border-left: 0; }
+.feats b { display: block; font-size: 17px; font-weight: 500; margin-bottom: 6px; }
+.feats p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+.foot { margin-top: 96px; border-top: 1px solid rgba(255,255,255,.28); padding-top: 48px; }
+.fcta { display: flex; justify-content: space-between; align-items: end; gap: 32px; }
+.fcta h3 { margin: 0; font-size: 56px; line-height: 1; font-weight: 300; letter-spacing: -.04em; }
+.ffacts { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 56px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ffacts div { padding: 0 24px; border-left: 1px solid var(--line); font-size: 13.5px; }
+.ffacts div:first-child { padding-left: 0; border-left: 0; }
+.ffacts b { display: block; font-weight: 500; font-size: 14.5px; margin-bottom: 2px; }
+.ffacts span { color: var(--muted); }
+.fcols { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr 1.3fr; gap: 32px; margin-top: 40px; font-size: 14px; }
+.fcols p { margin: 8px 0 0; color: var(--muted); max-width: 30ch; }
+.fcols b { display: block; font-weight: 400; font-size: 13px; color: var(--faint); margin-bottom: 10px; }
+.fcols div > span:not(.brand) { display: block; padding: 4px 0; }
+.fend { display: flex; justify-content: space-between; gap: 24px; margin-top: 44px; font-size: 13px; color: var(--faint); }
+/* phones */
+.phones { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+.phone { margin: 0; width: 330px; max-width: 100%; display: grid; gap: 8px; }
+.phone figcaption { text-align: center; font-size: 13px; color: var(--muted); }
+.screen { border-radius: 36px; border: 1px solid var(--line); padding: 22px 20px 92px; min-height: 680px; position: relative; overflow: hidden; isolation: isolate; display: flex; flex-direction: column; gap: 20px;
+  background: radial-gradient(420px 320px at 80% -12%, rgba(245,165,36,.13), transparent 70%), #0a0b0d; }
+.s-head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: var(--muted); }
+.s-head b { color: var(--ink); font-weight: 600; }
+.screen .big { font-size: 64px; margin: 4px 0 12px; } .screen .big span { font-size: 26px; }
+.screen .lead { font-size: 16px; margin: 0 0 18px; }
+.mdock { position: absolute; left: 44px; right: 44px; bottom: 16px; border-radius: 26px; padding: 8px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; text-align: center; font-size: 10.5px; color: var(--muted); }
+.mdock span { display: grid; place-items: center; height: 46px; }
+.mdock svg.lucide { width: 22px; height: 22px; }
+.mdock .on::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--amber); position: absolute; margin-top: 34px; }
+.mdock .on { color: var(--ink); } .mdock .on svg { color: var(--amber); }
+.mdock .plus { width: 46px; height: 46px; border-radius: 16px; background: var(--amber); color: var(--amber-ink); place-items: center; justify-self: center; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 30px 30px 0 0; padding: 10px 22px 22px; display: grid; gap: 16px; background: rgba(30,31,35,.78); }
+.sheet .grab { width: 40px; height: 4px; border-radius: 9px; background: rgba(255,255,255,.25); justify-self: center; }
+.sheet .add { width: 100%; justify-content: center; height: 48px; }
+.dim { opacity: .3; }
+
+/* rules */
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; border-top: 1px solid var(--line); }
+@media (max-width: 760px) { .rules { grid-template-columns: 1fr; } }
+.rules div { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.rules b { display: block; font-weight: 600; margin-bottom: 2px; }
+.rules span { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <h1>Your pages in the top-bar style</h1>
+    <p>Second pass, with your decisions applied: spending in red, comparisons against your six-month average, an icon-only mobile dock, and Accounts, Funds and Budget Maker redrawn. The landing page now has a footer. Sample data throughout.</p>
+  </header>
+  <div class="pills" id="tabs"></div>
+  <p class="say" id="say"></p>
+  <div class="fit" id="fit"></div>
+  <div class="phones" id="phones" hidden></div>
+  <div class="rules" id="rules" hidden></div>
+</div>
+
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script>
+const ic = n => `<i data-lucide="${n}"></i>`;
+const bar = on => `<div class="bar"><span class="brand">Budgeting Dashboard</span>
+  <span class="tabs glass">${["Overview", "Transactions", "Accounts", "Funds"].map(t => `<span class="${t === on ? "on" : ""}">${t}</span>`).join("")}${["Analytics", "Plan", "Tools"].map(t => `<span class="${t === on ? "on" : ""}">${t}${ic("chevron-down")}</span>`).join("")}</span>
+  <span class="right"><span>‹ &nbsp;January 2026&nbsp; ›</span><span class="ava">DU</span></span></div>`;
+const addBtn = `<span class="add">${ic("plus")}Add transaction <span class="kbd">N</span></span>`;
+
+// Day-to-day spending without rent: 31 values summing to 9 185 Kč (18 679 spent minus 9 494 rent).
+const DAYS = [0, 412, 96, 180, 655, 0, 1210, 240, 389, 0, 843, 130, 0, 520, 75, 310, 0, 990, 145, 0, 260, 430, 0, 88, 705, 0, 164, 350, 0, 215, 778];
+function lineChart(w, h) {
+  // Cumulative spending: January ends at 18 679, the six-month average near 21 900. One scale, 0 to 30 000.
+  const jan = []; let a = 0; DAYS.forEach((v, i) => { a += v + (i === 4 ? 9494 : 0); jan.push(a); });
+  const dec = []; let b = 0; DAYS.forEach((v, i) => { b += v * 1.35 + (i === 4 ? 9494 : 0); dec.push(b); });
+  const X = i => 40 + i * ((w - 54) / 30), Y = v => h - 30 - v / 30000 * (h - 48);
+  let s = "";
+  for (const g of [0, 10000, 20000, 30000]) s += `<line x1="40" x2="${w - 14}" y1="${Y(g)}" y2="${Y(g)}" stroke="rgba(255,255,255,.07)"/><text x="32" y="${Y(g) + 4}" text-anchor="end">${g / 1000}k</text>`;
+  for (const d of [1, 10, 20, 31]) s += `<text x="${X(d - 1)}" y="${h - 8}" text-anchor="middle">${d}</text>`;
+  const path = arr => arr.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ");
+  s += `<path d="${path(dec)}" fill="none" stroke="#63666b" stroke-width="1.5" stroke-dasharray="4 5"/>`;
+  s += `<path d="${path(jan)}" fill="none" stroke="var(--amber)" stroke-width="2"/>`;
+  s += `<circle cx="${X(30)}" cy="${Y(jan[30])}" r="4.5" fill="var(--amber)"/><text class="lab" x="${X(30) - 10}" y="${Y(jan[30]) + 20}" text-anchor="end">18 679</text>`;
+  s += `<text x="${X(30) - 10}" y="${Y(dec[30]) - 10}" text-anchor="end">21 900</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Cumulative spending in January compared with the six-month average">${s}</svg>`;
+}
+function dayStrip(w) {
+  // One scale, 0 to 1 300 Kč. The dashed line is the daily average: 9 185 / 31 = 296.
+  const max = 1300, H = 96, step = (w - 12) / 31, y = v => H - v / max * H + 8, avg = 296;
+  let s = `<line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(255,255,255,.12)"/>`;
+  DAYS.forEach((v, i) => {
+    const x = 6 + i * step;
+    if (v) s += `<rect x="${x}" y="${y(v)}" width="${step * .6}" height="${v / max * H}" rx="2" fill="rgba(255,255,255,${v > avg ? ".34" : ".18"})"/>`;
+    if ((i + 1) % 5 === 0 || i === 0) s += `<text x="${x + step * .3}" y="${y(0) + 18}" text-anchor="middle">${i + 1}</text>`;
+  });
+  s += `<line x1="0" x2="${w}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+  s += `<text x="${w}" y="12" text-anchor="end" style="fill:var(--amber);font-size:12px">dashed line: average, 296 a day</text>`;
+  return `<svg viewBox="0 0 ${w} 132" width="100%" role="img" aria-label="Daily spending in January without rent, with the daily average">${s}</svg>`;
+}
+function worthChart(w, h) {
+  // Net worth in thousands of Kč, February 2025 to January 2026. Scale 380 to 450.
+  const v = [392, 396, 401, 399, 407, 412, 418, 415, 423, 428, 431, 438.2], m = ["Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan"];
+  const X = i => 44 + i * ((w - 60) / 11), Y = x => h - 30 - (x - 380) / 70 * (h - 48);
+  let s = "";
+  for (const g of [380, 400, 420, 440]) s += `<line x1="44" x2="${w - 16}" y1="${Y(g)}" y2="${Y(g)}" stroke="rgba(255,255,255,.07)"/><text x="36" y="${Y(g) + 4}" text-anchor="end">${g}k</text>`;
+  m.forEach((t, i) => { if (i % 2 === 1 || i === 0) s += `<text x="${X(i)}" y="${h - 8}" text-anchor="middle">${t}</text>`; });
+  s += `<path d="${v.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(x).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--amber)" stroke-width="2"/>`;
+  s += `<circle cx="${X(11)}" cy="${Y(v[11])}" r="4.5" fill="var(--amber)"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Net worth over the last twelve months">${s}</svg>`;
+}
+function spark(vals) {
+  const mn = Math.min(...vals), mx = Math.max(...vals) || 1;
+  const p = vals.map((v, i) => `${i ? "L" : "M"}${(i * 84 / (vals.length - 1)).toFixed(1)} ${(20 - (v - mn) / (mx - mn || 1) * 16).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 -2 84 26" width="84" height="26" aria-hidden="true"><path d="${p}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/></svg>`;
+}
+
+const TX = [
+  ["11 Jan", "Albert", "Groceries", "#f5a524", "Main checking", "−842,50", 0], ["10 Jan", "Salary", "Income", "#6fd6a3", "Main checking", "+31 200,00", 1],
+  ["9 Jan", "Lunch with Petr", "Restaurants", "#d9825b", "Main checking", "−389,00", 0], ["8 Jan", "Vacation fund", "Fund deposit", "#8fb7e8", "Savings", "−3 000,00", 0],
+  ["7 Jan", "Lidl", "Groceries", "#f5a524", "Main checking", "−1 210,00", 0], ["6 Jan", "Pharmacy", "Other", "#9a9c9f", "Main checking", "−212,00", 0],
+  ["5 Jan", "Rent January", "Housing", "#9a9c9f", "Main checking", "−9 494,00", 0], ["4 Jan", "Train ticket", "Transport", "#7fc7b2", "Revolut CZK", "−180,00", 0]
+];
+const txTable = `<table class="t"><thead><tr><th style="width:100px;padding-left:14px">Date</th><th>Notes</th><th>Category</th><th>Account</th><th class="n">Amount</th></tr></thead><tbody>${TX.map(r =>
+  `<tr><td class="num mut side" style="--s:${r[3]}">${r[0]}</td><td>${r[1]}</td><td class="mut"><i class="dot" style="--d:${r[3]}"></i>${r[2]}</td><td class="mut">${r[4]}</td><td class="n num ${r[6] ? "pos" : "neg"}">${r[5]}</td></tr>`).join("")}</tbody></table>`;
+const latest = `<div class="rows">
+  <div class="r"><span>Albert<small>Groceries · 11 Jan</small></span><span class="num neg">−842,50</span></div>
+  <div class="r"><span>Salary<small>Income · 10 Jan</small></span><span class="num pos">+31 200,00</span></div>
+  <div class="r"><span>Lunch with Petr<small>Restaurants · 9 Jan</small></span><span class="num neg">−389,00</span></div></div>`;
+const cats = n => [["Housing", 9494, 100], ["Groceries", 4190, 44], ["Transport", 2782, 29], ["Restaurants", 1320, 14], ["Other", 893, 9]].slice(0, n).map(c =>
+  `<div class="cat" style="--w:${c[2]}%"><span>${c[0]}</span><span class="num">${c[1].toLocaleString("en").replace(",", " ")}</span></div>`).join("");
+const flow = `<div class="flow"><i style="flex:18679;background:rgba(255,255,255,.34)"></i><i style="flex:7975;background:rgba(255,255,255,.16)"></i><i style="flex:5837;background:var(--amber)"></i></div>
+  <div class="flowlab"><span class="mut" style="flex:18679">Spent<b class="num" style="color:var(--ink)">57 %</b></span><span class="mut" style="flex:7975">Saved<b class="num" style="color:var(--ink)">25 %</b></span><span class="amb" style="flex:5837">Left<b class="num">18 %</b></span></div>`;
+const txPage = `${bar("Transactions")}
+  <div class="phead"><h2>Transactions <span>12 in January</span></h2><div class="acts"><span class="ghost">${ic("scan-line")}Import screenshot</span>${addBtn}</div></div>
+  <div class="find"><span class="q">${ic("search")}Search notes, categories, amounts</span><span class="txt drop"><span class="on">January 2026${ic("chevron-down")}</span><span>All accounts${ic("chevron-down")}</span><span>All types${ic("chevron-down")}</span><span>Tags${ic("chevron-down")}</span><span>${ic("sliders-horizontal")}More</span></span></div>
+  <div style="margin-top:22px">${txTable}</div>
+  <div class="tf"><span>8 of 12 · Show all</span><span class="num">Net on this page +15 872,50 Kč</span></div>`;
+const dialog = `<div class="dialog glass">
+  <h3>Add transaction</h3>
+  <div class="seg"><span class="on">Transaction</span><span>Transfer</span><span>From fund</span></div>
+  <div class="amt num neg">−842,50<span>Kč</span></div>
+  <div class="field"><label for="d-notes">Notes</label><input class="ctrl" id="d-notes" value="Albert" autocomplete="off"></div>
+  <div class="f2">
+    <div class="field"><label for="d-date">Date</label><button type="button" class="ctrl" id="d-date">11 Jan 2026 ${ic("calendar")}</button></div>
+    <div class="field"><label for="d-acc">Account</label><button type="button" class="ctrl" id="d-acc">Main checking ${ic("chevron-down")}</button></div>
+  </div>
+  <div class="field bad"><label for="d-cat">Category</label><button type="button" class="ctrl" id="d-cat" aria-invalid="true"><span class="ph">Select category</span>${ic("chevron-down")}</button><span class="err">Choose a category.</span></div>
+  <div class="field"><label for="d-fund">Savings fund (optional)</label><button type="button" class="ctrl" id="d-fund"><span class="ph">None</span>${ic("chevron-down")}</button></div>
+  <div class="dacts"><span class="ghost">Cancel</span><span class="add">Add transaction</span></div></div>`;
+
+const SCREENS = {
+  overview: { label: "Overview", say: "The page you picked. The dashed line is now your six-month average, and spending amounts are red.",
+    html: `${bar("Overview")}
+    <div class="two mt1" style="align-items:end">
+      <div><div class="cap">Left this month · sample data</div><div class="big num">5 837<span>Kč</span></div>
+        <p class="lead">You earned <b class="num">32 491</b>, spent <b class="num">18 679</b> and put <b class="num">7 975</b> aside.</p>${flow}</div>
+      <div><p class="h">Where it went</p>${cats(5)}</div>
+    </div>
+    <div class="two mt2">
+      <div><p class="h"><span>Spending through the month, Kč</span><span class="legend"><span><i></i>January</span><span><i class="d"></i>6-month average</span></span></p>${lineChart(560, 190)}</div>
+      <div><p class="h">Latest</p>${latest}</div>
+    </div><span class="add fab">${ic("plus")}Add transaction <span class="kbd">N</span></span>` },
+  transactions: { label: "Transactions", say: "The filters you use stay visible: month, account, type and tags. Category, fund and amount range sit behind More. Each row has the type line on its left, as today.", html: txPage },
+  form: { label: "Add form", say: "The dialog is the one place glass carries content. The amount is the headline, fields are a label over a line, and the error sits under its field as it does in the app now.", html: txPage + `<div class="scrim">${dialog}</div>` },
+  accounts: { label: "Accounts", say: "Redrawn. Balances are now the largest thing on the page, and a group is a real heading with its own total. Net worth steps back to a small figure in the corner.",
+    html: `${bar("Accounts")}
+    <div class="phead"><h2>Accounts <span>4 active · sample data</span></h2>
+      <div class="acts" style="gap:18px"><span style="text-align:right"><span class="cap" style="display:block">Net worth</span><span class="num" style="font-size:19px">438 191 Kč</span> <small class="pos num">+46 191 in 12 months</small></span>${spark([392, 396, 401, 399, 407, 412, 418, 415, 423, 428, 431, 438])}<span class="ghost">${ic("plus")}Add account</span></div></div>
+    <div class="agroup"><div class="ahead"><b>Revolut</b><span class="cap">Group · 2 currencies</span><span class="num atot">43 980,00<span>Kč</span></span></div>
+      <div class="arow"><span>Revolut CZK<small>Checking</small></span>${spark([12, 12.2, 12.1, 12.3, 12.2, 12.4, 12.5, 12.48])}<span class="num pos">+480,00 this month</span><b class="num">12 480,00<span>Kč</span></b></div>
+      <div class="arow"><span>Revolut EUR<small>Checking · 31 500 Kč</small></span>${spark([1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25])}<span class="num mut">no change</span><b class="num">1 250,40<span>€</span></b></div></div>
+    <div class="agroup"><div class="ahead"><b>Other accounts</b><span class="cap">Not in a group</span><span class="num atot">394 210,50<span>Kč</span></span></div>
+      <div class="arow"><span>Main checking<small>Checking</small></span>${spark([89, 88, 86, 87, 83, 82, 84, 84.2])}<span class="num neg">−5 210,00 this month</span><b class="num">84 210,50<span>Kč</span></b></div>
+      <div class="arow"><span>Savings<small>Savings</small></span>${spark([298, 298, 301, 301, 305, 305, 310, 310])}<span class="num pos">+12 000,00 this month</span><b class="num">310 000,00<span>Kč</span></b></div></div>` },
+  funds: { label: "Funds", say: "Redrawn. The saved amount is the figure on each row; target and progress are the small print. The line on the left is recent activity: green if money went in during the last 30 days, red if it came out, grey if nothing moved.",
+    html: `${bar("Funds")}
+    <div class="mt1"><div class="cap">Saved across funds · sample data</div><div class="big num">182 000<span>Kč</span></div>
+      <p class="lead" style="max-width:44ch;margin:0"><b class="num">7 000</b> more than 30 days ago. The three targets add up to <b class="num">255 000</b>.</p></div>
+    <div class="mt2">
+      <div class="frow"><span class="fl" style="--s:var(--pos)"></span><span><b>New laptop</b><small>89 % of 45 000</small></span><span class="num pos">+5 000 in 30 days</span><b class="num fsum">40 000<span>Kč</span></b><i style="width:89%"></i></div>
+      <div class="frow"><span class="fl" style="--s:var(--neg)"></span><span><b>Emergency reserve</b><small>80 % of 150 000</small></span><span class="num neg">−1 000 in 30 days</span><b class="num fsum">120 000<span>Kč</span></b><i style="width:80%"></i></div>
+      <div class="frow"><span class="fl" style="--s:var(--pos)"></span><span><b>Vacation</b><small>37 % of 60 000</small></span><span class="num pos">+3 000 in 30 days</span><b class="num fsum">22 000<span>Kč</span></b><i style="width:37%"></i></div>
+      <div class="frow"><span class="fl" style="--s:var(--faint)"></span><span><b>Car repairs</b><small>No target</small></span><span class="num mut">no change</span><b class="num fsum">0<span>Kč</span></b><i style="width:0"></i></div>
+    </div><div class="tf" style="padding-top:22px"><span>4 active funds · sorted by recent activity</span><span class="ghost">${ic("plus")}Create fund</span></div>` },
+  monthly: { label: "Monthly analytics", say: "Each figure is compared with your six-month average. The daily strip now has a dashed average line, and days above it are brighter, with no single day singled out.",
+    html: `${bar("Analytics")}
+    <div class="phead"><h2>January <span>2026 · Monthly analytics</span></h2><div class="acts"><span class="ghost">${ic("file-down")}Export PDF</span></div></div>
+    <div class="stats">
+      <div><span>Income</span><b class="num">32 491</b><small>+1.5 % vs. average</small></div>
+      <div><span>Expenses</span><b class="num">18 679</b><small class="pos">−15 % vs. average</small></div>
+      <div><span>Savings rate</span><b class="num">24.6 %</b><small class="pos">+3.2 points vs. average</small></div>
+      <div><span>Left</span><b class="num amb">5 837</b><small>after saving 7 975</small></div>
+    </div>
+    <div class="mt2"><p class="h">Daily spending, rent left out, Kč</p>${dayStrip(1048)}</div>
+    <div class="mt2" style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:56px">
+      <div><p class="h">Expense categories</p>${cats(4)}</div>
+      <div><p class="h">Income sources</p>
+        <div class="cat" style="--w:96%;--c:var(--pos)"><span>Salary</span><span class="num">31 200</span></div>
+        <div class="cat" style="--w:4%;--c:var(--pos)"><span>Side work</span><span class="num">1 291</span></div></div>
+      <div><p class="h">Spending type</p>
+        <div class="cat" style="--w:51%;--c:var(--ink)"><span>Core<small>51 %</small></span><span class="num">9 494</span></div>
+        <div class="cat" style="--w:37%;--c:var(--ink)"><span>Necessary<small>37 %</small></span><span class="num">6 972</span></div>
+        <div class="cat" style="--w:12%;--c:var(--ink)"><span>Fun<small>12 %</small></span><span class="num">2 213</span></div></div>
+    </div>` },
+  budget: { label: "Budget Maker", say: "Redrawn for editing. The big summary figures are gone; the plan column is the one you type in, so it is the bright one. Actual and difference sit quietly beside it, and only a row over plan gets colour.",
+    html: `${bar("Plan")}
+    <div class="phead"><h2>Budget <span>January 2026</span></h2><div class="acts"><span class="mut" style="font-size:13px;margin-right:8px">All changes saved</span><span class="ghost">${ic("copy")}Copy to…</span></div></div>
+    <p class="cap" style="margin:14px 0 0;font-size:14.5px"><span class="num" style="color:var(--ink)">32 200</span> planned in · <span class="num" style="color:var(--ink)">27 000</span> allocated · <span class="num amb">5 200</span> left to plan</p>
+    <div style="margin-top:26px"><table class="t bud"><thead><tr><th style="width:30px"></th><th>Item</th><th>Linked to</th><th class="n" style="width:150px">Plan</th><th class="n" style="width:130px">Actual</th><th class="n" style="width:130px">Difference</th></tr></thead><tbody><tr class="grp"><td></td><td colspan="2">Income</td><td class="n num">32 200</td><td class="n num">32 491</td><td></td></tr><tr><td class="mut grip">⋮⋮</td><td>Salary</td><td class="mut">Salary</td><td class="n"><span class="num edit">31 200</span></td><td class="n num mut">31 200</td><td class="n num mut">0</td></tr><tr><td class="mut grip">⋮⋮</td><td>Side work</td><td class="mut">Side work</td><td class="n"><span class="num edit">1 000</span></td><td class="n num mut">1 291</td><td class="n num pos">+291</td></tr><tr class="addr"><td></td><td colspan="5">+ Add row</td></tr><tr class="grp"><td></td><td colspan="2">Expenses</td><td class="n num">19 000</td><td class="n num">18 679</td><td></td></tr><tr><td class="mut grip">⋮⋮</td><td>Housing</td><td class="mut">Housing</td><td class="n"><span class="num edit">9 500</span></td><td class="n num mut">9 494</td><td class="n num mut">−6</td></tr><tr><td class="mut grip">⋮⋮</td><td>Groceries</td><td class="mut">Groceries</td><td class="n"><span class="num edit">4 500</span></td><td class="n num mut">4 190</td><td class="n num mut">−310</td></tr><tr><td class="mut grip">⋮⋮</td><td>Transport</td><td class="mut">Transport</td><td class="n"><span class="num edit">2 500</span></td><td class="n num mut">2 782</td><td class="n num neg">+282 over</td></tr><tr><td class="mut grip">⋮⋮</td><td>Restaurants and other</td><td class="mut">Restaurants, Other</td><td class="n"><span class="num edit">2 500</span></td><td class="n num mut">2 213</td><td class="n num mut">−287</td></tr><tr class="addr"><td></td><td colspan="5">+ Add row</td></tr><tr class="grp"><td></td><td colspan="2">Savings</td><td class="n num">8 000</td><td class="n num">7 975</td><td></td></tr><tr><td class="mut grip">⋮⋮</td><td>Vacation fund</td><td class="mut">Fund deposit · Vacation</td><td class="n"><span class="num edit">3 000</span></td><td class="n num mut">3 000</td><td class="n num mut">0</td></tr><tr><td class="mut grip">⋮⋮</td><td>New laptop</td><td class="mut">Fund deposit · New laptop</td><td class="n"><span class="num edit">5 000</span></td><td class="n num mut">4 975</td><td class="n num mut">−25</td></tr><tr class="addr"><td></td><td colspan="5">+ Add row</td></tr><tr class="grp"><td></td><td colspan="2">Investments</td><td class="n num">0</td><td class="n num">0</td><td></td></tr><tr class="addr"><td></td><td colspan="5">No items in this section. + Add row</td></tr></tbody></table></div>` },
+  menus: { label: "Menus", say: "A top bar holds seven items, and the app has seventeen pages. Four stay visible; the rest sit in three menus. Profile moves behind the avatar. Shown here all open at once, as a map.",
+    html: `${bar("Analytics")}<div class="menus" style="grid-template-columns:repeat(4,230px)">
+      <div class="menu glass"><p>Analytics</p><span class="on">Monthly</span><span>Yearly</span><span>Cash Flow</span><span>Emergency Fund</span></div>
+      <div class="menu glass"><p>Plan</p><span>Budget Maker</span><span>Recurring</span><span>Categories</span></div>
+      <div class="menu glass"><p>Tools</p><span>Screenshot Import</span><span>Trading212</span><span>Investing Calculator</span><span>Dividend Calculator</span></div>
+      <div class="menu glass" style="align-self:start"><p>Avatar · demo@example.com</p><span>Profile &amp; settings</span><span>Hide amounts <small>⇧H</small></span><span>Sign out</span></div>
+    </div>` },
+  landing: { label: "Landing + footer", say: "Same language for the public page, now with a footer: a closing call to action, four plain facts about your data, link columns with contact, and a legal line. I could not open the Barley page from here, so this footer is my own proposal, not modelled on theirs.",
+    html: `<div class="bar"><span class="brand">Budgeting Dashboard</span><span class="tabs glass"><span>How it works</span><span>FAQ</span><span>About</span><span>Demo</span></span><span class="right"><span>Log in</span><span class="add" style="height:38px">Create account</span></span></div>
+    <div class="hero">
+      <div><h2>Know what is left <em>before</em> the month ends.</h2>
+        <p>Transactions, budgets, savings funds and cash flow in one monthly review. You enter the records and choose the categories. No bank sync, no automated advice.</p>
+        <div style="display:flex;gap:10px"><span class="add">Create account</span><span class="ghost">Try the demo</span></div></div>
+      <div><div class="cap">Left this month · January 2026 · sample data</div><div class="big m num">5 837<span>Kč</span></div>${flow}
+        <div class="rows" style="margin-top:22px"><div class="r"><span class="mut">Income</span><span class="num pos">+32 491</span></div><div class="r"><span class="mut">Spent</span><span class="num neg">−18 679</span></div><div class="r"><span class="mut">Saved</span><span class="num neg">−7 975</span></div></div></div>
+    </div>
+    <div class="feats">
+      <div><b>Monthly cash flow</b><p>What came in, what went out, and what was left after saving and investing.</p></div>
+      <div><b>Category pressure</b><p>The few categories that moved the month, without scanning every transaction.</p></div>
+      <div><b>Next month's budget</b><p>Start limits, funds and savings goals from last month's real numbers.</p></div>
+    </div>
+    <footer class="foot">
+      <div class="fcta"><h3>Start with this month.</h3><div style="display:flex;gap:10px"><span class="add">Create account</span><span class="ghost">Try the demo</span></div></div>
+      <div class="ffacts">
+        <div><b>No bank connection</b><span>You enter the records. Nothing is pulled from your bank.</span></div>
+        <div><b>Your data leaves with you</b><span>Export your transactions at any time from Profile.</span></div>
+        <div><b>Delete means delete</b><span>Remove your account and its data yourself, from Profile.</span></div>
+        <div><b>Open source</b><span>MIT licence. Read the code on GitHub.</span></div>
+      </div>
+      <div class="fcols">
+        <div><span class="brand">Budgeting Dashboard</span><p>Personal finance analytics for income, expenses, savings, budgets and cash flow.</p></div>
+        <div><b>Product</b><span>How it works</span><span>FAQ</span><span>Demo</span></div>
+        <div><b>Project</b><span>About</span><span>Source on GitHub</span><span>MIT licence</span></div>
+        <div><b>Legal</b><span>Privacy Policy</span><span>Terms of Service</span></div>
+        <div><b>Contact</b><span>me@ondrejkutil.com</span><span>github.com/OndrejKutil</span></div>
+      </div>
+      <div class="fend"><span>© 2026 Ondrej Kutil</span><span>Data stored with Supabase · hosted on Render</span><span>English · Čeština</span></div>
+    </footer>` },
+  mobile: { label: "Mobile", say: "On a phone the top bar becomes a glass dock at the bottom: icons only, Add in the middle, a dot under the current page." },
+  rules: { label: "Rules", say: "What the style is made of. Each line is a decision you can keep, change or strike before it goes into the spec." }
+};
+const mdock = on => `<div class="mdock glass">${[["layout-grid", "Overview"], ["receipt", "Transactions"]].map(d => `<span class="${d[1] === on ? "on" : ""}" role="img" aria-label="${d[1]}">${ic(d[0])}</span>`).join("")}<span class="plus" role="img" aria-label="Add transaction">${ic("plus")}</span>${[["piggy-bank", "Funds"], ["menu", "More"]].map(d => `<span class="${d[1] === on ? "on" : ""}" role="img" aria-label="${d[1]}">${ic(d[0])}</span>`).join("")}</div>`;
+document.getElementById("phones").innerHTML = `
+  <figure class="phone"><div class="screen">
+    <div class="s-head"><b>Overview</b><span>‹ January 2026 ›</span></div>
+    <div><div class="cap">Left this month · sample data</div><div class="big num">5 837<span>Kč</span></div>
+      <p class="lead">You earned <b class="num">32 491</b>, spent <b class="num">18 679</b> and put <b class="num">7 975</b> aside.</p>${flow}</div>
+    <div><p class="h">Where it went</p>${cats(3)}</div>
+    <div><p class="h">Latest</p><div class="rows"><div class="r"><span>Albert</span><span class="num neg">−842,50</span></div><div class="r"><span>Salary</span><span class="num pos">+31 200,00</span></div></div></div>
+    ${mdock("Overview")}</div><figcaption>Overview</figcaption></figure>
+  <figure class="phone"><div class="screen">
+    <div class="s-head"><b>Transactions</b><span>12 in January</span></div>
+    <div class="find" style="padding-top:0"><span class="q">${ic("search")}Search</span><span class="mut">${ic("sliders-horizontal")}</span></div>
+    <div class="txt drop" style="font-size:14px;gap:16px"><span class="on">January${ic("chevron-down")}</span><span>Account${ic("chevron-down")}</span><span>Type${ic("chevron-down")}</span><span>Tags${ic("chevron-down")}</span></div>
+    <div class="rows">${TX.slice(0, 7).map(r => `<div class="r"><span>${r[1]}<small style="display:block;margin:0">${r[2]} · ${r[0]}</small></span><span class="num ${r[6] ? "pos" : "neg"}">${r[5]}</span></div>`).join("")}</div>
+    ${mdock("Transactions")}</div><figcaption>Transactions</figcaption></figure>
+  <figure class="phone"><div class="screen">
+    <div class="s-head dim"><b>Transactions</b><span>12 in January</span></div>
+    <div class="sheet glass"><span class="grab"></span>
+      <div class="seg"><span class="on">Transaction</span><span>Transfer</span><span>From fund</span></div>
+      <div class="amt num neg">−842,50<span>Kč</span></div>
+      <div class="field"><label for="m-notes">Notes</label><input class="ctrl" id="m-notes" value="Albert" autocomplete="off"></div>
+      <div class="f2"><div class="field"><label for="m-date">Date</label><button type="button" class="ctrl" id="m-date">11 Jan 2026</button></div><div class="field"><label for="m-acc">Account</label><button type="button" class="ctrl" id="m-acc">Main checking</button></div></div>
+      <div class="field bad"><label for="m-cat">Category</label><button type="button" class="ctrl" id="m-cat" aria-invalid="true"><span class="ph">Select category</span>${ic("chevron-down")}</button><span class="err">Choose a category.</span></div>
+      <span class="add">Add transaction</span></div></div><figcaption>Add sheet with an inline error</figcaption></figure>`;
+document.getElementById("rules").innerHTML = [
+  ["No boxes around content", "Sections are separated by space and one-pixel lines. Cards, panels and tiles are not used for data."],
+  ["One large figure per page", "Each page opens with the single number that answers it: left this month, net worth, saved across funds. Light weight, very large."],
+  ["A sentence under the figure", "One plain sentence says what the number is made of, with the key amounts in brighter text."],
+  ["Glass only where things float", "The top bar, menus, dialogs, the mobile dock and sheet. Never behind tables or figures."],
+  ["Amber marks one thing per view", "The primary action, plus the one data point that deserves attention. Everything else is white at different strengths."],
+  ["Red for money out, green for money in", "Negative amounts are red and income is green, as in the app today. Errors are red too, so they always come with a message, never colour alone."],
+  ["Bars are lines", "Progress and proportion are drawn as a two-pixel line under the row they belong to, not as a separate bar in a track."],
+  ["Charts without frames", "No chart card and no legend box: faint gridlines, one amber series, a dashed grey comparison, and a labelled end point."],
+  ["Words on desktop, icons on mobile", "Text labels in the top bar and for filters. The mobile dock is icons only, with Add in the middle."],
+  ["A line on the side for state", "Rows that have a type or state carry a thin vertical line: transaction type, or a fund's activity in the last 30 days."],
+  ["Compare with your average", "The small change under a figure and the dashed line in a chart both use the average of the last six months."],
+  ["Underlined selection", "The current filter, tab or range is shown with an amber underline, not a filled pill. The top bar is the one exception."],
+  ["Category colour is a dot", "A six-pixel dot before the category name. No coloured badges or tinted backgrounds."],
+  ["Form fields are a label over a line", "Inputs have no box, only a bottom line that thickens and turns red on error, with the message directly beneath."],
+  ["One typeface, four weights", "A single grotesque with tabular figures. Size and weight do the work that boxes used to do."],
+  ["Numbers align right, always tabular", "Amounts sit in a right-aligned column with fixed-width digits so they can be compared down the page."]
+].map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join("");
+
+const $ = id => document.getElementById(id);
+const order = Object.keys(SCREENS);
+$("tabs").innerHTML = order.map(k => `<button type="button" data-k="${k}" aria-pressed="false">${SCREENS[k].label}</button>`).join("");
+let cur = "overview";
+function icons() { try { lucide.createIcons(); } catch (err) {} }
+function fit() {
+  const wrap = $("fit"), desk = wrap.firstElementChild;
+  if (wrap.hidden || !desk) return;
+  const k = Math.min(1, wrap.clientWidth / 1160);
+  desk.style.transform = k < 1 ? `scale(${k})` : "";
+  wrap.style.height = Math.round(desk.offsetHeight * k) + "px";
+}
+function show(k) {
+  if (!SCREENS[k]) k = "overview";
+  cur = k;
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-pressed", String(b.dataset.k === k));
+  $("say").textContent = SCREENS[k].say;
+  $("phones").hidden = k !== "mobile"; $("rules").hidden = k !== "rules";
+  $("fit").hidden = !SCREENS[k].html;
+  if (SCREENS[k].html) $("fit").innerHTML = `<div class="desk">${SCREENS[k].html}</div>`;
+  icons(); fit();
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; show(b.dataset.k); try { history.replaceState(null, "", "#" + b.dataset.k); } catch (err) {} });
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+addEventListener("resize", fit);
+show(location.hash.slice(1));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+</script>
+</body>
+</html>

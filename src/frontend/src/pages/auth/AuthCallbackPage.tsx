@@ -66,7 +66,7 @@ export default function AuthCallbackPage() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
             <div className="mx-auto w-full max-w-md px-4">
-                <div className="flex flex-col items-center gap-6 rounded-xl border border-border/50 bg-card/50 p-8 text-center backdrop-blur-lg">
+                <div className="flex flex-col items-center gap-6 p-8 text-center">
                     {status === 'loading' && (
                         <>
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />

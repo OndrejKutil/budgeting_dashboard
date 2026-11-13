@@ -19,6 +19,8 @@ interface SignedBarFacetProps {
   /** Short formatter for axis ticks. */
   formatCompact: (value: number) => string;
   onMonthClick?: (month: string) => void;
+  /** Display name for a month key (the API sends English abbreviations). */
+  monthLabel?: (month: string) => string;
 }
 
 /**
@@ -43,6 +45,7 @@ export function SignedBarFacet({
   formatCurrency,
   formatCompact,
   onMonthClick,
+  monthLabel = (month) => month,
 }: SignedBarFacetProps) {
   // Pad the axis so the tallest bar doesn't touch the top of the plot, and only extend
   // past zero when the data actually goes negative.
@@ -54,10 +57,8 @@ export function SignedBarFacet({
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="mb-3 flex items-baseline justify-between gap-3 px-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          {title}
-        </span>
-        <span className="font-display text-base font-bold tracking-tight text-foreground">
+        <span className="text-[0.8125rem] text-muted-foreground">{title}</span>
+        <span className="text-[1.0625rem] tabular-nums tracking-[-0.01em] text-foreground">
           <SensitiveValue>{total}</SensitiveValue>
         </span>
       </div>
@@ -75,6 +76,7 @@ export function SignedBarFacet({
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tickFormatter={monthLabel}
               dy={6}
               interval={0}
             />
@@ -91,9 +93,10 @@ export function SignedBarFacet({
               contentStyle={{
                 backgroundColor: 'hsl(var(--popover))',
                 border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                borderRadius: '0.75rem',
                 color: 'hsl(var(--popover-foreground))',
               }}
+              labelFormatter={(label) => monthLabel(String(label))}
               labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
               itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
               formatter={(value: number) => [
@@ -101,8 +104,8 @@ export function SignedBarFacet({
                 title,
               ]}
             />
-            <ReferenceLine y={0} stroke="hsl(var(--border))" strokeWidth={1} />
-            <Bar dataKey="value" name={title} maxBarSize={22} radius={[4, 4, 0, 0]}>
+            <ReferenceLine y={0} stroke="hsl(var(--foreground) / 0.2)" strokeWidth={1} />
+            <Bar dataKey="value" name={title} maxBarSize={14} radius={[2, 2, 0, 0]}>
               {data.map((point) => (
                 <Cell
                   key={point.month}

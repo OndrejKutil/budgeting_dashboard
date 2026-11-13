@@ -9,7 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { PrivacyModeProvider } from "@/contexts/PrivacyContext";
-import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton } from "@/components/skeletons";
+import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton, MonthlyAnalyticsSkeleton, OverviewSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -27,7 +27,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const FaqPage = lazy(() => import("./pages/FaqPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const DemoPage = lazy(() => import("./pages/DemoPage"));
 
 // Dashboard
 const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
@@ -110,7 +109,6 @@ const AppContent = () => {
               <Route path="/faq" element={withSuspense(<FaqPage />)} />
               <Route path="/how-it-works" element={withSuspense(<HowItWorksPage />)} />
               <Route path="/about" element={withSuspense(<AboutPage />)} />
-              <Route path="/demo" element={withSuspense(<DemoPage />)} />
 
               {/* Protected dashboard routes */}
               <Route
@@ -122,14 +120,14 @@ const AppContent = () => {
                 }
               >
                 {/* Routes living under the /dashboard/{...} */}
-                <Route index element={withSuspense(<DashboardOverview />, <DashboardSkeleton />)} />
+                <Route index element={withSuspense(<DashboardOverview />, <OverviewSkeleton />)} />
                 <Route path="transactions" element={withSuspense(<TransactionsPage />, <DashboardSkeleton />)} />
                 <Route path="recurring" element={withSuspense(<RecurringPage />, <DashboardSkeleton />)} />
                 <Route path="accounts" element={withSuspense(<AccountsPage />, <DashboardSkeleton />)} />
                 <Route path="categories" element={withSuspense(<CategoriesPage />, <DashboardSkeleton />)} />
                 <Route path="funds" element={withSuspense(<FundsPage />, <DashboardSkeleton />)} />
                 <Route path="profile" element={withSuspense(<ProfilePage />, <DashboardSkeleton />)} />
-                <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <MonthlyAnalyticsSkeleton />)} />
                 <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/cashflow" element={withSuspense(<CashFlowPage />, <AnalyticsSkeleton />)} />

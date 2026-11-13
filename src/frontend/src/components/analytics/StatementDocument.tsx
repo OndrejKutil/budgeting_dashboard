@@ -33,7 +33,7 @@ export function StatementDocument({ brand, title, period, summary, tables }: Pro
         tone === 'income' ? '#15803d' : tone === 'expense' ? '#b91c1c' : '#111827';
 
     return (
-        <div className="statement-doc" style={{ color: '#111827', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+        <div className="statement-doc" style={{ color: '#111827', background: '#ffffff', colorScheme: 'light', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #111827', paddingBottom: '12px', marginBottom: '20px' }}>
                 <div>

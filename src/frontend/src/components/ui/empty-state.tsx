@@ -28,14 +28,14 @@ export function EmptyState({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 p-12 text-center',
+        'flex flex-col items-center justify-center px-6 py-16 text-center',
         className
       )}
     >
-      <div className="rounded-full bg-muted p-4">
+      <div className="p-2">
         {icon || <Inbox className="h-8 w-8 text-muted-foreground" />}
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-foreground font-display">{title}</h3>
+      <h3 className="mt-4 text-lg font-medium text-foreground font-display">{title}</h3>
       {description && (
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
       )}

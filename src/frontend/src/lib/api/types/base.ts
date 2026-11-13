@@ -219,6 +219,20 @@ export interface PeriodComparison {
 }
 
 /**
+ * Average monthly totals over the (up to) six months before the requested month.
+ * Matches backend SixMonthAverage schema
+ */
+export interface SixMonthAverage {
+    months_counted: number;
+    income: number;
+    expense: number;
+    saving: number;
+    investment: number;
+    profit: number;
+    net_cash_flow: number;
+}
+
+/**
  * Dashboard summary data
  * Matches backend SummaryData schema
  */
@@ -232,9 +246,14 @@ export interface SummaryData {
     comparison: PeriodComparison;
     savings_rate: number;
     investment_rate: number;
-    top_expenses: CategoryInsight[];
-    biggest_mover: CategoryInsight | null;
-    largest_transactions: Transaction[];
+    /** All expense categories of the period, largest first. */
+    expense_categories: CategoryInsight[];
+    /** Cumulative expenses by day of month (index 0 = day 1); ends today for the current month. */
+    daily_cumulative_expense: number[];
+    /** Average cumulative expenses over the previous six months, one value per day of the month. Empty without history. */
+    average_daily_cumulative_expense: number[];
+    /** Null without history. */
+    six_month_average: SixMonthAverage | null;
 }
 
 // ================================================================================================
@@ -303,6 +322,22 @@ export interface MonthlyPeriodComparison {
 }
 
 /**
+ * Average monthly totals over the (up to) six months before the requested month
+ * Matches backend MonthlySixMonthAverage schema
+ */
+export interface MonthlySixMonthAverage {
+    months_counted: number;
+    income: number;
+    expenses: number;
+    savings: number;
+    investments: number;
+    profit: number;
+    cashflow: number;
+    /** Percent of income; null when none of the counted months had income */
+    savings_rate: number | null;
+}
+
+/**
  * Monthly analytics data
  * Matches backend MonthlyAnalyticsData schema
  */
@@ -322,7 +357,7 @@ export interface MonthlyAnalytics {
     day_split: DaySplit;
     category_concentration: CategoryConcentration;
     comparison: MonthlyPeriodComparison;
-    yoy_comparison: MonthlyPeriodComparison | null;
+    six_month_average: MonthlySixMonthAverage | null;
     daily_spending_heatmap: DailySpendingData[];
     income_breakdown: CategoryBreakdownData[];
     expenses_breakdown: CategoryBreakdownData[];
