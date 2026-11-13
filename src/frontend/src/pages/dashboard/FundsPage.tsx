@@ -1,92 +1,62 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader } from '@/components/ui/page-header';
+import { AlertCircle, ChevronDown, Plus, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Plus, Target, MoreHorizontal, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Field } from '@/components/ui/field';
 import { fieldAria, useFormErrors } from '@/hooks/use-form-errors';
 import { Input } from '@/components/ui/input';
 import { tokenManager, ApiError, getErrorMessage } from '@/lib/api/client';
 import { fundsApi } from '@/lib/api/endpoints';
 import { SavingsFund, CreateSavingsFundRequest, UpdateSavingsFundRequest } from '@/lib/api/types';
-import { isOptimistic, markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
+import { markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
+import { formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
 import { toast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/contexts/user-context';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-
-type FundSortKey = 'created' | 'name' | 'progress' | 'target' | 'activity';
-const FUND_SORT_STORAGE_KEY = 'funds-sort';
-
-function sortFunds(funds: SavingsFund[], sort: FundSortKey): SavingsFund[] {
-  return [...funds].sort((a, b) => {
-    switch (sort) {
-      case 'name':
-        return a.fund_name.localeCompare(b.fund_name);
-      case 'progress': {
-        const pA = a.target_amount > 0 ? (a.current_amount || 0) / a.target_amount : 0;
-        const pB = b.target_amount > 0 ? (b.current_amount || 0) / b.target_amount : 0;
-        return pB - pA;
-      }
-      case 'target':
-        return b.target_amount - a.target_amount;
-      case 'activity':
-        return Math.abs(b.net_flow_30d || 0) - Math.abs(a.net_flow_30d || 0);
-      case 'created':
-      default:
-        return (a.created_at ?? '').localeCompare(b.created_at ?? '');
-    }
-  });
-}
-
-const stagger = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
+import { BigFigure } from '@/components/data/BigFigure';
+import { LeadFigure, LeadSentence, type LeadSegment } from '@/components/data/LeadSentence';
+import { RowList } from '@/components/data/RowList';
+import { FundRow } from './funds/FundRow';
+import { FundsSkeleton } from './funds/FundsSkeleton';
+import {
+  FUND_SORT_KEYS,
+  FUND_SORT_LABELS,
+  FUND_SORT_STORAGE_KEY,
+  hasTarget,
+  isZero,
+  readStoredSort,
+  savedOf,
+  sortFunds,
+  targetsKey,
+  type FundSortKey,
+} from './funds/helpers';
 
 export default function FundsPage() {
-  const { formatCurrency, formatDate, t } = useUser();
+  const { formatNumber, t, locale, currency } = useUser();
   const queryClient = useQueryClient();
-  // const [funds, setFunds] = useState<SavingsFund[]>([]);
-  // const [isLoading, setIsLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
 
-  const { data: funds = [], isLoading, error } = useQuery({
+  const { data: funds = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['funds'],
     queryFn: async () => {
       const response = await fundsApi.getAll();
@@ -94,9 +64,7 @@ export default function FundsPage() {
     },
   });
 
-  const [sortKey, setSortKey] = useState<FundSortKey>(
-    () => (localStorage.getItem(FUND_SORT_STORAGE_KEY) as FundSortKey | null) ?? 'created'
-  );
+  const [sortKey, setSortKey] = useState<FundSortKey>(readStoredSort);
 
   const handleSortChange = (value: FundSortKey) => {
     setSortKey(value);
@@ -115,10 +83,13 @@ export default function FundsPage() {
 
   const activeFunds = sortFunds(funds.filter(f => f.fund_is_active !== false), sortKey);
   const inactiveFunds = sortFunds(funds.filter(f => f.fund_is_active === false), sortKey);
-  const totalTarget = activeFunds.reduce((sum, f) => sum + f.target_amount, 0);
-  const totalCurrent = activeFunds.reduce((sum, f) => sum + (f.current_amount || 0), 0);
-  // A target of 0 means "no target"; those funds stay out of the progress ratio so it never exceeds what the targets cover.
-  const totalCurrentTargeted = activeFunds.reduce((sum, f) => sum + (f.target_amount > 0 ? (f.current_amount || 0) : 0), 0);
+  const totalCurrent = activeFunds.reduce((sum, f) => sum + savedOf(f), 0);
+  const totalFlow = activeFunds.reduce((sum, f) => sum + (f.net_flow_30d || 0), 0);
+  // A target of 0 means "no target"; those funds stay out of the target and progress figures.
+  const targetedFunds = activeFunds.filter(hasTarget);
+  const totalTarget = targetedFunds.reduce((sum, f) => sum + f.target_amount, 0);
+  const totalCurrentTargeted = targetedFunds.reduce((sum, f) => sum + savedOf(f), 0);
+  const deleteTarget = funds.find(f => f.savings_funds_id_pk === deleteConfirmId) ?? null;
 
   const handleOpenModal = (fund?: SavingsFund) => {
     if (fund) {
@@ -277,28 +248,32 @@ export default function FundsPage() {
     onSettled: optimisticDelete.onSettled,
   });
 
-  const handleDelete = (fundId: string) => {
-    deleteMutation.mutate(fundId);
-  };
+  const header = (
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 lg:mb-10">
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+          {t('pages.funds.title')}
+        </h1>
+        <span className="hidden text-sm text-muted-foreground sm:inline">{t('pages.funds.description')}</span>
+      </div>
+      <Button variant="outline" className="h-11 px-4" onClick={() => handleOpenModal()}>
+        <Plus aria-hidden="true" />
+        {t('pages.funds.create')}
+      </Button>
+    </div>
+  );
 
   if (error && !isLoading && funds.length === 0) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('pages.funds.title')}
-          description={t('pages.funds.description')}
-          actions={
-            <Button onClick={() => handleOpenModal()}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('pages.funds.create')}
-            </Button>
-          }
-        />
-        <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
-          <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="text-lg font-semibold">{t('pages.funds.failedToLoad')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : t('common.unknownError')}</p>
-          <Button variant="outline" className="mt-4" onClick={() => queryClient.invalidateQueries({ queryKey: ['funds'] })}>
+      <div>
+        {header}
+        <div role="alert" className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <AlertCircle className="mb-4 h-8 w-8 text-destructive" aria-hidden="true" />
+          <h3 className="text-lg font-medium">{t('pages.funds.failedToLoad')}</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : t('common.unknownError')}
+          </p>
+          <Button variant="outline" className="mt-6" onClick={() => refetch()} disabled={isFetching}>
             {t('common.retry')}
           </Button>
         </div>
@@ -306,269 +281,123 @@ export default function FundsPage() {
     );
   }
 
-  const renderFundCard = (fund: SavingsFund) => {
-    const current = fund.current_amount || 0;
-    const hasTarget = fund.target_amount > 0;
-    const progress = hasTarget ? (current / fund.target_amount) * 100 : 0;
-    const isComplete = progress >= 100;
-    // Temp id until the server row arrives — actions would 404, so disable them.
-    const pending = isOptimistic(fund);
+  const renderRows = (list: SavingsFund[]) => (
+    <RowList>
+      {list.map(fund => (
+        <FundRow
+          key={fund.savings_funds_id_pk}
+          fund={fund}
+          onEdit={handleOpenModal}
+          onActivate={f => updateMutation.mutate({ id: f.savings_funds_id_pk, data: { fund_is_active: true } })}
+          onDelete={f => setDeleteConfirmId(f.savings_funds_id_pk)}
+        />
+      ))}
+    </RowList>
+  );
 
-    return (
-      <motion.div
-        key={fund.savings_funds_id_pk}
-        variants={fadeIn}
-        layout
-        className={cn(
-          'group rounded-xl border bg-card p-5 shadow-card transition-colors hover:border-primary/40',
-          fund.fund_is_active === false
-            ? 'border-border/50 opacity-60'
-            : isComplete ? 'border-success/30' : 'border-border hover:border-primary/50',
-          pending && 'opacity-60'
-        )}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                'rounded-lg p-2.5',
-                isComplete ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'
-              )}
-            >
-              <Target className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold">{fund.fund_name}</h3>
-                {fund.fund_is_active === false && (
-                  <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {t('states.inactive')}
-                  </span>
-                )}
-              </div>
-              {fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
-                <p className={cn("text-xs", fund.net_flow_30d > 0 ? "text-success" : "text-destructive")}>
-                  <SensitiveValue>{fund.net_flow_30d > 0 ? '+' : ''}{formatCurrency(fund.net_flow_30d)}</SensitiveValue> {t('states.thisMonth')}
-                </p>
-              )}
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={pending}
-                aria-label={`${t('common.actions')}: ${fund.fund_name}`}
-                className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleOpenModal(fund)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                {t('common.edit')}
-              </DropdownMenuItem>
-              {fund.fund_is_active === false && (
-                <DropdownMenuItem
-                  onClick={() => updateMutation.mutate({ id: fund.savings_funds_id_pk, data: { fund_is_active: true } })}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('common.activate')}
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setDeleteConfirmId(fund.savings_funds_id_pk)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('common.delete')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="mt-4">
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <span className="text-2xl font-bold font-display">
-                <SensitiveValue>{formatCurrency(current)}</SensitiveValue>
-              </span>
-              <span className="text-muted-foreground/70 ml-1 text-xs">
-                {hasTarget ? (
-                  <>{t('pages.funds.of')} <SensitiveValue>{formatCurrency(fund.target_amount)}</SensitiveValue></>
-                ) : t('pages.funds.noTarget')}
-              </span>
-            </div>
-            {isComplete && (
-              <span className="whitespace-nowrap rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-success">
-                {t('states.goalReached')}
-              </span>
-            )}
-          </div>
-          {hasTarget && (
-            <Progress
-              value={Math.min(progress, 100)}
-              className={cn('h-1.5', isComplete && '[&>div]:bg-success')}
-            />
-          )}
-          {/* Timeline Projection */}
-          {hasTarget && !isComplete && fund.net_flow_30d !== undefined && fund.net_flow_30d !== null && fund.net_flow_30d !== 0 && (
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              {fund.net_flow_30d > 0 ? (() => {
-                const remaining = fund.target_amount - current;
-                const monthsToGo = Math.ceil(remaining / fund.net_flow_30d);
-                const projected = new Date();
-                projected.setMonth(projected.getMonth() + monthsToGo);
-                return `~${formatDate(projected, { month: 'short', year: 'numeric' })} ${t('states.atCurrentPace')}`;
-              })() : t('states.netOutflowHint')}
-            </p>
-          )}
-        </div>
-      </motion.div>
-    );
-  };
+  const money = (value: number) => formatMoneyWhole(value, currency);
+  const change = isZero(totalFlow) ? 0 : totalFlow;
+  const figure = (value: number) => <LeadFigure>{money(value)}</LeadFigure>;
+  const segments: LeadSegment[] = [
+    change === 0
+      ? { template: t('pages.funds.leadSame'), values: {} }
+      : {
+          template: t(change > 0 ? 'pages.funds.leadMore' : 'pages.funds.leadLess'),
+          values: { change: figure(Math.abs(change)) },
+        },
+  ];
+  if (targetedFunds.length > 0) {
+    segments.push({
+      template: t(targetsKey(locale, targetedFunds.length), { count: formatNumber(targetedFunds.length) }),
+      values: { target: figure(totalTarget) },
+    });
+  }
+  const targetPercent =
+    totalTarget > 0 ? formatNumber(totalCurrentTargeted / totalTarget, { style: 'percent', maximumFractionDigits: 0 }) : null;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('pages.funds.title')}
-        description={t('pages.funds.description')}
-        actions={
-          <div className="flex items-center gap-2">
-            <Select value={sortKey} onValueChange={handleSortChange}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created">{t('pages.funds.sortCreated')}</SelectItem>
-                <SelectItem value="name">{t('pages.funds.sortName')}</SelectItem>
-                <SelectItem value="progress">{t('pages.funds.sortProgress')}</SelectItem>
-                <SelectItem value="target">{t('pages.funds.sortTarget')}</SelectItem>
-                <SelectItem value="activity">{t('pages.funds.sortActivity')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => handleOpenModal()}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('pages.funds.create')}
-            </Button>
-          </div>
-        }
-      />
+    <div>
+      {header}
 
-      {/* Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-border bg-card p-6 shadow-sm"
-      >
-        {isLoading ? (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-            <div className="w-full sm:w-48 space-y-2">
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-4 w-16 ml-auto" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">{t('metrics.totalSaved')}</p>
-              <p className="text-3xl font-bold font-display">
-                <SensitiveValue>{formatCurrency(totalCurrent)}</SensitiveValue>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {totalTarget > 0 ? (
-                  <>{t('pages.funds.of')} <SensitiveValue>{formatCurrency(totalTarget)}</SensitiveValue> {t('pages.funds.activeTarget')}</>
-                ) : t('pages.funds.noTarget')}
-              </p>
-            </div>
-            {totalTarget > 0 && (
-              <div className="w-full sm:w-48">
-                <Progress
-                  value={Math.min((totalCurrentTargeted / totalTarget) * 100, 100)}
-                  className="h-3"
-                />
-                <p className="mt-1 text-right text-sm text-muted-foreground">
-                  <SensitiveValue>{((totalCurrentTargeted / totalTarget) * 100).toFixed(0)}%</SensitiveValue> {t('states.complete')}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </motion.div>
-
-      {/* Funds Grid */}
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="rounded-xl border bg-card p-5 shadow-card">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-6 space-y-3">
-                <Skeleton className="h-6 w-20" />
-                <Skeleton className="h-2 w-full" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : activeFunds.length === 0 ? (
-        <EmptyState
-          icon={<Target className="h-8 w-8 text-muted-foreground" />}
-          title={t('pages.funds.noActiveTitle')}
-          description={t('pages.funds.noActiveDescription')}
-          action={{
-            label: t('pages.funds.createFirst'),
-            onClick: () => handleOpenModal(),
-          }}
-        />
+        <FundsSkeleton />
       ) : (
-        <div className="space-y-8">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            className="grid gap-4 sm:grid-cols-2"
-          >
-            <AnimatePresence mode='popLayout'>
-              {activeFunds.map(renderFundCard)}
-            </AnimatePresence>
-          </motion.div>
+        <>
+          {activeFunds.length === 0 ? (
+            <EmptyState
+              icon={<Target className="h-8 w-8 text-muted-foreground" />}
+              title={t('pages.funds.noActiveTitle')}
+              description={t('pages.funds.noActiveDescription')}
+              action={{
+                label: t('pages.funds.createFirst'),
+                onClick: () => handleOpenModal(),
+              }}
+            />
+          ) : (
+            <>
+              <section>
+                <BigFigure
+                  label={t('pages.funds.savedAcross')}
+                  parts={formatMoneyParts(totalCurrent, currency, 0)}
+                  negative={totalCurrent < 0}
+                />
+                <LeadSentence segments={segments} />
+                {targetPercent && (
+                  <p className="mt-2 text-[0.8125rem] text-muted-foreground">
+                    <SensitiveValue>
+                      {t('pages.funds.leadProgress', { percent: targetPercent })}
+                    </SensitiveValue>
+                  </p>
+                )}
+              </section>
+
+              <section className="mt-10 lg:mt-12">
+                <div
+                  role="group"
+                  aria-label={t('pages.funds.sortBy')}
+                  className="mb-1 flex flex-wrap items-baseline gap-x-5 gap-y-1"
+                >
+                  <span className="text-[0.8125rem] text-muted-foreground/80">{t('pages.funds.sortBy')}</span>
+                  {FUND_SORT_KEYS.map(key => (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={sortKey === key}
+                      onClick={() => handleSortChange(key)}
+                      className={cn(
+                        'rounded-sm py-1.5 text-[0.8125rem] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        sortKey === key ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                    >
+                      <span className={cn('border-b-2 pb-[0.1875rem]', sortKey === key ? 'border-primary' : 'border-transparent')}>
+                        {t(FUND_SORT_LABELS[key])}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {renderRows(activeFunds)}
+              </section>
+            </>
+          )}
 
           {inactiveFunds.length > 0 && (
-            <Accordion type="single" collapsible className="w-full bg-card rounded-xl border px-4">
-              <AccordionItem value="inactive-funds" className="border-none">
-                <AccordionTrigger className="hover:no-underline py-4 text-muted-foreground font-medium">
-                  {t('pages.funds.inactiveFunds')} ({inactiveFunds.length})
-                </AccordionTrigger>
-                <AccordionContent className="pb-6">
-                  <motion.div
-                    variants={stagger}
-                    initial="hidden"
-                    animate="show"
-                    className="grid gap-4 sm:grid-cols-2 pt-2"
-                  >
-                    <AnimatePresence mode='popLayout'>
-                      {inactiveFunds.map(renderFundCard)}
-                    </AnimatePresence>
-                  </motion.div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            <Collapsible className="mt-10">
+              <CollapsibleTrigger
+                className={cn(
+                  'group inline-flex items-center gap-1.5 rounded-sm py-2 text-sm text-muted-foreground transition-colors hover:text-foreground',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                )}
+              >
+                {t('pages.funds.inactiveFundsCount', { count: formatNumber(inactiveFunds.length) })}
+                <ChevronDown
+                  className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180"
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>{renderRows(inactiveFunds)}</CollapsibleContent>
+            </Collapsible>
           )}
-        </div>
+        </>
       )}
 
       {/* Create/Edit Modal */}
@@ -578,6 +407,9 @@ export default function FundsPage() {
             <DialogTitle className="font-display">
               {selectedFund ? t('pages.funds.editTitle') : t('pages.funds.createTitle')}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {selectedFund ? t('pages.funds.editTitle') : t('pages.funds.createTitle')}
+            </DialogDescription>
           </DialogHeader>
           <form
             noValidate
@@ -599,7 +431,12 @@ export default function FundsPage() {
                   {...fieldAria('name', formErrors.name)}
                 />
               </Field>
-              <Field htmlFor="target" label={t('pages.funds.targetAmount')} error={formErrors.target}>
+              <Field
+                htmlFor="target"
+                label={t('pages.funds.targetAmount')}
+                error={formErrors.target}
+                hint={t('pages.funds.targetHint')}
+              >
                 <Input
                   id="target"
                   type="number"
@@ -629,27 +466,29 @@ export default function FundsPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display">{t('pages.funds.deleteTitle')}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground py-2">
-            {t('pages.funds.deleteDescription')}
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('pages.funds.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('pages.funds.deleteDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteTarget && (
+            <div className="flex items-baseline justify-between gap-4 border-y border-border py-3 text-sm">
+              <p className="min-w-0 truncate font-medium">{deleteTarget.fund_name}</p>
+              <SensitiveValue className="shrink-0 font-medium">{money(savedOf(deleteTarget))}</SensitiveValue>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteConfirmId !== null && deleteMutation.mutate(deleteConfirmId)}
             >
               {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
