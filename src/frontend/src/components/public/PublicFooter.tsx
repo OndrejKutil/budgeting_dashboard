@@ -82,7 +82,7 @@ export function PublicFooter({ showCta = true }: { showCta?: boolean }) {
         <div className="mt-12 flex flex-col gap-1.5 border-t border-border py-6 text-[0.8125rem] text-muted-foreground/80 lg:flex-row lg:justify-between lg:gap-8">
           <p>Not a bank or financial adviser. Nothing here is financial advice.</p>
           <p className="lg:text-right">
-            © {year} Ondřej Kutil · Data in Frankfurt (Supabase) · hosted in the EU (Render)
+            © {year} Ondřej Kutil · Data on Supabase · hosted on Render
           </p>
         </div>
       </div>

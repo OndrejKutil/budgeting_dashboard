@@ -177,7 +177,7 @@ work:
 4. 22px at 2560px is enough.
 5. Footer compliance wording, accepted: "Budgeting Dashboard is a personal project, not a
    bank or financial adviser. Nothing here is financial advice." and "© <year> Ondřej
-   Kutil · Data stored with Supabase (Frankfurt, EU) · hosted on Render (EU)".
+   Kutil · Data on Supabase · hosted on Render".
 6. No reference footer: build our own (see 4.2). Contact = email and GitHub only.
 
 ## 4. Remaining work
@@ -194,7 +194,7 @@ polishing.
 dashboard; links in a row under the bar below `lg`), `PublicFooter` (a panel within the page width with a darker
 background and rounded top: closing call to actionclosing call to action
 for signed-out visitors, link columns, contact `me@ondrejkutil.com` and
-GitHub, disclaimer and the Supabase Frankfurt / Render EU line) and `PublicLayout` /
+GitHub, disclaimer and the "Data on Supabase · hosted on Render" line) and `PublicLayout` /
 `PublicPageTitle`. Landing, FAQ, How it works, About, Terms, Privacy and NotFound use it;
 `AuthLayout` is a centred column without the decorative panel. Decisions taken while building:
 public pages stay English-only, so the footer has no language switch yet; the landing headline
