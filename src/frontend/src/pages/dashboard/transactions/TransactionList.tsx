@@ -43,7 +43,7 @@ function TagChips({ tags }: { tags: Transaction['tags'] }) {
       {tags.map(tag => (
         <span
           key={tag.tags_id_pk}
-          className="rounded-full bg-foreground/[0.07] px-2 py-px text-[11px] leading-4 text-muted-foreground"
+          className="rounded-full bg-foreground/[0.07] px-2 py-px text-[0.6875rem] leading-4 text-muted-foreground"
         >
           {tag.tag_name}
         </span>
@@ -291,11 +291,11 @@ export function TransactionList({
               style={{ boxShadow: `inset 2px 0 0 ${color}` }}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] text-foreground">
+                <p className="truncate text-[0.9375rem] text-foreground">
                   {transaction.notes || t('pages.transactions.noDescription')}
                 </p>
                 {/* Category and account give way first; the date always stays whole. */}
-                <p className="flex min-w-0 gap-1 text-[13px] text-muted-foreground">
+                <p className="flex min-w-0 gap-1 text-[0.8125rem] text-muted-foreground">
                   <span className="min-w-0 shrink truncate">{category?.category_name || t('common.unknown')}</span>
                   <span aria-hidden="true">·</span>
                   <span className="min-w-0 shrink truncate">{account?.account_name || t('common.unknown')}</span>
@@ -304,7 +304,7 @@ export function TransactionList({
                 </p>
                 <TagChips tags={transaction.tags} />
               </div>
-              <Amount transaction={transaction} account={account} className="shrink-0 text-[15px]" />
+              <Amount transaction={transaction} account={account} className="shrink-0 text-[0.9375rem]" />
               <RowActions transaction={transaction} onEdit={onEdit} onCopy={onCopy} onDelete={onDelete} className="-mr-2 shrink-0" />
             </li>
           );
@@ -313,7 +313,7 @@ export function TransactionList({
 
       {/* Pagination */}
       <div className="flex items-center justify-between gap-3 pt-5">
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[0.8125rem] text-muted-foreground">
           {t('pages.transactions.showing')} <span className="text-foreground tabular-nums">{rangeStart}</span>&ndash;
           <span className="text-foreground tabular-nums">{rangeEnd}</span> {t('pages.transactions.showingSuffix')}
         </p>

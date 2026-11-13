@@ -46,7 +46,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-auto px-3 pb-2.5 pt-0 text-left align-middle text-[13px] font-normal text-muted-foreground dark:text-muted-foreground/80 first:pl-0 last:pr-0 [&:has([role=checkbox])]:pr-0",
+        "h-auto px-3 pb-2.5 pt-0 text-left align-middle text-[0.8125rem] font-normal text-muted-foreground dark:text-muted-foreground/80 first:pl-0 last:pr-0 [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ TableHead.displayName = "TableHead";
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("px-3 py-[13px] align-middle first:pl-0 last:pr-0 [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <td ref={ref} className={cn("px-3 py-[0.8125rem] align-middle first:pl-0 last:pr-0 [&:has([role=checkbox])]:pr-0", className)} {...props} />
   ),
 );
 TableCell.displayName = "TableCell";

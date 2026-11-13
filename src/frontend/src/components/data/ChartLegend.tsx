@@ -8,7 +8,7 @@ export interface ChartLegendItem {
 /** Legend as plain inline text with a short line sample, no box. */
 export function ChartLegend({ items, className }: { items: ChartLegendItem[]; className?: string }) {
   return (
-    <span className={cn('flex flex-wrap gap-x-[18px] gap-y-1 text-[13px] text-muted-foreground', className)}>
+    <span className={cn('flex flex-wrap gap-x-[1.125rem] gap-y-1 text-[0.8125rem] text-muted-foreground', className)}>
       {items.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1.5">
           <i

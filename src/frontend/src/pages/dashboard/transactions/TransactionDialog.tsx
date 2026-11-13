@@ -146,7 +146,7 @@ export function TransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => { if (!next) onClose(); }}>
-      <DialogContent className="sm:max-w-[460px]">
+      <DialogContent className="sm:max-w-[28.75rem]">
         <DialogHeader>
           <DialogTitle>
             {selectedTransaction
@@ -170,7 +170,7 @@ export function TransactionDialog({
             if (!isSaving) onSubmit();
           }}
         >
-          <div className="space-y-[18px]">
+          <div className="space-y-[1.125rem]">
             <FormAlert>{submitError}</FormAlert>
 
             {/* What kind of entry this is: underlined text tabs. One control instead of two
@@ -196,7 +196,7 @@ export function TransactionDialog({
                       disabled={isModeDisabled(value)}
                       onClick={() => changeMode(value)}
                       className={cn(
-                        'relative -mb-px min-h-11 whitespace-nowrap rounded-sm text-sm transition-colors sm:text-[14.5px]',
+                        'relative -mb-px min-h-11 whitespace-nowrap rounded-sm text-sm transition-colors sm:text-[0.90625rem]',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         'disabled:cursor-not-allowed disabled:opacity-40',
                         selected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -255,7 +255,7 @@ export function TransactionDialog({
                     clearError('amount');
                   }}
                   className={cn(
-                    'h-16 min-w-0 flex-1 text-4xl font-light leading-none tracking-[-0.04em] tabular-nums sm:text-[56px] md:text-[56px]',
+                    'h-16 min-w-0 flex-1 text-4xl font-light leading-none tracking-[-0.04em] tabular-nums sm:text-[3.5rem] md:text-[3.5rem]',
                     isAmountNegative && 'text-destructive',
                   )}
                   {...fieldAria('amount', errors.amount)}
@@ -286,7 +286,7 @@ export function TransactionDialog({
                       id="date"
                       type="button"
                       className={cn(
-                        'flex h-[42px] w-full items-center justify-between gap-2 py-0 text-left text-base md:text-[15px]',
+                        'flex h-[2.625rem] w-full items-center justify-between gap-2 py-0 text-left text-base md:text-[0.9375rem]',
                         fieldLine,
                         !formData.date && 'text-muted-foreground dark:text-muted-foreground/80',
                       )}
