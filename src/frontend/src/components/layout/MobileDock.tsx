@@ -24,7 +24,7 @@ import {
 import { useDueRecurringCount, useVisibleNavGroups } from './use-nav';
 
 const dockButtonClass =
-  'relative grid h-[46px] place-items-center rounded-2xl text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'relative grid h-[2.875rem] place-items-center rounded-2xl text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 function ActiveDot() {
   return <span aria-hidden="true" className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />;
@@ -39,7 +39,7 @@ function DockLink({ item, active }: { item: NavItem; active: boolean }) {
       aria-current={active ? 'page' : undefined}
       className={cn(dockButtonClass, active && 'text-foreground')}
     >
-      <item.icon className={cn('h-[22px] w-[22px]', active && 'text-primary')} aria-hidden="true" />
+      <item.icon className={cn('h-[1.375rem] w-[1.375rem]', active && 'text-primary')} aria-hidden="true" />
       {active && <ActiveDot />}
     </Link>
   );
@@ -53,15 +53,15 @@ function SheetLink({ item, badge, active, onNavigate }: { item: NavItem; badge?:
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-[2.75rem] items-center gap-3 rounded-xl px-3 text-[0.9375rem] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active ? 'bg-foreground/10' : 'hover:bg-foreground/5',
       )}
     >
-      <item.icon className={cn('h-[18px] w-[18px]', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
+      <item.icon className={cn('h-[1.125rem] w-[1.125rem]', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden="true" />
       <span className="flex-1">{t(item.labelKey)}</span>
       {badge ? (
         <span
-          className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold leading-none text-destructive-foreground"
+          className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[0.625rem] font-semibold leading-none text-destructive-foreground"
           aria-label={t('nav.recurringDue', { count: badge })}
         >
           {badge > 9 ? '9+' : badge}
@@ -90,16 +90,16 @@ export function MobileDock() {
       <nav
         aria-label={t('nav.mobileNavigation')}
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 lg:hidden"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
       >
-        <div className="glass pointer-events-auto mx-auto grid max-w-sm grid-cols-5 items-center rounded-[26px] p-2">
+        <div className="glass pointer-events-auto mx-auto grid max-w-sm grid-cols-5 items-center rounded-[1.625rem] p-2">
           <DockLink item={overviewItem} active={isPathActive(pathname, overviewItem.href)} />
           <DockLink item={transactionsItem} active={isPathActive(pathname, transactionsItem.href)} />
           <button
             type="button"
             onClick={openAdd}
             aria-label={t('nav.addTransaction')}
-            className="h-[46px] w-[46px] justify-self-center rounded-2xl bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="h-[2.875rem] w-[2.875rem] justify-self-center rounded-2xl bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <Plus className="mx-auto h-6 w-6" aria-hidden="true" />
           </button>
@@ -112,7 +112,7 @@ export function MobileDock() {
             aria-expanded={moreOpen}
             className={cn(dockButtonClass, moreActive && 'text-foreground')}
           >
-            <MoreHorizontal className={cn('h-[22px] w-[22px]', moreActive && 'text-primary')} aria-hidden="true" />
+            <MoreHorizontal className={cn('h-[1.375rem] w-[1.375rem]', moreActive && 'text-primary')} aria-hidden="true" />
             {moreActive && <ActiveDot />}
           </button>
         </div>
@@ -131,7 +131,7 @@ export function MobileDock() {
             <SheetLink item={fundsItem} active={isPathActive(pathname, fundsItem.href)} onNavigate={closeMore} />
             {groups.map((group) => (
               <div key={group.id}>
-                <p className="px-3 pb-1 text-[13px] text-muted-foreground">{t(group.labelKey)}</p>
+                <p className="px-3 pb-1 text-[0.8125rem] text-muted-foreground">{t(group.labelKey)}</p>
                 {group.items.map((item) => (
                   <SheetLink
                     key={item.href}

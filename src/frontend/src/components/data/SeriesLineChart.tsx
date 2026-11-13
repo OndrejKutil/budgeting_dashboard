@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 
@@ -21,7 +21,19 @@ interface SeriesLineChartProps {
   height?: number;
 }
 
-const MARGIN = { left: 46, right: 14, top: 10, bottom: 26 };
+const BASE_MARGIN = { left: 46, right: 14, top: 10, bottom: 26 };
+
+/** Root font size relative to 16px: SVG geometry is in px, so it is multiplied by this to follow rem. */
+function useRootScale(): number {
+  const read = () => (typeof window === 'undefined' ? 1 : parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 || 1);
+  const [scale, setScale] = useState(read);
+  useEffect(() => {
+    const update = () => setScale(read());
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return scale;
+}
 
 function niceStep(raw: number): number {
   if (raw <= 0) return 1;
@@ -61,12 +73,20 @@ export function SeriesLineChart({
   primaryName,
   comparisonName,
   ariaLabel,
-  height = 190,
+  height: baseHeight = 190,
 }: SeriesLineChartProps) {
+  const k = useRootScale();
+  const height = baseHeight * k;
+  const MARGIN = {
+    left: BASE_MARGIN.left * k,
+    right: BASE_MARGIN.right * k,
+    top: BASE_MARGIN.top * k,
+    bottom: BASE_MARGIN.bottom * k,
+  };
   const [wrapperRef, width] = useElementWidth<HTMLDivElement>();
   const { isPrivacyMode } = usePrivacyMode();
   const [hover, setHover] = useState<number | null>(null);
-  const blur = isPrivacyMode ? { filter: 'blur(5px)' } : undefined;
+  const blur = isPrivacyMode ? { filter: `blur(${5 * k}px)` } : undefined;
 
   const max = Math.max(1, ...primary, ...comparison);
   const step = niceStep(max / 3);
@@ -89,17 +109,17 @@ export function SeriesLineChart({
   const compareAtEnd = comparison[endIndex];
   const primaryAbove = compareAtEnd !== undefined && compareAtEnd < endValue;
   const comparisonEndIndex = comparison.length - 1;
-  const endLabelAnchor = x(endIndex) - MARGIN.left < 60 ? 'start' : 'end';
+  const endLabelAnchor = x(endIndex) - MARGIN.left < 60 * k ? 'start' : 'end';
 
   // End labels stay inside the plot (above the x-axis labels): prefer the requested side, flip
   // when it does not fit, clamp as a last resort.
-  const labelLow = MARGIN.top + 10;
-  const labelHigh = MARGIN.top + innerHeight - 6;
+  const labelLow = MARGIN.top + 10 * k;
+  const labelHigh = MARGIN.top + innerHeight - 6 * k;
   const clampLabel = (value: number) => Math.min(labelHigh, Math.max(labelLow, value));
   const placeLabel = (pointY: number, preferAbove: boolean) => {
-    const preferred = pointY + (preferAbove ? -10 : 20);
+    const preferred = pointY + (preferAbove ? -10 : 20) * k;
     if (preferred >= labelLow && preferred <= labelHigh) return preferred;
-    const other = pointY + (preferAbove ? 20 : -10);
+    const other = pointY + (preferAbove ? 20 : -10) * k;
     if (other >= labelLow && other <= labelHigh) return other;
     return clampLabel(preferred);
   };
@@ -109,11 +129,11 @@ export function SeriesLineChart({
     const pointY = y(comparison[comparisonEndIndex]);
     comparisonLabelY = placeLabel(pointY, !primaryAbove || comparisonEndIndex !== endIndex);
     // Both labels end near the same x: keep them at least one text line apart.
-    const near = primary.length > 0 && Math.abs(x(comparisonEndIndex) - x(endIndex)) < 110;
-    if (near && Math.abs(comparisonLabelY - primaryLabelY) < 15) {
-      const away = comparisonLabelY >= primaryLabelY ? 15 : -15;
+    const near = primary.length > 0 && Math.abs(x(comparisonEndIndex) - x(endIndex)) < 110 * k;
+    if (near && Math.abs(comparisonLabelY - primaryLabelY) < 15 * k) {
+      const away = comparisonLabelY >= primaryLabelY ? 15 * k : -15 * k;
       comparisonLabelY = clampLabel(primaryLabelY + away);
-      if (Math.abs(comparisonLabelY - primaryLabelY) < 15) comparisonLabelY = clampLabel(primaryLabelY - away);
+      if (Math.abs(comparisonLabelY - primaryLabelY) < 15 * k) comparisonLabelY = clampLabel(primaryLabelY - away);
     }
   }
 
@@ -140,10 +160,10 @@ export function SeriesLineChart({
                 className="stroke-foreground/10"
               />
               <text
-                x={MARGIN.left - 8}
-                y={y(tick) + 4}
+                x={MARGIN.left - 8 * k}
+                y={y(tick) + 4 * k}
                 textAnchor="end"
-                className="fill-muted-foreground/70 text-[11px]"
+                className="fill-muted-foreground/70 text-[0.6875rem]"
                 style={blur}
               >
                 {tick === 0 ? '0' : formatAxis(tick)}
@@ -154,9 +174,9 @@ export function SeriesLineChart({
             <text
               key={index}
               x={x(index)}
-              y={height - 8}
+              y={height - 8 * k}
               textAnchor="middle"
-              className="fill-muted-foreground/70 text-[11px]"
+              className="fill-muted-foreground/70 text-[0.6875rem]"
             >
               {xLabel(index)}
             </text>
@@ -166,21 +186,21 @@ export function SeriesLineChart({
             <path
               d={path(comparison)}
               fill="none"
-              strokeWidth={1.5}
-              strokeDasharray="4 5"
+              strokeWidth={1.5 * k}
+              strokeDasharray={`${4 * k} ${5 * k}`}
               className="stroke-muted-foreground/60"
             />
           )}
           {primary.length > 0 && (
-            <path d={path(primary)} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-primary" />
+            <path d={path(primary)} fill="none" strokeWidth={2 * k} strokeLinejoin="round" className="stroke-primary" />
           )}
 
           {comparison.length > 0 && (
             <text
-              x={x(comparisonEndIndex) - 10}
+              x={x(comparisonEndIndex) - 10 * k}
               y={comparisonLabelY}
               textAnchor="end"
-              className="fill-muted-foreground/70 text-[11px]"
+              className="fill-muted-foreground/70 text-[0.6875rem]"
               style={blur}
             >
               {formatValue(comparison[comparisonEndIndex])}
@@ -188,12 +208,12 @@ export function SeriesLineChart({
           )}
           {primary.length > 0 && (
             <>
-              <circle cx={x(endIndex)} cy={y(endValue)} r={4.5} className="fill-primary" />
+              <circle cx={x(endIndex)} cy={y(endValue)} r={4.5 * k} className="fill-primary" />
               <text
-                x={endLabelAnchor === 'end' ? x(endIndex) - 10 : x(endIndex) + 10}
+                x={endLabelAnchor === 'end' ? x(endIndex) - 10 * k : x(endIndex) + 10 * k}
                 y={primaryLabelY}
                 textAnchor={endLabelAnchor}
-                className="fill-foreground text-[12.5px]"
+                className="fill-foreground text-[0.78125rem]"
                 style={blur}
               >
                 {formatValue(endValue)}
@@ -204,9 +224,9 @@ export function SeriesLineChart({
           {hover !== null && (
             <g pointerEvents="none">
               <line x1={x(hover)} x2={x(hover)} y1={MARGIN.top} y2={MARGIN.top + innerHeight} className="stroke-foreground/25" />
-              {hoverPrimary !== undefined && <circle cx={x(hover)} cy={y(hoverPrimary)} r={3.5} className="fill-primary" />}
+              {hoverPrimary !== undefined && <circle cx={x(hover)} cy={y(hoverPrimary)} r={3.5 * k} className="fill-primary" />}
               {hoverComparison !== undefined && (
-                <circle cx={x(hover)} cy={y(hoverComparison)} r={3} className="fill-muted-foreground" />
+                <circle cx={x(hover)} cy={y(hoverComparison)} r={3 * k} className="fill-muted-foreground" />
               )}
             </g>
           )}
@@ -227,7 +247,7 @@ export function SeriesLineChart({
         <div
           className="glass glass-dense pointer-events-none absolute top-0 z-10 min-w-[8.5rem] rounded-xl px-3 py-2 text-xs"
           style={{
-            left: Math.min(Math.max(x(hover) + 12, 0), Math.max(0, width - 150)),
+            left: Math.min(Math.max(x(hover) + 12, 0), Math.max(0, width - 150 * k)),
           }}
         >
           <div className="mb-1 text-muted-foreground">{tooltipTitle(hover)}</div>

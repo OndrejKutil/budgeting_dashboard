@@ -18,7 +18,7 @@ interface LeadSentenceProps {
 /** The plain sentence under a page's big figure; key amounts are set in brighter text. */
 export function LeadSentence({ segments, className }: LeadSentenceProps) {
   return (
-    <p className={cn('max-w-[44ch] text-base leading-[1.45] text-muted-foreground sm:text-[19px]', className)}>
+    <p className={cn('max-w-[44ch] text-base leading-[1.45] text-muted-foreground sm:text-[1.1875rem]', className)}>
       {segments.map((segment, index) => (
         <Fragment key={index}>
           {index > 0 && ' '}

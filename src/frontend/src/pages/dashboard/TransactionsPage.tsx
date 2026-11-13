@@ -537,7 +537,7 @@ export default function TransactionsPage() {
       {/* Header: title with the count for the current filter, then the actions. */}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="flex flex-wrap items-baseline gap-x-3">
-          <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[26px]">
+          <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
             {t('pages.transactions.title')}
           </h1>
           {summaryData && (
@@ -559,13 +559,13 @@ export default function TransactionsPage() {
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             aria-keyshortcuts="n"
-            className="hidden h-11 px-[18px] lg:inline-flex"
+            className="hidden h-11 px-[1.125rem] lg:inline-flex"
           >
             <Plus aria-hidden="true" />
             {t('pages.transactions.add')}
             <kbd
               aria-hidden="true"
-              className="rounded-[5px] border border-primary-foreground/35 px-1.5 text-[11px] font-medium leading-[18px]"
+              className="rounded-[0.3125rem] border border-primary-foreground/35 px-1.5 text-[0.6875rem] font-medium leading-[1.125rem]"
             >
               N
             </kbd>
@@ -606,7 +606,7 @@ export default function TransactionsPage() {
 
       {/* Filtered summary: a quiet line, not a panel. */}
       {anyFilterActive && summaryData && (
-        <p className="text-[13px] text-muted-foreground" aria-live="polite">
+        <p className="text-[0.8125rem] text-muted-foreground" aria-live="polite">
           {t('pages.transactions.summaryTotal')}{' '}
           <span className="tabular-nums text-foreground">
             <SensitiveValue>{formatCurrency(summaryData.total_amount)}</SensitiveValue>
