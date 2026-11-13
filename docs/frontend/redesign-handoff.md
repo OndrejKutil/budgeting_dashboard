@@ -115,9 +115,9 @@ work:
   `RowList` / `RowListItem`, `SeriesLineChart` (zero-based cumulative line with a
   dashed comparison), `ChartLegend`, `DayBars` (one bar per day with an average line),
   `interpolate.ts` (i18n templates with rich parameters).
-- `pages/dashboard/accounts/NetWorthChart.tsx`: a line chart whose axis fits the data
-  (use this, not `SeriesLineChart`, for series that are large or can go negative).
-  Promote it to `components/data` if another page needs it.
+- `components/data/ValueLineChart.tsx` (was `accounts/NetWorthChart`): a line chart whose
+  axis fits the data (use this, not `SeriesLineChart`, for series that are large or can go
+  negative). Takes plain dates or full timestamps. Used by Accounts and Trading212.
 
 **Pages rebuilt and reviewed**
 
@@ -134,6 +134,8 @@ work:
 | Recurring | `pages/dashboard/RecurringPage.tsx` | Summary figures ("Templates", not "Active templates"), Due/Upcoming rows with side line, Post as the amber action, error state. Not yet checked with real data |
 | Categories | `pages/dashboard/CategoriesPage.tsx` | Open groups with counts, unknown types listed, `Exclude` and `Savings Funds Withdrawal` locked (no rename/retype/delete). Not yet checked with real data |
 | Emergency Fund | `analytics/EmergencyFundPage.tsx` | Runway / balance / monthly spending figures, scenario in the URL, target rows, core breakdown as rows. Not yet checked with real data |
+| Trading212 | `pages/dashboard/Trading212Page.tsx` | Value / unrealised P/L / change figures, status as a line under the title, `ValueLineChart` with span picker (keeps data while switching), boxless positions table, connect form in line style. Not yet checked with real data |
+| Screenshot Import | `pages/dashboard/ScreenshotImportPage.tsx` | Dashed hairline dropzone beside instructions, draft rows with a red side line plus "Needs your input" text, field-level needs-input errors, line-style fields, apply-to-all as a plain section. Logic unchanged. Not yet checked with real data |
 
 **Backend changes** (`src/backend`)
 
@@ -235,7 +237,8 @@ Mobile: columns stack, facts in a 2×2 grid.
 ### Phase 5: remaining app pages
 
 Done: Yearly, Recurring, Categories, Emergency Fund, Profile (see the table in 2.3; the
-notes below are kept for reference). Remaining order: Cash Flow, then tools, then Demo.
+notes below are kept for reference), plus Trading212 and Screenshot Import. Remaining
+order: Cash Flow, Investing and Dividend calculators, then Demo.
 
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
@@ -309,7 +312,7 @@ notes below are kept for reference). Remaining order: Cash Flow, then tools, the
   editing, the existing "needs input" state made obvious without relying on colour
   alone. It uses `TagMultiSelect` with pending tags: test that path.
 - Trading212 (`Trading212Page.tsx`, behind `t212_integration`): portfolio value as the
-  headline, positions as a boxless table, history with `NetWorthChart`.
+  headline, positions as a boxless table, history with `ValueLineChart`. (Built.)
 - Investing and Dividend calculators: inputs in line style on the left, result as the
   labelled figures (`MetricGrid`), chart frameless. Dividend yields are per payment
   (monthly ×12, quarterly ×4): say so in the labels. The Investing chart uses en-US

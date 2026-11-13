@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 
-interface NetWorthChartProps {
+interface ValueLineChartProps {
   dates: string[];
   values: number[];
   locale: string;
@@ -27,15 +27,16 @@ function niceStep(raw: number): number {
   return nice * magnitude;
 }
 
-const parseDate = (value: string) => new Date(`${value}T12:00:00`);
+/** Plain dates are read at local noon (no timezone shift); full timestamps as they are. */
+const parseDate = (value: string) => new Date(value.length === 10 ? `${value}T12:00:00` : value);
 
 /**
- * Frameless net-worth line: faint gridlines, one amber series with a labelled end point, no
+ * Frameless value-over-time line (net worth, portfolio value): faint gridlines, one amber series with a labelled end point, no
  * fill. Unlike SeriesLineChart (cumulative series from zero) the value axis fits the data,
  * so a net worth in the hundreds of thousands, or one below zero, still reads. Plain SVG at
  * the measured width so text stays one size at every screen width.
  */
-export function NetWorthChart({
+export function ValueLineChart({
   dates,
   values,
   locale,
@@ -44,7 +45,7 @@ export function NetWorthChart({
   name,
   ariaLabel,
   height: heightRem = 13.125,
-}: NetWorthChartProps) {
+}: ValueLineChartProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [rem, setRem] = useState(16);

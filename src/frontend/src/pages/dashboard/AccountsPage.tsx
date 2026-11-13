@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { AccountGroupSection } from './accounts/AccountGroupSection';
 import { AccountRow } from './accounts/AccountRow';
 import { AccountsSkeleton } from './accounts/AccountsSkeleton';
-import { NetWorthChart } from './accounts/NetWorthChart';
+import { ValueLineChart } from '@/components/data/ValueLineChart';
 import {
   getDateRange,
   NET_WORTH_RANGES,
@@ -504,7 +504,7 @@ export default function AccountsPage() {
       <div className="mt-2 h-[13.125rem]">
         {netWorthValues.length > 0 ? (
           <div className={cn('transition-opacity', netWorthSwitching && 'opacity-50')} aria-busy={netWorthSwitching}>
-            <NetWorthChart
+            <ValueLineChart
               dates={netWorthDates}
               values={netWorthValues}
               locale={locale}

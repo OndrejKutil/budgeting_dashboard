@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { PageHeader } from '@/components/ui/page-header';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, LineChart as LineChartIcon, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -22,15 +20,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { LineChart as LineChartIcon, Loader2, RefreshCw } from 'lucide-react';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
+import { ValueLineChart } from '@/components/data/ValueLineChart';
 import { cn } from '@/lib/utils';
-import { formatMoneyForeign } from '@/lib/currency';
+import { formatMoneyForeign, formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/api/client';
 import { trading212Api } from '@/lib/api/endpoints';
 import type { T212HistorySpan } from '@/lib/api/types';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
+import { usePrivacyMode } from '@/contexts/privacy-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 
 // Matches the feature_key registered in the migration -- not "trading212".
@@ -48,8 +48,11 @@ const SYNCED_AT_FORMAT: Intl.DateTimeFormatOptions = {
   minute: '2-digit',
 };
 
+type SortKey = 'market_value' | 'unrealised_pnl' | 'weight_pct';
+
 export default function Trading212Page() {
-  const { t, formatDate, formatCurrency, currency: userCurrency } = useUser();
+  const { t, locale, formatDate, formatCurrency, formatCurrencyCompact, formatNumber, currency: userCurrency } = useUser();
+  const { isPrivacyMode } = usePrivacyMode();
   const { enabled, isLoading: flagLoading } = useFeatureFlag(FEATURE_KEY);
   const queryClient = useQueryClient();
 
@@ -57,10 +60,16 @@ export default function Trading212Page() {
   const [apiSecret, setApiSecret] = useState('');
   const [span, setSpan] = useState<T212HistorySpan>('3m');
   const [deleteHistory, setDeleteHistory] = useState(false);
-  const [sortBy, setSortBy] = useState<'market_value' | 'unrealised_pnl' | 'weight_pct'>('market_value');
+  const [sortBy, setSortBy] = useState<SortKey>('market_value');
   const [sortDesc, setSortDesc] = useState(true);
 
-  const { data: connection, isLoading: connectionLoading } = useQuery({
+  const {
+    data: connection,
+    isLoading: connectionLoading,
+    error: connectionError,
+    refetch: refetchConnection,
+    isFetching: connectionFetching,
+  } = useQuery({
     queryKey: ['trading212', 'connection'],
     queryFn: async () => (await trading212Api.getConnection()).data,
     enabled,
@@ -74,10 +83,16 @@ export default function Trading212Page() {
     enabled: enabled && isConnected,
   });
 
-  const { data: historyData, isLoading: historyLoading } = useQuery({
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+    isPlaceholderData: historySwitching,
+  } = useQuery({
     queryKey: ['trading212', 'history', span, userCurrency],
     queryFn: async () => (await trading212Api.getHistory(span, userCurrency)).data,
     enabled: enabled && isConnected,
+    // Switching the span keeps the current line (dimmed) until the new one arrives.
+    placeholderData: keepPreviousData,
   });
 
   const invalidateAll = () => {
@@ -133,19 +148,28 @@ export default function Trading212Page() {
     },
   });
 
+  const title = (
+    <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">{t('pages.trading212.title')}</h1>
+  );
+
   if (flagLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div aria-busy="true">
+        {title}
+        <div className="mt-10 space-y-6">
+          <div className="grid grid-cols-2 gap-8 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+          </div>
+          <Skeleton className="h-[13rem] w-full" />
+        </div>
       </div>
     );
   }
 
   if (!enabled) {
     return (
-      <div className="space-y-6">
-        <PageHeader title={t('pages.trading212.title')} description={t('pages.trading212.description')} />
+      <div>
+        {title}
         <EmptyState
           icon={<LineChartIcon className="h-8 w-8 text-muted-foreground" />}
           title={t('pages.trading212.notEnabledTitle')}
@@ -155,28 +179,131 @@ export default function Trading212Page() {
     );
   }
 
-  const statusBadge = () => {
-    if (!connection) return null;
-    switch (connection.last_sync_status) {
-      case 'ok':
-        return <Badge variant="default">{t('pages.trading212.syncStatusOk')}</Badge>;
-      case 'auth_failed':
-        return <Badge variant="destructive">{t('pages.trading212.syncStatusAuthFailed')}</Badge>;
-      case 'rate_limited':
-      case 'error':
-        return <Badge variant="secondary">{t('pages.trading212.syncStatusError')}</Badge>;
-      default:
-        return null;
-    }
-  };
+  if (connectionError && !connection) {
+    return (
+      <div>
+        {title}
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium">{t('pages.trading212.loadFailed')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{getErrorMessage(connectionError, t('common.unknownError'))}</p>
+          </div>
+          <Button variant="outline" onClick={() => refetchConnection()} disabled={connectionFetching}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const chartData = (historyData?.points ?? []).map((p) => ({ date: p.snapshot_at, value: p.total_value }));
+  if (connectionLoading) {
+    return (
+      <div aria-busy="true">
+        {title}
+        <Skeleton className="mt-10 h-24 w-full max-w-md" />
+      </div>
+    );
+  }
 
-  const sortedPositions = [...(positionsData?.positions ?? [])].sort((a, b) =>
-    sortDesc ? b[sortBy] - a[sortBy] : a[sortBy] - b[sortBy]
-  );
+  // ---- Not connected: the connect form ----------------------------------------------------------
+  if (!isConnected) {
+    return (
+      <div>
+        {title}
+        <form
+          noValidate
+          className="mt-10 max-w-md"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (apiKey && apiSecret && !connectMutation.isPending) connectMutation.mutate();
+          }}
+        >
+          <h2 className="text-[1.125rem] font-medium tracking-[-0.01em]">{t('pages.trading212.connectTitle')}</h2>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground">{t('pages.trading212.connectDescription')}</p>
+          <div className="mt-6 space-y-5">
+            <Field htmlFor="t212-api-key" label={t('pages.trading212.apiKeyLabel')}>
+              <Input id="t212-api-key" type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+            </Field>
+            <Field htmlFor="t212-api-secret" label={t('pages.trading212.apiSecretLabel')}>
+              <Input
+                id="t212-api-secret"
+                type="password"
+                autoComplete="off"
+                value={apiSecret}
+                onChange={(e) => setApiSecret(e.target.value)}
+              />
+            </Field>
+          </div>
+          <Button type="submit" className="mt-7 h-11 px-5" disabled={!apiKey || !apiSecret || connectMutation.isPending}>
+            {connectMutation.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {t('pages.trading212.connect')}
+          </Button>
+        </form>
+      </div>
+    );
+  }
 
-  const toggleSort = (column: typeof sortBy) => {
+  // ---- Connected ----------------------------------------------------------------------------------
+  const status = connection?.last_sync_status;
+  const statusText =
+    status === 'auth_failed'
+      ? { text: t('pages.trading212.syncStatusAuthFailed'), tone: 'text-destructive' }
+      : status === 'rate_limited' || status === 'error'
+        ? { text: t('pages.trading212.syncStatusError'), tone: 'text-warning' }
+        : null;
+  const syncedText = connection?.last_synced_at
+    ? t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at, SYNCED_AT_FORMAT) })
+    : t('pages.trading212.neverSynced');
+
+  const positions = positionsData?.positions ?? [];
+  const sortedPositions = [...positions].sort((a, b) => (sortDesc ? b[sortBy] - a[sortBy] : a[sortBy] - b[sortBy]));
+  const points = historyData?.points ?? [];
+  const historyValues = points.map((point) => point.total_value);
+  const historyDates = points.map((point) => point.snapshot_at);
+
+  // The value is the latest synced snapshot of positions; until they load, the history's last point.
+  const totalValue = positions.length > 0
+    ? positions.reduce((sum, position) => sum + position.market_value, 0)
+    : historyValues[historyValues.length - 1] ?? 0;
+  const totalPnl = positions.reduce((sum, position) => sum + position.unrealised_pnl, 0);
+  const rawChange = historyValues.length > 1 ? historyValues[historyValues.length - 1] - historyValues[0] : 0;
+  const change = Math.abs(rawChange) < 0.5 ? 0 : rawChange;
+  const spanLabel = (value: T212HistorySpan) =>
+    t(`pages.trading212.span${value.charAt(0).toUpperCase() + value.slice(1)}` as 'pages.trading212.span7d');
+
+  const money = (value: number) => formatMoneyWhole(value, userCurrency);
+  const parts = (value: number) => formatMoneyParts(Math.abs(value) < 0.5 ? 0 : value, userCurrency, 0);
+  const metrics: Metric[] = [
+    {
+      key: 'value',
+      label: t('pages.trading212.valueChartTitle'),
+      value: totalValue,
+      parts: parts(totalValue),
+      loading: positionsLoading && historyLoading,
+      note: t('pages.trading212.positionsCount', { count: formatNumber(positions.length) }),
+    },
+    {
+      key: 'pnl',
+      label: t('pages.trading212.unrealisedPnl'),
+      value: Math.abs(totalPnl) < 0.5 ? 0 : totalPnl,
+      parts: parts(totalPnl),
+      signed: true,
+      loading: positionsLoading,
+      note: t('pages.trading212.unrealisedHint'),
+    },
+    {
+      key: 'change',
+      label: t('pages.netWorth.change'),
+      value: change,
+      parts: parts(change),
+      signed: true,
+      loading: historyLoading,
+      note: t('pages.trading212.changeOver', { span: spanLabel(span) }),
+    },
+  ];
+
+  const toggleSort = (column: SortKey) => {
     if (sortBy === column) {
       setSortDesc((prev) => !prev);
     } else {
@@ -191,18 +318,18 @@ export default function Trading212Page() {
    * arrow glyph only draws. Written as a function rather than a nested component so the
    * button keeps its identity — and therefore keyboard focus — across re-sorts.
    */
-  const sortableHead = (column: typeof sortBy, label: string) => (
-    <TableHead
-      className="text-right"
-      aria-sort={sortBy === column ? (sortDesc ? 'descending' : 'ascending') : 'none'}
-    >
+  const sortableHead = (column: SortKey, label: string) => (
+    <TableHead className="text-right" aria-sort={sortBy === column ? (sortDesc ? 'descending' : 'ascending') : 'none'}>
       <button
         type="button"
         onClick={() => toggleSort(column)}
-        className="inline-flex select-none items-center gap-1 rounded-sm ring-offset-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className={cn(
+          'inline-flex select-none items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          sortBy === column && 'text-foreground',
+        )}
       >
         {label}
-        {sortBy === column && <span aria-hidden="true">{sortDesc ? '↓' : '↑'}</span>}
+        <span aria-hidden="true" className={cn('w-2.5', sortBy !== column && 'invisible')}>{sortDesc ? '↓' : '↑'}</span>
       </button>
     </TableHead>
   );
@@ -227,229 +354,180 @@ export default function Trading212Page() {
     </SensitiveValue>
   );
 
+  const chartAria = isPrivacyMode || historyValues.length === 0
+    ? t('pages.trading212.chartAria', { span: spanLabel(span) })
+    : t('pages.trading212.chartAriaDetail', { span: spanLabel(span), amount: formatCurrency(historyValues[historyValues.length - 1]) });
+
   return (
-    <div className="space-y-6">
-      <PageHeader title={t('pages.trading212.title')} description={t('pages.trading212.description')} />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4"
-      >
-        {connectionLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : !isConnected ? (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">{t('pages.trading212.connectTitle')}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t('pages.trading212.connectDescription')}</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="t212-api-key">{t('pages.trading212.apiKeyLabel')}</Label>
-                <Input
-                  id="t212-api-key"
-                  type="password"
-                  autoComplete="off"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t212-api-secret">{t('pages.trading212.apiSecretLabel')}</Label>
-                <Input
-                  id="t212-api-secret"
-                  type="password"
-                  autoComplete="off"
-                  value={apiSecret}
-                  onChange={(e) => setApiSecret(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button
-              onClick={() => connectMutation.mutate()}
-              disabled={!apiKey || !apiSecret || connectMutation.isPending}
-            >
-              {connectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('pages.trading212.connect')}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{t('pages.trading212.connected')}</Badge>
-                {statusBadge()}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {connection?.last_synced_at
-                  ? t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at, SYNCED_AT_FORMAT) })
-                  : t('pages.trading212.neverSynced')}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>
-                {syncMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                {t('pages.trading212.syncNow')}
+    <div>
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          {title}
+          <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+            {t('pages.trading212.connected')}
+            <span aria-hidden="true"> · </span>
+            {syncedText}
+            {statusText && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className={statusText.tone}>{statusText.text}</span>
+              </>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Button variant="outline" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} className="h-11 px-4">
+            <RefreshCw className={cn(syncMutation.isPending && 'animate-spin')} aria-hidden="true" />
+            {t('pages.trading212.syncNow')}
+          </Button>
+          <AlertDialog onOpenChange={(open) => !open && setDeleteHistory(false)}>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" className="h-11 px-4 text-muted-foreground hover:text-destructive">
+                {t('pages.trading212.disconnect')}
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    {t('pages.trading212.disconnect')}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t('pages.trading212.disconnectTitle')}</AlertDialogTitle>
-                    <AlertDialogDescription>{t('pages.trading212.disconnectDescription')}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="flex items-center gap-2 py-2">
-                    <Checkbox
-                      id="t212-delete-history"
-                      checked={deleteHistory}
-                      onCheckedChange={(checked) => setDeleteHistory(checked === true)}
-                    />
-                    <Label htmlFor="t212-delete-history" className="text-sm font-normal">
-                      {t('pages.trading212.deleteHistoryLabel')}
-                    </Label>
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteHistory(false)}>
-                      {t('common.cancel')}
-                    </AlertDialogCancel>
-                    <AlertDialogAction onClick={() => disconnectMutation.mutate()}>
-                      {t('pages.trading212.disconnectConfirm')}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
-        )}
-      </motion.div>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('pages.trading212.disconnectTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>{t('pages.trading212.disconnectDescription')}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="flex items-start gap-2.5 py-2">
+                <Checkbox
+                  id="t212-delete-history"
+                  checked={deleteHistory}
+                  onCheckedChange={(checked) => setDeleteHistory(checked === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="t212-delete-history" className="text-sm font-normal leading-snug">
+                  {t('pages.trading212.deleteHistoryLabel')}
+                </Label>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => disconnectMutation.mutate()}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {t('pages.trading212.disconnectConfirm')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </header>
 
-      {isConnected && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-border bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium">{t('pages.trading212.valueChartTitle')}</p>
-              <div className="flex gap-1">
-                {SPANS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSpan(s)}
+      <section aria-label={t('pages.trading212.valueChartTitle')} className="mt-8 lg:mt-10">
+        <MetricGrid metrics={metrics} size="lg" className="grid-cols-2 lg:grid-cols-3" formatAmount={money} />
+
+        <div className="mt-8 flex items-baseline justify-between gap-4">
+          <h2 className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.trading212.valueOverTime')}</h2>
+          <div role="group" aria-label={t('pages.trading212.spanLabel')} className="flex gap-3.5 text-[0.8125rem]">
+            {SPANS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={span === value}
+                onClick={() => setSpan(value)}
+                className={cn(
+                  'border-b-2 pb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  span === value ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {spanLabel(value)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Fixed height in every state, so switching span or loading never moves the page. */}
+        <div className="mt-2 h-[13.125rem]">
+          {historyValues.length > 0 ? (
+            <div className={cn('transition-opacity', historySwitching && 'opacity-50')} aria-busy={historySwitching}>
+              <ValueLineChart
+                dates={historyDates}
+                values={historyValues}
+                locale={locale}
+                formatAxis={formatCurrencyCompact}
+                formatValue={formatCurrency}
+                name={t('pages.trading212.valueChartTitle')}
+                ariaLabel={chartAria}
+              />
+            </div>
+          ) : historyLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : (
+            <p className="flex h-full items-center justify-center text-[0.8125rem] text-muted-foreground">
+              {t('pages.trading212.noHistory')}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="t212-positions" className="mt-12 lg:mt-14">
+        <div className="flex items-baseline justify-between gap-4 border-b border-foreground/30 pb-3">
+          <h2 id="t212-positions" className="text-[1.125rem] font-medium tracking-[-0.01em]">
+            {t('pages.trading212.positionsTitle')}
+            <span className="ml-2.5 text-[0.8125rem] font-normal tabular-nums text-muted-foreground">
+              {formatNumber(positions.length)}
+            </span>
+          </h2>
+          {positionsData?.synced_at && (
+            <span className="text-[0.8125rem] text-muted-foreground">
+              {t('pages.trading212.lastSynced', { when: formatDate(positionsData.synced_at, SYNCED_AT_FORMAT) })}
+            </span>
+          )}
+        </div>
+        {positionsLoading ? (
+          <div className="mt-3 space-y-3">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-full" />)}
+          </div>
+        ) : positions.length === 0 ? (
+          <p className="py-4 text-sm text-muted-foreground">{t('pages.trading212.noPositions')}</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('pages.trading212.ticker')}</TableHead>
+                <TableHead className="text-right">{t('pages.trading212.quantity')}</TableHead>
+                <TableHead className="text-right">{t('pages.trading212.avgPrice')}</TableHead>
+                <TableHead className="text-right">{t('pages.trading212.currentPrice')}</TableHead>
+                {sortableHead('market_value', t('pages.trading212.marketValue'))}
+                {sortableHead('unrealised_pnl', t('pages.trading212.pl'))}
+                {sortableHead('weight_pct', t('pages.trading212.weight'))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedPositions.map((position) => (
+                <TableRow key={position.ticker}>
+                  <TableCell>{position.ticker}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    <SensitiveValue>{formatNumber(position.quantity, { maximumFractionDigits: 6 })}</SensitiveValue>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {priceCell(position.average_price, position.instrument_currency)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{priceCell(position.current_price, position.instrument_currency)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    <SensitiveValue>{formatCurrency(position.market_value)}</SensitiveValue>
+                  </TableCell>
+                  <TableCell
                     className={cn(
-                      'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
-                      span === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      'text-right tabular-nums',
+                      position.unrealised_pnl > 0 ? 'text-success' : position.unrealised_pnl < 0 ? 'text-destructive' : 'text-muted-foreground',
                     )}
                   >
-                    {t(`pages.trading212.span${s.charAt(0).toUpperCase() + s.slice(1)}` as 'pages.trading212.span7d')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {!historyLoading && chartData.length > 0 && (
-              <div className="mb-3">
-                <p className="text-2xl font-bold font-display">
-                  <SensitiveValue>{formatCurrency(chartData[chartData.length - 1].value)}</SensitiveValue>
-                </p>
-                {connection?.last_synced_at && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('pages.trading212.lastSynced', { when: formatDate(connection.last_synced_at, SYNCED_AT_FORMAT) })}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {historyLoading ? (
-              <Skeleton className="h-[220px] w-full" />
-            ) : chartData.length === 0 ? (
-              <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
-                {t('pages.trading212.noHistory')}
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                  <XAxis dataKey="date" hide />
-                  <YAxis hide domain={['auto', 'auto']} />
-                  <Tooltip
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                    formatter={(value: number) => [formatCurrency(value), t('pages.trading212.valueChartTitle')]}
-                    labelFormatter={(label: string) => formatDate(label)}
-                  />
-                  <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-border bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium">{t('pages.trading212.positionsTitle')}</p>
-              {positionsData?.synced_at && (
-                <p className="text-xs text-muted-foreground">
-                  {t('pages.trading212.lastSynced', { when: formatDate(positionsData.synced_at, SYNCED_AT_FORMAT) })}
-                </p>
-              )}
-            </div>
-            {positionsLoading ? (
-              <Skeleton className="h-40 w-full" />
-            ) : (positionsData?.positions.length ?? 0) === 0 ? (
-              <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-                {t('pages.trading212.noPositions')}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('pages.trading212.ticker')}</TableHead>
-                    <TableHead className="text-right">{t('pages.trading212.quantity')}</TableHead>
-                    <TableHead className="text-right">{t('pages.trading212.avgPrice')}</TableHead>
-                    <TableHead className="text-right">{t('pages.trading212.currentPrice')}</TableHead>
-                    {sortableHead('market_value', t('pages.trading212.marketValue'))}
-                    {sortableHead('unrealised_pnl', t('pages.trading212.pl'))}
-                    {sortableHead('weight_pct', t('pages.trading212.weight'))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedPositions.map((p) => (
-                    <TableRow key={p.ticker}>
-                      <TableCell className="font-medium">{p.ticker}</TableCell>
-                      <TableCell className="text-right">
-                        <SensitiveValue>{p.quantity}</SensitiveValue>
-                      </TableCell>
-                      <TableCell className="text-right">{priceCell(p.average_price, p.instrument_currency)}</TableCell>
-                      <TableCell className="text-right">{priceCell(p.current_price, p.instrument_currency)}</TableCell>
-                      <TableCell className="text-right">
-                        <SensitiveValue>{formatCurrency(p.market_value)}</SensitiveValue>
-                      </TableCell>
-                      <TableCell className={cn('text-right', p.unrealised_pnl >= 0 ? 'text-emerald-500' : 'text-destructive')}>
-                        <SensitiveValue>{formatCurrency(p.unrealised_pnl)}</SensitiveValue>
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {p.weight_pct.toFixed(1)}%
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </motion.div>
-        </>
-      )}
+                    <SensitiveValue>{`${position.unrealised_pnl > 0 ? '+' : ''}${formatCurrency(position.unrealised_pnl)}`}</SensitiveValue>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    <SensitiveValue>
+                      {formatNumber(position.weight_pct / 100, { style: 'percent', maximumFractionDigits: 1 })}
+                    </SensitiveValue>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </section>
     </div>
   );
 }
