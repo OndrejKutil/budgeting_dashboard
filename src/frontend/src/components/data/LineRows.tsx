@@ -24,11 +24,11 @@ export function LineRows({ rows, className, barClassName = 'bg-primary' }: LineR
   return (
     <ul className={className}>
       {rows.map((row) => (
-        <li key={row.key} className="relative grid grid-cols-[1fr_auto] gap-x-3 pb-3 pt-2.5 text-[14.5px]">
+        <li key={row.key} className="relative grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 pb-3 pt-2.5 text-[0.90625rem]">
           <span className="min-w-0 truncate" title={row.label}>
             {row.label}
             {row.detail && (
-              <small className="ml-2 text-[13px] text-muted-foreground">
+              <small className="ml-2 text-[0.8125rem] text-muted-foreground">
                 <SensitiveValue>{row.detail}</SensitiveValue>
               </small>
             )}

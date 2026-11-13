@@ -24,14 +24,18 @@ const AMOUNT_TONE = {
 
 export function RowListItem({ primary, secondary, amount, tone = 'muted', className }: RowListItemProps) {
   return (
-    <li className={cn('grid grid-cols-[1fr_auto] items-baseline gap-3 py-[11px] text-[14.5px]', className)}>
-      <span className="min-w-0">
-        <span className="block truncate sm:inline">{primary}</span>
+    <li className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 py-[0.6875rem] text-[0.90625rem]', className)}>
+      {/* sm and up: one line. The primary text (notes) gives way first, then the secondary text; the
+          amount never shrinks. Below sm the secondary text sits under the primary one. */}
+      <span className="min-w-0 sm:flex sm:items-baseline sm:gap-2">
+        <span className="block truncate sm:shrink-[100]">{primary}</span>
         {secondary && (
-          <small className="block truncate text-[13px] text-muted-foreground sm:ml-2 sm:inline">{secondary}</small>
+          <small className="flex min-w-0 text-[0.8125rem] text-muted-foreground sm:shrink">
+            {typeof secondary === 'string' ? <span className="truncate">{secondary}</span> : secondary}
+          </small>
         )}
       </span>
-      <span className={cn('whitespace-nowrap tabular-nums', AMOUNT_TONE[tone])}>
+      <span className={cn('shrink-0 whitespace-nowrap tabular-nums', AMOUNT_TONE[tone])}>
         <SensitiveValue>{amount}</SensitiveValue>
       </span>
     </li>

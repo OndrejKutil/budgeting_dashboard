@@ -225,11 +225,11 @@ export default function DashboardOverview() {
         type="button"
         onClick={openAddTransaction}
         aria-label={t('pages.overview.addTransactionShortcut')}
-        className="hidden h-11 items-center gap-2.5 whitespace-nowrap rounded-full bg-primary px-[18px] text-[14.5px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
+        className="hidden h-11 items-center gap-2.5 whitespace-nowrap rounded-full bg-primary px-[1.125rem] text-[0.90625rem] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
       >
-        <Plus className="h-[18px] w-[18px]" aria-hidden="true" />
+        <Plus className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" />
         {t('pages.overview.addTransaction')}
-        <kbd className="rounded-[5px] border border-primary-foreground/35 px-[5px] py-px font-sans text-[11px] font-medium" aria-hidden="true">N</kbd>
+        <kbd className="rounded-[0.3125rem] border border-primary-foreground/35 px-[0.3125rem] py-px font-sans text-[0.6875rem] font-medium" aria-hidden="true">N</kbd>
       </button>
     </div>
   );
@@ -247,7 +247,7 @@ export default function DashboardOverview() {
     return (
       <div>
         {header}
-        <div role="alert" className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center">
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
           <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
           <div>
             <p className="font-medium">{t('pages.overview.errorTitle')}</p>
@@ -267,8 +267,8 @@ export default function DashboardOverview() {
     return (
       <div>
         {header}
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-2 text-center">
-          <p className="text-[19px] font-light">{t('pages.overview.emptyTitle', { month: monthYear })}</p>
+        <div className="flex min-h-[20rem] flex-col items-center justify-center gap-2 text-center">
+          <p className="text-[1.1875rem] font-light">{t('pages.overview.emptyTitle', { month: monthYear })}</p>
           <p className="max-w-[40ch] text-sm text-muted-foreground">{t('pages.overview.emptyDescription')}</p>
           {!isCurrentMonth && (
             <Button
@@ -317,7 +317,7 @@ export default function DashboardOverview() {
     <div>
       {header}
 
-      <section className="items-end gap-x-[72px] lg:grid lg:grid-cols-[1.25fr_1fr]">
+      <section className="items-end gap-x-[4.5rem] lg:grid lg:grid-cols-[1.25fr_1fr]">
         <div className="min-w-0">
           <BigFigure
             label={isCurrentMonth ? t('pages.overview.leftThisMonth') : t('pages.overview.leftIn', { month: monthYear })}
@@ -326,7 +326,7 @@ export default function DashboardOverview() {
           />
           <LeadSentence segments={view.segments} />
           {averageDiff !== null && (
-            <p className={`mt-2 text-[13px] ${averageDiff > 0 ? 'text-success' : 'text-destructive'}`}>
+            <p className={`mt-2 text-[0.8125rem] ${averageDiff > 0 ? 'text-success' : 'text-destructive'}`}>
               <SensitiveValue>
                 {t(averageDiff > 0 ? 'pages.overview.aboveAverage' : 'pages.overview.belowAverage', {
                   amount: money(Math.abs(averageDiff)),
@@ -338,13 +338,13 @@ export default function DashboardOverview() {
             {view.splitSegments.length > 0 ? (
               <SplitBar segments={view.splitSegments} />
             ) : (
-              <p className="text-[13px] text-muted-foreground">{t('pages.overview.noIncome')}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">{t('pages.overview.noIncome')}</p>
             )}
           </div>
         </div>
 
         <div className="mt-10 min-w-0 lg:mt-0">
-          <h2 className="mb-1.5 text-[13px] font-normal text-muted-foreground">{t('pages.overview.whereItWent')}</h2>
+          <h2 className="mb-1.5 text-[0.8125rem] font-normal text-muted-foreground">{t('pages.overview.whereItWent')}</h2>
           {view.categoryRows.length > 0 ? (
             <LineRows rows={view.categoryRows} />
           ) : (
@@ -353,10 +353,10 @@ export default function DashboardOverview() {
         </div>
       </section>
 
-      <section className="mt-12 gap-x-[72px] lg:mt-11 lg:grid lg:grid-cols-[1.25fr_1fr]">
+      <section className="mt-12 gap-x-[4.5rem] lg:mt-11 lg:grid lg:grid-cols-[1.25fr_1fr]">
         <div className="min-w-0">
           <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h2 className="text-[13px] font-normal text-muted-foreground">
+            <h2 className="text-[0.8125rem] font-normal text-muted-foreground">
               {t('pages.overview.spendingThroughMonth')}, {symbol}
             </h2>
             <ChartLegend
@@ -384,7 +384,7 @@ export default function DashboardOverview() {
           )}
           <Link
             to={`/dashboard/analytics/monthly?month=${pad(month)}&year=${year}`}
-            className="mt-3 inline-block text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-3 inline-block text-[0.8125rem] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t('pages.overview.monthlyAnalytics')}
           </Link>
@@ -392,10 +392,10 @@ export default function DashboardOverview() {
 
         <div className="mt-10 min-w-0 lg:mt-0">
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            <h2 className="text-[13px] font-normal text-muted-foreground">{t('pages.overview.latest')}</h2>
+            <h2 className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.overview.latest')}</h2>
             <Link
               to="/dashboard/transactions"
-              className="text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="text-[0.8125rem] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {t('pages.overview.viewAll')}
             </Link>
@@ -411,7 +411,16 @@ export default function DashboardOverview() {
                     key={transaction.id_pk}
                     className={index >= LATEST_COUNT_COMPACT ? 'max-lg:hidden' : undefined}
                     primary={transaction.notes || category || date}
-                    secondary={transaction.notes ? [category, date].filter(Boolean).join(' · ') : category ? date : undefined}
+                    secondary={
+                      transaction.notes ? (
+                        <>
+                          {category && <span className="min-w-0 truncate">{category}</span>}
+                          <span className="shrink-0 whitespace-pre">{category ? ' · ' : ''}{date}</span>
+                        </>
+                      ) : category ? (
+                        date
+                      ) : undefined
+                    }
                     amount={`${amount > 0 ? '+' : ''}${formatMoney(amount, accountCurrency(transaction.account_id_fk))}`}
                     tone={amount > 0 ? 'positive' : amount < 0 ? 'negative' : 'muted'}
                   />

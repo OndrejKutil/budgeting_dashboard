@@ -42,18 +42,18 @@ export function SplitBar({ segments, className }: SplitBarProps) {
 
   return (
     <div className={className}>
-      <div className="flex h-2 gap-[3px]" aria-hidden="true">
+      <div className="flex h-2 gap-[0.1875rem]" aria-hidden="true">
         {visible.map((segment) => (
           <i
             key={segment.key}
-            className={cn('block h-full min-w-[3px] rounded-[2px]', BAR_TONE[segment.tone])}
+            className={cn('block h-full min-w-[0.1875rem] rounded-[2px]', BAR_TONE[segment.tone])}
             style={{ flexGrow: segment.value, flexBasis: 0 }}
           />
         ))}
       </div>
 
       {aligned && (
-        <div className="mt-2 hidden gap-[3px] text-[13px] sm:flex">
+        <div className="mt-2 hidden gap-[0.1875rem] text-[0.8125rem] sm:flex">
           {visible.map((segment) => (
             <span
               key={segment.key}
@@ -61,7 +61,7 @@ export function SplitBar({ segments, className }: SplitBarProps) {
               style={{ flexGrow: segment.value, flexBasis: 0 }}
             >
               <span className="block truncate">{segment.label}</span>
-              <b className="block text-[15px] font-medium tabular-nums text-foreground">
+              <b className="block text-[0.9375rem] font-medium tabular-nums text-foreground">
                 <SensitiveValue>{segment.percent}</SensitiveValue>
               </b>
             </span>
@@ -69,7 +69,7 @@ export function SplitBar({ segments, className }: SplitBarProps) {
         </div>
       )}
 
-      <ul className={cn('mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px]', aligned && 'sm:hidden')}>
+      <ul className={cn('mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[0.8125rem]', aligned && 'sm:hidden')}>
         {visible.map((segment) => (
           <li key={segment.key} className="flex items-center gap-2">
             <i className={cn('block h-2 w-2 rounded-[2px]', BAR_TONE[segment.tone])} aria-hidden="true" />

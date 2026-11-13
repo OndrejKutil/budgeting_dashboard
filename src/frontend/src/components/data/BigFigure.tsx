@@ -21,12 +21,12 @@ export function BigFigure({ label, parts, negative = false, className }: BigFigu
 
   return (
     <div className={cn('min-w-0', className)}>
-      <div className="text-[13px] text-muted-foreground">{label}</div>
+      <div className="text-[0.8125rem] text-muted-foreground">{label}</div>
       <div
         className={cn(
-          'mb-[18px] mt-1.5 whitespace-nowrap font-light tracking-[-0.045em] tabular-nums',
+          'mb-[1.125rem] mt-1.5 whitespace-nowrap font-light tracking-[-0.045em] tabular-nums',
           negative ? 'text-destructive' : 'text-foreground',
-          compact ? 'text-[44px] sm:text-[60px] lg:text-[72px]' : 'text-[56px] sm:text-[84px] lg:text-[104px]',
+          compact ? 'text-[2.75rem] sm:text-[3.75rem] lg:text-[4.5rem]' : 'text-[3.5rem] sm:text-[5.25rem] lg:text-[6.5rem]',
           // After the font-size classes: tailwind-merge drops a leading class that precedes a text-size one.
           'leading-[0.95]',
         )}
