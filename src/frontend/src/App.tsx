@@ -9,7 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "@/contexts/AuthContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { PrivacyModeProvider } from "@/contexts/PrivacyContext";
-import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton, OverviewSkeleton } from "@/components/skeletons";
+import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton, MonthlyAnalyticsSkeleton, OverviewSkeleton } from "@/components/skeletons";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -129,7 +129,7 @@ const AppContent = () => {
                 <Route path="categories" element={withSuspense(<CategoriesPage />, <DashboardSkeleton />)} />
                 <Route path="funds" element={withSuspense(<FundsPage />, <DashboardSkeleton />)} />
                 <Route path="profile" element={withSuspense(<ProfilePage />, <DashboardSkeleton />)} />
-                <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <AnalyticsSkeleton />)} />
+                <Route path="analytics/monthly" element={withSuspense(<MonthlyAnalyticsPage />, <MonthlyAnalyticsSkeleton />)} />
                 <Route path="analytics/yearly" element={withSuspense(<YearlyAnalyticsPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/emergency-fund" element={withSuspense(<EmergencyFundPage />, <AnalyticsSkeleton />)} />
                 <Route path="analytics/cashflow" element={withSuspense(<CashFlowPage />, <AnalyticsSkeleton />)} />

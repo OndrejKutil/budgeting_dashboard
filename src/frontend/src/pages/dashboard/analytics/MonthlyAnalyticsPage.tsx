@@ -1,144 +1,117 @@
-import { PageHeader } from '@/components/ui/page-header';
-import { AnalyticsSkeleton } from '@/components/skeletons';
-import { Button } from '@/components/ui/button';
-import {
-  TrendingUp,
-  TrendingDown,
-  PiggyBank,
-  Briefcase,
-  DollarSign,
-  Wallet,
-  FileDown,
-} from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useUrlPeriod } from '@/hooks/use-url-state';
-import { useAvailableYears } from '@/hooks/use-available-years';
+import { AlertCircle, FileDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MonthlyAnalyticsSkeleton } from '@/components/skeletons';
 import { PeriodNavigator } from '@/components/period/PeriodNavigator';
-import { useUser } from '@/contexts/user-context';
-import { analyticsApi } from '@/lib/api/endpoints';
-import { DeferredRender } from '@/components/performance/DeferredRender';
+import { LineRows, type LineRow } from '@/components/data/LineRows';
+import { DayBars } from '@/components/data/DayBars';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-import { usePrivacyMode } from '@/contexts/privacy-context';
-import { CHART_COLORS } from '@/lib/chart-colors';
+import { DeferredRender } from '@/components/performance/DeferredRender';
 import { StatementDocument, type StatementTable } from '@/components/analytics/StatementDocument';
-import { DonutBreakdown, type DonutSlice } from '@/components/analytics/DonutBreakdown';
 import { CategoryBreakdownTable } from '@/components/analytics/CategoryBreakdownTable';
-import type { CategoryBreakdownData } from '@/lib/api/types/base';
+import { usePrivacyMode } from '@/contexts/privacy-context';
+import { useUser } from '@/contexts/user-context';
+import { useAvailableYears } from '@/hooks/use-available-years';
+import { useUrlPeriod } from '@/hooks/use-url-state';
+import { analyticsApi } from '@/lib/api/endpoints';
+import type { CategoryBreakdownData, MonthlyAnalytics } from '@/lib/api/types/base';
+import { formatMoney, formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
+import { cn } from '@/lib/utils';
 
-/**
- * Fixed hue order for income sources.
- *
- * Only three: these are the widest-separated hues the chart tokens offer, and every
- * four-colour combination available fails either colourblind separation or the
- * normal-vision floor (the pink/green pair sits at ΔE 4.5 under deuteranopia). Anything
- * past the third source folds into a single grey "Other" slice rather than inventing a
- * fourth hue that readers cannot reliably tell apart.
- */
-const INCOME_SLICE_COLORS = [
-  CHART_COLORS.income,
-  CHART_COLORS.savings,
-  CHART_COLORS.investment,
-] as const;
+const MAX_CATEGORY_ROWS = 5;
+/** Differences below this (percent, or percentage points) read as "in line with the average". */
+const NEGLIGIBLE_DIFFERENCE = 0.5;
 
-const SPENDING_TYPE_COLORS = {
-  Core: CHART_COLORS.core,
-  Necessary: CHART_COLORS.necessary,
-  Fun: CHART_COLORS.fun,
-  Future: CHART_COLORS.future,
-} as const;
+const SPENDING_TYPES = ['Core', 'Necessary', 'Fun', 'Future'] as const;
+
+/** A value that displays as 0 is 0: no "-0". */
+const whole = (value: number) => (Math.abs(value) < 0.5 ? 0 : value);
+
+type Direction = 'higherIsBetter' | 'lowerIsBetter';
 
 export default function MonthlyAnalyticsPage() {
-  const { formatCurrency, formatDate, formatMonth, t, currency } = useUser();
+  const { formatDate, formatMonth, formatNumber, formatCurrency, locale, t, currency } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
-  const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
+  const { month, year, setPeriod } = useUrlPeriod();
+  const years = useAvailableYears({ include: year });
 
-  const { month: selectedMonthNumber, year: selectedYearNumber, setPeriod } = useUrlPeriod();
-  const selectedYear = String(selectedYearNumber);
-  const years = useAvailableYears();
+  const now = useMemo(() => new Date(), []);
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const monthLong = formatMonth(month - 1, 'long');
+  const daysInMonth = new Date(year, month, 0).getDate();
 
-  const prevLabel = useMemo(() => {
-    const prevDate = new Date(selectedYearNumber, selectedMonthNumber - 2, 1);
-    return `${t('pages.monthlyAnalytics.previousPrefix')} ${formatMonth(prevDate.getMonth(), 'short')}`;
-  }, [formatMonth, selectedMonthNumber, selectedYearNumber, t]);
-
-  const spendingTypeLabels = useMemo(() => ({
-    Core: t('types.core'),
-    Necessary: t('types.necessary'),
-    Fun: t('types.fun'),
-    Future: t('types.future'),
-  }), [t]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['monthly-analytics', { year: selectedYearNumber, month: selectedMonthNumber, currency }],
+  const { data, isLoading, error, refetch, isFetching } = useQuery<MonthlyAnalytics>({
+    queryKey: ['monthly-analytics', { year, month, currency }],
     queryFn: async () => {
-      const result = await analyticsApi.getMonthly({
-        year: selectedYearNumber,
-        month: selectedMonthNumber,
-        base_currency: currency,
-      });
-      if (result.success) {
+      const result = await analyticsApi.getMonthly({ year, month, base_currency: currency });
+      if (result.success && result.data) {
         return result.data;
       }
-      throw new Error(result.message || t('common.unknownError'));
+      throw new Error(result.message || t('pages.monthlyAnalytics.loadFailed'));
     },
     placeholderData: keepPreviousData,
   });
 
-  const incomeDonutData = useMemo(() => {
-    const sorted = (data?.income_breakdown ?? [])
-      .map((item) => ({ name: item.category, value: Number(item.total) }))
-      .sort((a, b) => b.value - a.value);
+  const money = (value: number) => formatMoneyWhole(value, currency);
+  const percent = (ratio: number, digits = 1) =>
+    formatNumber(ratio, { style: 'percent', maximumFractionDigits: digits });
+  const signed = (value: number, options?: Intl.NumberFormatOptions) =>
+    formatNumber(value, { signDisplay: 'exceptZero', maximumFractionDigits: 1, ...options });
+  const symbol = formatMoneyParts(0, currency, 0).find((part) => part.type === 'currency')?.value ?? currency;
 
-    const slices: DonutSlice[] = sorted
-      .slice(0, INCOME_SLICE_COLORS.length)
-      .map((item, index) => ({ ...item, color: INCOME_SLICE_COLORS[index] }));
-
-    const rest = sorted.slice(INCOME_SLICE_COLORS.length);
-    if (rest.length > 0) {
-      slices.push({
-        name: t('analytics.other'),
-        value: rest.reduce((sum, item) => sum + item.value, 0),
-        color: CHART_COLORS.neutral,
-      });
-    }
-
-    return slices;
-  }, [data, t]);
-
-  const expenseCategoryData = useMemo(() => data?.expenses_breakdown
-    .map((item) => ({ name: item.category, value: Number(item.total) }))
-    .sort((a, b) => b.value - a.value) ?? [], [data]);
-
-  const spendingTypeData = useMemo(() => data?.spending_type_breakdown
-    .map((item) => ({
-      name: spendingTypeLabels[item.type as keyof typeof spendingTypeLabels] ?? item.type,
-      value: Number(item.amount),
-      // Colour by spending type rather than by position, so Core is always the same hue.
-      color: SPENDING_TYPE_COLORS[item.type as keyof typeof SPENDING_TYPE_COLORS] ?? CHART_COLORS.neutral,
-    }))
-    .sort((a, b) => b.value - a.value) ?? [], [data, spendingTypeLabels]);
-
-  const dailyData = useMemo(() => data?.daily_spending_heatmap.map((item) => ({
-    day: new Date(item.day).getDate(),
-    fullDate: item.day,
-    amount: Number(item.amount),
-  })) ?? [], [data]);
+  const header = (canExport: boolean) => (
+    <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:mb-10">
+      <h1 className="min-w-0 text-[1.5rem] font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+        {formatDate(new Date(year, month - 1, 1), { month: 'long', year: 'numeric' })}
+        <span className="ml-3 whitespace-nowrap text-[1rem] font-normal text-muted-foreground">
+          {t('pages.monthlyAnalytics.title')}
+        </span>
+      </h1>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <PeriodNavigator
+          mode="month"
+          month={month}
+          year={year}
+          years={years}
+          onChange={setPeriod}
+          className="[&>div:first-child]:gap-1 [&>div:first-child]:border-transparent [&>div:first-child]:bg-transparent [&>div:first-child]:p-0 [&>div:first-child]:shadow-none"
+        />
+        <Button variant="outline" className="h-11 px-4" onClick={() => window.print()} disabled={!canExport}>
+          <FileDown className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" />
+          {t('pages.monthlyAnalytics.exportPdf')}
+        </Button>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
-    return <AnalyticsSkeleton />;
+    return (
+      <div className="screen-content">
+        {header(false)}
+        <MonthlyAnalyticsSkeleton label={t('pages.monthlyAnalytics.loading')} />
+      </div>
+    );
   }
 
-  if (!data) {
-    return <div className="p-8 text-center text-muted-foreground">{t('states.noDataForMonth')}</div>;
+  if (error || !data) {
+    return (
+      <div className="screen-content">
+        {header(false)}
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium">{t('pages.monthlyAnalytics.errorTitle')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : t('states.noDataAvailable')}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const buildTable = (title: string, rows: CategoryBreakdownData[]): StatementTable => {
@@ -157,279 +130,12 @@ export default function MonthlyAnalyticsPage() {
     buildTable(t('statement.investmentsByCategory'), data.investment_breakdown),
   ];
 
-  return (
-    <>
-    <div className="screen-content space-y-6">
-      <PageHeader
-        title={t('pages.monthlyAnalytics.title')}
-        description={t('pages.monthlyAnalytics.description', { month: formatMonth(selectedMonthNumber - 1, 'long'), year: selectedYear })}
-        actions={
-          <div className="flex flex-wrap items-center gap-2 no-print">
-            <PeriodNavigator mode="month" month={selectedMonthNumber} year={selectedYearNumber} years={years} onChange={setPeriod} />
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <FileDown className="h-4 w-4 mr-2" />
-              {t('pages.monthlyAnalytics.exportPdf')}
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Unified Financial Header */}
-      {(
-          <div
-            className="flex flex-col xl:flex-row items-stretch justify-between gap-6 p-6 rounded-2xl border border-border bg-card shadow-sm mb-8"
-          >
-            {/* Core Flows */}
-            <div className="flex-1 grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:pr-6">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <TrendingUp className="h-3 w-3 text-chart-income" /> {t('metrics.income')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.income)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.income_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.income_delta_pct > 0 ? '+' : ''}{data.comparison.income_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.income_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.income_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <TrendingDown className="h-3 w-3 text-destructive" /> {t('metrics.expenses')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.expenses)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.expenses_delta_pct <= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.expenses_delta_pct > 0 ? '+' : ''}{data.comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.expenses_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.expenses_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Wealth Generation */}
-            <div className="flex-[1.2] grid grid-cols-2 gap-4 xl:border-r xl:border-border/50 xl:px-6">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <PiggyBank className="h-3 w-3 text-chart-savings" /> {t('metrics.savings')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <div className="flex items-baseline gap-1.5">
-                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.savings)}</SensitiveValue></p>
-                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.savings_rate.toFixed(1)}%</SensitiveValue></span>
-                  </div>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.savings_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.savings_delta_pct > 0 ? '+' : ''}{data.comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.savings_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.savings_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Briefcase className="h-3 w-3 text-chart-investment" /> {t('metrics.investments')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <div className="flex items-baseline gap-1.5">
-                    <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.investments)}</SensitiveValue></p>
-                    <span className="text-xs text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded-sm"><SensitiveValue>{data.investment_rate.toFixed(1)}%</SensitiveValue></span>
-                  </div>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.investments_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.investments_delta_pct > 0 ? '+' : ''}{data.comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.investments_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.investments_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Outcomes */}
-            <div className="flex-1 grid grid-cols-2 gap-4 xl:pl-6">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <DollarSign className="h-3 w-3 text-chart-profit" /> {t('metrics.profit')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.profit)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.profit_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.profit_delta_pct > 0 ? '+' : ''}{data.comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.profit_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.profit_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1 flex items-center gap-1.5">
-                  <Wallet className="h-3 w-3 text-chart-cashflow" /> {t('metrics.cashFlow')}
-                </p>
-                <div className="flex flex-col mt-1">
-                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(data.cashflow)}</SensitiveValue></p>
-                  <span className={`text-[10px] font-medium mt-1 ${data.comparison.cashflow_delta_pct >= 0 ? 'text-chart-income' : 'text-destructive'}`}>
-                    <SensitiveValue>{data.comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue> {prevLabel}
-                  </span>
-                  {data.yoy_comparison && (
-                    <span className="text-[9px] text-muted-foreground/50 mt-0.5">
-                      <SensitiveValue>{data.yoy_comparison.cashflow_delta_pct > 0 ? '+' : ''}{data.yoy_comparison.cashflow_delta_pct.toFixed(1)}%</SensitiveValue>{' '}{t('pages.monthlyAnalytics.yoyPrefix')} {selectedYearNumber - 1}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-      )}
-
-      {/* Daily Spending Chart */}
-      <div
-        className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-      >
-        <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.dailySpending')}</h3>
-        <div className={`h-72 ${sensitiveChartClass}`}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_COLORS.expense} stopOpacity={0.2} />
-                  <stop offset="100%" stopColor={CHART_COLORS.expense} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
-                dy={10}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, opacity: 0.6 }}
-                tickFormatter={(v) => formatCurrency(v).replace(/(\.|,)00(?=\D*$)/, '')}
-                dx={-10}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--popover))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  color: 'hsl(var(--popover-foreground))',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                }}
-                formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.spending')]}
-                labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '12px' }}
-                labelFormatter={(label, payload) => {
-                  if (payload && payload[0]) {
-                    return formatDate(payload[0].payload.fullDate, { weekday: 'short', month: 'short', day: 'numeric' });
-                  }
-                  return t('pages.monthlyAnalytics.day', { day: label });
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="amount"
-                stroke={CHART_COLORS.expense}
-                strokeWidth={3}
-                fill="url(#spendingGradient)"
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-
-      {/* 2-Column Grid: Income Sources & Spending Types */}
-      <DeferredRender
-        className="grid gap-6 lg:grid-cols-2"
-        fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card lg:col-span-2" />}
-      >
-        {/* Income Sources — same donut treatment as the spending-type breakdown; a
-            handful of sources is a part-to-whole story, not a magnitude comparison. */}
-        <div
-          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-        >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.incomeSources')}</h3>
-          <div className="h-[300px]">
-            {incomeDonutData.length > 0 ? (
-              <DonutBreakdown
-                data={incomeDonutData}
-                formatCurrency={formatCurrency}
-                centerLabel={t('analytics.total')}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noIncomeData')}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Spending Type Breakdown */}
-        <div
-          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-        >
-          <h3 className="mb-6 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.spendingTypeBreakdown')}</h3>
-          <div className="h-[300px]">
-            {spendingTypeData.length > 0 ? (
-              <DonutBreakdown
-                data={spendingTypeData}
-                formatCurrency={formatCurrency}
-                centerLabel={t('analytics.total')}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noSpendingTypeData')}</div>
-            )}
-          </div>
-        </div>
-      </DeferredRender>
-
-      {/* Expense Categories — a ranked table reads far better than a wide bar chart
-          once a month has more than a handful of categories. */}
-      <DeferredRender
-        className="grid gap-6 lg:grid-cols-1"
-        fallback={<div className="min-h-[348px] rounded-xl border border-border/50 bg-card" />}
-      >
-        <div
-          className="rounded-xl border border-border/50 bg-card p-6 shadow-sm"
-        >
-          <h3 className="mb-4 text-base font-semibold font-display tracking-tight">{t('pages.monthlyAnalytics.expenseCategories')}</h3>
-          {expenseCategoryData.length > 0 ? (
-            <CategoryBreakdownTable
-              rows={expenseCategoryData}
-              formatCurrency={formatCurrency}
-              labels={{
-                category: t('common.category'),
-                amount: t('common.amount'),
-                share: t('analytics.share'),
-                total: t('statement.total'),
-              }}
-            />
-          ) : (
-            <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">{t('pages.monthlyAnalytics.noExpenseData')}</div>
-          )}
-        </div>
-      </DeferredRender>
-    </div>
-
+  const statement = (
     <div className="print-statement">
       <StatementDocument
         brand={t('appName')}
         title={t('statement.monthlyTitle')}
-        period={`${formatMonth(selectedMonthNumber - 1, 'long')} ${selectedYear}`}
+        period={`${monthLong} ${year}`}
         summary={[
           { label: t('metrics.income'), value: formatCurrency(data.income), tone: 'income' },
           { label: t('metrics.expenses'), value: formatCurrency(data.expenses), tone: 'expense' },
@@ -441,6 +147,353 @@ export default function MonthlyAnalyticsPage() {
         tables={statementTables}
       />
     </div>
+  );
+
+  const isEmpty =
+    whole(data.income) === 0 &&
+    whole(data.expenses) === 0 &&
+    whole(data.savings) === 0 &&
+    whole(data.investments) === 0 &&
+    data.income_breakdown.length === 0 &&
+    data.expenses_breakdown.length === 0 &&
+    data.saving_breakdown.length === 0 &&
+    data.investment_breakdown.length === 0;
+
+  if (isEmpty) {
+    return (
+      <>
+        <div className="screen-content">
+          {header(true)}
+          <div className="flex min-h-[20rem] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-[1.1875rem] font-light">
+              {t('pages.monthlyAnalytics.emptyTitle', { month: `${monthLong} ${year}` })}
+            </p>
+            <p className="max-w-[40ch] text-sm text-muted-foreground">{t('pages.monthlyAnalytics.emptyDescription')}</p>
+            {!isCurrentMonth && (
+              <Button variant="ghost" className="mt-2" onClick={() => setPeriod(now.getMonth() + 1, now.getFullYear())}>
+                {t('common.thisMonth')}
+              </Button>
+            )}
+          </div>
+        </div>
+        {statement}
+      </>
+    );
+  }
+
+  // ---- Comparison with the six-month average -------------------------------------------------
+  const average = data.six_month_average;
+
+  /** Percent difference from the average, relative to its size so a negative average still reads the right way. */
+  const percentDifference = (value: number, averageValue: number | undefined): number | null => {
+    if (averageValue === undefined || Math.abs(averageValue) < 0.005) return null;
+    return ((value - averageValue) / Math.abs(averageValue)) * 100;
+  };
+  const rateDifference = average && average.savings_rate !== null ? data.savings_rate - average.savings_rate : null;
+
+  const pointsKey = (count: number) => {
+    const category = new Intl.PluralRules(locale).select(count);
+    if (category === 'one') return 'pages.monthlyAnalytics.vsAveragePointOne' as const;
+    if (category === 'few') return 'pages.monthlyAnalytics.vsAveragePointFew' as const;
+    if (category === 'many') return 'pages.monthlyAnalytics.vsAveragePointMany' as const;
+    return 'pages.monthlyAnalytics.vsAveragePointOther' as const;
+  };
+
+  /**
+   * The small line under a figure. `difference` is a percent of the average (amounts) or percentage
+   * points (savings rate); null means there is no history, and the line is left empty.
+   */
+  const comparison = (difference: number | null, unit: 'percent' | 'points', direction: Direction): ReactNode => {
+    if (difference === null) return <p className="mt-1 min-h-[1.25rem]" aria-hidden="true" />;
+    const negligible = Math.abs(difference) < NEGLIGIBLE_DIFFERENCE;
+    const favourable = direction === 'higherIsBetter' ? difference > 0 : difference < 0;
+    let text: string;
+    if (negligible) {
+      text = t('pages.monthlyAnalytics.inLineWithAverage');
+    } else if (unit === 'percent') {
+      text = t('pages.monthlyAnalytics.vsAverage', {
+        change: signed(difference / 100, { style: 'percent' }),
+      });
+    } else {
+      text = t(pointsKey(Math.round(Math.abs(difference) * 10) / 10), { change: signed(difference) });
+    }
+    return (
+      <p
+        className={cn(
+          'mt-1 text-[0.8125rem]',
+          negligible ? 'text-muted-foreground' : favourable ? 'text-success' : 'text-destructive',
+        )}
+      >
+        <SensitiveValue>{text}</SensitiveValue>
+      </p>
+    );
+  };
+
+  const income = whole(data.income);
+  const expenses = whole(data.expenses);
+  const left = whole(data.cashflow);
+  const saved = whole(data.savings);
+  const invested = whole(data.investments);
+  const profit = whole(data.profit);
+
+  const figureClass =
+    'block whitespace-nowrap text-[1.375rem] font-normal leading-[1.2] tracking-[-0.03em] tabular-nums sm:text-[1.75rem] lg:text-[2.125rem]';
+  const cellClass = (index: number) =>
+    cn(
+      'min-w-0 py-1 pr-4 lg:px-7 lg:py-0',
+      index % 2 === 1 && 'border-l border-border pl-4',
+      index >= 2 && 'mt-4 border-t border-border pt-4 lg:mt-0 lg:border-t-0 lg:pt-0',
+      index === 0 ? 'lg:pl-0' : 'lg:border-l lg:border-border',
+      index === 3 && 'lg:pr-0',
+    );
+
+  const figures: { key: string; label: string; value: ReactNode; sub?: ReactNode; comparison: ReactNode }[] = [
+    {
+      key: 'income',
+      label: t('metrics.income'),
+      value: <span className={figureClass}><SensitiveValue>{money(income)}</SensitiveValue></span>,
+      comparison: comparison(percentDifference(data.income, average?.income), 'percent', 'higherIsBetter'),
+    },
+    {
+      key: 'expenses',
+      label: t('metrics.expenses'),
+      value: <span className={figureClass}><SensitiveValue>{money(expenses)}</SensitiveValue></span>,
+      comparison: comparison(percentDifference(data.expenses, average?.expenses), 'percent', 'lowerIsBetter'),
+    },
+    {
+      key: 'savingsRate',
+      label: t('pages.monthlyAnalytics.savingsRate'),
+      value: <span className={figureClass}><SensitiveValue>{percent(data.savings_rate / 100)}</SensitiveValue></span>,
+      comparison: comparison(rateDifference, 'points', 'higherIsBetter'),
+    },
+    {
+      key: 'left',
+      label: t('pages.monthlyAnalytics.left'),
+      value: (
+        <span className={cn(figureClass, left < 0 ? 'text-destructive' : 'text-primary')}>
+          <SensitiveValue>{money(left)}</SensitiveValue>
+        </span>
+      ),
+      comparison: comparison(percentDifference(data.cashflow, average?.cashflow), 'percent', 'higherIsBetter'),
+    },
+  ];
+
+  // Supporting figures: what the four above are made of, and profit, which differs from cash flow.
+  const supporting = [
+    {
+      key: 'saved',
+      label: t('pages.monthlyAnalytics.saved'),
+      amount: money(saved),
+      sub: t('pages.monthlyAnalytics.savedRate', { rate: percent(data.savings_rate / 100) }),
+      difference: percentDifference(data.savings, average?.savings),
+    },
+    {
+      key: 'invested',
+      label: t('pages.monthlyAnalytics.invested'),
+      amount: money(invested),
+      sub: t('pages.monthlyAnalytics.investedRate', { rate: percent(data.investment_rate / 100) }),
+      difference: percentDifference(data.investments, average?.investments),
+    },
+    {
+      key: 'profit',
+      label: t('pages.monthlyAnalytics.profit'),
+      amount: money(profit),
+      sub: t('pages.monthlyAnalytics.profitHint'),
+      difference: percentDifference(data.profit, average?.profit),
+      negative: profit < 0,
+    },
+  ];
+
+  // ---- Daily spending strip --------------------------------------------------------------------
+  const elapsedDays = Math.max(0, Math.min(data.run_rate.days_elapsed, daysInMonth));
+  const dailyValues = Array.from({ length: elapsedDays }, () => 0);
+  for (const item of data.daily_spending_heatmap) {
+    const day = Number(item.day.slice(8, 10));
+    if (day >= 1 && day <= elapsedDays) dailyValues[day - 1] += Number(item.amount);
+  }
+  const hasSpending = dailyValues.some((value) => value > 0);
+  // The month's own average spending per elapsed day (expenses / days elapsed), from the API.
+  const dailyAverage = elapsedDays > 0 ? data.run_rate.average_daily_spend : null;
+  const partialMonth = elapsedDays > 0 && elapsedDays < daysInMonth;
+  const averageLabel =
+    dailyAverage === null
+      ? ''
+      : t(partialMonth ? 'pages.monthlyAnalytics.averageDaySoFar' : 'pages.monthlyAnalytics.averageDay', {
+          amount: money(dailyAverage),
+        });
+  const chartAria = [
+    t('pages.monthlyAnalytics.chartAria', { month: monthLong }),
+    !isPrivacyMode && dailyAverage !== null
+      ? t('pages.monthlyAnalytics.chartAriaAverage', { amount: money(dailyAverage) })
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // ---- Lists ------------------------------------------------------------------------------------
+  const share = (value: number, total: number) => {
+    const ratio = total > 0 ? value / total : 0;
+    return percent(ratio, ratio < 0.1 ? 1 : 0);
+  };
+  const toRows = (items: { key: string; label: string; value: number; detail?: string }[]): LineRow[] => {
+    const largest = Math.max(...items.map((item) => item.value), 0);
+    return items.map((item) => ({
+      key: item.key,
+      label: item.label,
+      detail: item.detail,
+      amount: money(item.value),
+      ratio: largest > 0 ? item.value / largest : 0,
+    }));
+  };
+
+  const expenseSorted = data.expenses_breakdown
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
+    .sort((a, b) => b.value - a.value);
+  const expenseItems = expenseSorted.slice(0, MAX_CATEGORY_ROWS).map((item) => ({ key: item.name, label: item.name, value: item.value }));
+  const expenseRest = expenseSorted.slice(MAX_CATEGORY_ROWS);
+  if (expenseRest.length > 0) {
+    expenseItems.push({
+      key: '__other',
+      label: t('analytics.other'),
+      value: expenseRest.reduce((sum, item) => sum + item.value, 0),
+    });
+  }
+  const expenseRows = toRows(expenseItems);
+
+  const incomeSorted = data.income_breakdown
+    .map((item) => ({ name: item.category, value: Number(item.total) }))
+    .sort((a, b) => b.value - a.value);
+  const incomeTotal = incomeSorted.reduce((sum, item) => sum + item.value, 0);
+  const incomeRows = toRows(
+    incomeSorted.map((item) => ({ key: item.name, label: item.name, value: item.value, detail: share(item.value, incomeTotal) })),
+  );
+
+  const spendingTypeLabels: Record<string, string> = {
+    Core: t('types.core'),
+    Necessary: t('types.necessary'),
+    Fun: t('types.fun'),
+    Future: t('types.future'),
+  };
+  const spendingSorted = data.spending_type_breakdown
+    .map((item) => ({ type: item.type, value: Number(item.amount) }))
+    .sort((a, b) => b.value - a.value);
+  const spendingTotal = spendingSorted.reduce((sum, item) => sum + item.value, 0);
+  const spendingRows = toRows(
+    spendingSorted.map((item) => ({
+      key: item.type,
+      label: (SPENDING_TYPES as readonly string[]).includes(item.type) ? spendingTypeLabels[item.type] : item.type,
+      value: item.value,
+      detail: share(item.value, spendingTotal),
+    })),
+  );
+
+  const columnHeading = 'mb-1.5 text-[0.8125rem] font-normal text-muted-foreground';
+  const emptyText = 'py-3 text-sm text-muted-foreground';
+
+  return (
+    <>
+      <div className="screen-content">
+        {header(true)}
+
+        <section aria-label={t('pages.monthlyAnalytics.title')}>
+          <div className="grid grid-cols-2 lg:grid-cols-4">
+            {figures.map((figure, index) => (
+              <div key={figure.key} className={cellClass(index)}>
+                <div className="text-[0.8125rem] text-muted-foreground">{figure.label}</div>
+                {figure.value}
+                {figure.comparison}
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 grid gap-y-5 border-t border-border pt-5 sm:grid-cols-3">
+            {supporting.map((item, index) => (
+              <div key={item.key} className={cn('min-w-0 sm:px-7', index === 0 && 'sm:pl-0', index > 0 && 'sm:border-l sm:border-border')}>
+                <div className="text-[0.8125rem] text-muted-foreground">{item.label}</div>
+                <span
+                  className={cn(
+                    'block whitespace-nowrap text-[1.25rem] font-normal tabular-nums tracking-[-0.02em]',
+                    'negative' in item && item.negative ? 'text-destructive' : 'text-foreground',
+                  )}
+                >
+                  <SensitiveValue>{item.amount}</SensitiveValue>
+                </span>
+                <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+                  {item.key === 'profit' ? item.sub : <SensitiveValue>{item.sub}</SensitiveValue>}
+                </p>
+                {comparison(item.difference, 'percent', 'higherIsBetter')}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-11">
+          <h2 className={columnHeading}>
+            {t('pages.monthlyAnalytics.dailySpending')}, {symbol}
+          </h2>
+          {hasSpending ? (
+            <DayBars
+              values={dailyValues}
+              length={daysInMonth}
+              average={dailyAverage}
+              averageLabel={averageLabel}
+              formatValue={(value) => formatMoney(value, currency)}
+              dayTitle={(index) =>
+                formatDate(new Date(year, month - 1, index + 1), { weekday: 'short', month: 'short', day: 'numeric' })
+              }
+              ariaLabel={chartAria}
+              keyboardHint={t('pages.monthlyAnalytics.chartKeyboardHint')}
+            />
+          ) : (
+            <p className="py-8 text-sm text-muted-foreground">{t('pages.monthlyAnalytics.noSpending')}</p>
+          )}
+        </section>
+
+        <section className="mt-11 grid gap-x-14 gap-y-10 lg:grid-cols-[1.1fr_1fr_1fr]">
+          <div className="min-w-0">
+            <h2 className={columnHeading}>{t('pages.monthlyAnalytics.expenseCategories')}</h2>
+            {expenseRows.length > 0 ? (
+              <LineRows rows={expenseRows} />
+            ) : (
+              <p className={emptyText}>{t('pages.monthlyAnalytics.noExpenseData')}</p>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h2 className={columnHeading}>{t('pages.monthlyAnalytics.incomeSources')}</h2>
+            {incomeRows.length > 0 ? (
+              <LineRows rows={incomeRows} barClassName="bg-success" />
+            ) : (
+              <p className={emptyText}>{t('pages.monthlyAnalytics.noIncomeData')}</p>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h2 className={columnHeading}>{t('pages.monthlyAnalytics.spendingType')}</h2>
+            {spendingRows.length > 0 ? (
+              <LineRows rows={spendingRows} barClassName="bg-foreground/60" />
+            ) : (
+              <p className={emptyText}>{t('pages.monthlyAnalytics.noSpendingTypeData')}</p>
+            )}
+          </div>
+        </section>
+
+        {expenseSorted.length > 0 && (
+          <DeferredRender className="mt-14" fallback={<div className="mt-14 min-h-[20rem]" />}>
+            <h2 className={columnHeading}>{t('pages.monthlyAnalytics.allExpenseCategories')}</h2>
+            <CategoryBreakdownTable
+              rows={expenseSorted}
+              formatCurrency={money}
+              formatShare={(ratio) => percent(ratio)}
+              labels={{
+                category: t('common.category'),
+                amount: t('common.amount'),
+                share: t('analytics.share'),
+                total: t('statement.total'),
+              }}
+            />
+          </DeferredRender>
+        )}
+      </div>
+
+      {statement}
     </>
   );
 }

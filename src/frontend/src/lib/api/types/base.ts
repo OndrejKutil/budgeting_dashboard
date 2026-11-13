@@ -325,6 +325,22 @@ export interface MonthlyPeriodComparison {
 }
 
 /**
+ * Average monthly totals over the (up to) six months before the requested month
+ * Matches backend MonthlySixMonthAverage schema
+ */
+export interface MonthlySixMonthAverage {
+    months_counted: number;
+    income: number;
+    expenses: number;
+    savings: number;
+    investments: number;
+    profit: number;
+    cashflow: number;
+    /** Percent of income; null when none of the counted months had income */
+    savings_rate: number | null;
+}
+
+/**
  * Monthly analytics data
  * Matches backend MonthlyAnalyticsData schema
  */
@@ -344,7 +360,7 @@ export interface MonthlyAnalytics {
     day_split: DaySplit;
     category_concentration: CategoryConcentration;
     comparison: MonthlyPeriodComparison;
-    yoy_comparison: MonthlyPeriodComparison | null;
+    six_month_average: MonthlySixMonthAverage | null;
     daily_spending_heatmap: DailySpendingData[];
     income_breakdown: CategoryBreakdownData[];
     expenses_breakdown: CategoryBreakdownData[];
