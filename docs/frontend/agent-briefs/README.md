@@ -15,8 +15,8 @@ when the redesign is finished.
 |---|---|---|
 | 1 | Theme, typeface, top bar, mobile dock, N shortcut | merged |
 | 2 | Overview (incl. backend six-month average), Transactions, shared form/dialog/table primitives | merged |
-| 3 | Accounts, Funds, Budget Maker, Monthly analytics | in progress |
-| 3a | Large-screen scaling (fluid root size, rem sizes), Latest row overflow fix | in progress |
+| 3 | Accounts, Funds, Budget Maker, Monthly analytics (incl. backend six-month average) | merged |
+| 3a | Large-screen scaling (fluid root size, rem sizes), Latest row overflow fix | merged |
 | 4 | Landing, footer, public and auth pages | not started |
 | 5 | Yearly, Cash Flow, Emergency Fund, Categories, Recurring, tools, Profile, Demo | not started |
 | 6 | Light theme pass | not started |
@@ -29,3 +29,7 @@ when the redesign is finished.
 - `cn()` drops a `leading-*` class placed before a `text-[size]` class.
 - Agent worktrees may start from an old commit: reset to the branch head first.
 - Some files use CRLF line endings (AccountsPage.tsx, App.tsx): preserve them.
+- Privacy (hide amounts) is toggled by localStorage `budget-dashboard:privacy-mode` = "true".
+- The root font size is fluid above 1440px (16px to 22px at 2560px); check new pages at 2560.
+- Pages still mixing old and new styles: Recurring, Categories, Screenshot Import, Profile,
+  Yearly, Cash Flow, Emergency Fund, Trading212, calculators, Demo, landing, public and auth pages.
