@@ -59,7 +59,10 @@ export function FundRow({ fund, onEdit, onActivate, onDelete }: FundRowProps) {
   const pending = isOptimistic(fund);
   const lineRatio = targeted ? Math.max(0, Math.min(progress, 100)) : 0;
 
-  const percent = formatNumber(progress / 100, { style: 'percent', maximumFractionDigits: 0 });
+  // Below the goal the percent is cut, never rounded up, so "100%" only appears once the goal is
+  // reached; `|| 0` turns -0 (tiny negative progress) into 0.
+  const shownPercent = (complete ? Math.round(progress) : Math.trunc(progress)) || 0;
+  const percent = formatNumber(shownPercent / 100, { style: 'percent', maximumFractionDigits: 0 });
 
   let projection: string | null = null;
   if (targeted && !complete && flow !== 0) {
@@ -81,7 +84,7 @@ export function FundRow({ fund, onEdit, onActivate, onDelete }: FundRowProps) {
   return (
     <li
       className={cn(
-        'group relative grid grid-cols-[3px_minmax(0,1fr)_auto_2rem] items-center gap-x-3.5 gap-y-1 border-b border-border py-4',
+        'group relative grid grid-cols-[3px_minmax(6rem,1fr)_auto_2rem] items-center gap-x-3.5 gap-y-1 border-b border-border py-4',
         'md:grid-cols-[3px_minmax(0,1fr)_11.875rem_auto_2rem] md:gap-x-[1.375rem]',
         (inactive || pending) && 'opacity-60',
       )}
@@ -95,7 +98,7 @@ export function FundRow({ fund, onEdit, onActivate, onDelete }: FundRowProps) {
       />
 
       <div className="col-start-2 row-start-1 min-w-0">
-        <h3 className="truncate text-base font-medium tracking-[-0.01em] sm:text-lg">{fund.fund_name}</h3>
+        <h3 className="line-clamp-2 break-words text-base font-medium tracking-[-0.01em] sm:text-lg md:line-clamp-1">{fund.fund_name}</h3>
         <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
           {targeted ? (
             <SensitiveValue>
@@ -107,7 +110,7 @@ export function FundRow({ fund, onEdit, onActivate, onDelete }: FundRowProps) {
           ) : (
             t('pages.funds.noTarget')
           )}
-          {complete && <span className="text-success"> · {t('pages.funds.goalReached')}</span>}
+          {complete && <span className="whitespace-nowrap text-success"> · {t('pages.funds.goalReached')}</span>}
           {inactive && <span> · {t('states.inactive')}</span>}
         </p>
         {projection && <p className="mt-0.5 text-[0.75rem] text-muted-foreground">{projection}</p>}
@@ -124,7 +127,7 @@ export function FundRow({ fund, onEdit, onActivate, onDelete }: FundRowProps) {
 
       <p
         className={cn(
-          'col-start-3 row-start-1 shrink-0 whitespace-nowrap text-right text-2xl font-normal tracking-[-0.03em] tabular-nums md:col-start-4 md:text-[2.125rem]',
+          'col-start-3 row-start-1 shrink-0 whitespace-nowrap text-right text-xl font-normal min-[400px]:text-2xl tracking-[-0.03em] tabular-nums md:col-start-4 md:text-[2.125rem]',
           saved < 0 ? 'text-destructive' : 'text-foreground',
           // After the size classes: tailwind-merge drops a leading class that precedes a text-size one.
           'leading-none',
