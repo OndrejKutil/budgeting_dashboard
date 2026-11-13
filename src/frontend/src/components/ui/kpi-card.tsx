@@ -100,7 +100,7 @@ export function KPICard({
             </span>
           ) : <span />}
           {extra && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 text-emerald-500">
+            <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full bg-background/50 border border-border/50 text-emerald-500">
               <SensitiveValue>{extra}</SensitiveValue>
             </span>
           )}

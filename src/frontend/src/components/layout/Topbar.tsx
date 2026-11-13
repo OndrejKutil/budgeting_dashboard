@@ -18,7 +18,7 @@ import { isPathActive, primaryNavItems, RECURRING_PATH, type NavGroup } from './
 import { useDueRecurringCount, useVisibleNavGroups } from './use-nav';
 
 const pillItemClass =
-  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[7px] text-sm xl:px-3.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[0.4375rem] text-sm xl:px-3.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 const pillItemActiveClass =
   'bg-foreground/10 text-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.16)]';
 
@@ -50,13 +50,13 @@ function NavMenu({ group, dueCount }: { group: NavGroup; dueCount: number }) {
             <DropdownMenuItem
               key={item.href}
               asChild
-              className={cn('cursor-pointer rounded-[11px] px-3 py-2.5 text-sm', itemActive && 'bg-foreground/10')}
+              className={cn('cursor-pointer rounded-[0.6875rem] px-3 py-2.5 text-sm', itemActive && 'bg-foreground/10')}
             >
               <Link to={item.href} aria-current={itemActive ? 'page' : undefined} className="flex items-center justify-between gap-3">
                 <span>{t(item.labelKey)}</span>
                 {showDue && (
                   <span
-                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold leading-none text-destructive-foreground"
+                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[0.625rem] font-semibold leading-none text-destructive-foreground"
                     aria-label={t('nav.recurringDue', { count: dueCount })}
                   >
                     {dueCount > 9 ? '9+' : dueCount}
@@ -90,7 +90,7 @@ export function Topbar() {
 
   return (
     <header className="safe-top sticky top-0 z-40 bg-gradient-to-b from-background from-60% to-transparent pb-3">
-      <div className="mx-auto grid w-full max-w-[1160px] grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 lg:grid-cols-[1fr_auto_1fr] lg:px-14 lg:pt-5">
+      <div className="mx-auto grid w-full max-w-[72.5rem] grid-cols-[1fr_auto] items-center gap-4 px-4 pt-3 sm:px-5 lg:grid-cols-[1fr_auto_1fr] lg:px-14 lg:pt-5">
         <Link
           to="/dashboard"
           className="justify-self-start whitespace-nowrap rounded-md text-base font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -98,7 +98,7 @@ export function Topbar() {
           {t('appName')}
         </Link>
 
-        <nav aria-label={t('nav.mainNavigation')} className="glass hidden items-center gap-0.5 rounded-full p-[5px] lg:flex">
+        <nav aria-label={t('nav.mainNavigation')} className="glass hidden items-center gap-0.5 rounded-full p-[0.3125rem] lg:flex">
           {primaryNavItems.map((item) => {
             const active = isPathActive(pathname, item.href);
             return (
@@ -125,7 +125,7 @@ export function Topbar() {
                 size="icon"
                 onClick={togglePrivacyMode}
                 className={cn(
-                  'min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground',
+                  'min-h-[2.75rem] min-w-[2.75rem] text-muted-foreground hover:text-foreground',
                   isPrivacyMode && 'bg-primary/10 text-primary hover:text-primary',
                 )}
                 aria-label={isPrivacyMode ? t('common.showSensitiveValues') : t('common.hideSensitiveValues')}
@@ -144,7 +144,7 @@ export function Topbar() {
             size="icon"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
+            className="min-h-[2.75rem] min-w-[2.75rem] text-muted-foreground hover:text-foreground"
             aria-label={t('common.refreshData')}
           >
             <RefreshCw className={cn('h-4 w-4 transition-transform', isRefreshing && 'animate-spin')} />

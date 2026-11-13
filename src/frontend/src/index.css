@@ -173,6 +173,10 @@
 
   html {
     @apply scroll-smooth;
+    /* Fluid root size: the user's default (100%, 16px normally) up to a 1440px viewport, then
+       +0.00536px per extra viewport px (18.6px at 1920, 22px at 2560), capped at 137.5%. Every
+       rem-based size, spacing and arbitrary [x.xrem] value scales with it. */
+    font-size: clamp(100%, calc(100% + (100vw - 1440px) * 0.00536), 137.5%);
   }
 
   body {
@@ -224,7 +228,7 @@
   /* ---- Dashboard shell: faint amber glow behind the top of the page (dark only) ---- */
   .app-shell {
     background-color: hsl(var(--background));
-    background-image: radial-gradient(900px 600px at 78% -20%, rgb(245 165 36 / 0.1), transparent 70%);
+    background-image: radial-gradient(56.25rem 37.5rem at 78% -20%, rgb(245 165 36 / 0.1), transparent 70%);
     background-repeat: no-repeat;
   }
 

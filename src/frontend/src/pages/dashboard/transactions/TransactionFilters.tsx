@@ -240,13 +240,13 @@ export function TransactionFilters(props: TransactionFiltersProps) {
   const moreTriggerContent = (
     <>
       <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className={cn('border-b-2 pb-[3px]', hiddenActiveCount > 0 ? 'border-primary' : 'border-transparent')}>
+      <span className={cn('border-b-2 pb-[0.1875rem]', hiddenActiveCount > 0 ? 'border-primary' : 'border-transparent')}>
         {t('pages.transactions.more')}
       </span>
       {hiddenActiveCount > 0 && (
         <span
           aria-label={t('pages.transactions.moreActiveCount', { count: hiddenActiveCount })}
-          className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums"
+          className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold leading-none text-primary-foreground tabular-nums"
         >
           {hiddenActiveCount}
         </span>
@@ -257,7 +257,7 @@ export function TransactionFilters(props: TransactionFiltersProps) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-        <div className="relative min-w-[200px] flex-1 basis-full md:basis-0">
+        <div className="relative min-w-[12.5rem] flex-1 basis-full md:basis-0">
           <Search
             className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
