@@ -46,14 +46,14 @@ export function AccountGroupSection({
 
   return (
     <section aria-labelledby={headingId} className="mt-10 first:mt-0">
-      <div className="flex items-baseline gap-x-3.5 border-b border-foreground/30 pb-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3.5 gap-y-0.5">
+      <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 border-b border-foreground/30 pb-3 sm:flex-nowrap">
+        <div className="flex min-w-[60%] flex-1 flex-wrap items-baseline sm:min-w-0 gap-x-3.5 gap-y-0.5">
           <h2 id={headingId} className="min-w-0 break-words text-[1.375rem] font-medium tracking-[-0.02em]">
             {title}
           </h2>
           {caption && <span className="text-[0.8125rem] text-muted-foreground">{caption}</span>}
         </div>
-        <div className="shrink-0 text-right lg:mr-[0.625rem]">
+        <div className="max-w-[9rem] shrink-0 text-right sm:max-w-none lg:mr-[0.625rem]">
           <div className="text-[1.375rem] tracking-[-0.02em]">
             {total === null ? (
               <span className="text-muted-foreground" aria-label={t('metrics.totalBalance')}>
