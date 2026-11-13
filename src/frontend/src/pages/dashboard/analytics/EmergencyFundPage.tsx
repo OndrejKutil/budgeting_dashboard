@@ -1,43 +1,78 @@
-import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { PageHeader } from '@/components/ui/page-header';
-import { KPICard } from '@/components/ui/kpi-card';
-import { Progress } from '@/components/ui/progress';
-import { AnalyticsSkeleton } from '@/components/skeletons';
-import { Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-} from 'recharts';
+import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PeriodNavigator } from '@/components/period/PeriodNavigator';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
+import { LineRows, type LineRow } from '@/components/data/LineRows';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useAvailableYears } from '@/hooks/use-available-years';
-import { PeriodNavigator } from '@/components/period/PeriodNavigator';
-import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { analyticsApi } from '@/lib/api/endpoints';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DeferredRender } from '@/components/performance/DeferredRender';
-import { SensitiveValue } from '@/components/privacy/SensitiveValue';
-import { usePrivacyMode } from '@/contexts/privacy-context';
-import { CATEGORY_CHART_COLORS, CHART_COLORS } from '@/lib/chart-colors';
+import type { EmergencyFundData } from '@/lib/api/types';
+import { formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
+import type { DashboardTranslationKey } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+
+type Scenario = 'core' | 'necessary' | 'all';
+const SCENARIOS: Scenario[] = ['core', 'necessary', 'all'];
+
+const SCENARIO_TAB: Record<Scenario, DashboardTranslationKey> = {
+  core: 'pages.emergencyFund.coreOnly',
+  necessary: 'pages.emergencyFund.coreNecessary',
+  all: 'pages.emergencyFund.allExpenses',
+};
+const SCENARIO_DESCRIPTION: Record<Scenario, DashboardTranslationKey> = {
+  core: 'pages.emergencyFund.coreScenarioDescription',
+  necessary: 'pages.emergencyFund.necessaryScenarioDescription',
+  all: 'pages.emergencyFund.allScenarioDescription',
+};
+
+/** The figures of one scenario, picked out of the response. */
+function scenarioFigures(data: EmergencyFundData, scenario: Scenario) {
+  if (scenario === 'core') {
+    return {
+      monthly: data.average_monthly_core_expenses,
+      annual: data.total_core_expenses,
+      targets: [
+        { months: 3, amount: data.three_month_core_target },
+        { months: 6, amount: data.six_month_core_target },
+      ],
+    };
+  }
+  if (scenario === 'necessary') {
+    return {
+      monthly: data.average_monthly_core_necessary,
+      annual: data.total_core_necessary,
+      targets: [
+        { months: 3, amount: data.three_month_core_necessary_target },
+        { months: 6, amount: data.six_month_core_necessary_target },
+      ],
+    };
+  }
+  return {
+    monthly: data.average_monthly_all_expenses,
+    annual: data.total_all_expenses,
+    targets: [
+      { months: 3, amount: data.three_month_all_target },
+      { months: 6, amount: data.six_month_all_target },
+    ],
+  };
+}
 
 export default function EmergencyFundPage() {
-  const { formatCurrency, t, currency } = useUser();
-  const { isPrivacyMode } = usePrivacyMode();
+  const { t, locale, currency, formatNumber } = useUser();
   const [selectedYear, setSelectedYear] = useUrlState('year', new Date().getFullYear().toString());
-  const selectedYearNumber = parseInt(selectedYear);
-  const years = useAvailableYears();
+  const [scenarioParam, setScenario] = useUrlState('scenario', 'core' as string);
+  const scenario: Scenario = SCENARIOS.includes(scenarioParam as Scenario) ? (scenarioParam as Scenario) : 'core';
+  const year = parseInt(selectedYear);
+  const years = useAvailableYears({ include: year });
 
-  const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['emergency-fund', selectedYearNumber, currency],
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ['emergency-fund', year, currency],
     queryFn: async () => {
-      const response = await analyticsApi.getEmergencyFund({ year: selectedYearNumber, base_currency: currency });
+      const response = await analyticsApi.getEmergencyFund({ year, base_currency: currency });
       if (response.success && response.data) {
         return response.data;
       }
@@ -46,239 +81,221 @@ export default function EmergencyFundPage() {
     placeholderData: keepPreviousData,
   });
 
-  const coreCategoryBreakdownData = useMemo(() => Object.entries(data?.core_category_breakdown ?? {})
-    .map(([name, amount]) => ({ name, amount }))
-    .sort((a, b) => b.amount - a.amount), [data]);
+  const money = (value: number) => formatMoneyWhole(value, currency);
 
-  if (loading) {
-    return <AnalyticsSkeleton />;
+  const header = (
+    <header className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:mb-10">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+          {t('pages.emergencyFund.title')}
+        </h1>
+        <p className="mt-1 text-[0.8125rem] text-muted-foreground">{t('pages.emergencyFund.trackingHint')}</p>
+      </div>
+      <PeriodNavigator
+        mode="year"
+        year={year}
+        years={years}
+        onChange={(_, y) => setSelectedYear(String(y))}
+        className="[&>div:first-child]:gap-1 [&>div:first-child]:border-transparent [&>div:first-child]:bg-transparent [&>div:first-child]:p-0 [&>div:first-child]:shadow-none"
+      />
+    </header>
+  );
+
+  if (isLoading) {
+    return (
+      <div>
+        {header}
+        <div className="space-y-10" aria-busy="true">
+          <Skeleton className="h-6 w-80 max-w-full" />
+          <div className="grid grid-cols-2 gap-8 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
+          </div>
+          <div className="space-y-4">
+            {[0, 1].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !data) {
     return (
-      <div className="flex h-96 items-center justify-center flex-col gap-4">
-        <p className="text-destructive">{error instanceof Error ? error.message : t('states.noDataAvailable')}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>{t('common.retry')}</Button>
+      <div>
+        {header}
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium">{t('pages.emergencyFund.loadFailed')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : t('states.noDataAvailable')}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {t('common.retry')}
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const renderContent = (
-    averageMonthly: number,
-    target3: number,
-    target6: number,
-    totalAnnual: number,
-    variant: 'core' | 'necessary' | 'all'
-  ) => {
-    const progress3 = (data.current_savings_amount / target3) * 100;
-    const progress6 = (data.current_savings_amount / target6) * 100;
-    const sensitiveChartClass = isPrivacyMode ? 'privacy-chart-values' : '';
+  const { monthly, annual, targets } = scenarioFigures(data, scenario);
+  const balance = data.current_savings_amount;
+  const hasSpending = monthly > 0.5;
+  const runway = hasSpending ? balance / monthly : null;
 
-    const titles = {
-      core: { title: t('pages.emergencyFund.coreScenarioTitle'), desc: t('pages.emergencyFund.coreScenarioDescription') },
-      necessary: { title: t('pages.emergencyFund.necessaryScenarioTitle'), desc: t('pages.emergencyFund.necessaryScenarioDescription') },
-      all: { title: t('pages.emergencyFund.allScenarioTitle'), desc: t('pages.emergencyFund.allScenarioDescription') }
-    };
+  // "4.8 months" with the unit set small and muted, like a currency symbol.
+  const runwayRounded = runway === null ? 0 : Math.floor(runway * 10) / 10;
+  const unitCategory = new Intl.PluralRules(locale).select(runwayRounded);
+  const unitKey: DashboardTranslationKey =
+    unitCategory === 'one'
+      ? 'pages.emergencyFund.monthsOne'
+      : unitCategory === 'few'
+        ? 'pages.emergencyFund.monthsFew'
+        : unitCategory === 'many'
+          ? 'pages.emergencyFund.monthsMany'
+          : 'pages.emergencyFund.monthsOther';
+  const runwayParts: Intl.NumberFormatPart[] =
+    runway === null
+      ? [{ type: 'literal', value: '—' }]
+      : [
+          ...new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).formatToParts(runwayRounded),
+          { type: 'literal', value: ' ' },
+          // Marked as a currency part only so FigureParts sets the unit small and muted.
+          { type: 'currency', value: t(unitKey) },
+        ];
 
-    return (
-      <div className="space-y-6 mt-6">
-        {/* Scenario Header with Monthly Burn */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-xl border border-border bg-card shadow-sm">
-          <div>
-            <h3 className="text-xl font-display font-semibold text-foreground">{titles[variant].title}</h3>
-            <p className="text-muted-foreground mt-1 text-sm">{titles[variant].desc}</p>
-          </div>
-          <div className="flex items-center gap-6 text-right md:pr-4">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">{t('metrics.monthlyBurn')}</p>
-              <p className="text-3xl font-display font-bold text-foreground tracking-tight"><SensitiveValue>{formatCurrency(averageMonthly)}</SensitiveValue></p>
-            </div>
-            <div className="hidden sm:block w-px h-12 bg-border/50"></div>
-            <div className="hidden sm:block">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">{t('metrics.annualTotal')}</p>
-              <p className="text-xl font-display font-medium text-muted-foreground tracking-tight"><SensitiveValue>{formatCurrency(totalAnnual)}</SensitiveValue></p>
-            </div>
-          </div>
-        </div>
+  const metrics: Metric[] = [
+    {
+      key: 'runway',
+      label: t('pages.emergencyFund.runway'),
+      value: runwayRounded,
+      parts: runwayParts,
+      accent: true,
+      note: hasSpending ? t('pages.emergencyFund.runwayHint') : t('pages.emergencyFund.noSpending'),
+    },
+    {
+      key: 'balance',
+      label: t('pages.emergencyFund.fundBalance'),
+      value: balance,
+      parts: formatMoneyParts(balance, currency, 0),
+      note: balance > 0.5 ? t('pages.emergencyFund.balanceHint') : t('pages.emergencyFund.noFund'),
+    },
+    {
+      key: 'monthly',
+      label: t('pages.emergencyFund.monthlySpending'),
+      value: monthly,
+      parts: formatMoneyParts(monthly, currency, 0),
+      note: (
+        <SensitiveValue>
+          {t('pages.emergencyFund.annualNote', {
+            amount: money(annual),
+            months: formatNumber(data.months_analyzed),
+          })}
+        </SensitiveValue>
+      ),
+    },
+  ];
 
-        {/* Progress Trackers */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* 3 Months */}
-          <div className={cn(
-            'rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md',
-            progress3 >= 100 ? 'border-primary/30 bg-primary/5' : 'border-border'
-          )}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold font-display text-foreground">{t('pages.emergencyFund.threeMonthResilience')}</h3>
-              {progress3 >= 100 ? (
-                <Shield className="h-5 w-5 text-primary" />
-              ) : (
-                <Shield className="h-5 w-5 text-muted-foreground/50" />
-              )}
-            </div>
-            <div className="mt-6">
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <span className="text-3xl font-bold font-display tracking-tight">
-                    <SensitiveValue>{formatCurrency(data.current_savings_amount)}</SensitiveValue>
-                  </span>
-                  <span className="text-muted-foreground text-sm ml-1"> / <SensitiveValue>{formatCurrency(target3)}</SensitiveValue></span>
-                </div>
-                <span className={cn(
-                  'text-lg font-medium',
-                  progress3 >= 100 ? 'text-primary' : 'text-muted-foreground'
-                )}>
-                  <SensitiveValue>{Math.min(progress3, 100).toFixed(0)}%</SensitiveValue>
-                </span>
-              </div>
-              <Progress
-                value={Math.min(progress3, 100)}
-                className={cn('h-2', progress3 >= 100 && '[&>div]:bg-primary')}
-              />
-              {progress3 < 100 && (
-                <p className="mt-3 text-xs text-muted-foreground font-medium">
-                  <SensitiveValue>{t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target3 - data.current_savings_amount) })}</SensitiveValue>
-                </p>
-              )}
-            </div>
-          </div>
+  const breakdown = Object.entries(data.core_category_breakdown ?? {})
+    .map(([name, amount]) => ({ name, amount: Number(amount) }))
+    .sort((a, b) => b.amount - a.amount);
+  const largest = Math.max(...breakdown.map((item) => item.amount), 0);
+  const breakdownRows: LineRow[] = breakdown.map((item) => ({
+    key: item.name,
+    label: item.name,
+    amount: money(item.amount),
+    ratio: largest > 0 ? item.amount / largest : 0,
+  }));
 
-          {/* 6 Months */}
-          <div className={cn(
-            'rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md',
-            progress6 >= 100 ? 'border-primary/30 bg-primary/5' : 'border-border'
-          )}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold font-display text-foreground">{t('pages.emergencyFund.sixMonthResilience')}</h3>
-              {progress6 >= 100 ? (
-                <Shield className="h-5 w-5 text-primary" />
-              ) : (
-                <Shield className="h-5 w-5 text-muted-foreground/50" />
-              )}
-            </div>
-            <div className="mt-6">
-              <div className="flex items-end justify-between mb-2">
-                <div>
-                  <span className="text-3xl font-bold font-display tracking-tight">
-                    <SensitiveValue>{formatCurrency(data.current_savings_amount)}</SensitiveValue>
-                  </span>
-                  <span className="text-muted-foreground text-sm ml-1"> / <SensitiveValue>{formatCurrency(target6)}</SensitiveValue></span>
-                </div>
-                <span className={cn(
-                  'text-lg font-medium',
-                  progress6 >= 100 ? 'text-primary' : 'text-muted-foreground'
-                )}>
-                  <SensitiveValue>{Math.min(progress6, 100).toFixed(0)}%</SensitiveValue>
-                </span>
-              </div>
-              <Progress
-                value={Math.min(progress6, 100)}
-                className={cn('h-2', progress6 >= 100 && '[&>div]:bg-primary')}
-              />
-              {progress6 < 100 && (
-                <p className="mt-3 text-xs text-muted-foreground font-medium">
-                  <SensitiveValue>{t('pages.emergencyFund.toReachBuffer', { amount: formatCurrency(target6 - data.current_savings_amount) })}</SensitiveValue>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Core Breakdown only shown for core tab */}
-        {variant === 'core' && (
-          <DeferredRender fallback={<div className="min-h-[480px] rounded-xl border border-border bg-card" />}>
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <h3 className="mb-4 text-lg font-semibold font-display">{t('pages.emergencyFund.coreBreakdownTitle')}</h3>
-              <p className="mb-6 text-sm text-muted-foreground">
-                {t('pages.emergencyFund.coreBreakdownDescription')}
-              </p>
-              <div className={`h-96 ${sensitiveChartClass}`}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={coreCategoryBreakdownData}
-                    layout="vertical"
-                    barCategoryGap={12}
-                    margin={{ left: 20 }}
-                  >
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickFormatter={(v) => formatCurrency(v)} />
-                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} width={100} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--popover-foreground))',
-                      }}
-                      itemStyle={{ color: CHART_COLORS.core }}
-                      formatter={(value: number) => [<SensitiveValue key="value">{formatCurrency(value)}</SensitiveValue>, t('metrics.amount')]}
-                    />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
-                      {coreCategoryBreakdownData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </DeferredRender>
-        )}
-      </div>
-    );
-  };
+  const headingClass = 'text-[1.125rem] font-medium tracking-[-0.01em]';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
-        <PageHeader
-          title={t('pages.emergencyFund.title')}
-          description={t('pages.emergencyFund.description')}
-        />
-        <div className="text-xs text-muted-foreground flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-md border border-border/50 max-w-sm">
-          <Info className="h-4 w-4 shrink-0 text-primary" />
-          <span>{t('pages.emergencyFund.trackingHint')}</span>
-        </div>
+    <div>
+      {header}
+
+      {/* Scenario: how much spending the fund has to cover. */}
+      <div role="group" aria-label={t('pages.emergencyFund.scenario')} className="flex flex-wrap gap-x-6 gap-y-1 text-[0.9375rem]">
+        {SCENARIOS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={scenario === option}
+            onClick={() => setScenario(option)}
+            className={cn(
+              'rounded-sm py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              scenario === option ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <span className={cn('border-b-2 pb-[0.1875rem]', scenario === option ? 'border-primary' : 'border-transparent')}>
+              {t(SCENARIO_TAB[option])}
+            </span>
+          </button>
+        ))}
       </div>
+      <p className="mt-2 text-[0.8125rem] text-muted-foreground">{t(SCENARIO_DESCRIPTION[scenario])}</p>
 
-      <Tabs defaultValue="core" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <TabsList className="grid w-full sm:w-[400px] grid-cols-3">
-            <TabsTrigger value="core">{t('pages.emergencyFund.coreOnly')}</TabsTrigger>
-            <TabsTrigger value="necessary">{t('pages.emergencyFund.coreNecessary')}</TabsTrigger>
-            <TabsTrigger value="all">{t('pages.emergencyFund.allExpenses')}</TabsTrigger>
-          </TabsList>
+      <section aria-label={t('pages.emergencyFund.title')} className={cn('mt-8 transition-opacity', isFetching && 'opacity-60')}>
+        <MetricGrid metrics={metrics} size="lg" className="grid-cols-2 lg:grid-cols-3" formatAmount={money} />
+      </section>
 
-          <PeriodNavigator mode="year" year={selectedYearNumber} years={years} onChange={(_, y) => setSelectedYear(String(y))} />
+      <section aria-labelledby="emergency-targets" className="mt-12 lg:mt-14">
+        <div className="border-b border-foreground/30 pb-3">
+          <h2 id="emergency-targets" className={headingClass}>{t('pages.emergencyFund.targets')}</h2>
         </div>
-        
-        <TabsContent value="core">
-          {renderContent(
-            data.average_monthly_core_expenses,
-            data.three_month_core_target,
-            data.six_month_core_target,
-            data.total_core_expenses,
-            'core'
+        <ul>
+          {targets.map((target) => {
+            const ratio = target.amount > 0 ? balance / target.amount : 0;
+            const reached = target.amount > 0 && ratio >= 1;
+            const shown = formatNumber(Math.min(Math.max(ratio, 0), 1), { style: 'percent', maximumFractionDigits: 0 });
+            return (
+              <li key={target.months} className="border-b border-border py-4">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
+                  <div className="min-w-0">
+                    <div className="text-base">{t('pages.emergencyFund.monthsOfSpending', { count: target.months })}</div>
+                    <div className={cn('text-[0.8125rem]', reached ? 'text-success' : 'text-muted-foreground')}>
+                      {reached ? (
+                        t('pages.emergencyFund.reached')
+                      ) : (
+                        <SensitiveValue>
+                          {t('pages.emergencyFund.toReachBuffer', { amount: money(Math.max(target.amount - balance, 0)) })}
+                        </SensitiveValue>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="whitespace-nowrap text-[1.0625rem] tabular-nums">
+                      <SensitiveValue>{money(target.amount)}</SensitiveValue>
+                    </div>
+                    <div className="text-[0.8125rem] tabular-nums text-muted-foreground">
+                      <SensitiveValue>{shown}</SensitiveValue>
+                    </div>
+                  </div>
+                </div>
+                <div aria-hidden="true" className="mt-3 h-[2px] rounded-full bg-foreground/10">
+                  <div
+                    className={cn('h-full rounded-full', reached ? 'bg-success' : 'bg-foreground/60')}
+                    style={{ width: `${Math.min(Math.max(ratio, 0), 1) * 100}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {scenario === 'core' && (
+        <section aria-labelledby="emergency-core" className="mt-12 lg:mt-14">
+          <div className="border-b border-foreground/30 pb-3">
+            <h2 id="emergency-core" className={headingClass}>{t('pages.emergencyFund.coreBreakdownTitle')}</h2>
+            <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.emergencyFund.coreBreakdownDescription')}</p>
+          </div>
+          {breakdownRows.length > 0 ? (
+            <LineRows rows={breakdownRows} className="mt-1 max-w-3xl" barClassName="bg-foreground/50" />
+          ) : (
+            <p className="py-4 text-sm text-muted-foreground">{t('pages.emergencyFund.noCoreData')}</p>
           )}
-        </TabsContent>
-        <TabsContent value="necessary">
-          {renderContent(
-            data.average_monthly_core_necessary,
-            data.three_month_core_necessary_target,
-            data.six_month_core_necessary_target,
-            data.total_core_necessary,
-            'necessary'
-          )}
-        </TabsContent>
-        <TabsContent value="all">
-          {renderContent(
-            data.average_monthly_all_expenses,
-            data.three_month_all_target,
-            data.six_month_all_target,
-            data.total_all_expenses,
-            'all'
-          )}
-        </TabsContent>
-      </Tabs>
+        </section>
+      )}
     </div>
   );
 }

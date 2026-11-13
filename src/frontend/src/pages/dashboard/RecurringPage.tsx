@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
@@ -31,6 +29,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
+  AlertCircle,
   Plus,
   Repeat,
   MoreHorizontal,
@@ -38,9 +37,8 @@ import {
   Trash2,
   Loader2,
   CalendarIcon,
-  CheckCircle2,
-  Clock,
 } from 'lucide-react';
+import { MetricGrid, type Metric } from '@/components/data/MetricGrid';
 import { cn } from '@/lib/utils';
 import { fieldLine } from '@/components/ui/field-line';
 import { toast } from '@/hooks/use-toast';
@@ -51,7 +49,7 @@ import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, wit
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { AccountSelect } from '@/components/AccountSelect';
-import { formatMoney } from '@/lib/currency';
+import { formatMoney, formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
 import { daysDiff, toLocalDateString } from '@/lib/dates';
 
 const DECIMAL_INPUT_PATTERN = '-?[0-9]*([.,][0-9]*)?';
@@ -71,12 +69,6 @@ function parseDecimalInput(value: string): number | null {
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
-
-const stagger = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
-};
-const fadeIn = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 interface FormData {
   account_id_fk: string;
@@ -101,7 +93,7 @@ const EMPTY_FORM: FormData = {
 };
 
 export default function RecurringPage() {
-  const { t, formatCurrency, currency: userCurrency } = useUser();
+  const { t, locale, formatDate, currency: userCurrency } = useUser();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<Recurring | null>(null);
@@ -109,7 +101,7 @@ export default function RecurringPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const { data: recurringData, isLoading } = useQuery({
+  const { data: recurringData, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['recurring', userCurrency],
     queryFn: async () => {
       const res = await recurringApi.getAll({ base_currency: userCurrency });
@@ -284,9 +276,10 @@ export default function RecurringPage() {
 
   const templates = recurringData?.data ?? [];
   const summary = recurringData?.summary;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const dueTemplates = templates.filter(r => daysDiff(r.next_date) <= 0);
-  const upcomingTemplates = templates.filter(r => daysDiff(r.next_date) > 0);
+  // Most overdue first among the due ones, soonest first among the upcoming ones.
+  const byDate = (a: Recurring, b: Recurring) => a.next_date.localeCompare(b.next_date);
+  const dueTemplates = templates.filter(r => daysDiff(r.next_date) <= 0).sort(byDate);
+  const upcomingTemplates = templates.filter(r => daysDiff(r.next_date) > 0).sort(byDate);
 
   const cadenceLabel = (c: string) => ({
     weekly: t('pages.recurring.weekly'),
@@ -296,118 +289,162 @@ export default function RecurringPage() {
     yearly: t('pages.recurring.yearly'),
   }[c] ?? c);
 
-  const relativeDate = (dateStr: string) => {
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  /** "Today", "tomorrow", "in 5 days" or "Overdue · 3 days ago", then the date itself. */
+  const whenText = (dateStr: string) => {
     const diff = daysDiff(dateStr);
-    if (diff === 0) return t('pages.recurring.today');
-    if (diff < 0) return `${t('pages.recurring.overdue')} (${Math.abs(diff)}d)`;
-    return t('pages.recurring.inDays').replace('{n}', String(diff));
+    const when =
+      diff === 0
+        ? t('pages.recurring.today')
+        : diff < 0
+          ? `${t('pages.recurring.overdue')} · ${relative.format(diff, 'day')}`
+          : relative.format(diff, 'day');
+    return `${when} · ${formatDate(new Date(`${dateStr}T12:00:00`), { day: 'numeric', month: 'short' })}`;
   };
 
-  const renderCard = (r: Recurring) => {
+  const renderRow = (r: Recurring) => {
     const diff = daysDiff(r.next_date);
     const isDue = diff <= 0;
     const account = accounts.find(a => a.accounts_id_pk === r.account_id_fk);
+    const category = categories.find(c => c.categories_id_pk === r.category_id_fk)?.category_name;
     const isPosting = postMutation.isPending && postMutation.variables === r.recurring_id_pk;
     // Temp id until the server row arrives — edit/delete/post would 404, so disable them.
     const pending = isOptimistic(r);
+    const details = [r.notes ? category : null, account?.account_name, cadenceLabel(r.cadence)].filter(Boolean).join(' · ');
 
     return (
-      <motion.div
+      <li
         key={r.recurring_id_pk}
-        variants={fadeIn}
         className={cn(
-          'group rounded-xl border bg-card p-4 shadow-sm transition-colors',
-          isDue ? 'border-primary/40 hover:border-primary/70' : 'border-border hover:border-border/80',
-          pending && 'opacity-60'
+          // Phone: side line, text, amount, menu; a due row puts Post on a second line.
+          // From md: Post sits in its own column before the menu.
+          'grid grid-cols-[3px_minmax(0,1fr)_auto_2rem] items-center gap-x-3.5 gap-y-3 border-b border-border py-4 md:gap-x-5',
+          isDue && 'md:grid-cols-[3px_minmax(0,1fr)_auto_auto_2rem]',
+          pending && 'opacity-60',
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium truncate">{r.notes || categories.find(c => c.categories_id_pk === r.category_id_fk)?.category_name || '—'}</span>
-              <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {cadenceLabel(r.cadence)}
-              </span>
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {account?.account_name} · {relativeDate(r.next_date)}
-            </p>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'self-stretch rounded-[2px]',
+            diff < 0 ? 'bg-destructive' : diff === 0 ? 'bg-primary' : 'bg-muted-foreground/25',
+            isDue && 'row-span-2 md:row-span-1',
+          )}
+        />
+        <div className="min-w-0">
+          <div className="truncate text-base">{r.notes || category || '—'}</div>
+          <div className="truncate text-[0.8125rem] text-muted-foreground">{details}</div>
+        </div>
+        <div className="text-right">
+          <div className={cn('whitespace-nowrap text-[1.0625rem] tabular-nums', r.amount > 0 && 'text-success')}>
+            <SensitiveValue>
+              {`${r.amount > 0 ? '+' : ''}${formatMoney(r.amount, account?.currency || userCurrency)}`}
+            </SensitiveValue>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={cn('text-lg font-bold font-display', r.amount >= 0 ? 'text-emerald-500' : 'text-foreground')}>
-              <SensitiveValue>{formatMoney(r.amount, account?.currency || userCurrency)}</SensitiveValue>
-            </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" disabled={pending} className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEdit(r)}>
-                  <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(r.recurring_id_pk)}>
-                  <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className={cn('whitespace-nowrap text-[0.8125rem]', diff < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+            {whenText(r.next_date)}
           </div>
         </div>
         {isDue && (
-          <div className="mt-3">
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={() => postMutation.mutate(r.recurring_id_pk)}
-              disabled={isPosting || pending}
-            >
-              {isPosting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-              {isPosting ? t('pages.recurring.posting') : t('pages.recurring.post')}
-            </Button>
-          </div>
+          // Nothing posts by itself: this button is the only way a due template becomes a transaction.
+          <Button
+            onClick={() => postMutation.mutate(r.recurring_id_pk)}
+            disabled={isPosting || pending}
+            className="col-span-2 col-start-2 row-start-2 h-10 px-4 md:col-span-1 md:col-start-4 md:row-start-1"
+          >
+            {isPosting && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {isPosting ? t('pages.recurring.posting') : t('pages.recurring.post')}
+          </Button>
         )}
-      </motion.div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={pending}
+              aria-label={`${t('common.actions')}: ${r.notes || category || ''}`}
+              className={cn('col-start-4 row-start-1 h-8 w-8 text-muted-foreground', isDue && 'md:col-start-5')}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => openEdit(r)}>
+              <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(r.recurring_id_pk)}>
+              <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </li>
     );
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('pages.recurring.title')}
-        description={t('pages.recurring.description')}
-        actions={
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('pages.recurring.add')}
-          </Button>
-        }
-      />
+  const money = (value: number) => formatMoneyWhole(value, userCurrency);
+  const countParts = (count: number) => new Intl.NumberFormat(locale).formatToParts(count);
+  const summaryMetrics: Metric[] = [
+    {
+      key: 'monthly',
+      label: t('pages.recurring.monthlyTotal'),
+      value: summary?.monthly_total ?? 0,
+      parts: formatMoneyParts(summary?.monthly_total ?? 0, userCurrency, 0),
+      note: t('pages.recurring.monthlyHint'),
+    },
+    {
+      key: 'annual',
+      label: t('pages.recurring.annualTotal'),
+      value: summary?.annual_total ?? 0,
+      parts: formatMoneyParts(summary?.annual_total ?? 0, userCurrency, 0),
+      note: t('pages.recurring.annualHint'),
+    },
+    {
+      key: 'templates',
+      label: t('pages.recurring.templates'),
+      value: templates.length,
+      parts: countParts(templates.length),
+      note: t('pages.recurring.dueCount', { count: new Intl.NumberFormat(locale).format(dueTemplates.length) }),
+    },
+  ];
 
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          { label: t('pages.recurring.monthlyTotal'), value: summary ? formatCurrency(summary.monthly_total) : null },
-          { label: t('pages.recurring.annualTotal'), value: summary ? formatCurrency(summary.annual_total) : null },
-          { label: t('pages.recurring.activeTemplates'), value: isLoading ? null : String(templates.length) },
-        ].map((card) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-sm"
-          >
-            <p className="text-sm text-muted-foreground">{card.label}</p>
-            <div className="mt-1 text-2xl font-bold font-display">
-              {isLoading || card.value === null ? <Skeleton className="h-7 w-24 inline-block" /> : <SensitiveValue>{card.value}</SensitiveValue>}
-            </div>
-          </motion.div>
-        ))}
-      </div>
+  const listHeading = (id: string, title: string, count: number) => (
+    <div className="flex items-baseline gap-2.5 border-b border-foreground/30 pb-3">
+      <h2 id={id} className="text-[1.125rem] font-medium tracking-[-0.01em]">{title}</h2>
+      <span className="text-[0.8125rem] tabular-nums text-muted-foreground">{new Intl.NumberFormat(locale).format(count)}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+          {t('pages.recurring.title')}
+        </h1>
+        <Button variant="outline" onClick={() => setIsModalOpen(true)} className="h-11 px-4">
+          <Plus aria-hidden="true" />
+          {t('pages.recurring.add')}
+        </Button>
+      </header>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+        <div className="mt-10 space-y-4" aria-busy="true">
+          <div className="grid grid-cols-2 gap-8 lg:grid-cols-3">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+          </div>
+          <div className="space-y-3 pt-8">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          </div>
+        </div>
+      ) : error && !recurringData ? (
+        <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-medium">{t('pages.recurring.failedToLoad')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{getErrorMessage(error, t('common.unknownError'))}</p>
+          </div>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {t('common.retry')}
+          </Button>
         </div>
       ) : templates.length === 0 ? (
         <EmptyState
@@ -417,43 +454,34 @@ export default function RecurringPage() {
           action={{ label: t('pages.recurring.createFirst'), onClick: () => setIsModalOpen(true) }}
         />
       ) : (
-        <div className="space-y-6">
-          {/* Due Now */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold">{t('pages.recurring.dueNow')}</h2>
-              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">{dueTemplates.length}</span>
-            </div>
-            {dueTemplates.length === 0 ? (
-              <p className="text-sm text-muted-foreground pl-6">{t('pages.recurring.noDue')}</p>
-            ) : (
-              <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
-                {dueTemplates.map(renderCard)}
-              </motion.div>
-            )}
-          </div>
+        <>
+          <section aria-label={t('pages.recurring.title')} className="mt-8 lg:mt-10">
+            <MetricGrid metrics={summaryMetrics} size="lg" className="grid-cols-2 lg:grid-cols-3" formatAmount={money} />
+          </section>
 
-          {/* Upcoming */}
+          <section aria-labelledby="recurring-due" className="mt-12 lg:mt-14">
+            {listHeading('recurring-due', t('pages.recurring.dueNow'), dueTemplates.length)}
+            {dueTemplates.length === 0 ? (
+              <p className="py-4 text-sm text-muted-foreground">{t('pages.recurring.noDue')}</p>
+            ) : (
+              <ul>{dueTemplates.map(renderRow)}</ul>
+            )}
+          </section>
+
           {upcomingTemplates.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-semibold text-muted-foreground">{t('pages.recurring.upcoming')}</h2>
-              </div>
-              <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-3">
-                {upcomingTemplates.map(renderCard)}
-              </motion.div>
-            </div>
+            <section aria-labelledby="recurring-upcoming" className="mt-10">
+              {listHeading('recurring-upcoming', t('pages.recurring.upcoming'), upcomingTemplates.length)}
+              <ul>{upcomingTemplates.map(renderRow)}</ul>
+            </section>
           )}
-        </div>
+        </>
       )}
 
       {/* Create/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">
+            <DialogTitle>
               {selected ? t('pages.recurring.editTitle') : t('pages.recurring.addTitle')}
             </DialogTitle>
           </DialogHeader>
@@ -600,7 +628,7 @@ export default function RecurringPage() {
       <Dialog open={deleteConfirmId !== null} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display">{t('pages.recurring.deleteTitle')}</DialogTitle>
+            <DialogTitle>{t('pages.recurring.deleteTitle')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">{t('pages.recurring.deleteDescription')}</p>
           <DialogFooter>

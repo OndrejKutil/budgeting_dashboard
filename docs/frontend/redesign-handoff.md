@@ -128,7 +128,12 @@ work:
 | Accounts | `pages/dashboard/AccountsPage.tsx` (CRLF) + `accounts/*` | Groups as headings with totals, balance largest on the row, net worth secondary with a collapsible chart |
 | Funds | `pages/dashboard/FundsPage.tsx` + `funds/*` | Saved amount as the row figure, side line by 30-day activity |
 | Budget Maker | `pages/dashboard/BudgetMaker.tsx`, `components/budget/*` | Editing first; difference as an amount; no progress bars |
-| Monthly analytics | `pages/dashboard/analytics/MonthlyAnalyticsPage.tsx` | Four figures vs six-month average, DayBars, rows instead of donuts, print statement kept |
+| Monthly analytics | `pages/dashboard/analytics/MonthlyAnalyticsPage.tsx` | Six figures vs six-month average, DayBars with a y-axis, rows instead of donuts, print statement kept |
+| Yearly analytics | `analytics/YearlyAnalyticsPage.tsx`, `components/analytics/{MonthlyBreakdownTable,SignedBarFacet,YearlyHeatmap}` | Six figures with trend notes, records linking to Monthly, frameless charts, localized month names, amber heatmap (tooltip now privacy-aware), print statement kept. Not yet checked with real data |
+| Profile | `pages/dashboard/ProfilePage.tsx` | Sections of rows; all 7 currencies; Dark/Light text switch; error state with retry. Not yet checked with real data |
+| Recurring | `pages/dashboard/RecurringPage.tsx` | Summary figures ("Templates", not "Active templates"), Due/Upcoming rows with side line, Post as the amber action, error state. Not yet checked with real data |
+| Categories | `pages/dashboard/CategoriesPage.tsx` | Open groups with counts, unknown types listed, `Exclude` and `Savings Funds Withdrawal` locked (no rename/retype/delete). Not yet checked with real data |
+| Emergency Fund | `analytics/EmergencyFundPage.tsx` | Runway / balance / monthly spending figures, scenario in the URL, target rows, core breakdown as rows. Not yet checked with real data |
 
 **Backend changes** (`src/backend`)
 
@@ -229,8 +234,8 @@ Mobile: columns stack, facts in a 2×2 grid.
 
 ### Phase 5: remaining app pages
 
-Suggested order: Yearly, Cash Flow, Recurring, Categories, Emergency Fund, Profile,
-then tools, then Demo.
+Done: Yearly, Recurring, Categories, Emergency Fund, Profile (see the table in 2.3; the
+notes below are kept for reference). Remaining order: Cash Flow, then tools, then Demo.
 
 **5.1 Yearly analytics** — `analytics/YearlyAnalyticsPage.tsx`, uses
 `components/analytics/{YearlyHeatmap,MonthlyBreakdownTable,SignedBarFacet,StatementDocument}`.
