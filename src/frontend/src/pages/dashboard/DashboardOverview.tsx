@@ -10,6 +10,7 @@ import { SplitBar, type SplitSegment } from '@/components/data/SplitBar';
 import { LineRows, type LineRow } from '@/components/data/LineRows';
 import { RowList, RowListItem } from '@/components/data/RowList';
 import { ChartLegend } from '@/components/data/ChartLegend';
+import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { SeriesLineChart } from '@/components/data/SeriesLineChart';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 import { useUser } from '@/contexts/user-context';
@@ -170,13 +171,19 @@ export default function DashboardOverview() {
       },
     ];
 
+    // The bar splits the money the month had to work with. That is income, unless more was taken
+    // out of savings than put in: then net saving is negative (and drawn as nothing) and the net
+    // withdrawal is extra money to spend, so it joins the whole. Spent + saved + invested + cash
+    // flow then always add up to 100 %.
+    const fromSavings = saving < 0 ? -saving : 0;
+    const available = income + fromSavings;
     const splitSegments: SplitSegment[] =
-      income > 0
+      available > 0
         ? [
-            { key: 'spent', label: t('pages.overview.spent'), value: expense, percent: percentOf(expense, income), tone: 'strong' },
-            { key: 'saved', label: t('pages.overview.saved'), value: saving, percent: percentOf(saving, income), tone: 'soft' },
-            { key: 'invested', label: t('pages.overview.invested'), value: investing, percent: percentOf(investing, income), tone: 'medium' },
-            { key: 'left', label: t('pages.overview.left'), value: left, percent: percentOf(left, income), tone: 'accent' },
+            { key: 'spent', label: t('pages.overview.spent'), value: expense, percent: percentOf(expense, available), tone: 'strong' },
+            { key: 'saved', label: t('pages.overview.saved'), value: saving, percent: percentOf(saving, available), tone: 'soft' },
+            { key: 'invested', label: t('pages.overview.invested'), value: investing, percent: percentOf(investing, available), tone: 'medium' },
+            { key: 'left', label: t('pages.overview.left'), value: left, percent: percentOf(left, available), tone: 'accent' },
           ]
         : [];
 
@@ -198,7 +205,7 @@ export default function DashboardOverview() {
     const isEmpty =
       isZero(income) && isZero(expense) && isZero(saving) && isZero(investing) && sorted.length === 0;
 
-    return { leadMetrics, detailMetrics, splitSegments, categoryRows, isEmpty };
+    return { leadMetrics, detailMetrics, splitSegments, fromSavings, categoryRows, isEmpty };
     // percentOf only depends on formatNumber.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currency, data, formatNumber, t]);
@@ -321,7 +328,16 @@ export default function DashboardOverview() {
           />
           <div className="mt-8">
             {view.splitSegments.length > 0 ? (
-              <SplitBar segments={view.splitSegments} />
+              <>
+                <SplitBar segments={view.splitSegments} />
+                {view.fromSavings > 0 && (
+                  <p className="mt-2 text-[0.8125rem] text-muted-foreground">
+                    <SensitiveValue>
+                      {t('pages.overview.includesFromSavings', { amount: money(view.fromSavings) })}
+                    </SensitiveValue>
+                  </p>
+                )}
+              </>
             ) : (
               <p className="text-[0.8125rem] text-muted-foreground">{t('pages.overview.noIncome')}</p>
             )}

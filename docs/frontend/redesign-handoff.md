@@ -156,18 +156,21 @@ work:
 - Pages that are not rebuilt yet already use the new inputs, buttons, tables and
   dialogs, so they look mixed until their phase.
 
-**Open questions for the owner**
+**Owner's answers (2026-11-13)** to the questions previously open here:
 
-1. In hide-amounts mode, should direction also be hidden (green/red side lines and
-   "more"/"less" wording on Funds, Accounts, Monthly)?
-2. Overview split bar: when money is withdrawn from savings, Spent % + Cash flow % exceed
-   100 %. Show the withdrawal as its own segment?
-3. Budget Maker colours accepted without the owner's confirmation: expense under plan is
-   muted (was green); savings/investment shortfall is muted (was red).
-4. Large screens: is 22px at 2560px enough?
-5. Footer compliance wording (spec, "Footer": "To decide before build").
-6. The reference footer the owner likes (barleysolutions.cz) could not be fetched from
-   the build environment. Get a screenshot, or allow the host, before building it.
+1. Hide-amounts mode keeps direction (green/red, "more"/"less"). No change.
+2. Split bar: it splits the money the month had to work with = income, plus the net
+   withdrawal when more was taken out of savings than put in (net saving < 0). Then the
+   parts always add up to 100 %, and a line under the bar says "Includes X taken from
+   savings". Months with net saving >= 0 are unchanged. Built on Overview
+   (`DashboardOverview.tsx`); apply the same rule wherever a split of income is drawn
+   (Yearly, Cash Flow).
+3. Budget Maker colours as built (muted) are accepted.
+4. 22px at 2560px is enough.
+5. Footer compliance wording, accepted: "Budgeting Dashboard is a personal project, not a
+   bank or financial adviser. Nothing here is financial advice." and "© <year> Ondřej
+   Kutil · Data stored with Supabase (Frankfurt, EU) · hosted on Render (EU)".
+6. No reference footer: build our own (see 4.2). Contact = email and GitHub only.
 
 ## 4. Remaining work
 
@@ -197,11 +200,14 @@ Terms, Privacy, Demo. Spec section "Footer" has the full structure:
 1. Closing call to action ("Start with this month.") with the two buttons.
 2. Four data facts split by hairlines: no bank connection; export from Profile; delete
    account from Profile; open source (MIT). Each must stay true.
-3. Link columns: brand + one line; Product; Project; Legal; Contact.
-4. Legal line: copyright, "Data stored with Supabase · hosted on Render", language
+3. Link columns: brand + one line; Product (Overview, Demo, How it works, FAQ);
+   Project (About, source on GitHub); Legal (Terms, Privacy); Contact (email, GitHub
+   https://github.com/OndrejKutil). Confirm the exact public email address with the
+   owner when building; do not guess it.
+4. Legal line: the disclaimer and copyright line from answer 5 in section 3, language
    switch.
 
-Resolve open questions 5 and 6 first. Mobile: columns stack, facts in a 2×2 grid.
+Mobile: columns stack, facts in a 2×2 grid.
 
 **4.3 FAQ, How it works, About, Terms, Privacy, NotFound** — `pages/*.tsx`.
 
