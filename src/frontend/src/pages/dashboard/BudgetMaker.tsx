@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader } from '@/components/ui/page-header';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { BudgetMakerSkeleton } from '@/components/skeletons';
 import {
     Select,
@@ -12,12 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { AlertCircle, Check, Copy, Loader2, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Copy, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { categoriesApi, budgetApi, tagsApi } from '@/lib/api/endpoints';
@@ -34,7 +34,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
     Dialog,
@@ -48,12 +47,14 @@ import {
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
 import { PeriodNavigator } from '@/components/period/PeriodNavigator';
 import { useAvailableYears } from '@/hooks/use-available-years';
-import { BudgetSection, type RowPatch } from '@/components/budget/BudgetSection';
+import { BudgetColumnHeader, BudgetSection, type RowPatch } from '@/components/budget/BudgetSection';
+import { interpolate } from '@/components/data/interpolate';
 import { useBudgetAutosave, type SaveStatus } from '@/components/budget/use-budget-autosave';
 import {
     BUDGET_GROUPS,
     buildPlan,
     cloneRowsForNewMonth,
+    budgetMoney,
     countRows,
     createEmptyRow,
     emptyRows,
@@ -81,7 +82,7 @@ const shiftMonth = (month: number, year: number, delta: number) => {
 };
 
 export default function BudgetMaker() {
-    const { formatCurrency, formatMonth, t, currency: userCurrency } = useUser();
+    const { formatMonth, t, currency: userCurrency } = useUser();
     const queryClient = useQueryClient();
     const monthOptions = useMemo(() => MONTHS.map((_, index) => formatMonth(index, 'long')), [formatMonth]);
 
@@ -108,6 +109,7 @@ export default function BudgetMaker() {
 
     // UI State
     const [isCopyOpen, setIsCopyOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [openSections, setOpenSections] = useState<Record<BudgetGroup, boolean>>({
         income: true,
         expense: true,
@@ -240,8 +242,8 @@ export default function BudgetMaker() {
         list.filter(r => r.include_in_total).reduce((sum, r) => sum + (parseAmount(r.amount) || 0), 0);
 
     const totalIncome = calculateTotal(rows.income);
-    const remainingBudget = totalIncome - calculateTotal(rows.expense) - calculateTotal(rows.saving) - calculateTotal(rows.investment);
-    const remainingBudgetPct = totalIncome > 0 ? (remainingBudget / totalIncome) * 100 : 0;
+    const totalAllocated = calculateTotal(rows.expense) + calculateTotal(rows.saving) + calculateTotal(rows.investment);
+    const remainingBudget = totalIncome - totalAllocated;
 
     // ---- Budget-level mutations ------------------------------------------------------
 
@@ -304,114 +306,152 @@ export default function BudgetMaker() {
         investment: t('metrics.investments'),
     };
 
+    const monthLabel = monthOptions[selectedMonth - 1];
+    const hasRows = ready && countRows(rows) > 0;
+
+    // One quiet line above the table: planned in, allocated, left to plan.
+    const figure = (value: number, className?: string) => (
+        <span className={cn('tabular-nums', className ?? 'text-foreground')}>
+            <SensitiveValue>{budgetMoney(value, userCurrency)}</SensitiveValue>
+        </span>
+    );
+    const overAllocated = remainingBudget < -0.005;
+    const summary = interpolate(
+        t(overAllocated ? 'pages.budgetMaker.summaryOver' : 'pages.budgetMaker.summaryLeft'),
+        {
+            income: figure(totalIncome),
+            allocated: figure(totalAllocated),
+            left: figure(remainingBudget, remainingBudget > 0.005 ? 'text-primary' : 'text-muted-foreground'),
+            over: figure(Math.abs(remainingBudget), 'text-destructive'),
+        },
+    );
+
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-32">
-            <PageHeader
-                title={t('pages.budgetMaker.title')}
-                description={t('pages.budgetMaker.description')}
-                actions={
-                    <div className="flex items-center gap-2">
-                        <SaveIndicator status={autosave.status} onRetry={autosave.retry} />
-                        {ready && countRows(rows) > 0 && (
-                            <>
-                                <Dialog
-                                    open={isCopyOpen}
-                                    onOpenChange={(open) => {
-                                        if (open) setCopyTarget(nextPeriod);
-                                        setIsCopyOpen(open);
-                                    }}
-                                >
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline">
-                                            <Copy className="mr-2 h-4 w-4" /> {t('pages.budgetMaker.copyTo')}
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>{t('pages.budgetMaker.copyTitle')}</DialogTitle>
-                                            <DialogDescription>
-                                                {t('pages.budgetMaker.copyDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="flex gap-4 py-4">
-                                            <div className="flex flex-col gap-1.5 flex-1">
-                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetMonth')}</Label>
-                                                <Select value={copyTarget.month.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, month: parseInt(val) }))}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {monthOptions.map((m, i) => (
-                                                            <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex flex-col gap-1.5 w-1/3">
-                                                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{t('pages.budgetMaker.targetYear')}</Label>
-                                                <Select value={copyTarget.year.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, year: parseInt(val) }))}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {yearOptions.map(y => (
-                                                            <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+        <div className="pb-32 lg:pb-12">
+            {/* Header: title and period on the left; save status and quiet actions on the right. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <h1 className="text-2xl font-medium tracking-tight text-foreground sm:text-[1.625rem]">
+                        {t('pages.budgetMaker.heading')}
+                    </h1>
+                    <PeriodNavigator
+                        mode="month"
+                        month={selectedMonth}
+                        year={selectedYear}
+                        years={yearOptions}
+                        onChange={setPeriod}
+                        className="[&>div:first-child]:gap-1 [&>div:first-child]:border-transparent [&>div:first-child]:bg-transparent [&>div:first-child]:p-0 [&>div:first-child]:shadow-none"
+                    />
+                </div>
+                <div className="flex items-center gap-2.5">
+                    <SaveIndicator status={autosave.status} onRetry={autosave.retry} />
+                    {hasRows && (
+                        <>
+                            <Dialog
+                                open={isCopyOpen}
+                                onOpenChange={(open) => {
+                                    if (open) setCopyTarget(nextPeriod);
+                                    setIsCopyOpen(open);
+                                }}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="h-9 px-4">
+                                        <Copy aria-hidden="true" /> {t('pages.budgetMaker.copyTo')}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>{t('pages.budgetMaker.copyTitle')}</DialogTitle>
+                                        <DialogDescription>
+                                            {t('pages.budgetMaker.copyDescription', { month: monthLabel, year: selectedYear })}
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex gap-4 py-4">
+                                        <div className="flex flex-1 flex-col gap-1.5">
+                                            <Label className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.budgetMaker.targetMonth')}</Label>
+                                            <Select value={copyTarget.month.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, month: parseInt(val) }))}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {monthOptions.map((m, i) => (
+                                                        <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
-                                        <DialogFooter>
-                                            <Button variant="ghost" onClick={() => setIsCopyOpen(false)}>{t('common.cancel')}</Button>
-                                            <Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending}>
-                                                {copyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                {t('pages.budgetMaker.copyBudget')}
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            aria-label={t('pages.budgetMaker.deleteBudget')}
-                                            title={t('pages.budgetMaker.deleteBudget')}
-                                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
+                                        <div className="flex w-1/3 flex-col gap-1.5">
+                                            <Label className="text-[0.8125rem] font-normal text-muted-foreground">{t('pages.budgetMaker.targetYear')}</Label>
+                                            <Select value={copyTarget.year.toString()} onValueChange={(val) => setCopyTarget(p => ({ ...p, year: parseInt(val) }))}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {yearOptions.map(y => (
+                                                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="ghost" onClick={() => setIsCopyOpen(false)}>{t('common.cancel')}</Button>
+                                        <Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending}>
+                                            {copyMutation.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
+                                            {t('pages.budgetMaker.copyBudget')}
                                         </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>{t('pages.budgetMaker.deleteConfirmTitle')}</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                {t('pages.budgetMaker.deleteConfirmDescription', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive hover:bg-destructive/90">
-                                                {t('common.delete')}
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </>
-                        )}
-                    </div>
-                }
-            />
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
 
-            {/* Period navigation */}
-            <PeriodNavigator mode="month" month={selectedMonth} year={selectedYear} years={yearOptions} onChange={setPeriod} />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                                        aria-label={t('pages.budgetMaker.moreActions')}
+                                    >
+                                        <MoreHorizontal aria-hidden="true" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onSelect={() => setIsDeleteOpen(true)}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                                        {t('pages.budgetMaker.deleteBudget')}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>{t('pages.budgetMaker.deleteConfirmTitle')}</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            {t('pages.budgetMaker.deleteConfirmDescription', { month: monthLabel, year: selectedYear })}
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive hover:bg-destructive/90">
+                                            {t('common.delete')}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </>
+                    )}
+                </div>
+            </div>
 
             {error && !ready ? (
-                <div className="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
-                    <AlertCircle className="h-6 w-6 text-destructive" />
+                <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-4 text-center">
+                    <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
                     <p className="text-sm text-muted-foreground">{t('pages.budgetMaker.loadFailed')}</p>
-                    <Button variant="outline" size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>
+                    <Button variant="outline" onClick={() => refetch()}>{t('common.retry')}</Button>
                 </div>
             ) : isLoading || !ready ? (
                 <BudgetMakerSkeleton />
@@ -421,68 +461,48 @@ export default function BudgetMaker() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="space-y-2"
                 >
-                    {isEmpty && (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-5 py-4">
+                    {isEmpty ? (
+                        <div className="mt-6 flex flex-col justify-between gap-3 border-b border-border pb-5 sm:flex-row sm:items-center">
                             <div>
-                                <p className="font-medium">
-                                    {t('pages.budgetMaker.emptyTitle', { month: monthOptions[selectedMonth - 1], year: selectedYear })}
+                                <p className="text-[0.9375rem] font-medium">
+                                    {t('pages.budgetMaker.emptyTitle', { month: monthLabel, year: selectedYear })}
                                 </p>
                                 <p className="text-sm text-muted-foreground">{t('pages.budgetMaker.emptyDescription')}</p>
                             </div>
                             {prevHasRows && (
-                                <Button onClick={copyFromPrevious} className="shrink-0">
-                                    <Copy className="mr-2 h-4 w-4" />
+                                <Button variant="outline" onClick={copyFromPrevious} className="h-9 shrink-0 px-4">
+                                    <Copy aria-hidden="true" />
                                     {t('pages.budgetMaker.copyFromPrevious', { month: monthOptions[prevPeriod.month - 1], year: prevPeriod.year })}
                                 </Button>
                             )}
                         </div>
+                    ) : (
+                        <p className="mt-5 text-[0.90625rem] text-muted-foreground" aria-live="polite">{summary}</p>
                     )}
 
-                    {BUDGET_GROUPS.map(group => (
-                        <BudgetSection
-                            key={group}
-                            title={sectionTitles[group]}
-                            group={group}
-                            rows={rows[group]}
-                            totalIncome={totalIncome}
-                            categories={categories}
-                            tags={tags}
-                            open={openSections[group]}
-                            onOpenChange={(open) => setOpenSections(prev => ({ ...prev, [group]: open }))}
-                            onAdd={() => addRow(group)}
-                            onUpdate={(id, patch) => updateRow(group, id, patch)}
-                            onRemove={(id) => removeRow(group, id)}
-                            onReorder={(next) => setGroup(group, () => next)}
-                        />
-                    ))}
-
-                    {/* Summary Card */}
-                    <AnimatePresence>
-                        <motion.div
-                            initial={{ y: 100, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 100, opacity: 0 }}
-                            className="fixed bottom-24 left-4 right-4 lg:bottom-6 lg:right-6 lg:left-auto z-50"
-                        >
-                            <Card className="border-border bg-card shadow-sm">
-                                <CardHeader className="py-4 px-6 flex flex-row items-center gap-6 space-y-0">
-                                    <div>
-                                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                                            {t('metrics.remainingPlannedBudget')}
-                                        </CardTitle>
-                                        <div className={cn("text-3xl font-bold font-mono tracking-tight", remainingBudget >= 0 ? "text-foreground" : "text-destructive")}>
-                                            <SensitiveValue>{formatCurrency(remainingBudget)}</SensitiveValue>
-                                            <span className="text-sm ml-2 font-normal text-muted-foreground select-none">
-                                                (<SensitiveValue>{remainingBudgetPct.toFixed(1)}%</SensitiveValue>)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                            </Card>
-                        </motion.div>
-                    </AnimatePresence>
+                    <div data-budget-table="" className="mt-6">
+                        <BudgetColumnHeader />
+                        <div>
+                        {BUDGET_GROUPS.map(group => (
+                            <BudgetSection
+                                key={group}
+                                title={sectionTitles[group]}
+                                group={group}
+                                rows={rows[group]}
+                                totalIncome={totalIncome}
+                                categories={categories}
+                                tags={tags}
+                                open={openSections[group]}
+                                onOpenChange={(open) => setOpenSections(prev => ({ ...prev, [group]: open }))}
+                                onAdd={() => addRow(group)}
+                                onUpdate={(id, patch) => updateRow(group, id, patch)}
+                                onRemove={(id) => removeRow(group, id)}
+                                onReorder={(next) => setGroup(group, () => next)}
+                            />
+                        ))}
+                        </div>
+                    </div>
                 </motion.div>
             )}
         </div>
@@ -495,17 +515,17 @@ function SaveIndicator({ status, onRetry }: { status: SaveStatus; onRetry: () =>
     const content = (() => {
         switch (status) {
             case 'pending':
-                return <><span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />{t('pages.budgetMaker.unsavedStatus')}</>;
+                return <><span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" aria-hidden="true" />{t('pages.budgetMaker.unsavedStatus')}</>;
             case 'saving':
-                return <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('pages.budgetMaker.savingStatus')}</>;
+                return <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />{t('pages.budgetMaker.savingStatus')}</>;
             case 'saved':
-                return <><Check className="h-3.5 w-3.5 text-success" />{t('pages.budgetMaker.savedStatus')}</>;
+                return <><Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />{t('pages.budgetMaker.savedStatus')}</>;
             case 'invalid':
-                return <span className="flex items-center gap-1.5 text-warning"><AlertCircle className="h-3.5 w-3.5" />{t('pages.budgetMaker.invalidStatus')}</span>;
+                return <span className="flex items-center gap-1.5 text-warning"><AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />{t('pages.budgetMaker.invalidStatus')}</span>;
             case 'error':
                 return (
                     <span className="flex items-center gap-1.5 text-destructive">
-                        <AlertCircle className="h-3.5 w-3.5" />{t('pages.budgetMaker.errorStatus')}
+                        <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />{t('pages.budgetMaker.errorStatus')}
                         <Button variant="link" size="sm" className="h-auto p-0 text-destructive underline" onClick={onRetry}>{t('common.retry')}</Button>
                     </span>
                 );
@@ -515,7 +535,7 @@ function SaveIndicator({ status, onRetry }: { status: SaveStatus; onRetry: () =>
     })();
 
     return (
-        <span role="status" aria-live="polite" className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2 whitespace-nowrap">
+        <span role="status" aria-live="polite" className="flex items-center gap-1.5 whitespace-nowrap text-[0.8125rem] text-muted-foreground">
             {content}
         </span>
     );

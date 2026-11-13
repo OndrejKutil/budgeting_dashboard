@@ -39,20 +39,15 @@ export function BudgetRowFilters({ group, categoryIds, tagIds, categories, tags,
         .filter((tg): tg is Tag => !!tg);
     const hasAny = selectedCats.length + selectedTags.length > 0;
 
+    // Quiet text, not pills: names in muted type, the remove cross shows on hover or focus (always on touch).
     const chip = (key: string, label: string, kind: 'cat' | 'tag', onRemove: () => void) => (
-        <span
-            key={key}
-            className={cn(
-                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs',
-                kind === 'cat' ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground',
-            )}
-        >
+        <span key={key} className="inline-flex min-w-0 max-w-full items-center gap-0.5 text-[0.84375rem] text-muted-foreground">
             {kind === 'tag' && <span aria-hidden="true">#</span>}
-            {label}
+            <span className="truncate">{label}</span>
             <button
                 type="button"
                 aria-label={`${t('common.delete')} ${label}`}
-                className="rounded-sm text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="relative rounded-sm text-muted-foreground/70 max-lg:before:absolute max-lg:before:-inset-3.5 max-lg:before:content-[''] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100"
                 onClick={(e) => { e.stopPropagation(); onRemove(); }}
                 onPointerDown={(e) => e.stopPropagation()}
             >
@@ -63,7 +58,7 @@ export function BudgetRowFilters({ group, categoryIds, tagIds, categories, tags,
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
-            <div className="flex flex-wrap items-center gap-1 min-h-8">
+            <div className="flex min-h-9 min-w-0 flex-wrap items-center lg:flex-nowrap gap-x-3 gap-y-0.5">
                 {selectedCats.map(c => chip(`c${c.categories_id_pk}`, c.category_name, 'cat',
                     () => onChange({ category_ids: categoryIds.filter(id => id !== c.categories_id_pk) })))}
                 {selectedTags.map(tg => chip(`t${tg.tags_id_pk}`, tg.tag_name, 'tag',
@@ -71,14 +66,15 @@ export function BudgetRowFilters({ group, categoryIds, tagIds, categories, tags,
                 <PopoverTrigger asChild>
                     <button
                         type="button"
+                        aria-label={t('pages.budgetMaker.addFilter')}
                         className={cn(
-                            'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                            // Keep the empty state discoverable; once there are chips, only show on row hover.
-                            hasAny && 'md:opacity-0 md:group-hover/row:opacity-100 md:focus-visible:opacity-100',
+                            'relative inline-flex shrink-0 items-center gap-1 rounded max-lg:before:absolute max-lg:before:-inset-3.5 max-lg:before:content-[""] text-[0.84375rem] text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                            // Keep the empty state discoverable; once there are names, only show on row hover.
+                            hasAny && 'lg:opacity-0 lg:group-hover/row:opacity-100 lg:focus-visible:opacity-100',
                             open && 'opacity-100',
                         )}
                     >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-3 w-3" aria-hidden="true" />
                         {!hasAny && t('pages.budgetMaker.addFilter')}
                     </button>
                 </PopoverTrigger>
