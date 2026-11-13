@@ -171,7 +171,7 @@ export function DayBars({
               y={0}
               width={slot}
               height={baseline + 1}
-              tabIndex={index === focusIndex ? 0 : -1}
+              tabIndex={index === Math.min(focusIndex, values.length - 1) ? 0 : -1}
               role="img"
               aria-label={isPrivacyMode ? dayTitle(index) : `${dayTitle(index)}: ${formatValue(value)}`}
               className={`cursor-default outline-none ${active === index ? 'fill-foreground/[0.07]' : 'fill-transparent'} focus-visible:stroke-primary focus-visible:stroke-2`}

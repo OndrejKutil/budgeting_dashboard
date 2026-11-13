@@ -189,7 +189,7 @@ export default function MonthlyAnalyticsPage() {
     if (averageValue === undefined || Math.abs(averageValue) < 0.005) return null;
     return ((value - averageValue) / Math.abs(averageValue)) * 100;
   };
-  const rateDifference = average && average.savings_rate !== null ? data.savings_rate - average.savings_rate : null;
+  const rateDifference = average && average.savings_rate !== null && data.income > 0 ? data.savings_rate - average.savings_rate : null;
 
   const pointsKey = (count: number) => {
     const category = new Intl.PluralRules(locale).select(count);
@@ -269,6 +269,7 @@ export default function MonthlyAnalyticsPage() {
     {
       key: 'left',
       label: t('pages.monthlyAnalytics.left'),
+      sub: <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{t('pages.monthlyAnalytics.leftHint')}</p>,
       value: (
         <span className={cn(figureClass, left < 0 ? 'text-destructive' : 'text-primary')}>
           <SensitiveValue>{money(left)}</SensitiveValue>
@@ -401,6 +402,7 @@ export default function MonthlyAnalyticsPage() {
               <div key={figure.key} className={cellClass(index)}>
                 <div className="text-[0.8125rem] text-muted-foreground">{figure.label}</div>
                 {figure.value}
+                {figure.sub}
                 {figure.comparison}
               </div>
             ))}
