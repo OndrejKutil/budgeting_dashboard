@@ -32,7 +32,7 @@ On the Pi:
 |-----|--------|----------|-------|
 | `recurring` | `post_recurring.py` | daily 05:00 | `POST /recurring/post-due` (backend) |
 | `fx` | `refresh_exchange_rates.py` | daily 06:00 | `refresh-exchange-rates` Edge Function |
-| `trading` | `sync_trading212.py` | every 30 min | `POST /trading212/sync-all` (backend) |
+| `trading` | `sync_trading212.py` | every 3 hours | `POST /trading212/sync-all` (backend) |
 
 Times are Europe/Prague (the Pi's timezone).
 

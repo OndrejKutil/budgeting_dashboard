@@ -25,7 +25,7 @@ Jobs right now (exact list and times: `bd status`):
 |-----|--------------|------|
 | `recurring` | auto-posts due recurring transactions | daily 05:00 |
 | `fx` | refreshes exchange rates | daily 06:00 |
-| `trading` | syncs Trading212 portfolios | every 30 min |
+| `trading` | syncs Trading212 portfolios | every 3 hours (00:00, 03:00, …) |
 
 ## Where things are
 
