@@ -1,7 +1,9 @@
 -- Auto-posting for recurring templates.
 --
--- A template with auto_post = true is posted by a daily pg_cron job instead of waiting for the
--- user to press "Post" on the Recurring page. Every automatic posting is recorded in
+-- A template with auto_post = true is posted by a daily job instead of waiting for the user to
+-- press "Post" on the Recurring page. The job is scripts/post_recurring.py on the Raspberry Pi
+-- (same as the other scheduled jobs), which calls POST /recurring/post-due on the backend, which
+-- calls post_due_recurring() below with the service-role client. Every automatic posting is recorded in
 -- fct_recurring_postings, which doubles as the notification feed: the app lists unacknowledged
 -- postings from the last few days so the user can edit, delete or dismiss them.
 --
@@ -9,7 +11,7 @@
 --   fct_recurring_postings    -- one row per automatically posted occurrence; unique on
 --                                (recurring_id_fk, occurrence_date) so an occurrence can never be
 --                                posted twice, even if two runs overlap
---   post_due_recurring()      -- SECURITY DEFINER worker run by pg_cron; not callable by app users
+--   post_due_recurring()      -- SECURITY DEFINER worker; callable by service_role only
 --
 -- Manual posting (POST /recurring/{id}/post) is untouched and records no posting: the user just
 -- did it, there is nothing to notify about.
@@ -83,7 +85,8 @@ GRANT ALL ON TABLE "public"."fct_recurring_postings" TO "service_role";
 -- ================================================================================================
 
 -- Posts every due occurrence of every active auto_post template, for all users, and advances
--- next_date. Missed days are caught up (each occurrence dated on its own due date).
+-- next_date. Missed days are caught up (each occurrence dated on its own due date), so a day
+-- the Pi was off only delays postings, it doesn't lose them.
 --
 -- Catch-up window: only templates whose next_date is within the last 31 days are picked up. A
 -- template that was already long overdue when auto-post was switched on (or when it was
@@ -99,7 +102,7 @@ GRANT ALL ON TABLE "public"."fct_recurring_postings" TO "service_role";
 -- clamps month-end the same way (Jan 31 + 1 month = Feb 28; Feb 29 + 1 year = Feb 28).
 --
 -- "Today" is Europe/Prague, the app's home timezone, so a template due on the 1st posts on the
--- 1st local time regardless of when the UTC cron fires.
+-- 1st local time whatever the server clock says.
 CREATE OR REPLACE FUNCTION "public"."post_due_recurring"() RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -178,17 +181,9 @@ $$;
 
 ALTER FUNCTION "public"."post_due_recurring"() OWNER TO "postgres";
 
--- SECURITY DEFINER and acting for every user: must never be reachable through PostgREST RPC.
+-- SECURITY DEFINER and acting for every user: must never be reachable through PostgREST RPC by
+-- app users. Only the backend's service-role client (POST /recurring/post-due) may call it.
 REVOKE ALL ON FUNCTION "public"."post_due_recurring"() FROM PUBLIC;
 REVOKE ALL ON FUNCTION "public"."post_due_recurring"() FROM "anon", "authenticated";
 GRANT EXECUTE ON FUNCTION "public"."post_due_recurring"() TO "service_role";
 
-
--- ================================================================================================
---                                   pg_cron schedule
--- ================================================================================================
-
-CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
-
--- 03:15 UTC = 04:15/05:15 Prague: after local midnight in both summer and winter time.
-SELECT cron.schedule('post-due-recurring', '15 3 * * *', $$SELECT public.post_due_recurring();$$);

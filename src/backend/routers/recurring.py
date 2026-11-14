@@ -5,8 +5,8 @@ from datetime import UTC, date, datetime, timedelta
 import fastapi
 from fastapi import APIRouter, Depends, Query, Request, status
 
-from ..auth.auth import api_key_auth, get_current_user
-from ..data.database import get_db_client
+from ..auth.auth import api_key_auth, get_current_user, job_secret_auth
+from ..data.database import get_db_client, get_service_db_client
 from ..helper.columns import (
     ACCOUNTS_COLUMNS,
     RECURRING_COLUMNS,
@@ -143,8 +143,8 @@ async def get_all_recurring(
 # ================================================================================================
 #   Auto-post notifications
 #
-#   The daily pg_cron job (supabase/migrations/20261114000000_add_recurring_auto_post.sql,
-#   post_due_recurring()) posts due occurrences of auto_post templates and records each one in
+#   The daily job (scripts/post_recurring.py -> POST /recurring/post-due -> the SQL function
+#   post_due_recurring() in supabase/migrations/20261114000000_add_recurring_auto_post.sql) posts due occurrences of auto_post templates and records each one in
 #   fct_recurring_postings. These endpoints only read and dismiss those records; "Delete" on a
 #   notification is a plain DELETE /transactions/{id}, which cascades the posting row away.
 #   Declared before the /{recurring_id} routes so "notifications" is never read as an ID.
@@ -256,6 +256,30 @@ async def acknowledge_notification(
         raise fastapi.HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to dismiss notification"
         )
+
+
+@router.post("/post-due", include_in_schema=False)
+@limiter.limit(RATE_LIMITS["health"])
+async def cron_post_due(
+    request: Request,
+    job_secret: str = Depends(job_secret_auth),
+) -> dict[str, int]:
+    """
+    Daily entry point for the Pi script (scripts/post_recurring.py). Same gate as
+    /trading212/sync-all: the job secret, not a user token, because this posts for every user.
+    The work itself is the post_due_recurring() SQL function (it runs as one transaction per
+    template, so a concurrent manual Post can't double-post); this only triggers it with the
+    service-role client, the only role allowed to execute it.
+    """
+    try:
+        service_client = get_service_db_client()
+        resp = service_client.rpc("post_due_recurring").execute()
+        posted = int(resp.data or 0)
+        logger.info(f"cron_post_due: posted {posted} occurrence(s)")
+        return {"posted": posted}
+    except Exception as e:
+        logger.error(f"cron_post_due failed: {e}")
+        raise fastapi.HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to post due templates")
 
 
 @router.post("/", response_model=RecurringSuccessResponse)
