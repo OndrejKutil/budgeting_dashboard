@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { PublicLayout, PublicPageTitle } from '@/components/public/PublicLayout';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,43 @@ const FIGURES = [
   },
 ];
 
+/** The savings-fund guide, step by step. Linked from the Funds page as /how-it-works#savings-funds. */
+const FUND_STEPS = [
+  {
+    title: 'Create a fund',
+    description:
+      'On the Funds page, choose Create Fund and give it a name, such as Vacation or Emergency reserve. A target amount is optional: set one to see progress towards it, or leave it at 0 for an open-ended fund.',
+  },
+  {
+    title: 'Put money in',
+    description:
+      'Add a normal transaction with a category of the Saving type, the account the money leaves from, and the fund in the Savings Fund field. The account balance goes down and the fund grows by the same amount.',
+  },
+  {
+    title: 'Take money out',
+    description:
+      'Add a transaction and switch the entry type to From fund. Pick the fund and the account the money goes back to. It is recorded under the Savings Funds Withdrawal category, so it does not count as new income.',
+  },
+  {
+    title: 'Track progress',
+    description:
+      'Each fund shows its current amount, how close it is to its target, and how much went in or out over the last 30 days. The fund balance is simply everything put in minus everything taken out.',
+  },
+  {
+    title: 'Retire a fund',
+    description:
+      'Deleting a fund that already has transactions deactivates it instead, so your history and analytics stay intact. A fund with no transactions is deleted for good.',
+  },
+];
+
+const FUND_TIPS = [
+  'A fund is a label on your money, not a separate account. It tracks how much of your money is set aside for a purpose, even when it sits in the same bank account as everything else.',
+  'Money in funds still counts towards your Liquid Cash. Moving money into or out of a fund changes account balances, but not your total.',
+  'To save automatically, create a recurring template with a Saving category and a fund selected. Each time it is posted, the fund grows.',
+  'Keep the Savings Funds Withdrawal and Exclude categories as they are. The app finds them by name, so renaming or deleting them breaks withdrawals and transfers.',
+  'Moving money between two of your own accounts is a Transfer, not a saving. It creates two transactions in the Exclude category, which no figure counts.',
+];
+
 const EXAMPLE_INPUTS = [
   { label: 'Income', value: '30 000 Kč' },
   { label: 'Expenses', value: '18 000 Kč' },
@@ -49,6 +87,12 @@ const EXAMPLE_RESULTS = [
 ];
 
 export default function HowItWorksPage() {
+  // Lazy-loaded page: redo the browser's jump to #savings-funds once the section exists.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, []);
+
   return (
     <PublicLayout>
       <PublicPageTitle
@@ -99,6 +143,31 @@ export default function HowItWorksPage() {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section id="savings-funds" aria-labelledby="savings-funds-title" className="mt-20 max-w-[60rem] scroll-mt-8">
+        <h2 id="savings-funds-title" className="text-[1.5rem] font-light tracking-[-0.02em]">Using savings funds</h2>
+        <p className="mt-2 max-w-[42rem] text-[0.9375rem] leading-relaxed text-muted-foreground">
+          Savings funds set money aside for a goal. They are built from ordinary transactions, so every figure above
+          already accounts for them.
+        </p>
+
+        <ol className="mt-8 border-t border-border">
+          {FUND_STEPS.map((step, index) => (
+            <li key={step.title} className="grid gap-x-8 gap-y-2 border-b border-border py-6 md:grid-cols-[2.5rem_14rem_minmax(0,1fr)]">
+              <span className="tabular-nums text-muted-foreground">{index + 1}</span>
+              <h3 className="text-[1.125rem] font-normal tracking-[-0.01em]">{step.title}</h3>
+              <p className="min-w-0 text-[0.9375rem] leading-relaxed text-muted-foreground">{step.description}</p>
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="mt-10 text-[1.125rem] font-normal tracking-[-0.01em]">Good to know</h3>
+        <ul className="mt-3 max-w-[42rem] list-disc space-y-2 pl-5 text-[0.9375rem] leading-relaxed text-muted-foreground">
+          {FUND_TIPS.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
       </section>
     </PublicLayout>
   );

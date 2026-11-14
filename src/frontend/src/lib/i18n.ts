@@ -230,6 +230,7 @@ const dashboardTranslations = {
       funds: {
         title: 'Savings Funds',
         description: 'Track your savings goals and progress',
+        guideLink: 'How funds work',
         create: 'Create Fund',
         failedToLoad: 'Failed to load funds',
         created: 'Fund created successfully',
@@ -388,6 +389,9 @@ const dashboardTranslations = {
       screenshotImport: {
         title: 'Screenshot Import',
         description: 'Turn a screenshot of bank notifications or a transaction list into draft transactions.',
+        dataNotice: "Your screenshot is sent to Groq, where third-party AI models (which may change over time) read it. We don't store the image, and Groq says it doesn't train on it. Crop or blur anything you'd rather not share, such as account numbers or names.",
+        dataNoticeLink: 'How your data is handled',
+        providerPolicyLink: "Groq's data policy",
         notEnabledTitle: 'Not enabled for this account',
         notEnabledDescription: 'Screenshot import is behind a feature flag. Ask for access to have it turned on.',
         dropTitle: 'Drop a screenshot here',
@@ -840,6 +844,7 @@ const dashboardTranslations = {
         notEnabledTitle: 'Not enabled for this account',
         notEnabledDescription: 'The Trading212 integration is behind a feature flag. Ask for access to have it turned on.',
         connectTitle: 'Connect your Trading212 account',
+        privacyLink: 'How your key is stored',
         connectDescription: 'Generate a read-only API key in Trading212 (Settings → API) and paste it below. Grant only account, portfolio, and history permissions — never order placement.',
         apiKeyLabel: 'API key',
         apiSecretLabel: 'API secret',
@@ -1195,6 +1200,7 @@ const dashboardTranslations = {
       funds: {
         title: 'Spořicí fondy',
         description: 'Sledujte cíle spoření a jejich průběh',
+        guideLink: 'Jak fondy fungují',
         create: 'Vytvořit fond',
         failedToLoad: 'Fondy se nepodařilo načíst',
         created: 'Fond byl úspěšně vytvořen',
@@ -1353,6 +1359,9 @@ const dashboardTranslations = {
       screenshotImport: {
         title: 'Import ze snímku',
         description: 'Proměňte snímek bankovních notifikací nebo seznamu transakcí v návrhy transakcí.',
+        dataNotice: 'Snímek se odesílá společnosti Groq, kde jej čtou AI modely třetích stran (které se mohou časem měnit). Obrázek neukládáme a Groq uvádí, že na něm modely netrénuje. Ořízněte nebo rozmažte vše, co sdílet nechcete, například čísla účtů nebo jména.',
+        dataNoticeLink: 'Jak nakládáme s daty',
+        providerPolicyLink: 'Zásady Groq k datům',
         notEnabledTitle: 'Pro tento účet není zapnuto',
         notEnabledDescription: 'Import ze snímku je skrytý za příznakem funkce. Požádejte o přístup a bude zapnut.',
         dropTitle: 'Přetáhněte sem snímek obrazovky',
@@ -1716,6 +1725,7 @@ const dashboardTranslations = {
         notEnabledTitle: 'Pro tento účet není povoleno',
         notEnabledDescription: 'Integrace Trading212 je skrytá za feature flagem. Požádejte o přístup.',
         connectTitle: 'Připojte svůj účet Trading212',
+        privacyLink: 'Jak klíč uchováváme',
         connectDescription: 'Vygenerujte API klíč pouze pro čtení v Trading212 (Nastavení → API) a vložte ho níže. Povolte pouze oprávnění k účtu, portfoliu a historii — nikdy k zadávání příkazů.',
         apiKeyLabel: 'API klíč',
         apiSecretLabel: 'API tajný klíč',

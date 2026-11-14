@@ -29,6 +29,7 @@ import {
   CalendarIcon,
   History,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 import { fieldLine } from '@/components/ui/field-line';
 import { cn } from '@/lib/utils';
@@ -591,6 +592,21 @@ export default function ScreenshotImportPage() {
       <header>
         {title}
         <p className="mt-1 max-w-[65ch] text-[0.8125rem] text-muted-foreground">{t('pages.screenshotImport.description')}</p>
+        {/* Data-handling disclosure: what leaves the app before the user uploads anything. Links open in a
+            new tab so a chosen screenshot and typed instructions aren't lost. */}
+        <p className="mt-3 flex max-w-[65ch] gap-2 text-[0.8125rem] text-muted-foreground">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>
+            {t('pages.screenshotImport.dataNotice')}{' '}
+            <a href="/privacy#screenshot-import" target="_blank" rel="noreferrer" className="text-foreground underline decoration-foreground/30 underline-offset-4">
+              {t('pages.screenshotImport.dataNoticeLink')}
+            </a>
+            {' · '}
+            <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noreferrer" className="text-foreground underline decoration-foreground/30 underline-offset-4">
+              {t('pages.screenshotImport.providerPolicyLink')}
+            </a>
+          </span>
+        </p>
       </header>
 
       {/* Upload: the screenshot on the left, instructions and the extract action on the right. */}
