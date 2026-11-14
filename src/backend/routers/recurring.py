@@ -273,7 +273,8 @@ async def cron_post_due(
     """
     try:
         service_client = get_service_db_client()
-        resp = service_client.rpc("post_due_recurring").execute()
+        # supabase-py 1.x requires the params argument even for a no-arg function.
+        resp = service_client.rpc("post_due_recurring", {}).execute()
         posted = int(resp.data or 0)
         logger.info(f"cron_post_due: posted {posted} occurrence(s)")
         return {"posted": posted}
