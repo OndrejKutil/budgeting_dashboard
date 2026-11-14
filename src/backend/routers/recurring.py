@@ -3,10 +3,12 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 
 import fastapi
+import httpx
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from ..auth.auth import api_key_auth, get_current_user, job_secret_auth
-from ..data.database import get_db_client, get_service_db_client
+from ..data.database import get_db_client
+from ..helper import environment as env
 from ..helper.columns import (
     ACCOUNTS_COLUMNS,
     RECURRING_COLUMNS,
@@ -272,10 +274,23 @@ async def cron_post_due(
     service-role client, the only role allowed to execute it.
     """
     try:
-        service_client = get_service_db_client()
-        # supabase-py 1.x requires the params argument even for a no-arg function.
-        resp = service_client.rpc("post_due_recurring", {}).execute()
-        posted = int(resp.data or 0)
+        # Direct PostgREST call instead of supabase-py's rpc(): the pinned postgrest-py 0.10
+        # only accepts a list of rows as a response and errors on this function's scalar
+        # return value -- after the posting has already been committed.
+        if not env.PROJECT_URL or not env.SERVICE_ROLE_KEY:
+            raise OSError("PROJECT_URL or SERVICE_ROLE_KEY is not set")
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{env.PROJECT_URL}/rest/v1/rpc/post_due_recurring",
+                headers={
+                    "apikey": env.SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {env.SERVICE_ROLE_KEY}",
+                },
+                json={},
+            )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"HTTP {resp.status_code}: {resp.text}")
+        posted = int(resp.json() or 0)
         logger.info(f"cron_post_due: posted {posted} occurrence(s)")
         return {"posted": posted}
     except Exception as e:
