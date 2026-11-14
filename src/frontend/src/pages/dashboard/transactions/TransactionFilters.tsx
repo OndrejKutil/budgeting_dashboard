@@ -240,7 +240,8 @@ export function TransactionFilters(props: TransactionFiltersProps) {
   const moreTriggerContent = (
     <>
       <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className={cn('border-b-2 pb-[0.1875rem]', hiddenActiveCount > 0 ? 'border-primary' : 'border-transparent')}>
+      {/* Same space above as the underline takes below, so the text stays centred on the icon and badge. */}
+      <span className={cn('border-y-2 border-t-transparent py-[0.1875rem]', hiddenActiveCount > 0 ? 'border-b-primary' : 'border-b-transparent')}>
         {t('pages.transactions.more')}
       </span>
       {/* The badge's slot is always there, so the bar does not shift when it appears. */}

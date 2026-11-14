@@ -121,8 +121,9 @@ export function MultiSelect({
           className={cn(
             'truncate',
             variant === 'field' && selected.length === 0 && 'text-muted-foreground dark:text-muted-foreground/80',
-            variant === 'quiet' && 'max-w-[12rem] border-b-2 pb-[3px]',
-            variant === 'quiet' && (selected.length > 0 ? 'border-primary' : 'border-transparent'),
+            // Mirrored space above the underline keeps the text centred on the chevron and the row.
+            variant === 'quiet' && 'max-w-[12rem] border-y-2 border-t-transparent py-[3px]',
+            variant === 'quiet' && (selected.length > 0 ? 'border-b-primary' : 'border-b-transparent'),
           )}
         >
           {triggerLabel}
