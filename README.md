@@ -75,7 +75,7 @@ budgeting_dashboard/
 ├── supabase/                       # Database as code
 │   ├── migrations/                 # Versioned schema migrations
 │   └── functions/                  # Edge Functions
-├── scripts/                        # Ops scripts (e.g. daily FX-rate refresh)
+├── scripts/                        # Scheduled jobs run on a Raspberry Pi (FX refresh, T212 sync, …)
 ├── docs/                           # backend / frontend / database docs
 └── README.md
 ```
@@ -85,6 +85,7 @@ budgeting_dashboard/
 - **[docs/backend](./docs/backend/README.md)** — auth, rate limiting, routers, schemas, DB access.
 - **[docs/frontend](./docs/frontend/README.md)** — state, API client, routing, patterns.
 - **[docs/database](./docs/database/README.md)** — data model + the Supabase migration workflow.
+- **[docs/scripts](./docs/scripts/README.md)** — scheduled jobs on the Raspberry Pi and the `bd` CLI.
 - Live API reference: Swagger at `/docs`, ReDoc at `/redoc` on the running backend.
 
 ### **Real-World Application**
