@@ -389,7 +389,7 @@ const dashboardTranslations = {
       screenshotImport: {
         title: 'Screenshot Import',
         description: 'Turn a screenshot of bank notifications or a transaction list into draft transactions.',
-        dataNotice: "Your screenshot is sent to Groq, where third-party AI models (which may change over time) read it. We don't store the image, and Groq says it doesn't train on it. Crop or blur anything you'd rather not share, such as account numbers or names.",
+        dataNotice: "Your screenshot, the names of your categories, accounts, funds and tags, and a few matching past transaction notes are sent to Groq, where third-party AI models (which may change over time) process them. We don't store the image, and Groq says it doesn't train on API data. Crop or blur anything you'd rather not share, such as account numbers or names.",
         dataNoticeLink: 'How your data is handled',
         providerPolicyLink: "Groq's data policy",
         notEnabledTitle: 'Not enabled for this account',
@@ -824,7 +824,7 @@ const dashboardTranslations = {
         activeHint: 'Turn off to pause the template without deleting it. Paused templates are never posted and are left out of the totals.',
         paused: 'Paused',
         autoPost: 'Post automatically',
-        autoPostHint: "Posted for you early in the morning on the due date. You'll get a notification to review, edit or delete it.",
+        autoPostHint: "Posted for you early in the morning on the due date. You'll get a notification to review, edit or delete it. If it's more than a month overdue, post the missed ones by hand first.",
         autoBadge: 'Auto',
         notifications: {
           title: 'Posted automatically',
@@ -1375,7 +1375,7 @@ const dashboardTranslations = {
       screenshotImport: {
         title: 'Import ze snímku',
         description: 'Proměňte snímek bankovních notifikací nebo seznamu transakcí v návrhy transakcí.',
-        dataNotice: 'Snímek se odesílá společnosti Groq, kde jej čtou AI modely třetích stran (které se mohou časem měnit). Obrázek neukládáme a Groq uvádí, že na něm modely netrénuje. Ořízněte nebo rozmažte vše, co sdílet nechcete, například čísla účtů nebo jména.',
+        dataNotice: 'Snímek, názvy vašich kategorií, účtů, fondů a štítků a několik podobných dřívějších poznámek k transakcím se odesílají společnosti Groq, kde je zpracují AI modely třetích stran (které se mohou časem měnit). Obrázek neukládáme a Groq uvádí, že na datech z API modely netrénuje. Ořízněte nebo rozmažte vše, co sdílet nechcete, například čísla účtů nebo jména.',
         dataNoticeLink: 'Jak nakládáme s daty',
         providerPolicyLink: 'Zásady Groq k datům',
         notEnabledTitle: 'Pro tento účet není zapnuto',
@@ -1721,7 +1721,7 @@ const dashboardTranslations = {
         activeHint: 'Vypnutím šablonu pozastavíte, aniž byste ji smazali. Pozastavené šablony se nikdy nezaúčtují a nepočítají se do součtů.',
         paused: 'Pozastavené',
         autoPost: 'Zaúčtovat automaticky',
-        autoPostHint: 'Zaúčtuje se za vás brzy ráno v den splatnosti. Dostanete upozornění, abyste ji mohli zkontrolovat, upravit nebo smazat.',
+        autoPostHint: 'Zaúčtuje se za vás brzy ráno v den splatnosti. Dostanete upozornění, abyste ji mohli zkontrolovat, upravit nebo smazat. Pokud je po splatnosti déle než měsíc, zaúčtujte nejdřív zmeškané platby ručně.',
         autoBadge: 'Automaticky',
         notifications: {
           title: 'Zaúčtováno automaticky',

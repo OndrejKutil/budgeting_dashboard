@@ -70,7 +70,11 @@ CREATE POLICY "Update own recurring postings" ON "public"."fct_recurring_posting
 CREATE POLICY "Delete own recurring postings" ON "public"."fct_recurring_postings"
     FOR DELETE USING (("user_id_fk" = ( SELECT "auth"."uid"() AS "uid")));
 
-GRANT SELECT, UPDATE, DELETE ON TABLE "public"."fct_recurring_postings" TO "authenticated";
+-- Supabase's default privileges grant anon/authenticated ALL on new tables; narrow that down.
+-- Users may only read, dismiss (acknowledged_at is the one updatable column) and delete.
+REVOKE ALL ON TABLE "public"."fct_recurring_postings" FROM "anon", "authenticated";
+GRANT SELECT, DELETE ON TABLE "public"."fct_recurring_postings" TO "authenticated";
+GRANT UPDATE ("acknowledged_at") ON TABLE "public"."fct_recurring_postings" TO "authenticated";
 GRANT ALL ON TABLE "public"."fct_recurring_postings" TO "service_role";
 
 
@@ -79,8 +83,17 @@ GRANT ALL ON TABLE "public"."fct_recurring_postings" TO "service_role";
 -- ================================================================================================
 
 -- Posts every due occurrence of every active auto_post template, for all users, and advances
--- next_date. Missed days are caught up (each occurrence dated on its own due date), capped per
--- template per run so a weekly template that was due years ago cannot flood the ledger in one go.
+-- next_date. Missed days are caught up (each occurrence dated on its own due date).
+--
+-- Catch-up window: only templates whose next_date is within the last 31 days are picked up. A
+-- template that was already long overdue when auto-post was switched on (or when it was
+-- un-paused) is left alone and stays in "Due now" for the user to post by hand, instead of
+-- silently back-posting months of transactions. Once it is within the window, auto-post takes
+-- over. In normal operation the job runs daily, so the window only matters in that case.
+-- v_max_per is a second safety cap per template per run.
+--
+-- Each template is posted in its own sub-transaction: one failing template (bad FK, a future
+-- trigger) is skipped with a WARNING instead of rolling back the whole run for every user.
 --
 -- Date stepping must match routers/recurring.py::_advance_date: Postgres' interval arithmetic
 -- clamps month-end the same way (Jan 31 + 1 month = Feb 28; Feb 29 + 1 year = Feb 28).
@@ -93,8 +106,10 @@ CREATE OR REPLACE FUNCTION "public"."post_due_recurring"() RETURNS integer
     AS $$
 DECLARE
     v_today    date := (now() AT TIME ZONE 'Europe/Prague')::date;
-    v_max_per  constant integer := 60;
+    v_window   constant integer := 31;
+    v_max_per  constant integer := 10;
     v_posted   integer := 0;
+    v_tpl_n    integer;
     v_tpl      record;
     v_date     date;
     v_steps    integer;
@@ -103,12 +118,16 @@ BEGIN
     FOR v_tpl IN
         SELECT *
         FROM public.dim_recurring
-        WHERE auto_post AND is_active AND next_date <= v_today
+        WHERE auto_post AND is_active
+          AND next_date <= v_today
+          AND next_date >= v_today - v_window
         ORDER BY next_date
         FOR UPDATE SKIP LOCKED
     LOOP
+      BEGIN
         v_date  := v_tpl.next_date;
         v_steps := 0;
+        v_tpl_n := 0;
 
         WHILE v_date <= v_today AND v_steps < v_max_per LOOP
             -- Guard against a duplicate if next_date was ever rewound onto an already-posted date.
@@ -128,7 +147,7 @@ BEGIN
                 VALUES
                     (v_tpl.user_id_fk, v_tpl.recurring_id_pk, v_tx_id, v_date);
 
-                v_posted := v_posted + 1;
+                v_tpl_n := v_tpl_n + 1;
             END IF;
 
             v_date := CASE v_tpl.cadence
@@ -144,6 +163,13 @@ BEGIN
         UPDATE public.dim_recurring
         SET next_date = v_date, updated_at = now()
         WHERE recurring_id_pk = v_tpl.recurring_id_pk;
+
+        -- Counted only once the template's savepoint has succeeded.
+        v_posted := v_posted + v_tpl_n;
+      EXCEPTION WHEN OTHERS THEN
+        -- Rolls back just this template's inserts (the BEGIN block is a savepoint).
+        RAISE WARNING 'post_due_recurring: template % skipped: %', v_tpl.recurring_id_pk, SQLERRM;
+      END;
     END LOOP;
 
     RETURN v_posted;

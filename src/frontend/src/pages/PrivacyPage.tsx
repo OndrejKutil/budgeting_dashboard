@@ -83,8 +83,8 @@ export default function PrivacyPage() {
                   Screenshot import is optional and only available when enabled for your account. When you use it, the following is sent to <a href="https://groq.com" target="_blank" rel="noreferrer">Groq</a>, which runs the AI models that read the image:
                 </p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-                  <li>The screenshot you upload</li>
-                  <li>The names of your categories, accounts, savings funds and tags, so the result can be matched to them</li>
+                  <li>The screenshot you upload, and then the transactions read from it (merchants, amounts, dates) as text for a second matching step</li>
+                  <li>The names of your categories, accounts, savings funds and tags, with basic details such as category type and account type and currency, so the result can be matched to them</li>
                   <li>A few of your past transaction notes that resemble the merchants found, so they are categorised the way you did before</li>
                   <li>Any instructions you type into the import form</li>
                 </ul>

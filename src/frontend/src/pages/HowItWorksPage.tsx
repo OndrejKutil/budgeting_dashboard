@@ -61,7 +61,7 @@ const FUND_STEPS = [
   {
     title: 'Retire a fund',
     description:
-      'Deleting a fund that already has transactions deactivates it instead, so your history and analytics stay intact. A fund with no transactions is deleted for good.',
+      'A fund can only be deleted once its balance is 0, so take the money out first. A fund with past transactions is then deactivated instead of deleted, so your history and analytics stay intact; a fund that was never used is deleted for good.',
   },
 ];
 
@@ -70,7 +70,7 @@ const FUND_TIPS = [
   'Money in funds still counts towards your Liquid Cash. Moving money into or out of a fund changes account balances, but not your total.',
   'To save automatically, create a recurring template with a Saving category and a fund selected, and turn on Post automatically. Each time it is posted, the fund grows, and you get a notification you can review or ignore.',
   'Keep the Savings Funds Withdrawal and Exclude categories as they are. The app finds them by name, so renaming or deleting them breaks withdrawals and transfers.',
-  'Moving money between two of your own accounts is a Transfer, not a saving. It creates two transactions in the Exclude category, which no figure counts.',
+  'Moving money between two of your own accounts is a Transfer, not a saving. It creates two transactions in the Exclude category, which the income, expense and savings figures ignore.',
 ];
 
 const EXAMPLE_INPUTS = [

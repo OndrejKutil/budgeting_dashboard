@@ -170,9 +170,12 @@ viewing and one-off pokes.** Mixing them causes drift — which this setup exist
 
 `post-due-recurring` runs daily at 03:15 UTC and calls `public.post_due_recurring()`
 (migration `20261114000000_add_recurring_auto_post.sql`). For every active template with
-`auto_post = true` it posts each due occurrence (catching up missed ones, max 60 per template
-per run), dated on its due date, records it in `fct_recurring_postings`, and advances
-`next_date`. "Today" is Europe/Prague. The function is `SECURITY DEFINER` and acts for all
+`auto_post = true` whose `next_date` is due and at most 31 days old, it posts each due
+occurrence (catching up missed ones, max 10 per template per run), dated on its due date,
+records it in `fct_recurring_postings`, and advances `next_date`. Templates overdue by more than
+31 days are left for the user to post by hand, so switching auto-post on never back-posts
+months of history. Each template runs in its own savepoint; a failing one is skipped with a
+`WARNING` (visible in the Postgres logs) rather than aborting the run. "Today" is Europe/Prague. The function is `SECURITY DEFINER` and acts for all
 users, so `EXECUTE` is revoked from `anon`/`authenticated` — it must never be callable via RPC.
 
 Inspect or run it by hand from the SQL editor:
