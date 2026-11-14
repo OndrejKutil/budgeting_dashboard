@@ -208,6 +208,13 @@ export interface CreateRecurringRequest {
     next_date: string;
     notes?: string;
     is_active?: boolean;
+    auto_post?: boolean;
+}
+
+/** PATCH /recurring/{id}: flip switches without resending the template. */
+export interface ToggleRecurringRequest {
+    is_active?: boolean;
+    auto_post?: boolean;
 }
 
 export interface UpdateRecurringRequest {
@@ -219,6 +226,7 @@ export interface UpdateRecurringRequest {
     next_date?: string;
     notes?: string;
     is_active?: boolean;
+    auto_post?: boolean;
 }
 
 // ================================================================================================

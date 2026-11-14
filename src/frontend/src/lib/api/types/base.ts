@@ -503,8 +503,21 @@ export interface Recurring {
     next_date: string;
     notes: string | null;
     is_active: boolean | null;
+    /** Posted automatically by the daily job when due (see fct_recurring_postings). */
+    auto_post: boolean;
     created_at: string | null;
     updated_at: string | null;
+}
+
+/** An occurrence the daily job posted automatically and the user hasn't dismissed yet. */
+export interface RecurringNotification {
+    posting_id: string;
+    recurring_id: string;
+    transaction_id: string;
+    occurrence_date: string;
+    posted_at: string;
+    /** The posted transaction as it is now, tags included (same shape as a transactions-list row). */
+    transaction: Transaction;
 }
 
 export interface RecurringSummary {

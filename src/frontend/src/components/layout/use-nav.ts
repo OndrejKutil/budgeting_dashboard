@@ -20,8 +20,9 @@ export function useDueRecurringCount(): number {
   const { currency: userCurrency } = useUser();
   const { data } = useQuery({
     queryKey: ['recurring', userCurrency],
-    queryFn: async () => recurringApi.getAll({ base_currency: userCurrency }),
+    // Same key and params as RecurringPage, which lists paused templates as well.
+    queryFn: async () => recurringApi.getAll({ base_currency: userCurrency, include_inactive: true }),
     staleTime: 5 * 60 * 1000,
   });
-  return (data?.data ?? []).filter((r) => daysDiff(r.next_date) <= 0).length;
+  return (data?.data ?? []).filter((r) => r.is_active !== false && daysDiff(r.next_date) <= 0).length;
 }

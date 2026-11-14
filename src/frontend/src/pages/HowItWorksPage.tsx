@@ -68,7 +68,7 @@ const FUND_STEPS = [
 const FUND_TIPS = [
   'A fund is a label on your money, not a separate account. It tracks how much of your money is set aside for a purpose, even when it sits in the same bank account as everything else.',
   'Money in funds still counts towards your Liquid Cash. Moving money into or out of a fund changes account balances, but not your total.',
-  'To save automatically, create a recurring template with a Saving category and a fund selected. Each time it is posted, the fund grows.',
+  'To save automatically, create a recurring template with a Saving category and a fund selected, and turn on Post automatically. Each time it is posted, the fund grows, and you get a notification you can review or ignore.',
   'Keep the Savings Funds Withdrawal and Exclude categories as they are. The app finds them by name, so renaming or deleting them breaks withdrawals and transfers.',
   'Moving money between two of your own accounts is a Transfer, not a saving. It creates two transactions in the Exclude category, which no figure counts.',
 ];

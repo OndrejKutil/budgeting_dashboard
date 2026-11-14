@@ -22,10 +22,15 @@ import {
 } from '@/components/ui/select';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
+import { AutoPostedList } from '@/components/recurring/AutoPostedList';
+import { useRecurringNotifications } from '@/hooks/use-recurring-notifications';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -45,6 +50,7 @@ import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/api/client';
 import { recurringApi, accountsApi, categoriesApi, fundsApi } from '@/lib/api/endpoints';
 import type { Recurring, CreateRecurringRequest, RecurringResponse } from '@/lib/api/types';
+import type { ToggleRecurringRequest } from '@/lib/api/types/requests';
 import { isOptimistic, markOptimistic, optimisticQuery, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { useUser } from '@/contexts/user-context';
 import { SensitiveValue } from '@/components/privacy/SensitiveValue';
@@ -80,6 +86,7 @@ interface FormData {
   next_date: Date | undefined;
   notes: string;
   is_active: boolean;
+  auto_post: boolean;
 }
 
 const EMPTY_FORM: FormData = {
@@ -91,6 +98,7 @@ const EMPTY_FORM: FormData = {
   next_date: undefined,
   notes: '',
   is_active: true,
+  auto_post: false,
 };
 
 export default function RecurringPage() {
@@ -102,13 +110,16 @@ export default function RecurringPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  // Paused templates are listed too (their own section), so they can be switched back on.
+  // The nav's due-count hook shares this key and params.
   const { data: recurringData, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['recurring', userCurrency],
     queryFn: async () => {
-      const res = await recurringApi.getAll({ base_currency: userCurrency });
+      const res = await recurringApi.getAll({ base_currency: userCurrency, include_inactive: true });
       return res;
     },
   });
+  const { notifications, dismissAll } = useRecurringNotifications();
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -155,6 +166,7 @@ export default function RecurringPage() {
           next_date: payload.next_date,
           notes: payload.notes ?? null,
           is_active: payload.is_active ?? true,
+          auto_post: payload.auto_post ?? false,
           created_at: null,
           updated_at: null,
         }),
@@ -218,6 +230,28 @@ export default function RecurringPage() {
     onSettled: optimisticDelete.onSettled,
   });
 
+  const optimisticToggle = optimisticQuery<RecurringResponse, { id: string; data: ToggleRecurringRequest }>(
+    queryClient,
+    recurringKey,
+    (prev, vars) => prev && {
+      ...prev,
+      data: patchById(prev.data, 'recurring_id_pk', vars.id, vars.data as Partial<Recurring>),
+    }
+  );
+
+  // The on/off and auto-post switches: flip in place, no toast on success (the switch itself shows it).
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ToggleRecurringRequest }) => recurringApi.toggle(id, data),
+    onMutate: optimisticToggle.onMutate,
+    // Totals and the nav's due count both depend on which templates are active.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recurring'] }),
+    onError: (err, _vars, context) => {
+      optimisticToggle.rollback(context);
+      toast({ title: t('common.error'), description: getErrorMessage(err, t('pages.recurring.updateFailed')), variant: 'destructive' });
+    },
+    onSettled: optimisticToggle.onSettled,
+  });
+
   const postMutation = useMutation({
     mutationFn: recurringApi.post,
     onSuccess: () => { invalidate(); toast({ title: t('pages.recurring.posted'), description: t('pages.recurring.postedDescription') }); },
@@ -239,6 +273,7 @@ export default function RecurringPage() {
       next_date: new Date(r.next_date + 'T12:00:00'),
       notes: r.notes ?? '',
       is_active: r.is_active ?? true,
+      auto_post: r.auto_post ?? false,
     });
     setIsModalOpen(true);
   };
@@ -261,6 +296,7 @@ export default function RecurringPage() {
       next_date: toLocalDateString(form.next_date),
       notes: form.notes || undefined,
       is_active: form.is_active,
+      auto_post: form.auto_post,
     };
     if (selected) {
       updateMutation.mutate({ id: selected.recurring_id_pk, data: payload });
@@ -276,8 +312,10 @@ export default function RecurringPage() {
   const summary = recurringData?.summary;
   // Most overdue first among the due ones, soonest first among the upcoming ones.
   const byDate = (a: Recurring, b: Recurring) => a.next_date.localeCompare(b.next_date);
-  const dueTemplates = templates.filter(r => daysDiff(r.next_date) <= 0).sort(byDate);
-  const upcomingTemplates = templates.filter(r => daysDiff(r.next_date) > 0).sort(byDate);
+  const activeTemplates = templates.filter(r => r.is_active !== false);
+  const pausedTemplates = templates.filter(r => r.is_active === false).sort(byDate);
+  const dueTemplates = activeTemplates.filter(r => daysDiff(r.next_date) <= 0).sort(byDate);
+  const upcomingTemplates = activeTemplates.filter(r => daysDiff(r.next_date) > 0).sort(byDate);
 
   const cadenceLabel = (c: string) => ({
     weekly: t('pages.recurring.weekly'),
@@ -302,22 +340,29 @@ export default function RecurringPage() {
 
   const renderRow = (r: Recurring) => {
     const diff = daysDiff(r.next_date);
-    const isDue = diff <= 0;
+    const isPaused = r.is_active === false;
+    const isDue = !isPaused && diff <= 0;
     const account = accounts.find(a => a.accounts_id_pk === r.account_id_fk);
     const category = categories.find(c => c.categories_id_pk === r.category_id_fk)?.category_name;
     const isPosting = postMutation.isPending && postMutation.variables === r.recurring_id_pk;
     // Temp id until the server row arrives — edit/delete/post would 404, so disable them.
     const pending = isOptimistic(r);
-    const details = [r.notes ? category : null, account?.account_name, cadenceLabel(r.cadence)].filter(Boolean).join(' · ');
+    const details = [
+      r.notes ? category : null,
+      account?.account_name,
+      cadenceLabel(r.cadence),
+      r.auto_post ? t('pages.recurring.autoBadge') : null,
+    ].filter(Boolean).join(' · ');
+    const title = r.notes || category || '—';
 
     return (
       <li
         key={r.recurring_id_pk}
         className={cn(
-          // Phone: side line, text, amount, menu; a due row puts Post on a second line.
-          // From md: Post sits in its own column before the menu.
-          'grid grid-cols-[3px_minmax(0,1fr)_auto_2rem] items-center gap-x-3.5 gap-y-3 border-b border-border py-4 md:gap-x-5',
-          isDue && 'md:grid-cols-[3px_minmax(0,1fr)_auto_auto_2rem]',
+          // Phone: side line, text, amount, on/off switch, menu; a due row puts Post on a second
+          // line. From md: Post sits in its own column before the switch.
+          'grid grid-cols-[3px_minmax(0,1fr)_auto_auto_2rem] items-center gap-x-3.5 gap-y-3 border-b border-border py-4 md:gap-x-5',
+          isDue && 'md:grid-cols-[3px_minmax(0,1fr)_auto_auto_auto_2rem]',
           pending && 'opacity-60',
         )}
       >
@@ -325,48 +370,63 @@ export default function RecurringPage() {
           aria-hidden="true"
           className={cn(
             'self-stretch rounded-[2px]',
-            diff < 0 ? 'bg-destructive' : diff === 0 ? 'bg-primary' : 'bg-muted-foreground/25',
+            isPaused ? 'bg-transparent' : diff < 0 ? 'bg-destructive' : diff === 0 ? 'bg-primary' : 'bg-muted-foreground/25',
             isDue && 'row-span-2 md:row-span-1',
           )}
         />
-        <div className="min-w-0">
-          <div className="truncate text-base">{r.notes || category || '—'}</div>
+        <div className={cn('min-w-0', isPaused && 'opacity-60')}>
+          <div className="truncate text-base">{title}</div>
           <div className="truncate text-[0.8125rem] text-muted-foreground">{details}</div>
         </div>
-        <div className="text-right">
+        <div className={cn('text-right', isPaused && 'opacity-60')}>
           <div className={cn('whitespace-nowrap text-[1.0625rem] tabular-nums', r.amount > 0 && 'text-success')}>
             <SensitiveValue>
               {`${r.amount > 0 ? '+' : ''}${formatMoney(r.amount, account?.currency || userCurrency)}`}
             </SensitiveValue>
           </div>
-          <div className={cn('whitespace-nowrap text-[0.8125rem]', diff < 0 ? 'text-destructive' : 'text-muted-foreground')}>
-            {whenText(r.next_date)}
+          <div className={cn('whitespace-nowrap text-[0.8125rem]', isDue && diff < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+            {isPaused ? t('pages.recurring.paused') : whenText(r.next_date)}
           </div>
         </div>
         {isDue && (
-          // Nothing posts by itself: this button is the only way a due template becomes a transaction.
+          // Auto-post templates are also posted by the daily job; Post does it right away.
           <Button
             onClick={() => postMutation.mutate(r.recurring_id_pk)}
             disabled={isPosting || pending}
-            className="col-span-2 col-start-2 row-start-2 h-10 px-4 md:col-span-1 md:col-start-4 md:row-start-1"
+            className="col-span-3 col-start-2 row-start-2 h-10 px-4 md:col-span-1 md:col-start-4 md:row-start-1"
           >
             {isPosting && <Loader2 className="animate-spin" aria-hidden="true" />}
             {isPosting ? t('pages.recurring.posting') : t('pages.recurring.post')}
           </Button>
         )}
+        <Switch
+          checked={!isPaused}
+          onCheckedChange={(on) => toggleMutation.mutate({ id: r.recurring_id_pk, data: { is_active: on } })}
+          disabled={pending}
+          aria-label={`${t('pages.recurring.active')}: ${title}`}
+          title={isPaused ? t('pages.recurring.paused') : t('pages.recurring.active')}
+          className={cn('col-start-4 row-start-1', isDue && 'md:col-start-5')}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               disabled={pending}
-              aria-label={`${t('common.actions')}: ${r.notes || category || ''}`}
-              className={cn('col-start-4 row-start-1 h-8 w-8 text-muted-foreground', isDue && 'md:col-start-5')}
+              aria-label={`${t('common.actions')}: ${title}`}
+              className={cn('col-start-5 row-start-1 h-8 w-8 text-muted-foreground', isDue && 'md:col-start-6')}
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuCheckboxItem
+              checked={r.auto_post}
+              onCheckedChange={(on) => toggleMutation.mutate({ id: r.recurring_id_pk, data: { auto_post: on === true } })}
+            >
+              {t('pages.recurring.autoPost')}
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => openEdit(r)}>
               <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
             </DropdownMenuItem>
@@ -399,8 +459,8 @@ export default function RecurringPage() {
     {
       key: 'templates',
       label: t('pages.recurring.templates'),
-      value: templates.length,
-      parts: countParts(templates.length),
+      value: activeTemplates.length,
+      parts: countParts(activeTemplates.length),
       note: t('pages.recurring.dueCount', { count: new Intl.NumberFormat(locale).format(dueTemplates.length) }),
     },
   ];
@@ -457,6 +517,30 @@ export default function RecurringPage() {
             <MetricGrid metrics={summaryMetrics} size="lg" className="grid-cols-2 lg:grid-cols-3" formatAmount={money} />
           </section>
 
+          {notifications.length > 0 && (
+            <section aria-labelledby="recurring-auto-posted" className="mt-12 lg:mt-14">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground/30 pb-3">
+                <div className="flex items-baseline gap-2.5">
+                  <h2 id="recurring-auto-posted" className="text-[1.125rem] font-medium tracking-[-0.01em]">
+                    {t('pages.recurring.notifications.title')}
+                  </h2>
+                  <span className="text-[0.8125rem] tabular-nums text-muted-foreground">
+                    {new Intl.NumberFormat(locale).format(notifications.length)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dismissAll()}
+                  className="text-[0.8125rem] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {t('pages.recurring.notifications.keepAll')}
+                </button>
+              </div>
+              <p className="pt-3 text-[0.8125rem] text-muted-foreground">{t('pages.recurring.notifications.description')}</p>
+              <AutoPostedList />
+            </section>
+          )}
+
           <section aria-labelledby="recurring-due" className="mt-12 lg:mt-14">
             {listHeading('recurring-due', t('pages.recurring.dueNow'), dueTemplates.length)}
             {dueTemplates.length === 0 ? (
@@ -470,6 +554,13 @@ export default function RecurringPage() {
             <section aria-labelledby="recurring-upcoming" className="mt-10">
               {listHeading('recurring-upcoming', t('pages.recurring.upcoming'), upcomingTemplates.length)}
               <ul>{upcomingTemplates.map(renderRow)}</ul>
+            </section>
+          )}
+
+          {pausedTemplates.length > 0 && (
+            <section aria-labelledby="recurring-paused" className="mt-10">
+              {listHeading('recurring-paused', t('pages.recurring.paused'), pausedTemplates.length)}
+              <ul>{pausedTemplates.map(renderRow)}</ul>
             </section>
           )}
         </>
@@ -610,6 +701,26 @@ export default function RecurringPage() {
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               />
             </Field>
+
+            {/* Switches */}
+            {([
+              { id: 'recurring-auto-post', key: 'auto_post', label: t('pages.recurring.autoPost'), hint: t('pages.recurring.autoPostHint') },
+              { id: 'recurring-active', key: 'is_active', label: t('pages.recurring.active'), hint: t('pages.recurring.activeHint') },
+            ] as const).map(({ id, key, label, hint }) => (
+              <div key={id} className="flex items-start justify-between gap-4 pt-1">
+                <div className="min-w-0">
+                  <label htmlFor={id} className="text-sm font-medium">{label}</label>
+                  <p id={`${id}-hint`} className="mt-0.5 text-[0.8125rem] text-muted-foreground">{hint}</p>
+                </div>
+                <Switch
+                  id={id}
+                  checked={form[key]}
+                  onCheckedChange={(on) => setForm(f => ({ ...f, [key]: on }))}
+                  aria-describedby={`${id}-hint`}
+                  className="mt-0.5"
+                />
+              </div>
+            ))}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={closeModal}>{t('common.cancel')}</Button>

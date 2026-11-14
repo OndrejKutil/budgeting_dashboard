@@ -21,6 +21,7 @@ from .base import (
     NetWorthTimelineData,
     ProfileData,
     RecurringData,
+    RecurringNotification,
     RecurringSummary,
     SavingsFundsData,
     SavingsRowResponse,
@@ -570,6 +571,14 @@ class RecurringSuccessResponse(BaseModel):
     success: bool = Field(..., description="Indicates if the operation was successful")
     message: str = Field(..., description="Success/error message")
     data: list[RecurringData] | None = Field(None, description="Template data if applicable")
+
+
+class RecurringNotificationsResponse(BaseModel):
+    """Response schema for the auto-posted notifications feed"""
+    data: list[RecurringNotification] = Field(..., description="Unacknowledged auto-posted occurrences, newest first")
+    count: int = Field(..., description="Number of notifications")
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
 
 
 class NetWorthResponse(BaseModel):

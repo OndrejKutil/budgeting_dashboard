@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserNav } from './UserNav';
+import { NotificationsBell } from './NotificationsBell';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { usePrivacyMode } from '@/contexts/privacy-context';
@@ -120,6 +121,7 @@ export function Topbar() {
         </nav>
 
         <div className="flex items-center justify-end gap-1 lg:gap-2">
+          <NotificationsBell />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

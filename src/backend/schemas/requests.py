@@ -262,8 +262,15 @@ class RecurringRequest(BaseModel):
     next_date: Date = Field(..., description="Next due date")
     notes: str | None = Field(None, description="Notes")
     is_active: bool | None = Field(True, description="Whether template is active")
+    auto_post: bool = Field(False, description="Post due occurrences automatically (daily job)")
 
     model_config = ConfigDict(json_encoders={Decimal: float})
+
+
+class RecurringToggleRequest(BaseModel):
+    """Flip a template's switches without resending the whole template. Omitted fields are left as they are."""
+    is_active: bool | None = Field(None, description="Whether template is active")
+    auto_post: bool | None = Field(None, description="Post due occurrences automatically")
 
 
 class DividendPortfolioRequest(BaseModel):
