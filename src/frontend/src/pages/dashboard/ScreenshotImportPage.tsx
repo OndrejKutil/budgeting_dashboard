@@ -9,9 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -27,7 +25,6 @@ import {
   ClipboardPaste,
   Trash2,
   CalendarIcon,
-  History,
   Info,
   ShieldCheck,
 } from 'lucide-react';
@@ -39,12 +36,13 @@ import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { toast } from '@/hooks/use-toast';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
 import { screenshotImportApi, accountsApi, categoriesApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
-import type { Category, DraftTransaction, FieldSource, NoTransactionsReason, Tag } from '@/lib/api/types';
+import type { DraftTransaction, FieldSource, NoTransactionsReason, Tag } from '@/lib/api/types';
 import type { CreateTransactionRequest } from '@/lib/api/types/requests';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useUser } from '@/contexts/user-context';
 import { invalidateTransactionData } from '@/lib/query-invalidation';
-import type { DashboardTranslationKey } from '@/lib/i18n';
+import { CategorySelectItems } from '@/components/import/CategorySelectItems';
+import { FieldStatus } from '@/components/import/FieldStatus';
 
 const FEATURE_KEY = 'screenshot_import';
 
@@ -95,16 +93,6 @@ function parseDecimalInput(value: string): number | null {
   const parsedValue = Number(normalizedValue);
   return Number.isFinite(parsedValue) ? parsedValue : null;
 }
-
-const CATEGORY_TYPE_ORDER = ['expense', 'income', 'saving', 'investment', 'exclude', 'transfer'] as const;
-const CATEGORY_TYPE_LABEL_KEY: Record<string, DashboardTranslationKey> = {
-  expense: 'metrics.expenses',
-  income: 'metrics.income',
-  saving: 'types.saving',
-  investment: 'metrics.investments',
-  exclude: 'types.exclude',
-  transfer: 'types.transfer',
-};
 
 // The fields the review UI lets a user fix. Matches the backend's DraftTransactionData -- there
 // is no separate merchant field, `notes` carries it instead (see DraftTransactionData docstring).
@@ -244,82 +232,8 @@ class TagCreateError extends Error {
   }
 }
 
-function CategorySelectItems({ categories, t }: { categories: Category[]; t: ReturnType<typeof useUser>['t'] }) {
-  return (
-    <>
-      {CATEGORY_TYPE_ORDER.map((type) => ({
-        type,
-        cats: categories
-          .filter((c) => c.is_active !== false && c.type === type)
-          .sort((a, b) => a.category_name.localeCompare(b.category_name)),
-      }))
-        .filter((g) => g.cats.length > 0)
-        .map((g, gi) => (
-          <SelectGroup key={g.type}>
-            <SelectLabel
-              className={cn(
-                'px-2 pb-1 text-xs font-normal text-muted-foreground',
-                gi > 0 && 'mt-1 border-t border-border pt-2'
-              )}
-            >
-              {t(CATEGORY_TYPE_LABEL_KEY[g.type])}
-            </SelectLabel>
-            {g.cats.map((cat) => (
-              <SelectItem key={cat.categories_id_pk} value={cat.categories_id_pk.toString()}>
-                {cat.category_name}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-    </>
-  );
-}
-
 function fieldRingClass(source: FieldSource | undefined): string {
   return source === 'none' ? 'border-destructive' : '';
-}
-
-/**
- * Small provenance note on a field's label row -- silent when the model resolved the field
- * normally, since that's the expected case. "Needs your input" is not shown here: it is the
- * field's error line (icon + text), so it does not rely on colour alone. Clears once the user
- * edits the field (see `updateDraft`), so a fixed field doesn't stay flagged forever.
- */
-function FieldStatus({
-  source,
-  defaultedLabel,
-  fromHistoryLabel,
-  fromHistoryHint,
-}: {
-  source: FieldSource | undefined;
-  defaultedLabel: string;
-  fromHistoryLabel?: string;
-  fromHistoryHint?: string;
-}) {
-  if (source === 'rule' && fromHistoryLabel) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-sm text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <History className="h-3 w-3" aria-hidden="true" />
-            {fromHistoryLabel}
-          </button>
-        </TooltipTrigger>
-        {fromHistoryHint && (
-          <TooltipContent>
-            <p>{fromHistoryHint}</p>
-          </TooltipContent>
-        )}
-      </Tooltip>
-    );
-  }
-  if (source === 'default') {
-    return <span className="text-xs text-muted-foreground">{defaultedLabel}</span>;
-  }
-  return null;
 }
 
 export default function ScreenshotImportPage() {

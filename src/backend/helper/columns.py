@@ -15,6 +15,7 @@ class TRANSACTIONS_COLUMNS(Enum):
     NOTES = "notes"
     CREATED_AT = "created_at"
     SAVINGS_FUND_ID = "savings_fund_id_fk"
+    IMPORT_BATCH_ID = "import_batch_id_fk"
 
     def __str__(self):
         return self.value
@@ -211,6 +212,22 @@ class T212_VALUE_HISTORY_COLUMNS(Enum):
     INVESTED_VALUE = "invested_value"
     CURRENCY = "currency"
     SNAPSHOT_AT = "snapshot_at"
+    CREATED_AT = "created_at"
+
+    def __str__(self):
+        return self.value
+
+
+class IMPORT_BATCHES_COLUMNS(Enum):
+    ID = "import_batch_id_pk"
+    USER_ID = "user_id_fk"
+    ACCOUNT_ID = "account_id_fk"
+    FILE_NAME = "file_name"
+    PRESET = "preset"
+    MAPPING_JSON = "mapping_json"
+    ROW_COUNT = "row_count"
+    DATE_FROM = "date_from"
+    DATE_TO = "date_to"
     CREATED_AT = "created_at"
 
     def __str__(self):

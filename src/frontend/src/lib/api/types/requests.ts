@@ -4,6 +4,8 @@
  * These match the request schemas defined in backend/schemas/requests.py
  */
 
+import type { StatementMapping } from './base';
+
 // ================================================================================================
 //                                   Authentication Requests
 // ================================================================================================
@@ -261,4 +263,37 @@ export interface DividendPortfolioRequest {
 export interface T212ConnectionRequest {
     api_key: string;
     api_secret: string;
+}
+
+// ================================================================================================
+//                                   Statement Import
+// ================================================================================================
+
+/** One reviewed statement row to save. */
+export interface StatementCommitRow {
+    date: string;
+    amount: number;
+    notes: string | null;
+    category_id_fk: number;
+}
+
+/** A savings fund's balance after the file's last row, as the user states it. */
+export interface StatementFundBalance {
+    savings_fund_id_fk: string;
+    balance: number;
+}
+
+/** POST /statement-import/commit. */
+export interface StatementCommitRequest {
+    account_id: string;
+    file_name: string | null;
+    preset: string | null;
+    mapping: StatementMapping | null;
+    rows: StatementCommitRow[];
+    /** Account balance after the last row in the file; adds a "Starting balance" transaction. */
+    closing_balance?: number | null;
+    /** The file's last day (preview `date_to`), which the stated balances refer to. */
+    balance_date?: string | null;
+    /** Fund balances after the last row; each adds an opening transaction for that fund. */
+    fund_balances?: StatementFundBalance[];
 }

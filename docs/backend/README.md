@@ -148,11 +148,25 @@ endpoints use `Depends(api_key_auth)` and `Depends(get_current_user)`.
 | `net_worth`          | `/net-worth`   | Net-worth chart data                       |
 | `features`           | `/features`    | Per-user feature flags (read-only)         |
 | `screenshot_import`  | `/screenshot-import` | Screenshot → draft transactions (flag-gated) |
+| `statement_import`   | `/statement-import` | Bank statement CSV/XLSX → reviewed transactions, past imports, undo (flag-gated; rules in `helper/statement_import/`) |
 
 > The auto-generated OpenAPI at `/docs` (Swagger) and `/redoc` is the canonical, always
 > up-to-date endpoint reference — there is no hand-maintained endpoint list.
 
 ---
+
+### Statement import
+
+`/statement-import/preview` parses a bank export into draft rows and writes nothing; `/commit`
+saves the reviewed rows as one `fct_import_batches` batch (all rows in one insert, the batch row
+deleted again if that fails); `DELETE /batches/{id}` is undo. Parsing lives in
+`helper/statement_import/` (`reader` → `mapping` presets → `normalize` → `duplicates` →
+`suggest`). A bank preset is only added from a real export. The suggestion call sends the model
+merchant text, direction, kind and short scrubbed messages only -- never amounts, dates or
+account numbers. Its failure never fails the preview (`suggestions_available: false`). The user can
+switch the model off per import (`use_ai=false`), and transfers to the account holder's own name are
+never sent. Commit can also book savings-fund opening balances (`fund_balances`). Spec:
+[`docs/specs/statement-import.md`](../specs/statement-import.md).
 
 ## Schemas
 
@@ -213,7 +227,7 @@ pytest                                  # tests + coverage
 | `DEVELOPMENT_MODE`    | Flag for dev-specific behavior             |
 | `INFERENCE_API_KEY`   | Vision-model API key for `/screenshot-import` |
 | `INFERENCE_MODEL`     | Vision-model identifier for `/screenshot-import` (stage one), e.g. `qwen/qwen3.8-27b` |
-| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` (stage two), e.g. `openai/gpt-oss-120b` |
+| `REASONING_MODEL`     | Text-only reasoning-model identifier for `/screenshot-import` (stage two) and the category-suggestion call of `/statement-import/preview`, e.g. `openai/gpt-oss-120b` |
 | `NTFY_TOPIC_URL`      | Optional ntfy topic URL (e.g. `https://ntfy.sh/<secret-topic>`) for operational push alerts; empty disables them |
 | `NTFY_TOKEN`          | Optional Bearer token for a protected ntfy topic |
 

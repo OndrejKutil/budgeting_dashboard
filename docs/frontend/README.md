@@ -256,7 +256,8 @@ All under `/dashboard`:
 - `/dashboard/accounts`, `/categories`, `/funds` - dimension management
 - `/dashboard/analytics/monthly`, `/analytics/yearly`, `/analytics/cashflow`, `/analytics/emergency-fund`
 - `/dashboard/budget-maker` - plan
-- `/dashboard/import/screenshot`, `/trading212` - tools behind feature flags (`screenshot_import`, `t212_integration`)
+- `/dashboard/import/screenshot`, `/import/statement`, `/trading212` - tools behind feature flags (`screenshot_import`, `statement_import`, `t212_integration`)
+- `/dashboard/transactions?import=<batch id>` - the ledger limited to one statement import (replaces the date filter; cleared from the page)
 - `/dashboard/investing-calculator`, `/dividend-calculator` - calculators
 - `/dashboard/profile`
 
@@ -280,6 +281,8 @@ Each domain has its own file in `lib/api/endpoints/`:
 | `summary.ts`      | `summaryApi.getSummary()`                      |
 | `analytics.ts`    | `analyticsApi.getYearly()`, `.getMonthly()`    |
 | `health.ts`       | `healthApi.warmup()` - fire-and-forget on load |
+| `screenshotImport.ts` | `screenshotImportApi.extract()`, `.import()` |
+| `statementImport.ts`  | `statementImportApi.preview()` (multipart), `.commit()`, `.batches()`, `.undo()` |
 
 All re-exported from `client.ts` for backwards compatibility.
 
@@ -313,6 +316,26 @@ were deleted; regenerate one with the shadcn CLI if it is needed again.
 `MetricGrid` (labelled figures with a six-month comparison or a note); lists with proportions
 are `LineRows`; value-over-time charts are `ValueLineChart` (axis fits the data) or
 `SeriesLineChart` (cumulative from zero).
+
+### Statement import
+
+`pages/dashboard/StatementImportPage.tsx` owns the flow (upload, optional mapping, review, done)
+and `pages/dashboard/statement-import/` holds the parts. Drafts live in component state: the
+backend parses (`/statement-import/preview`) and nothing is kept on the server until `commit`.
+`ReviewStep` groups rows by `merchant_key` plus direction (`statement-import/helpers.ts`); a line's
+category picker writes to every row the user has not set individually (`RowState.manual`).
+`CategorySelectItems`, `FieldStatus` and `SuggestionMarker` live in `components/import/` and are
+shared with the screenshot import. A user with no account is sent through
+`components/CreateAccountDialog.tsx` (prefilled from the recognised bank) after the first preview.
+The feature is presented as "Import data". Upload has a "Suggest categories with AI" switch
+(remembered in localStorage, sent as `use_ai`). Flow: upload -> review -> opening balances -> done;
+`ReviewStep` keeps all state and shows `OpeningBalancesStep` as its second sub-step (Back loses nothing),
+and the commit happens there. Transfers between the user's own accounts are not imported: rows the
+backend flags `own_transfer`, plus merchant lines the user moves there, sit excluded in one collapsed
+line (a single row can still be included as a normal transaction). `OpeningBalancesStep` collects the
+account balance (`closing_balance`), optional balances of existing savings funds (`fund_balances`)
+and can create a fund inline via `fundsApi.create`, with a short disclaimer about the simplifications.
+Commit and undo call `invalidateTransactionData` (which includes `funds`) plus `['statement-import', 'batches']`.
 
 ### Layout
 

@@ -149,11 +149,13 @@ async def create_account(
         if data.get(ACCOUNTS_COLUMNS.CREATED_AT.value) is not None:
             data[ACCOUNTS_COLUMNS.CREATED_AT.value] = data[ACCOUNTS_COLUMNS.CREATED_AT.value].isoformat()
 
-        user_supabase_client.table("dim_accounts").insert(data).execute()
+        response = user_supabase_client.table("dim_accounts").insert(data).execute()
+        created = response.data[0] if response.data else {}
 
         return AccountSuccessResponse(
             success=True,
-            message="Account created successfully"
+            message="Account created successfully",
+            account_id=created.get(ACCOUNTS_COLUMNS.ID.value),
         )
 
     except Exception as e:

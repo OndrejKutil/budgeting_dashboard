@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Calendar,
   CircleDollarSign,
+  FileSpreadsheet,
   GitFork,
   Landmark,
   LayoutDashboard,
@@ -35,6 +36,7 @@ export interface NavGroup {
 export const TRANSACTIONS_PATH = '/dashboard/transactions';
 export const RECURRING_PATH = '/dashboard/recurring';
 export const PROFILE_PATH = '/dashboard/profile';
+export const STATEMENT_IMPORT_PATH = '/dashboard/import/statement';
 
 export const overviewItem: NavItem = { labelKey: 'nav.overview', href: '/dashboard', icon: LayoutDashboard };
 export const transactionsItem: NavItem = { labelKey: 'nav.transactions', href: TRANSACTIONS_PATH, icon: Receipt };
@@ -75,6 +77,7 @@ export const navGroups: readonly NavGroup[] = [
     items: [
       // Gated items only appear when their feature flag is on for this user.
       { labelKey: 'nav.screenshotImport', href: '/dashboard/import/screenshot', icon: ScanLine, flag: 'screenshot_import' },
+      { labelKey: 'nav.statementImport', href: STATEMENT_IMPORT_PATH, icon: FileSpreadsheet, flag: 'statement_import' },
       { labelKey: 'nav.trading212', href: '/dashboard/trading212', icon: LineChart, flag: 't212_integration' },
       { labelKey: 'nav.investingCalculator', href: '/dashboard/investing-calculator', icon: Landmark },
       { labelKey: 'nav.dividendCalculator', href: '/dashboard/dividend-calculator', icon: CircleDollarSign },

@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .base import StatementMapping
+
 # ================================================================================================
 #                                   Insert Schemas
 # ================================================================================================
@@ -306,3 +308,49 @@ class T212ConnectionRequest(BaseModel):
     """POST /trading212/connection. T212 issues a key+secret pair, not a single key (QUESTIONS.md §1)."""
     api_key: str = Field(..., min_length=1, max_length=512, description="Trading212 API key")
     api_secret: str = Field(..., min_length=1, max_length=512, description="Trading212 API secret")
+
+
+# ================================================================================================
+#                                   Statement Import
+# ================================================================================================
+
+# Mirrored by MAX_STATEMENT_ROWS in routers/statement_import.py; kept here so pydantic rejects an
+# oversized body before any of it is processed.
+MAX_STATEMENT_COMMIT_ROWS = 5000
+
+
+class StatementCommitRow(BaseModel):
+    """One reviewed statement row to save."""
+    date: Date = Field(..., description="Transaction date")
+    amount: Decimal = Field(..., description="Signed amount in the account currency")
+    notes: str | None = Field(None, max_length=1000, description="Note to store")
+    category_id_fk: int = Field(..., description="Category chosen on the review screen")
+
+
+class StatementFundBalance(BaseModel):
+    """A savings fund's balance after the file's last row, as the user states it."""
+    savings_fund_id_fk: str = Field(..., min_length=1, description="Savings fund ID")
+    balance: Decimal = Field(..., description="Fund balance after the last row in the file")
+
+
+class StatementCommitRequest(BaseModel):
+    """POST /statement-import/commit."""
+    account_id: str = Field(..., min_length=1, description="Account to import into")
+    file_name: str | None = Field(None, max_length=255, description="Original file name, shown in past imports")
+    preset: str | None = Field(None, max_length=50, description="Preset key the preview used, or null")
+    mapping: StatementMapping | None = Field(None, description="Mapping the preview used; saved for the next file")
+    rows: list[StatementCommitRow] = Field(
+        ..., min_length=1, max_length=MAX_STATEMENT_COMMIT_ROWS, description="Rows to import"
+    )
+    closing_balance: Decimal | None = Field(
+        None, description="Account balance after the last row in the file; adds a 'Starting balance' transaction"
+    )
+    balance_date: Date | None = Field(
+        None,
+        description="The file's last day (preview date_to), which the stated balances refer to. Rows left out "
+                    "of the import (own transfers, duplicates) can make it later than the last committed row.",
+    )
+    fund_balances: list[StatementFundBalance] = Field(
+        default_factory=list, max_length=50,
+        description="Savings fund balances after the last row; each adds an opening transaction for that fund",
+    )

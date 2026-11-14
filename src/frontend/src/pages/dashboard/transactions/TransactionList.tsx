@@ -15,6 +15,7 @@ import { useUser } from '@/contexts/user-context';
 import type { Account, Category, SavingsFund, Transaction } from '@/lib/api/types';
 import { formatMoney } from '@/lib/currency';
 import { cn } from '@/lib/utils';
+import { STATEMENT_IMPORT_PATH } from '@/components/layout/nav-config';
 import { typeColor } from './helpers';
 
 interface TransactionListProps {
@@ -31,6 +32,8 @@ interface TransactionListProps {
   rangeEnd: number;
   hasNextPage: boolean;
   onAdd: () => void;
+  /** Offer "Import from your bank" in the empty state (flag on, no filters narrowing the list). */
+  showImportLink?: boolean;
   onEdit: (transaction: Transaction) => void;
   onCopy: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
@@ -186,6 +189,7 @@ export function TransactionList({
   rangeEnd,
   hasNextPage,
   onAdd,
+  showImportLink,
   onEdit,
   onCopy,
   onDelete,
@@ -214,6 +218,7 @@ export function TransactionList({
         title={t('pages.transactions.noTransactionsTitle')}
         description={t('pages.transactions.noTransactionsDescription')}
         action={{ label: t('pages.transactions.add'), onClick: onAdd }}
+        secondaryAction={showImportLink ? { label: t('pages.statementImport.importFromBank'), to: STATEMENT_IMPORT_PATH } : undefined}
       />
     );
   }

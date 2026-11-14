@@ -35,6 +35,8 @@ type TransactionFilterParams = {
     min_amount?: number;
     max_amount?: number;
     tag_id?: string;
+    /** Only the transactions created by one statement import. */
+    import_batch_id?: string;
     /**
      * Comma-separated YYYY-MM list. Disjoint months (Jan + Mar) are not a date range, so
      * they ride alongside start_date/end_date rather than replacing them.

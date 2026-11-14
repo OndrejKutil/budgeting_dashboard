@@ -22,3 +22,4 @@ export { tagsApi } from './tags';
 export { featuresApi } from './features';
 export { screenshotImportApi } from './screenshotImport';
 export { trading212Api } from './trading212';
+export { statementImportApi } from './statementImport';
