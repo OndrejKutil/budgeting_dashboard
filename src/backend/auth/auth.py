@@ -184,8 +184,8 @@ async def admin_key_auth(admin_key: str = Depends(admin_key_header)) -> str:
 
 async def job_secret_auth(job_secret: str = Depends(job_secret_header)) -> str:
     """
-    Dependency for unattended background jobs (currently: the Trading212 sync cron running on
-    the Pi). Deliberately a separate secret from ADMIN_KEY -- this one lives unattended in a
+    Dependency for unattended background jobs on the Pi (the Trading212 sync and the daily
+    recurring auto-post). Both share T212_SYNC_JOB_SECRET. Deliberately a separate secret from ADMIN_KEY -- this one lives unattended in a
     long-running process outside this server, so a leak there should not also compromise
     admin-only endpoints reachable from a browser.
     """

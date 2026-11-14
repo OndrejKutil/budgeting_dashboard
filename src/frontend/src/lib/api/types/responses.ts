@@ -21,6 +21,7 @@ import type {
     FeatureFlag,
     ExtractionData,
     Recurring,
+    RecurringNotification,
     RecurringSummary,
     NetWorthTimeline,
     T212Connection,
@@ -305,6 +306,13 @@ export interface RecurringResponse {
     data: Recurring[];
     count: number;
     summary: RecurringSummary;
+    success: boolean;
+    message: string;
+}
+
+export interface RecurringNotificationsResponse {
+    data: RecurringNotification[];
+    count: number;
     success: boolean;
     message: string;
 }

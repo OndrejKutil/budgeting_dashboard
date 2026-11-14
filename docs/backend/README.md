@@ -144,7 +144,7 @@ endpoints use `Depends(api_key_auth)` and `Depends(get_current_user)`.
 | `savings_funds`      | `/funds`       | Savings fund tracking                      |
 | `budgets`            | `/budgets`     | Monthly budget plans (`plan_json`)         |
 | `dividends`          | `/dividends`   | Dividend portfolio calculator              |
-| `recurring`          | `/recurring`   | Recurring-transaction templates            |
+| `recurring`          | `/recurring`   | Recurring-transaction templates + auto-post notifications (`/recurring/notifications`) |
 | `net_worth`          | `/net-worth`   | Net-worth chart data                       |
 | `features`           | `/features`    | Per-user feature flags (read-only)         |
 | `screenshot_import`  | `/screenshot-import` | Screenshot → draft transactions (flag-gated) |

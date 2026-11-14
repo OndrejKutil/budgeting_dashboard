@@ -1,15 +1,16 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Plus, ScanLine } from 'lucide-react';
 import type { OpenAddState } from '@/hooks/use-add-transaction';
+import { RECURRING_NOTIFICATIONS_KEY, type OpenEditState } from '@/hooks/use-recurring-notifications';
 import { useUrlState } from '@/hooks/use-url-state';
 import { useAvailableYears } from '@/hooks/use-available-years';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { Button } from '@/components/ui/button';
 import { useFormErrors } from '@/hooks/use-form-errors';
 import { ApiError, getErrorMessage } from '@/lib/api/client';
-import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi } from '@/lib/api/endpoints';
+import { transactionsApi, categoriesApi, accountsApi, fundsApi, tagsApi, recurringApi } from '@/lib/api/endpoints';
 import { Transaction, Category, Account, SavingsFund, CreateTransactionRequest, UpdateTransactionRequest } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
@@ -200,6 +201,9 @@ export default function TransactionsPage() {
     window.history.replaceState({ ...(window.history.state as object | null), usr: null }, '');
   }, [location]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  // Set when the edit dialog was opened from an auto-post notification: saving the edit also
+  // dismisses that notification (the user has reviewed it).
+  const [ackPostingId, setAckPostingId] = useState<string | null>(null);
   // Copy prefills the create form from an existing row; it only changes the modal's wording,
   // the submit path stays the create one (selectedTransaction is left null on purpose).
   const [isCopy, setIsCopy] = useState(false);
@@ -301,6 +305,11 @@ export default function TransactionsPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateTransactionRequest }) => transactionsApi.update(id, payload),
     onSuccess: () => {
+      if (ackPostingId) {
+        recurringApi.ackNotification(ackPostingId)
+          .catch(() => undefined) // Best effort: an undismissed notice just expires on its own.
+          .finally(() => queryClient.invalidateQueries({ queryKey: RECURRING_NOTIFICATIONS_KEY }));
+      }
       invalidateTransactionData(queryClient);
       toast({ title: t('pages.transactions.updated') });
       closeModal();
@@ -449,6 +458,22 @@ export default function TransactionsPage() {
     });
   };
 
+  // "Edit" on an auto-post notification (bell / Recurring page) navigates here with the
+  // transaction in location state. Wait for categories so openEditModal can tell a fund
+  // withdrawal apart, then consume the state once so a reload doesn't reopen the dialog.
+  const consumedEditKey = useRef<string | null>(null);
+  useEffect(() => {
+    const state = location.state as OpenEditState | null;
+    if (!state?.editTransaction || categories.length === 0) return;
+    // replaceState below doesn't update router `location`, so guard against re-opening when
+    // categories refetch with a different length.
+    if (consumedEditKey.current === location.key) return;
+    consumedEditKey.current = location.key;
+    openEditModal(state.editTransaction);
+    setAckPostingId(state.ackPostingId ?? null);
+    window.history.replaceState({ ...(window.history.state as object | null), usr: null }, '');
+  }, [location, categories.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /**
    * Prefills the create form with an existing transaction's values. Mirrors openEditModal
    * except that selectedTransaction stays null, so saving goes through createMutation and
@@ -480,6 +505,7 @@ export default function TransactionsPage() {
   const closeModal = () => {
     setIsCreateModalOpen(false);
     setSelectedTransaction(null);
+    setAckPostingId(null);
     setIsCopy(false);
     setIsWithdrawal(false);
     setIsTransfer(false);

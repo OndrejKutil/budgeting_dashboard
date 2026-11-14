@@ -255,6 +255,14 @@ export default function FundsPage() {
           {t('pages.funds.title')}
         </h1>
         <span className="hidden text-sm text-muted-foreground sm:inline">{t('pages.funds.description')}</span>
+        <a
+          href="/how-it-works#savings-funds"
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-foreground underline decoration-foreground/30 underline-offset-4"
+        >
+          {t('pages.funds.guideLink')}
+        </a>
       </div>
       <Button variant="outline" className="h-11 px-4" onClick={() => handleOpenModal()}>
         <Plus aria-hidden="true" />

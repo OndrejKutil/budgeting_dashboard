@@ -94,8 +94,22 @@ class RECURRING_COLUMNS(Enum):
     NEXT_DATE = "next_date"
     NOTES = "notes"
     IS_ACTIVE = "is_active"
+    AUTO_POST = "auto_post"
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
+
+    def __str__(self):
+        return self.value
+
+
+class RECURRING_POSTINGS_COLUMNS(Enum):
+    ID = "recurring_postings_id_pk"
+    USER_ID = "user_id_fk"
+    RECURRING_ID = "recurring_id_fk"
+    TRANSACTION_ID = "transaction_id_fk"
+    OCCURRENCE_DATE = "occurrence_date"
+    POSTED_AT = "posted_at"
+    ACKNOWLEDGED_AT = "acknowledged_at"
 
     def __str__(self):
         return self.value

@@ -39,7 +39,8 @@ has Row Level Security enabled**, with policies scoped to `auth.uid()`.
 | `dim_categories` | dim | Global default categories (a template, not user-owned) |
 | `dim_categories_users` | dim | Per-user categories, **seeded from `dim_categories` on signup** by the `seed_default_categories()` trigger |
 | `dim_savings_funds` | dim | Savings goals; soft-deleted via `fund_is_active` when still referenced by transactions |
-| `dim_recurring` | dim | Recurring-transaction templates (`cadence`, `next_date`) |
+| `dim_recurring` | dim | Recurring-transaction templates (`cadence`, `next_date`, `auto_post`) |
+| `fct_recurring_postings` | fct | One row per occurrence auto-posted by `post_due_recurring()`; unique on `(recurring_id_fk, occurrence_date)`. Unacknowledged rows from the last 7 days are the app's notifications. No INSERT policy — only the job writes |
 | `dim_exchange_rates` | dim | One row per currency pair; refreshed daily by the edge function (write = service role only, read = any authenticated user) |
 | `fct_transactions` | fct | Core ledger; FKs to account / category / fund |
 | `fct_budgets` | fct | One row per user / month / year; the plan is stored as `plan_json` (JSONB) |
@@ -165,12 +166,36 @@ viewing and one-off pokes.** Mixing them causes drift — which this setup exist
 
 ---
 
+## Recurring auto-post job
+
+`public.post_due_recurring()` (migration `20261114000000_add_recurring_auto_post.sql`) posts due
+occurrences of templates with `auto_post = true`. Like the other scheduled jobs it is triggered
+from the Raspberry Pi: `scripts/post_recurring.py` calls `POST /recurring/post-due` on the backend
+once a day (X-Job-Secret = `T212_SYNC_JOB_SECRET`), and the backend calls the function with the
+service-role client.
+
+For every active `auto_post` template whose `next_date` is due and at most 31 days old, it posts
+each due occurrence (catching up missed days, max 10 per template per run), dated on its due date,
+records it in `fct_recurring_postings`, and advances `next_date`. A day the Pi is off only delays
+postings. Templates overdue by more than 31 days are left for the user to post by hand, so
+switching auto-post on never back-posts months of history. Each template runs in its own
+savepoint; a failing one is skipped with a `WARNING` (Postgres logs) instead of aborting the run.
+"Today" is Europe/Prague. The function is `SECURITY DEFINER` and acts for all users, so `EXECUTE`
+is granted to `service_role` only.
+
+Run it by hand from the SQL editor: `select public.post_due_recurring();` (returns rows posted).
+
+Its month stepping must stay in line with `_advance_date` in `routers/recurring.py` (used by
+the manual Post button): both clamp month-end the same way (Jan 31 → Feb 28).
+
+---
+
 ## Edge Functions
 
 `supabase/functions/refresh-exchange-rates/index.ts` fetches FX rates from Frankfurter and
 upserts them into `dim_exchange_rates`. It's triggered daily by
 `scripts/refresh_exchange_rates.py` (a small `schedule` loop meant to run on a Raspberry Pi
-in tmux), and can also be invoked manually from the dashboard.
+in tmux, next to `sync_trading212.py` and `post_recurring.py`), and can also be invoked manually from the dashboard.
 
 Deploy after changes:
 ```powershell

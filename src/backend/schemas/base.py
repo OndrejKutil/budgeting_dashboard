@@ -244,10 +244,21 @@ class RecurringData(BaseModel):
     next_date: Date = Field(..., description="Next due date")
     notes: str | None = Field(None, description="Notes")
     is_active: bool | None = Field(True, description="Whether template is active")
+    auto_post: bool = Field(False, description="Post due occurrences automatically (daily job)")
     created_at: datetime | None = Field(None, description="Created at")
     updated_at: datetime | None = Field(None, description="Updated at")
 
     model_config = ConfigDict(json_encoders={Decimal: float})
+
+
+class RecurringNotification(BaseModel):
+    """An occurrence the daily job posted automatically, not yet dismissed by the user."""
+    posting_id: str = Field(..., description="fct_recurring_postings ID (used to dismiss)")
+    recurring_id: str = Field(..., description="Template that produced the transaction")
+    transaction_id: str = Field(..., description="The posted transaction")
+    occurrence_date: Date = Field(..., description="Due date the transaction was posted for")
+    posted_at: datetime = Field(..., description="When the job posted it")
+    transaction: TransactionData = Field(..., description="The posted transaction as it is now (incl. tags)")
 
 
 class RecurringSummary(BaseModel):

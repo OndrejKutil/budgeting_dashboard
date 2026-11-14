@@ -5,6 +5,7 @@ import logging
 import fastapi
 import httpx
 from fastapi import APIRouter, Depends, Request, status
+from gotrue.errors import AuthApiError
 
 # supabase client
 from supabase.client import Client
@@ -37,6 +38,36 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _login_error(e: AuthApiError) -> fastapi.HTTPException | None:
+    """
+    Translate a Supabase Auth rejection into the response the login form should show.
+
+    supabase-py doesn't return an empty session for bad credentials -- it raises AuthApiError
+    (status 400, "Invalid login credentials"). Without this, that fell into the generic handler
+    and the user saw "Server error" for a simple typo. Wrong password and unknown email get the
+    same message on purpose, so the form can't be used to probe which emails are registered.
+    None means "not a client-side problem": let the caller report it as a server error.
+    """
+    message = (e.message or "").lower()
+    if "not confirmed" in message:
+        return fastapi.HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your email isn't confirmed yet. Check your inbox for the confirmation link.",
+        )
+    if e.status == status.HTTP_429_TOO_MANY_REQUESTS:
+        return fastapi.HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Wait a moment and try again.",
+        )
+    if e.status in (400, 401, 422):
+        return fastapi.HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+    return None
+
+
 #? /auth
 
 @router.post("/login", response_model=LoginResponse)
@@ -58,7 +89,7 @@ async def login(
         if response.session is None or response.user is None:
             raise fastapi.HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                detail="Invalid email or password."
             )
 
         return LoginResponse(
@@ -70,6 +101,16 @@ async def login(
 
     except fastapi.HTTPException:
         raise
+    except AuthApiError as e:
+        client_error = _login_error(e)
+        if client_error is not None:
+            logger.info(f"Login rejected by Supabase Auth: {e.status} {e.message}")
+            raise client_error from None
+        logger.error(f"Login failed: Supabase Auth returned {e.status}")
+        raise fastapi.HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server error"
+        ) from None
     except Exception as e:
         logger.error("Login failed")
         logger.info(f"Login failed with error: {str(e)}")

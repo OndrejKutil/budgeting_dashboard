@@ -220,7 +220,12 @@ export default function Trading212Page() {
           }}
         >
           <h2 className="text-[1.125rem] font-medium tracking-[-0.01em]">{t('pages.trading212.connectTitle')}</h2>
-          <p className="mt-1 text-[0.875rem] text-muted-foreground">{t('pages.trading212.connectDescription')}</p>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground">
+            {t('pages.trading212.connectDescription')}{' '}
+            <a href="/privacy#trading212" target="_blank" rel="noreferrer" className="text-foreground underline decoration-foreground/30 underline-offset-4">
+              {t('pages.trading212.privacyLink')}
+            </a>
+          </p>
           <div className="mt-6 space-y-5">
             <Field htmlFor="t212-api-key" label={t('pages.trading212.apiKeyLabel')}>
               <Input id="t212-api-key" type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />

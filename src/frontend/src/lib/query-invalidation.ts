@@ -17,6 +17,8 @@ const TRANSACTION_DERIVED_KEYS = [
   'yearly-heatmap',
   'cashflow',
   'emergency-fund',
+  // Each auto-post notification embeds its transaction; deleting the transaction removes it.
+  'recurring-notifications',
 ] as const;
 
 /**
