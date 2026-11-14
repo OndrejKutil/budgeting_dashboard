@@ -194,8 +194,8 @@ the manual Post button): both clamp month-end the same way (Jan 31 → Feb 28).
 
 `supabase/functions/refresh-exchange-rates/index.ts` fetches FX rates from Frankfurter and
 upserts them into `dim_exchange_rates`. It's triggered daily by
-`scripts/refresh_exchange_rates.py` (a small `schedule` loop meant to run on a Raspberry Pi
-in tmux, next to `sync_trading212.py` and `post_recurring.py`), and can also be invoked manually from the dashboard.
+`scripts/refresh_exchange_rates.py` (job `fx` on the Raspberry Pi, see
+[docs/scripts](../scripts/README.md)), and can also be invoked manually from the dashboard.
 
 Deploy after changes:
 ```powershell

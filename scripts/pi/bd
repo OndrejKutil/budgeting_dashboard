@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+# bd — run and manage the budgeting-dashboard jobs on the Raspberry Pi.
+# Jobs are listed in scripts/pi/jobs.conf; each becomes a systemd *user* timer + service
+# named bd-<job>. Run `bd help` for usage. Docs: docs/scripts/README.md in the repo.
+set -euo pipefail
+
+BUDGET_DIR="${BUDGET_DIR:-$HOME/budget}"
+REPO="$BUDGET_DIR/repo"
+SCRIPTS="$REPO/scripts"
+JOBS_CONF="$SCRIPTS/pi/jobs.conf"
+ENV_FILE="$BUDGET_DIR/.env"
+VENV="$BUDGET_DIR/.venv"
+UNIT_DIR="$HOME/.config/systemd/user"
+PREFIX="bd-"
+
+if [ -t 1 ]; then
+  RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m' BOLD=$'\e[1m' RESET=$'\e[0m'
+else
+  RED="" GREEN="" YELLOW="" BOLD="" RESET=""
+fi
+
+die()  { echo "${RED}error:${RESET} $*" >&2; exit 1; }
+info() { echo "${BOLD}$*${RESET}"; }
+sc()   { systemctl --user "$@"; }
+
+# "name<TAB>script<TAB>schedule" per job; comments and blank lines skipped.
+read_jobs() {
+  [ -f "$JOBS_CONF" ] || die "no $JOBS_CONF — is the repo cloned to $REPO?"
+  sed -e 's/#.*//' "$JOBS_CONF" | while read -r name script sched; do
+    [ -n "$name" ] && printf '%s\t%s\t%s\n' "$name" "$script" "$sched"
+  done
+}
+
+job_names() { read_jobs | cut -f1; }
+
+# Expand a user-given job argument ("all" or a name) into job names.
+resolve_jobs() {
+  [ $# -ge 1 ] || die "which job? one of: $(job_names | tr '\n' ' ')or all"
+  if [ "$1" = "all" ]; then job_names; return; fi
+  job_names | grep -qx -- "$1" || die "unknown job '$1'. Jobs: $(job_names | tr '\n' ' ')"
+  echo "$1"
+}
+
+# "Sat 2026-11-14 12:00:00 CET" -> "2026-11-14 12:00"
+short_time() { awk '{ if (NF >= 3) print $2 " " substr($3, 1, 5); else print "-" }'; }
+
+# ── commands ─────────────────────────────────────────────────────────────────
+
+cmd_status() {
+  printf "${BOLD}%-12s %-8s %-17s %-17s %s${RESET}\n" JOB RESULT "LAST RUN" "NEXT RUN" SCHEDULE
+  local name script sched svc state result last next shown
+  while IFS=$'\t' read -r name script sched; do
+    svc="$PREFIX$name.service"
+    state=$(sc show "$svc" -p ActiveState --value 2>/dev/null || true)
+    result=$(sc show "$svc" -p Result --value 2>/dev/null || true)
+    last=$(sc show "$svc" -p ExecMainStartTimestamp --value 2>/dev/null | short_time)
+    if [ "$(sc is-enabled "$PREFIX$name.timer" 2>/dev/null || true)" = "enabled" ]; then
+      next=$(sc show "$PREFIX$name.timer" -p NextElapseUSecRealtime --value 2>/dev/null | short_time)
+    else
+      next="paused"
+    fi
+    # Pad before colouring so the escape codes don't skew the column width.
+    if   [ "$state" = "activating" ]; then printf -v shown '%-8s' running; shown="$YELLOW$shown$RESET"
+    elif [ "$last" = "-" ];           then printf -v shown '%-8s' never
+    elif [ "$result" = "success" ];   then printf -v shown '%-8s' ok;      shown="$GREEN$shown$RESET"
+    else                                   printf -v shown '%-8s' FAILED;  shown="$RED$shown$RESET"
+    fi
+    printf "%-12s %s %-17s %-17s %s\n" "$name" "$shown" "$last" "$next" "$sched"
+  done < <(read_jobs)
+  echo
+  echo "Details of a run: bd logs <job>"
+}
+
+cmd_run() {
+  local rc=0 name since jobs
+  jobs=$(resolve_jobs "$@")
+  for name in $jobs; do
+    info "▶ running $name ..."
+    since=$(date '+%Y-%m-%d %H:%M:%S')
+    if sc start "$PREFIX$name.service" 2>/dev/null; then
+      journalctl --user-unit "$PREFIX$name.service" --since "$since" -o cat --no-pager -q
+      echo "${GREEN}✔ $name ok${RESET}"
+    else
+      journalctl --user-unit "$PREFIX$name.service" --since "$since" -o cat --no-pager -q
+      echo "${RED}✘ $name failed${RESET} (bd logs $name for more)"
+      rc=1
+    fi
+  done
+  return $rc
+}
+
+cmd_logs() {
+  local name lines=50 follow=() arg
+  [ "${1:-}" != "all" ] || die "logs takes one job, not 'all'"
+  name=$(resolve_jobs "$@"); shift
+  for arg in "$@"; do
+    case "$arg" in
+      -f) follow=(-f) ;;
+      ''|*[!0-9]*) die "usage: bd logs <job> [number-of-lines] [-f]" ;;
+      *) lines=$arg ;;
+    esac
+  done
+  journalctl --user-unit "$PREFIX$name.service" -n "$lines" --no-pager "${follow[@]}"
+}
+
+cmd_pause() {
+  local name jobs
+  jobs=$(resolve_jobs "$@")
+  for name in $jobs; do
+    sc disable --now "$PREFIX$name.timer" 2>/dev/null
+    echo "⏸ $name paused (won't run on schedule; bd run $name still works)"
+  done
+}
+
+cmd_resume() {
+  local name jobs
+  jobs=$(resolve_jobs "$@")
+  for name in $jobs; do
+    sc enable --now "$PREFIX$name.timer" 2>/dev/null
+    echo "▶ $name resumed"
+  done
+}
+
+cmd_env() {
+  ensure_env_file
+  "${EDITOR:-nano}" "$ENV_FILE"
+  echo "Saved. Changes apply from the next run (try: bd run all)."
+}
+
+cmd_update() {
+  info "Pulling latest scripts ..."
+  git -C "$REPO" pull --ff-only
+  sync_all
+}
+
+cmd_install() {
+  info "One-time setup ..."
+  # Lets the user's timers run without anyone logged in, and survive reboots.
+  sudo loginctl enable-linger "$USER"
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$SCRIPTS/pi/bd" "$HOME/.local/bin/bd"
+  ln -sf "$SCRIPTS/pi/README.md" "$BUDGET_DIR/README.md"
+  sync_all
+  echo
+  echo "Installed. Open a new shell (or run: source ~/.profile) so 'bd' is on your PATH."
+}
+
+cmd_help() {
+  cat <<EOF
+${BOLD}bd${RESET} — budgeting-dashboard jobs on this Pi
+
+  bd status                 every job: last result, last run, next run
+  bd run <job|all>          run a job right now and show its output
+  bd logs <job> [N] [-f]    last N log lines (default 50); -f keeps following
+  bd pause <job|all>        stop running it on schedule
+  bd resume <job|all>       start running it on schedule again
+  bd env                    edit the keys/config file (~/budget/.env)
+  bd update                 git pull + apply jobs.conf (new/changed/removed jobs)
+  bd install                one-time setup (already done on this Pi)
+
+Jobs: $(job_names 2>/dev/null | tr '\n' ' ')
+Guide: ~/budget/README.md
+EOF
+}
+
+# ── internals ────────────────────────────────────────────────────────────────
+
+ensure_env_file() {
+  if [ ! -f "$ENV_FILE" ]; then
+    cp "$SCRIPTS/pi/env.example" "$ENV_FILE"
+    echo "${YELLOW}Created $ENV_FILE from the example — fill in real values with: bd env${RESET}"
+  fi
+  chmod 600 "$ENV_FILE"
+}
+
+setup_venv() {
+  local uv
+  uv=$(command -v uv || echo "$HOME/.local/bin/uv")
+  if [ -x "$uv" ]; then
+    [ -x "$VENV/bin/python" ] || "$uv" venv -q "$VENV"
+    "$uv" pip install -q --python "$VENV/bin/python" -r "$SCRIPTS/requirements.txt"
+  else
+    [ -x "$VENV/bin/python" ] || python3 -m venv "$VENV"
+    "$VENV/bin/pip" install -q -r "$SCRIPTS/requirements.txt"
+  fi
+}
+
+sync_all() {
+  ensure_env_file
+  info "Installing Python dependencies ..."
+  setup_venv
+  info "Applying jobs.conf ..."
+  sync_units
+  echo
+  cmd_status
+}
+
+# Turn jobs.conf into systemd units: create/update listed jobs, remove unlisted ones.
+sync_units() {
+  local name script sched f wanted=() created=()
+
+  # Validate everything before touching any unit.
+  while IFS=$'\t' read -r name script sched; do
+    [[ "$name" =~ ^[a-z0-9-]+$ ]] || die "jobs.conf: bad job name '$name' (use a-z, 0-9, -)"
+    [ -f "$SCRIPTS/$script" ] || die "jobs.conf: job '$name': no file scripts/$script"
+    [ -n "$sched" ] || die "jobs.conf: job '$name' has no schedule"
+    systemd-analyze calendar "$sched" >/dev/null 2>&1 \
+      || die "jobs.conf: job '$name': invalid schedule '$sched'"
+  done < <(read_jobs)
+
+  mkdir -p "$UNIT_DIR"
+  while IFS=$'\t' read -r name script sched; do
+    wanted+=("$name")
+    [ -f "$UNIT_DIR/$PREFIX$name.timer" ] || created+=("$name")
+
+    cat > "$UNIT_DIR/$PREFIX$name.service" <<EOF
+# Generated by bd from scripts/pi/jobs.conf — edit that file, not this one.
+[Unit]
+Description=Budget job $name ($script)
+
+[Service]
+Type=oneshot
+WorkingDirectory=$SCRIPTS
+EnvironmentFile=$ENV_FILE
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=$VENV/bin/python $SCRIPTS/$script
+TimeoutStartSec=10min
+EOF
+
+    cat > "$UNIT_DIR/$PREFIX$name.timer" <<EOF
+# Generated by bd from scripts/pi/jobs.conf — edit that file, not this one.
+[Unit]
+Description=Schedule for budget job $name
+
+[Timer]
+OnCalendar=$sched
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+  done < <(read_jobs)
+
+  # Remove jobs that are no longer in jobs.conf.
+  for f in "$UNIT_DIR/$PREFIX"*.timer; do
+    [ -e "$f" ] || continue
+    name=$(basename "$f" .timer); name=${name#"$PREFIX"}
+    if ! printf '%s\n' "${wanted[@]}" | grep -qx -- "$name"; then
+      sc disable --now "$PREFIX$name.timer" 2>/dev/null || true
+      rm -f "$UNIT_DIR/$PREFIX$name.timer" "$UNIT_DIR/$PREFIX$name.service"
+      echo "  removed job $name"
+    fi
+  done
+
+  sc daemon-reload
+  for name in "${wanted[@]}"; do
+    if printf '%s\n' "${created[@]}" | grep -qx -- "$name"; then
+      sc enable --now "$PREFIX$name.timer" 2>/dev/null
+      echo "  added job $name"
+    elif [ "$(sc is-enabled "$PREFIX$name.timer" 2>/dev/null || true)" = "enabled" ]; then
+      sc restart "$PREFIX$name.timer"   # picks up a changed schedule; paused jobs stay paused
+    fi
+  done
+}
+
+# ── main ─────────────────────────────────────────────────────────────────────
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  status|st)        cmd_status ;;
+  run)              cmd_run "$@" ;;
+  logs|log)         cmd_logs "$@" ;;
+  pause|stop)       cmd_pause "$@" ;;
+  resume|start)     cmd_resume "$@" ;;
+  env)              cmd_env ;;
+  update)           cmd_update ;;
+  install)          cmd_install ;;
+  help|-h|--help)   cmd_help ;;
+  *)                echo "unknown command: $cmd"; echo; cmd_help; exit 1 ;;
+esac

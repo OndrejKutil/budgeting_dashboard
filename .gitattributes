@@ -1,0 +1,2 @@
+# Files that run on the Raspberry Pi must keep LF line endings (bash breaks on CRLF).
+scripts/** text eol=lf

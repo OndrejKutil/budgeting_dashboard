@@ -1,57 +1,26 @@
 """
-Refresh exchange rates daily by calling the Supabase Edge Function.
-Run on Raspberry Pi in a tmux session: python refresh_exchange_rates.py
+Refresh exchange rates by calling the Supabase Edge Function `refresh-exchange-rates`.
 
-Requires: pip install requests schedule
+Runs once and exits; scheduled on the Pi by scripts/pi/jobs.conf (job `fx`).
+Env: SUPABASE_URL, SUPABASE_ANON_KEY.
 """
 
-import requests
-import schedule
-import time
-import logging
-from datetime import datetime
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
-# ── Config ────────────────────────────────────────────────────────────────────
-SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
-ANON_KEY     = "your-anon-public-key"
-RUN_AT       = "06:00"   # daily refresh time (local time on the Pi)
-# ─────────────────────────────────────────────────────────────────────────────
+from _common import env, logger, post
 
 
-def refresh_rates() -> None:
+def main() -> None:
+    base = env("SUPABASE_URL").rstrip("/")
+    anon_key = env("SUPABASE_ANON_KEY")
+
     logger.info("Refreshing exchange rates...")
-    try:
-        resp = requests.post(
-            f"{SUPABASE_URL}/functions/v1/refresh-exchange-rates",
-            headers={
-                "Authorization": f"Bearer {ANON_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        logger.info(f"Done — {data.get('updated', '?')} pairs updated at {data.get('fetched_at', '?')}")
-    except requests.HTTPError as e:
-        logger.error(f"HTTP error: {e.response.status_code} {e.response.text}")
-    except Exception as e:
-        logger.error(f"Failed: {e}")
+    data = post(
+        f"{base}/functions/v1/refresh-exchange-rates",
+        headers={"Authorization": f"Bearer {anon_key}", "Content-Type": "application/json"},
+        json={},
+        timeout=60,
+    )
+    logger.info(f"Done — {data.get('updated', '?')} pairs updated at {data.get('fetched_at', '?')}")
 
 
 if __name__ == "__main__":
-    logger.info(f"Starting — will refresh rates daily at {RUN_AT}")
-    refresh_rates()  # run once immediately on start
-
-    schedule.every().day.at(RUN_AT).do(refresh_rates)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    main()
