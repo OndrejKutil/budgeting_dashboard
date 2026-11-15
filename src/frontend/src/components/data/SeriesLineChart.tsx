@@ -19,6 +19,8 @@ interface SeriesLineChartProps {
   /** Accessible name; the caller leaves amounts out of it in privacy mode. */
   ariaLabel: string;
   height?: number;
+  /** Never blur amounts in privacy mode (for sample data). */
+  ignorePrivacy?: boolean;
 }
 
 const BASE_MARGIN = { left: 46, right: 14, top: 10, bottom: 26 };
@@ -74,6 +76,7 @@ export function SeriesLineChart({
   comparisonName,
   ariaLabel,
   height: baseHeight = 190,
+  ignorePrivacy = false,
 }: SeriesLineChartProps) {
   const k = useRootScale();
   const height = baseHeight * k;
@@ -84,7 +87,8 @@ export function SeriesLineChart({
     bottom: BASE_MARGIN.bottom * k,
   };
   const [wrapperRef, width] = useElementWidth<HTMLDivElement>();
-  const { isPrivacyMode } = usePrivacyMode();
+  const { isPrivacyMode: privacyOn } = usePrivacyMode();
+  const isPrivacyMode = privacyOn && !ignorePrivacy;
   const [hover, setHover] = useState<number | null>(null);
   const blur = isPrivacyMode ? { filter: `blur(${5 * k}px)` } : undefined;
 
@@ -255,7 +259,7 @@ export function SeriesLineChart({
             <div className="flex items-center justify-between gap-4">
               <span className="text-muted-foreground">{primaryName}</span>
               <span className="tabular-nums text-foreground">
-                <SensitiveValue>{formatValue(hoverPrimary)}</SensitiveValue>
+                <SensitiveValue disabled={ignorePrivacy}>{formatValue(hoverPrimary)}</SensitiveValue>
               </span>
             </div>
           )}
@@ -263,7 +267,7 @@ export function SeriesLineChart({
             <div className="flex items-center justify-between gap-4">
               <span className="text-muted-foreground">{comparisonName}</span>
               <span className="tabular-nums text-foreground">
-                <SensitiveValue>{formatValue(hoverComparison)}</SensitiveValue>
+                <SensitiveValue disabled={ignorePrivacy}>{formatValue(hoverComparison)}</SensitiveValue>
               </span>
             </div>
           )}
