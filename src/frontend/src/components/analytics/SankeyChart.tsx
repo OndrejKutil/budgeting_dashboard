@@ -28,6 +28,16 @@ interface Props {
   data: SankeyInput;
   /** Accessible name of the chart; leave amounts out in privacy mode. */
   ariaLabel: string;
+  /** Overrides the user's currency formatter (the public sample uses a fixed one). */
+  formatValue?: (value: number) => string;
+  /** Overrides the translated node names of the five fixed nodes. */
+  labels?: Partial<Record<'income' | 'expenses' | 'savings' | 'investments' | 'cashFlow', string>>;
+  /** Never blur or hide amounts in privacy mode (for sample data). */
+  ignorePrivacy?: boolean;
+  /** Lower bound of the chart height in rem (default 26). A short chart can ask for less so it is not stretched. */
+  minHeightRem?: number;
+  /** Let groups fold into one node via their arrow or Enter (default true). When false, groups are always expanded. */
+  collapsible?: boolean;
 }
 
 type NodeLayer = 'income' | 'pool' | 'group' | 'sink';
@@ -55,9 +65,14 @@ const rootFontSize = () => parseFloat(getComputedStyle(document.documentElement)
  * cash that stays; groups split into their categories (click a group's arrow to fold it).
  * Hover or focus highlights a node and everything downstream; click pins it.
  */
-export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyChart({ data, ariaLabel }, ref) {
-  const { formatCurrency, t } = useUser();
-  const { isPrivacyMode } = usePrivacyMode();
+export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyChart(
+  { data, ariaLabel, formatValue, labels, ignorePrivacy = false, minHeightRem = 26, collapsible = true },
+  ref,
+) {
+  const { formatCurrency: userFormatCurrency, t } = useUser();
+  const { isPrivacyMode: privacyOn } = usePrivacyMode();
+  const formatCurrency = formatValue ?? userFormatCurrency;
+  const isPrivacyMode = privacyOn && !ignorePrivacy;
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(0);
@@ -115,13 +130,13 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
       rawLinks.push({ source: `in:${name}`, target: 'pool', value: data.income_by_category[name] });
     });
 
-    rawNodes.push({ key: 'pool', name: t('metrics.income'), layer: 'pool', tone: 'strong' });
+    rawNodes.push({ key: 'pool', name: labels?.income ?? t('metrics.income'), layer: 'pool', tone: 'strong' });
 
     let leaves = 0;
     const addGroup = (key: string, name: string, total: number, entries: [string, number][], prefix: string) => {
       if (total <= 0) return;
-      const expanded = entries.length > 0 && !collapsed.has(key);
-      rawNodes.push({ key, name, layer: expanded ? 'group' : 'sink', tone: 'medium', collapsible: entries.length > 0 });
+      const expanded = entries.length > 0 && !(collapsible && collapsed.has(key));
+      rawNodes.push({ key, name, layer: expanded ? 'group' : 'sink', tone: 'medium', collapsible: collapsible && entries.length > 0 });
       rawLinks.push({ source: 'pool', target: key, value: total });
       if (expanded) {
         entries.forEach(([category, value]) => {
@@ -135,12 +150,12 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
       }
     };
 
-    addGroup('g:expenses', t('metrics.expenses'), totalExpenses, expenseEntries, 'ex');
-    addGroup('g:savings', t('metrics.savings'), totalSaving, savingEntries, 'sv');
-    addGroup('g:investments', t('metrics.investments'), totalInvestment, investmentEntries, 'iv');
+    addGroup('g:expenses', labels?.expenses ?? t('metrics.expenses'), totalExpenses, expenseEntries, 'ex');
+    addGroup('g:savings', labels?.savings ?? t('metrics.savings'), totalSaving, savingEntries, 'sv');
+    addGroup('g:investments', labels?.investments ?? t('metrics.investments'), totalInvestment, investmentEntries, 'iv');
 
     if (showSurplus) {
-      rawNodes.push({ key: 'g:surplus', name: t('metrics.cashFlow'), layer: 'sink', tone: 'accent' });
+      rawNodes.push({ key: 'g:surplus', name: labels?.cashFlow ?? t('metrics.cashFlow'), layer: 'sink', tone: 'accent' });
       rawLinks.push({ source: 'pool', target: 'g:surplus', value: surplus });
       leaves += 1;
     }
@@ -162,10 +177,10 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
       childrenByKey: children,
       leafCount: Math.max(leaves, incomeEntries.length),
     };
-  }, [data, collapsed, t]);
+  }, [data, collapsed, t, labels, collapsible]);
 
   // Taller when there are many categories, so labels never collide.
-  const heightRem = Math.max(26, leafCount * 1.75 + 4);
+  const heightRem = Math.max(minHeightRem, leafCount * 1.75 + 4);
   const height = heightRem * rem;
 
   const layout = useMemo(() => {
@@ -387,7 +402,7 @@ export const SankeyChart = forwardRef<SankeyChartHandle, Props>(function SankeyC
         >
           <p className="mb-0.5 text-muted-foreground">{tooltip.label}</p>
           <p className="tabular-nums text-foreground">
-            <SensitiveValue>{formatCurrency(tooltip.value)}</SensitiveValue>
+            <SensitiveValue disabled={ignorePrivacy}>{formatCurrency(tooltip.value)}</SensitiveValue>
           </p>
         </div>
       )}

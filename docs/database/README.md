@@ -42,7 +42,8 @@ has Row Level Security enabled**, with policies scoped to `auth.uid()`.
 | `dim_recurring` | dim | Recurring-transaction templates (`cadence`, `next_date`, `auto_post`) |
 | `fct_recurring_postings` | fct | One row per occurrence auto-posted by `post_due_recurring()`; unique on `(recurring_id_fk, occurrence_date)`. Unacknowledged rows from the last 7 days are the app's notifications. No INSERT policy — only the job writes |
 | `dim_exchange_rates` | dim | One row per currency pair; refreshed daily by the edge function (write = service role only, read = any authenticated user) |
-| `fct_transactions` | fct | Core ledger; FKs to account / category / fund |
+| `fct_transactions` | fct | Core ledger; FKs to account / category / fund, and `import_batch_id_fk` (→ `fct_import_batches`, `on delete set null`) for imported rows |
+| `fct_import_batches` | fct | One row per imported bank statement (file name, preset, `mapping_json`, row count, date range). Undo deletes the batch's transactions, then the row. Select/insert/delete only |
 | `fct_budgets` | fct | One row per user / month / year; the plan is stored as `plan_json` (JSONB) |
 | `fct_dividend_portfolios` | fct | One row per user; holdings stored as `portfolio_json` (JSONB) |
 | `dim_features` | dim | Global registry of gateable features (read = any authenticated user, write = migrations only) |

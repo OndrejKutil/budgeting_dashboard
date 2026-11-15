@@ -97,6 +97,7 @@ export interface Transaction {
     notes: string | null;
     created_at: string | null;
     savings_fund_id_fk: string | null;
+    import_batch_id_fk?: string | null;
     tags?: Tag[];
 }
 
@@ -731,3 +732,83 @@ export interface T212History {
 
 /** Query span for GET /trading212/history. */
 export type T212HistorySpan = '7d' | '1m' | '3m' | 'ytd' | '1y' | 'all';
+
+// ================================================================================================
+//                                   Statement Import (CSV / XLSX)
+// ================================================================================================
+
+/** Mirrors backend StatementMapping: which columns of a bank export mean what. */
+export interface StatementMapping {
+    date_column: string;
+    /** strptime pattern; null = auto-detect. */
+    date_format: string | null;
+    amount_column: string | null;
+    debit_column: string | null;
+    credit_column: string | null;
+    decimal_separator: ',' | '.';
+    currency_column: string | null;
+    merchant_columns: string[];
+    message_columns: string[];
+    own_account_column: string | null;
+}
+
+/** A recognised bank export format. */
+export interface StatementPresetData {
+    key: string;
+    name: string;
+}
+
+/** One parsed statement row, ready for review. Dates are YYYY-MM-DD. */
+export interface StatementDraftRow {
+    row_number: number;
+    date: string | null;
+    amount: number | null;
+    merchant: string;
+    merchant_key: string;
+    notes: string;
+    category_id_fk: number | null;
+    category_source: FieldSource;
+    duplicate: boolean;
+    warning: string | null;
+    error: string | null;
+    /** Money moved to / from the account holder themselves (counterparty is the holder's own name). */
+    own_transfer: boolean;
+}
+
+/** Result of POST /statement-import/preview. */
+export interface StatementPreviewData {
+    needs_mapping: boolean;
+    headers: string[];
+    sample_rows: string[][];
+    mapping: StatementMapping | null;
+    preset: StatementPresetData | null;
+    rows: StatementDraftRow[];
+    date_from: string | null;
+    date_to: string | null;
+    currency: string | null;
+    suggestions_available: boolean;
+    /** The user opted out of AI suggestions; only history suggestions exist. */
+    ai_skipped: boolean;
+}
+
+/** One past import (a row of fct_import_batches). */
+export interface ImportBatchData {
+    import_batch_id_pk: string;
+    account_id_fk: string;
+    file_name: string | null;
+    preset: string | null;
+    mapping_json: Record<string, unknown> | null;
+    row_count: number;
+    date_from: string | null;
+    date_to: string | null;
+    created_at: string | null;
+}
+
+/** Result of POST /statement-import/commit. */
+export interface StatementCommitData {
+    batch: ImportBatchData;
+    rows_written: number;
+    balance_adjustment: number | null;
+    /** Savings fund id -> opening amount added (non-zero ones only). */
+    fund_adjustments: Record<string, number>;
+}

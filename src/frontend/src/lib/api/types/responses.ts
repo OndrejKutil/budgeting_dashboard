@@ -27,6 +27,9 @@ import type {
     T212Connection,
     T212History,
     T212Positions,
+    StatementPreviewData,
+    StatementCommitData,
+    ImportBatchData,
 } from './base';
 
 // ================================================================================================
@@ -430,4 +433,32 @@ export interface T212HistoryResponse {
     data: T212History;
     success: boolean;
     message: string;
+}
+
+// ================================================================================================
+//                                   Statement Import
+// ================================================================================================
+
+export interface StatementPreviewResponse {
+    success: boolean;
+    message: string;
+    data: StatementPreviewData;
+}
+
+export interface StatementCommitResponse {
+    success: boolean;
+    message: string;
+    data: StatementCommitData;
+}
+
+export interface ImportBatchesResponse {
+    success: boolean;
+    message: string;
+    data: ImportBatchData[];
+}
+
+export interface ImportBatchDeleteResponse {
+    success: boolean;
+    message: string;
+    data: { transactions_deleted: number };
 }

@@ -8,6 +8,7 @@ two ever drift, the list and the total shown above it silently disagree. Keeping
 """
 
 import calendar
+import uuid
 from datetime import date
 
 import fastapi
@@ -83,6 +84,7 @@ def apply_common_filters(
     search: str | None = None,
     tag_id: str | None = None,
     months: str | None = None,
+    import_batch_id: str | None = None,
 ):
     """Apply all shared filter conditions to a query builder."""
     if start_date:
@@ -117,4 +119,13 @@ def apply_common_filters(
         query = query.ilike(TRANSACTIONS_COLUMNS.NOTES.value, f"%{search}%")
     if tag_ids := split_csv(tag_id):
         query = query.in_("fct_transaction_tags.tag_id_fk", tag_ids)
+    if import_batch_id:
+        try:
+            uuid.UUID(import_batch_id)
+        except ValueError as exc:
+            raise fastapi.HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid import filter '{import_batch_id}'",
+            ) from exc
+        query = query.eq(TRANSACTIONS_COLUMNS.IMPORT_BATCH_ID.value, import_batch_id)
     return query

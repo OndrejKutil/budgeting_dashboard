@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Inbox } from 'lucide-react';
 import { Button } from './button';
 
@@ -12,6 +13,11 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  /** A quieter link under the main action (e.g. "Import from your bank"). */
+  secondaryAction?: {
+    label: string;
+    to: string;
+  };
   className?: string;
 }
 
@@ -20,6 +26,7 @@ export function EmptyState({
   title,
   description,
   action,
+  secondaryAction,
   className,
 }: EmptyStateProps) {
   return (
@@ -43,6 +50,14 @@ export function EmptyState({
         <Button onClick={action.onClick} className="mt-6">
           {action.label}
         </Button>
+      )}
+      {secondaryAction && (
+        <Link
+          to={secondaryAction.to}
+          className="mt-4 text-sm text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
+        >
+          {secondaryAction.label}
+        </Link>
       )}
     </motion.div>
   );

@@ -17,7 +17,8 @@ export const accountsApi = {
     },
 
     create: async (account: CreateAccountRequest) => {
-        const response = await apiClient.post<{ success: boolean; message: string }>(
+        // account_id: the new account's id (null only if the backend couldn't read it back).
+        const response = await apiClient.post<{ success: boolean; message: string; account_id?: string | null }>(
             '/accounts/',
             account
         );

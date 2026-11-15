@@ -43,6 +43,8 @@ dependencies = [
     "groq>=1.6.0",
     # Encrypting the Trading212 API key/secret at rest
     "cryptography>=42.0.0",
+    # Reading .xlsx bank statements (statement import)
+    "openpyxl>=3.1.0",
 ]
 
 # Install (from src/backend/):

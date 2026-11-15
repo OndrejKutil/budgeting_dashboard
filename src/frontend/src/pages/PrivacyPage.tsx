@@ -96,6 +96,13 @@ export default function PrivacyPage() {
                 </p>
               </section>
 
+              <section id="statement-import">
+                <h2>5a. Importing Your Bank Data</h2>
+                <p>
+                  Importing your bank data (a CSV or Excel export) is optional and only available when enabled for your account. To suggest a category for each merchant, it sends merchant names and payment messages from your file, without amounts, dates or account numbers, together with the names of your categories, to the same AI provider described in section 5. The file itself is processed in memory and not stored; only the transactions you review and confirm are saved. You can switch the AI suggestions off on the upload screen; categories then come only from how you filed the same merchants before, and nothing is sent to the AI provider. Transfers to or from the account holder's own name are never sent.
+                </p>
+              </section>
+
               <section id="trading212">
                 <h2>6. Trading212 Integration</h2>
                 <p>

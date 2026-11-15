@@ -26,6 +26,8 @@ import { Account, AccountGroup, CreateAccountRequest, UpdateAccountRequest } fro
 import { markOptimistic, optimisticList, patchById, tempUuid, withoutId } from '@/lib/optimistic';
 import { toast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { STATEMENT_IMPORT_PATH } from '@/components/layout/nav-config';
 import { useUser } from '@/contexts/user-context';
 import { usePrivacyMode } from '@/contexts/privacy-context';
 import { formatMoneyParts, formatMoneyWhole } from '@/lib/currency';
@@ -52,6 +54,7 @@ export default function AccountsPage() {
   const queryClient = useQueryClient();
   const { locale, t, currency: userCurrency, formatCurrency, formatCurrencyCompact, formatNumber } = useUser();
   const { isPrivacyMode } = usePrivacyMode();
+  const { enabled: statementImportEnabled } = useFeatureFlag('statement_import');
   const [netWorthRange, setNetWorthRange] = useState<NetWorthRange>('90d');
   const [inactiveOpen, setInactiveOpen] = useState(false);
   const inactiveId = useId();
@@ -554,6 +557,7 @@ export default function AccountsPage() {
           label: t('pages.accounts.addFirst'),
           onClick: () => setIsModalOpen(true),
         }}
+        secondaryAction={statementImportEnabled ? { label: t('pages.statementImport.importFromBank'), to: STATEMENT_IMPORT_PATH } : undefined}
       />
     );
   } else {
@@ -568,6 +572,7 @@ export default function AccountsPage() {
               label: t('pages.accounts.addFirst'),
               onClick: () => setIsModalOpen(true),
             }}
+            secondaryAction={statementImportEnabled ? { label: t('pages.statementImport.importFromBank'), to: STATEMENT_IMPORT_PATH } : undefined}
           />
         )}
         {groupSections.map(({ group, members }) => (

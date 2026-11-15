@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Plus, ScanLine } from 'lucide-react';
+import { Plus, ScanLine, X } from 'lucide-react';
 import type { OpenAddState } from '@/hooks/use-add-transaction';
 import { RECURRING_NOTIFICATIONS_KEY, type OpenEditState } from '@/hooks/use-recurring-notifications';
 import { useUrlState } from '@/hooks/use-url-state';
@@ -47,8 +47,12 @@ export default function TransactionsPage() {
   const { formatCurrency, formatDate, formatNumber, t, locale, currency: userCurrency } = useUser();
   const queryClient = useQueryClient();
   const location = useLocation();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { enabled: screenshotImportEnabled } = useFeatureFlag('screenshot_import');
+  const { enabled: statementImportEnabled } = useFeatureFlag('statement_import');
+  // "View them" after a statement import. Read straight from the URL (not useUrlState) so it is
+  // never restored from session storage later, when the import may no longer exist.
+  const importBatchId = searchParams.get('import') ?? '';
 
   // URL State Management
   const [page, setPage] = useUrlState<number>('page', 1);
@@ -130,19 +134,21 @@ export default function TransactionsPage() {
     min_amount: parseDecimalInput(debouncedMin) ?? undefined,
     max_amount: parseDecimalInput(debouncedMax) ?? undefined,
     tag_id: tagFilter === 'all' ? undefined : tagFilter,
+    import_batch_id: importBatchId || undefined,
     // Picked months are disjoint spans that can cross a year (Nov + Dec + Jan), which no
     // single range expresses — so when any are picked they are the whole date filter and
     // the year bounds drop out. The Year select only scopes the unfiltered case.
-    start_date: selectedMonths.length ? undefined : `${yearFilter}-01-01`,
-    end_date: selectedMonths.length ? undefined : `${yearFilter}-12-31`,
-    months: selectedMonths.length ? selectedMonths.join(',') : undefined,
+    // An import usually spans more than the selected year, so it replaces the date filter too.
+    start_date: selectedMonths.length || importBatchId ? undefined : `${yearFilter}-01-01`,
+    end_date: selectedMonths.length || importBatchId ? undefined : `${yearFilter}-12-31`,
+    months: selectedMonths.length && !importBatchId ? selectedMonths.join(',') : undefined,
   };
 
   // The year counts as a filter once it leaves its default: it now lives behind "More", so a
   // changed year has to be visible (and resettable) from the bar.
   const anyFilterActive = Boolean(
     categoryFilter !== 'all' || accountFilter !== 'all' || fundFilter !== 'all' || typeFilter !== 'all' ||
-    tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery ||
+    tagFilter !== 'all' || monthFilter !== 'all' || minAmount || maxAmount || searchQuery || importBatchId ||
     yearFilter !== new Date().getFullYear().toString(),
   );
 
@@ -173,6 +179,7 @@ export default function TransactionsPage() {
       year: yearFilter,
       month: monthFilter,
       tag: tagFilter,
+      importBatch: importBatchId,
     }],
     queryFn: () => transactionsApi.getAll({
       limit: ITEMS_PER_PAGE,
@@ -263,7 +270,7 @@ export default function TransactionsPage() {
       setPage(1);
     }
   }, [ // eslint-disable-line react-hooks/exhaustive-deps
-    categoryFilter, accountFilter, fundFilter, typeFilter, tagFilter,
+    categoryFilter, accountFilter, fundFilter, typeFilter, tagFilter, importBatchId,
     yearFilter, monthFilter, debouncedSearch, debouncedMin, debouncedMax,
   ]);
 
@@ -625,6 +632,24 @@ export default function TransactionsPage() {
         onReset={clearFilters}
       />
 
+      {importBatchId && (
+        <p className="flex flex-wrap items-center gap-x-3 text-[0.8125rem] text-muted-foreground">
+          {t('pages.transactions.importFilterActive')}
+          <button
+            type="button"
+            onClick={() => setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('import');
+              return next;
+            })}
+            className="inline-flex items-center gap-1 rounded-sm text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('pages.transactions.importFilterClear')}
+          </button>
+        </p>
+      )}
+
       <TransactionList
         transactions={transactions}
         isLoading={isLoading}
@@ -639,6 +664,7 @@ export default function TransactionsPage() {
         rangeEnd={rangeEnd}
         hasNextPage={hasNextPage}
         onAdd={() => setIsCreateModalOpen(true)}
+        showImportLink={statementImportEnabled && !anyFilterActive}
         onEdit={openEditModal}
         onCopy={openCopyModal}
         onDelete={handleDelete}

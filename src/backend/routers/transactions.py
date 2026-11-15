@@ -69,6 +69,7 @@ async def get_transactions_summary(
     max_amount: float | None = Query(None),
     tag_id: str | None = Query(None),
     months: str | None = Query(None, description="Comma-separated YYYY-MM list; matches any of them"),
+    import_batch_id: str | None = Query(None, description="Only transactions from this statement import"),
     base_currency: str = Query("CZK", description="Currency to convert all amounts into"),
 ) -> TransactionSummaryResponse:
     """
@@ -99,7 +100,7 @@ async def get_transactions_summary(
         query = apply_common_filters(
             query, start_date, end_date, category_id, account_id,
             savings_fund_id, category_type, min_amount, max_amount, search, tag_id,
-            months=months,
+            months=months, import_batch_id=import_batch_id,
         )
 
         response = query.execute()
@@ -191,6 +192,7 @@ async def get_all_data(
     max_amount: float | None = Query(None, description="Filter by maximum amount value"),
     tag_id: str | None = Query(None, description="Filter by tag ID"),
     months: str | None = Query(None, description="Comma-separated YYYY-MM list; matches any of them"),
+    import_batch_id: str | None = Query(None, description="Only transactions from this statement import"),
     limit: int | None = Query(100, ge=1, le=1000, description="Number of items to return (max 1000)"),
     offset: int | None = Query(0, ge=0, description="Number of items to skip")
 ) -> TransactionsResponse:
@@ -238,7 +240,7 @@ async def get_all_data(
         query = apply_common_filters(
             query, start_date, end_date, category_id, account_id,
             savings_fund_id, category_type, min_amount, max_amount, search, tag_id,
-            months=months,
+            months=months, import_batch_id=import_batch_id,
         )
 
         query = query.order(TRANSACTIONS_COLUMNS.DATE.value, desc=True)

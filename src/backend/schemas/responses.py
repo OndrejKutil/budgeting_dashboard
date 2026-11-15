@@ -15,6 +15,7 @@ from .base import (
     ExpenseRowResponse,
     ExtractionData,
     FeatureFlagData,
+    ImportBatchData,
     IncomeRowResponse,
     InvestmentRowResponse,
     MonthlyAnalyticsData,
@@ -26,6 +27,8 @@ from .base import (
     SavingsFundsData,
     SavingsRowResponse,
     SpendingType,
+    StatementCommitData,
+    StatementPreviewData,
     SummaryData,
     T212ConnectionData,
     T212HistoryData,
@@ -350,6 +353,7 @@ class AccountSuccessResponse(BaseModel):
     """Response schema for account creation endpoint"""
     success: bool = Field(..., description="Indicates if the account creation was successful")
     message: str = Field(..., description="Success message for account creation")
+    account_id: str | None = Field(None, description="ID of the account just created (POST only)")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -686,3 +690,35 @@ class T212HistoryResponse(BaseModel):
     data: T212HistoryData = Field(..., description="Portfolio value-history series")
     success: bool = Field(..., description="Indicates if the request was successful")
     message: str = Field(..., description="Response message")
+
+
+class StatementPreviewResponse(BaseModel):
+    """Response schema for POST /statement-import/preview"""
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+    data: StatementPreviewData = Field(..., description="Parsed drafts, or the mapping state")
+
+
+class StatementCommitResponse(BaseModel):
+    """Response schema for POST /statement-import/commit"""
+    success: bool = Field(..., description="Indicates if the import was saved")
+    message: str = Field(..., description="Response message")
+    data: StatementCommitData = Field(..., description="The batch and how many rows were written")
+
+
+class ImportBatchesResponse(BaseModel):
+    """Response schema for GET /statement-import/batches"""
+    success: bool = Field(..., description="Indicates if the request was successful")
+    message: str = Field(..., description="Response message")
+    data: list[ImportBatchData] = Field(default_factory=list, description="Past imports, newest first")
+
+
+class ImportBatchDeleteData(BaseModel):
+    transactions_deleted: int = Field(..., description="Transactions removed with the batch")
+
+
+class ImportBatchDeleteResponse(BaseModel):
+    """Response schema for DELETE /statement-import/batches/{id}"""
+    success: bool = Field(..., description="Indicates if the undo succeeded")
+    message: str = Field(..., description="Response message")
+    data: ImportBatchDeleteData = Field(..., description="What was removed")

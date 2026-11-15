@@ -2,7 +2,7 @@ from datetime import date as Date
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -979,3 +979,106 @@ class T212HistoryData(BaseModel):
     """GET /trading212/history."""
     points: list[T212ValueHistoryPoint] = Field(default_factory=list, description="Value-history series")
     currency: str | None = Field(None, description="Currency total_value is converted to (the caller's base currency)")
+
+
+# ================================================================================================
+#                                   Statement Import (CSV / XLSX)
+# ================================================================================================
+
+class StatementMapping(BaseModel):
+    """
+    Which columns of a bank export mean what. A bank preset is one of these, and the mapping
+    screen produces the same shape, so a file is always read through exactly one mapping.
+
+    The amount comes either from one signed `amount_column` or from separate `debit_column`
+    (money out) / `credit_column` (money in) columns. `date_format` is a strptime pattern; null
+    means "try the common formats" (what the mapping screen sends).
+    """
+    date_column: str = Field(..., min_length=1, description="Header of the transaction-date column")
+    date_format: str | None = Field(None, description="strptime format, e.g. %d.%m.%Y; null = auto-detect")
+    amount_column: str | None = Field(None, description="Header of a signed amount column (money out negative)")
+    debit_column: str | None = Field(None, description="Header of a money-out column (used when amount_column is null)")
+    credit_column: str | None = Field(None, description="Header of a money-in column (used when amount_column is null)")
+    decimal_separator: Literal[",", "."] = Field(",", description="Decimal separator of the amount columns")
+    currency_column: str | None = Field(None, description="Header of the account-currency column, if any")
+    merchant_columns: list[str] = Field(default_factory=list, description="Merchant text, in priority order; first non-empty wins")
+    message_columns: list[str] = Field(default_factory=list, description="Payment message columns, appended to the note")
+    own_account_column: str | None = Field(None, description="Header of the user's own account number, for the mixed-accounts check")
+
+    @model_validator(mode="after")
+    def _needs_an_amount(self) -> "StatementMapping":
+        if not self.amount_column and not (self.debit_column or self.credit_column):
+            raise ValueError("A mapping needs amount_column, or debit_column / credit_column")
+        return self
+
+    def columns(self) -> list[str]:
+        """Every header this mapping reads."""
+        cols = [self.date_column, self.amount_column, self.debit_column, self.credit_column,
+                self.currency_column, self.own_account_column, *self.merchant_columns, *self.message_columns]
+        return [c for c in cols if c]
+
+
+class StatementPresetData(BaseModel):
+    """A recognised export format."""
+    key: str = Field(..., description="Stable preset key, e.g. 'raiffeisenbank'")
+    name: str = Field(..., description="Display name, e.g. 'Raiffeisenbank' (also the suggested account name)")
+
+
+class StatementDraftRow(BaseModel):
+    """One parsed statement row, ready for review. Nothing is saved yet."""
+    row_number: int = Field(..., description="1-based line/row number in the file, for error messages")
+    date: Date | None = Field(None, description="Transaction date; null when the row failed to parse")
+    amount: Decimal | None = Field(None, description="Signed amount in the account currency (money out negative)")
+    merchant: str = Field("", description="What the row is grouped by on the review screen")
+    merchant_key: str = Field("", description="normalize_merchant(merchant); the frontend groups by this plus the sign")
+    notes: str = Field("", description="Proposed note to store on the transaction")
+    category_id_fk: int | None = Field(None, description="Suggested category, if any")
+    category_source: FieldSource = Field(FieldSource.NONE, description="rule (user history), model, or none")
+    duplicate: bool = Field(False, description="Already in the ledger (same account, date and amount); skipped by default")
+    own_transfer: bool = Field(
+        False, description="Money moved to/from the account holder themselves (counterparty = holder's name); never sent to the model"
+    )
+    warning: str | None = Field(None, description="Something to look at before importing (e.g. a non-zero fee)")
+    error: str | None = Field(None, description="Why the row could not be read; such rows are left out")
+
+    model_config = ConfigDict(json_encoders={Decimal: float})
+
+
+class StatementPreviewData(BaseModel):
+    """Result of POST /statement-import/preview."""
+    needs_mapping: bool = Field(False, description="True when the columns could not be recognised; only the mapping fields below are filled")
+    headers: list[str] = Field(default_factory=list, description="Header row of the file")
+    sample_rows: list[list[str]] = Field(default_factory=list, description="First rows of the file as text (only when needs_mapping)")
+    mapping: StatementMapping | None = Field(None, description="The mapping used, or the best guess when needs_mapping")
+    preset: StatementPresetData | None = Field(None, description="Recognised bank, or null")
+    rows: list[StatementDraftRow] = Field(default_factory=list, description="Draft rows, in file order")
+    date_from: Date | None = Field(None, description="Earliest date among the readable rows")
+    date_to: Date | None = Field(None, description="Latest date among the readable rows")
+    currency: str | None = Field(None, description="Currency of the file (from its currency column), or the account's")
+    suggestions_available: bool = Field(False, description="False when the suggestion call failed")
+    ai_skipped: bool = Field(False, description="True when the user opted out of AI suggestions (use_ai=false); only history was used")
+
+
+class ImportBatchData(BaseModel):
+    """One past import (a row of fct_import_batches)."""
+    import_batch_id_pk: str = Field(..., description="Batch ID")
+    account_id_fk: str = Field(..., description="Account the file was imported into")
+    file_name: str | None = Field(None, description="Original file name")
+    preset: str | None = Field(None, description="Preset key used, or null for a custom mapping")
+    mapping_json: dict[str, Any] | None = Field(None, description="The StatementMapping used")
+    row_count: int = Field(..., description="Number of statement rows imported (the balance adjustment not included)")
+    date_from: Date | None = Field(None, description="Earliest imported date")
+    date_to: Date | None = Field(None, description="Latest imported date")
+    created_at: datetime | None = Field(None, description="When the import happened")
+
+
+class StatementCommitData(BaseModel):
+    """Result of POST /statement-import/commit."""
+    batch: ImportBatchData = Field(..., description="The new batch")
+    rows_written: int = Field(..., description="Statement rows inserted")
+    balance_adjustment: Decimal | None = Field(None, description="Amount of the 'Starting balance' transaction added, if any")
+    fund_adjustments: dict[str, Decimal] = Field(
+        default_factory=dict, description="Savings fund ID -> opening amount added to that fund (only non-zero ones)"
+    )
+
+    model_config = ConfigDict(json_encoders={Decimal: float})
