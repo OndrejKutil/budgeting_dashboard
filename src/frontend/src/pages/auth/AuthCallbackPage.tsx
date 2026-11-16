@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { tokenManager } from '@/lib/api/client';
+import { decodeJwtPayload, tokenManager } from '@/lib/api/client';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -33,9 +33,12 @@ export default function AuthCallbackPage() {
                     throw new Error('No authentication tokens received');
                 }
 
-                // Decode the JWT to get the user ID
-                const payload = JSON.parse(atob(accessToken.split('.')[1]));
-                const userId = payload.sub;
+                // Decode the JWT to get the user ID (base64url-safe; plain atob throws
+                // InvalidCharacterError when the payload contains '-' or '_')
+                const userId = decodeJwtPayload(accessToken)?.sub;
+                if (typeof userId !== 'string') {
+                    throw new Error('Invalid authentication token');
+                }
 
                 // Store the tokens
                 tokenManager.setTokens(accessToken, refreshToken, userId);
