@@ -15,7 +15,7 @@ const REFRESH_TOKEN_KEY = 'finance_refresh_token';
 const USER_ID_KEY = 'finance_user_id';
 const TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
