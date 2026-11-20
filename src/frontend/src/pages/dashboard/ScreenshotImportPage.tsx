@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { fieldLine } from '@/components/ui/field-line';
 import { cn } from '@/lib/utils';
-import { getCurrencyFlag, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { getCurrencyFlag } from '@/lib/currency';
 import { AccountSelect } from '@/components/AccountSelect';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { toast } from '@/hooks/use-toast';
@@ -94,15 +94,16 @@ function parseDecimalInput(value: string): number | null {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 }
 
-// The fields the review UI lets a user fix. Matches the backend's DraftTransactionData -- there
-// is no separate merchant field, `notes` carries it instead (see DraftTransactionData docstring).
-const REVIEW_FIELDS = ['amount', 'currency', 'date', 'notes', 'account_id_fk', 'category_id_fk'] as const;
+// The fields the review UI lets a user fix. Matches the backend's DraftTransactionData minus
+// currency -- a transaction is always in its account's currency, so that isn't editable here.
+// There is no separate merchant field, `notes` carries it instead (see DraftTransactionData docstring).
+const REVIEW_FIELDS = ['amount', 'date', 'notes', 'account_id_fk', 'category_id_fk'] as const;
 
 // "Keep as is" in the apply-to-all selects.
 const KEEP = '';
 
 // What actually has to be filled in to save a draft as a real transaction. Narrower than
-// REVIEW_FIELDS -- currency isn't stored on a transaction and notes is optional.
+// REVIEW_FIELDS -- notes is optional.
 const REQUIRED_FOR_IMPORT = ['amount', 'date', 'account_id_fk', 'category_id_fk'] as const;
 
 /**
@@ -111,7 +112,11 @@ const REQUIRED_FOR_IMPORT = ['amount', 'date', 'account_id_fk', 'category_id_fk'
  */
 interface EditableDraft {
   amount: string;
-  currency: string;
+  /**
+   * Currency read off the screenshot, or null when the backend only inherited it from the
+   * account. Display-only: used to warn when it differs from the chosen account's currency.
+   */
+  screenshot_currency: string | null;
   date: string;
   account_id_fk: string;
   category_id_fk: string;
@@ -144,7 +149,7 @@ const EMPTY_BULK: BulkEdit = {
 function toEditableDraft(draft: DraftTransaction): EditableDraft {
   return {
     amount: draft.amount !== null ? String(draft.amount) : '',
-    currency: draft.currency ?? '',
+    screenshot_currency: draft.field_sources.currency === 'model' ? draft.currency : null,
     date: draft.date ?? '',
     account_id_fk: draft.account_id_fk ?? '',
     category_id_fk: draft.category_id_fk !== null ? String(draft.category_id_fk) : '',
@@ -500,6 +505,8 @@ export default function ScreenshotImportPage() {
   const allReadyToImport = drafts.length > 0 && drafts.every(draftIsReadyToImport);
   const needsInput = (source: FieldSource | undefined) => (source === 'none' ? t('pages.screenshotImport.needsInput') : undefined);
   const sectionHeading = 'text-[1.125rem] font-medium tracking-[-0.01em]';
+  const accountCurrency = (accountId: string) =>
+    accounts.find((a) => a.accounts_id_pk === accountId)?.currency ?? null;
 
   return (
     <div>
@@ -727,6 +734,11 @@ export default function ScreenshotImportPage() {
               <ol>
                 {drafts.map((draft, i) => {
                   const flagged = draftNeedsReview(draft);
+                  const draftCurrency = accountCurrency(draft.account_id_fk);
+                  const currencyMismatch =
+                    draft.screenshot_currency !== null &&
+                    draftCurrency !== null &&
+                    draft.screenshot_currency !== draftCurrency;
                   return (
                     <li
                       key={i}
@@ -791,7 +803,15 @@ export default function ScreenshotImportPage() {
                         <Field
                           htmlFor={`amount-${i}`}
                           label={t('common.amount')}
-                          error={needsInput(draft.field_sources.amount) ?? needsInput(draft.field_sources.currency)}
+                          error={needsInput(draft.field_sources.amount)}
+                          hint={
+                            currencyMismatch
+                              ? t('pages.screenshotImport.currencyMismatch', {
+                                  screenshot: draft.screenshot_currency ?? '',
+                                  account: draftCurrency ?? '',
+                                })
+                              : undefined
+                          }
                           labelAction={<FieldStatus source={draft.field_sources.amount} defaultedLabel={t('pages.screenshotImport.defaulted')} />}
                         >
                           <div className="flex items-end gap-3">
@@ -831,21 +851,17 @@ export default function ScreenshotImportPage() {
                               onChange={(e) => updateDraft(i, { amount: e.target.value })}
                               className={cn('min-w-0 flex-1 tabular-nums', fieldRingClass(draft.field_sources.amount))}
                             />
-                            <Select value={draft.currency} onValueChange={(value) => updateDraft(i, { currency: value })}>
-                              <SelectTrigger
-                                aria-label={t('common.currency')}
-                                className={cn('w-[5.5rem] shrink-0', fieldRingClass(draft.field_sources.currency))}
-                              >
-                                <SelectValue placeholder={t('common.currency')} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {SUPPORTED_CURRENCIES.map((currency) => (
-                                  <SelectItem key={currency} value={currency}>
-                                    {getCurrencyFlag(currency)} {currency}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {/* Always the account's currency -- that's what the transaction is saved in. */}
+                            <span
+                              className={cn(
+                                'flex h-[42px] shrink-0 items-center text-[0.9375rem] tabular-nums',
+                                fieldLine,
+                                currencyMismatch ? 'text-warning' : 'text-muted-foreground',
+                              )}
+                              aria-label={t('common.currency')}
+                            >
+                              {draftCurrency ? `${getCurrencyFlag(draftCurrency)} ${draftCurrency}` : '—'}
+                            </span>
                           </div>
                         </Field>
 
