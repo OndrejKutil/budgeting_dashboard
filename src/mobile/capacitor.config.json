@@ -4,6 +4,7 @@
   "webDir": "www",
   "server": {
     "url": "https://budget.ondrejkutil.com",
+    "appStartPath": "dashboard",
     "errorPath": "offline.html"
   },
   "ios": {
