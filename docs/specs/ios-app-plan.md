@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **round B merged (PR #107); waiting for Gate B (phone test) and the next-day login check** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **Gate B passed (23 Nov 2026, 1.0.6 via the SideStore source); round C in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -172,6 +172,12 @@ Gate B (Claude waits): PR merged; M4 done; checklist:
 - [ ] Claude pushes a trivial native change → the update appears in SideStore → installing it keeps the login
 
 M5 (automations) can be set up now; the 3-night check runs alongside C and D.
+
+**Gate B results (23 Nov 2026):** SideStore signs in again (after the anisette workaround); the
+source was added and 1.0.6 installed from it. Face ID lock, app-switcher cover, re-lock, zoom
+setting, notifications, dock and tag picker as expected. Bug found: `WKWebView.pageZoom` left an
+empty strip on the right; fixed by zooming through the viewport meta (next release). Still to
+observe: 20:00 reminder, a 07:00 due-today reminder, next-day login, 3 nightly refreshes.
 
 ### Round C: diagnostic widget (≈1.5–2 h / 2–3 h)
 
