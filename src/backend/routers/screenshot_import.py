@@ -30,7 +30,7 @@ from ..helper.columns import (
 )
 from ..helper.features import is_feature_enabled
 from ..helper.llm_client import LLMProviderError, get_llm_client, is_model_unavailable
-from ..helper.merchant_history import HistoryMatch, MerchantHistory, fetch_history
+from ..helper.merchant_history import HistoryMatch, MerchantHistory, fetch_history, normalize_merchant
 
 # rate limiting
 from ..helper.rate_limiter import RATE_LIMITS, limiter
@@ -255,8 +255,11 @@ For each transaction, produce (in this order):
   Decide this BEFORE choosing a category, from what the merchant sells to a customer — not
   from a word in its name.
 - category_id_fk: the id of the best-matching category from the "categories" list, or null.
+- bank_name: stage one's "bank_name" for this transaction, copied unchanged (null if it had none).
 - account_id_fk: the id of the best-matching account from the "accounts" list, or null.
-  Match by bank_name against account name, and by currency, when available.
+  The bank the screenshot shows ("bank_name") decides the account: match it against the account
+  names, then by currency. Only when no bank is visible may you fall back to the account in
+  "history_matches" -- never let history override a visible bank (see below).
 - savings_fund_id_fk: the id of a savings fund from "savings_funds" ONLY if the user
   instructions or history clearly ask for one; otherwise null.
 - tag_ids: ids from "tags" the user instructions ask for; otherwise [].
@@ -278,6 +281,12 @@ Using the user's history ("history_matches"):
   past choice beats your general knowledge of the merchant, even if it looks odd to you.
 - A non-exact match is a hint only: use it when it is clearly the same business (e.g. a
   different branch), ignore it when the shared word is generic.
+- History tells you the CATEGORY. Its "account_id" only says which account the user usually
+  paid this merchant from, which changes all the time (a different card, one account ran low).
+  If the screenshot shows the bank, use the account for that bank, even when history says
+  otherwise, and do NOT add a warning about the account differing from history -- paying the
+  same merchant from another account is normal, not something to flag. Use history's
+  "account_id" only when no bank is visible at all.
 
 Category-matching guidance when there is no usable history (use judgment for merchants not
 listed — these are examples of the reasoning to apply, not a lookup table):
@@ -303,6 +312,7 @@ REASONING_SCHEMA = """
       "notes": <string|null>,
       "merchant_kind": <string|null>,
       "category_id_fk": <number|null>,
+      "bank_name": <string|null>,
       "account_id_fk": <string|null>,
       "savings_fund_id_fk": <string|null>,
       "tag_ids": [<number>, ...],
@@ -516,6 +526,55 @@ def _clean_tag_names(
     return existing_ids, new_names
 
 
+# Words in bank and account names that don't identify a bank: "MONETA Money Bank" must not match
+# an account called "Air Bank" on "bank", and "Revolut EUR" names the bank Revolut.
+_GENERIC_BANK_TOKENS = frozenset({
+    "bank", "banka", "banky", "money", "card", "karta", "account", "ucet", "uctu", "debit",
+    "credit", "kreditni", "debetni", "visa", "mastercard", "checking", "savings", "sporici",
+    "sporeni", "bezny", "main", "hlavni", "wallet", "pay", "apple", "google", "group",
+    *(c.lower() for c in SUPPORTED_CURRENCIES),
+})
+
+
+def _bank_tokens(name: str | None) -> set[str]:
+    return {t for t in normalize_merchant(name).split() if len(t) >= 3 and t not in _GENERIC_BANK_TOKENS}
+
+
+def _account_for_bank(bank_name: object, accounts: list[dict], currency: str | None) -> tuple[bool, str | None]:
+    """
+    The account a visible bank name points to, decided without the model.
+
+    Returns (bank_matched, account_id). bank_matched is False when the bank name is missing or
+    matches none of the user's accounts -- the model's choice then stands. When it matches,
+    account_id is the single account at that bank (narrowed by currency if the user has several
+    there), or None if it is still ambiguous and the user has to pick.
+
+    "Raiffeisenbank a.s." matches an account named "Raiffeisen" (one name's word starts with the
+    other's), "MONETA Money Bank" matches "Moneta".
+    """
+    if not isinstance(bank_name, str):
+        return False, None
+    bank = _bank_tokens(bank_name)
+    if not bank:
+        return False, None
+
+    def matches(account: dict) -> bool:
+        return any(
+            a.startswith(b) or b.startswith(a)
+            for a in _bank_tokens(account.get("name"))
+            for b in bank
+        )
+
+    candidates = [a for a in accounts if matches(a)]
+    if not candidates:
+        return False, None
+    if len(candidates) > 1 and currency is not None:
+        same_currency = [a for a in candidates if a.get("currency") == currency]
+        if same_currency:
+            candidates = same_currency
+    return True, candidates[0]["id"] if len(candidates) == 1 else None
+
+
 def _build_draft(
     item: dict,
     ctx: UserContext,
@@ -578,6 +637,19 @@ def _build_draft(
     for tag_id in existing_from_names:
         if tag_id not in tag_ids:
             tag_ids.append(tag_id)
+
+    # The bank shown on the screenshot is the strongest evidence for the account -- stronger
+    # than which account the user usually pays this merchant from. Stage two is told so, but
+    # history's account still leaks into its answer sometimes (groceries "always" go on Moneta,
+    # so a Raiffeisen payment at Albert lands on Moneta), so it is enforced here. Skipped when
+    # the user typed instructions, which may name the account themselves.
+    if not instructions_given:
+        bank_matched, bank_account_id = _account_for_bank(
+            item.get("bank_name"), ctx.accounts, currency if currency in SUPPORTED_CURRENCIES else None
+        )
+        if bank_matched and bank_account_id != account_id:
+            account_id = bank_account_id
+            field_sources["account_id_fk"] = FieldSource.MODEL if account_id else FieldSource.NONE
 
     # History rule: the user has filed this exact merchant the same way repeatedly, so that
     # answer wins over the model's general knowledge. Skipped when the user typed instructions
