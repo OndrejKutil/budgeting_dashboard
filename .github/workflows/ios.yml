@@ -22,6 +22,9 @@ jobs:
     # Capacitor 8 needs Xcode 26+, the default on macos-26.
     runs-on: macos-26
     timeout-minutes: 45
+    # Write access only to publish GitHub Releases (the update channel) from main.
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: src/mobile
@@ -169,3 +172,31 @@ jobs:
           name: simulator-smoke-${{ github.run_number }}
           path: ${{ runner.temp }}/smoke
           if-no-files-found: ignore
+
+      # Update channel: builds from main become a GitHub Release, and the SideStore source
+      # (source.json, at a fixed URL on the `ios-source` release) is rewritten to point at it.
+      # SideStore then shows the new version as an update. Branch builds only upload artifacts.
+      - name: Publish release and SideStore source
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ios-v$MARKETING_VERSION"
+          IPA="$RUNNER_TEMP/Budget-$MARKETING_VERSION.ipa"
+          NOTES="$(git log -1 --pretty=%s)"
+          case "$NOTES" in "Merge pull request"*) NOTES="$(git log -1 --pretty=%b | head -1)";; esac
+
+          gh release create "$TAG" "$IPA" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Budget iOS $MARKETING_VERSION" --notes "$NOTES" --latest=false
+
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/Budget-$MARKETING_VERSION.ipa"
+          python3 scripts/make-source.py --ipa "$IPA" --version "$MARKETING_VERSION" --build "$BUILD_NUMBER" \
+            --download-url "$URL" --notes "$NOTES" --out "$RUNNER_TEMP/source.json"
+
+          SOURCE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/ios-source/source.json"
+          if ! gh release view ios-source --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create ios-source --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Budget iOS: SideStore source" --notes "Add this URL as a source in SideStore: $SOURCE_URL"
+          fi
+          gh release upload ios-source "$RUNNER_TEMP/source.json" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Published $TAG; source: $SOURCE_URL"

@@ -1,7 +1,6 @@
 # Budget on iPhone: setup guide
 
-For a Windows PC and an iPhone, no Mac. Status: **sections 1–2 ready (round A)**; later sections
-are added as the features ship.
+For a Windows PC and an iPhone, no Mac. Status: **sections 1–5 ready (rounds A–B)**; the rest is added as the features ship.
 
 What you'll end up with: SideStore (a sideloading app) on the phone, signed with a free Apple ID,
 which installs and keeps renewing the Budget app. Free signing lasts 7 days, so SideStore has to
@@ -83,26 +82,67 @@ apps from the PC, which gives another 7 days.
 
 ---
 
-## 2. Installing a Budget test build (rounds A–B)
+## 2. Installing Budget
 
-Until the update channel exists (round B), builds come from GitHub as a file:
+**From the SideStore source (normal way, once SideStore can sign in):**
 
-1. On the phone, open the build link I give you (GitHub › Actions › the run › **Artifacts** ›
-   `Budget-1.0.N-ipa`). You need to be signed in to GitHub. The download is a `.zip`; tap it in the
-   Files app to unzip it, which gives `Budget-1.0.N.ipa`.
-2. Connect LocalDevVPN.
-3. SideStore › **My Apps** › **+** (top left) › pick the `.ipa`.
-4. Budget appears on the home screen and in My Apps with its own 7-day counter.
+1. Connect LocalDevVPN.
+2. SideStore › **Sources** › **+** (top left) › paste
+   `https://github.com/OndrejKutil/budgeting_dashboard/releases/download/ios-source/source.json`
+   › tap the **⊕** next to the preview.
+3. Open the **Budget** app from that source and tap **FREE** to install.
+4. If SideStore asks whether to keep app extensions: **keep** them (from round C on, the widget
+   is one).
+5. If you installed Budget earlier with iloader or from a file, delete that copy first (only once):
+   SideStore can only update apps it installed itself. You'll need to log in again.
 
-Installing a newer build the same way replaces the app and keeps its data (login).
+**Without SideStore (stopgap while SideStore can't sign in):** on the PC, download the latest
+`Budget-1.0.N.ipa` from https://github.com/OndrejKutil/budgeting_dashboard/releases, connect the
+iPhone by USB and use iloader › **Import IPA**. Lasts 7 days; repeat to renew.
+
+Installing a newer build over an existing one keeps the app's data (login, settings).
+
+---
+
+## 3. Nightly refresh automation
+
+_Added once SideStore can sign in again (needed to test it)._
+
+---
+
+## 4. Everyday use
+
+**Settings** — in the app, Profile › **App** (only visible in the iPhone app):
+
+- **Face ID lock** — asks for Face ID (or the passcode) when the app opens and when you return
+  after the chosen time (default 5 min). Cancelling keeps it locked with an **Unlock** button.
+  The app switcher always shows a blurred screen. Turning the lock off asks for Face ID first.
+- **Zoom** — size of the whole page, like Safari's page zoom. Default 85 % (matches the PWA).
+- **Daily reminder** — 20:00, to log the day's spending.
+- **Recurring payments** — 07:00 on the day each recurring payment is due ("auto-post" for ones
+  the Raspberry Pi posts automatically at 05:00).
+- **Send test notification** — arrives 5 s later; lock the phone or leave the app to see it.
+
+Notifications are scheduled on the phone (no server push on a free Apple account): they're
+refreshed every time you open the app, so a recurring payment changed on the website is picked
+up the next time you open Budget. iOS asks for notification permission once; if you said no,
+turn them on in Settings › Notifications › Budget. With privacy mode on, notifications don't
+show amounts.
+
+---
+
+## 5. Updating
+
+- **Website changes** (dashboard, pages, fixes): nothing to do. The app loads the live site, so
+  they appear the next time you open it.
+- **App changes** (Face ID, notifications, widget…): a new version appears in SideStore ›
+  **My Apps** (or the Budget page in your source) — tap **Update**. LocalDevVPN must be on.
 
 ---
 
 ## Later sections
 
-3. Nightly refresh automation — round B
-4. Everyday use (widget, notifications, Face ID, expiry banner) — rounds B–D
-5. Updating — round B
+- Widget and expiry banner (section 4) — rounds C–D
 6. Troubleshooting — round D (reboot + LocalDevVPN; re-place the pairing file with iloader:
    **Manage Pairing File › Place**; switch anisette server; wait 24–72 h after re-registering a
    device; App ID limit; never delete an expired app — refresh it, or its data is lost)

@@ -10,7 +10,9 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
     public let jsName = "BudgetNative"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "startAuthSession", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setStatusBarStyle", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setStatusBarStyle", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAppSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAppSettings", returnType: CAPPluginReturnPromise)
     ]
 
     /// The only URL scheme the sign-in sheet may return to. Must match the backend's
@@ -97,6 +99,60 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
         DispatchQueue.main.async {
             (self.bridge?.viewController as? CAPBridgeViewController)?.setStatusBarStyle(style)
             call.resolve()
+        }
+    }
+
+    // MARK: - App settings (Face ID lock, page zoom)
+
+    private func settingsPayload() -> [String: Any] {
+        let settings = AppSettings.shared
+        return [
+            "lockEnabled": settings.lockEnabled,
+            "lockTimeoutSeconds": settings.lockTimeout,
+            "pageZoom": settings.pageZoom,
+            "biometry": PrivacyLock.biometryName()
+        ]
+    }
+
+    @objc func getAppSettings(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            call.resolve(self.settingsPayload())
+        }
+    }
+
+    /// Any subset of `lockEnabled`, `lockTimeoutSeconds`, `pageZoom`. Turning the lock off
+    /// requires Face ID / passcode first; a failed check rejects with `CANCELED`.
+    @objc func setAppSettings(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let settings = AppSettings.shared
+            let controller = self.bridge?.viewController as? BudgetBridgeViewController
+
+            let apply = {
+                if let timeout = call.getDouble("lockTimeoutSeconds") {
+                    settings.lockTimeout = timeout
+                }
+                if let zoom = call.getDouble("pageZoom") {
+                    settings.pageZoom = zoom
+                    controller?.applyPageZoom()
+                }
+                if let enabled = call.getBool("lockEnabled") {
+                    settings.lockEnabled = enabled
+                }
+                call.resolve(self.settingsPayload())
+            }
+
+            let turningLockOff = call.getBool("lockEnabled") == false && settings.lockEnabled
+            guard turningLockOff, let lock = controller?.privacyLock else {
+                apply()
+                return
+            }
+            lock.runOwnerCheck(reason: LockCoverView.text.unlockReason) { success in
+                if success {
+                    apply()
+                } else {
+                    call.reject("Face ID check was canceled.", "CANCELED")
+                }
+            }
         }
     }
 }

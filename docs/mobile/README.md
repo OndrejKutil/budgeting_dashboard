@@ -22,6 +22,18 @@ Native features are exposed to the web app through one app-local Capacitor plugi
 Web code checks `isNativeApp()` before using anything native, so browsers and the PWA behave as
 before.
 
+| Feature | Native side | Web side |
+|---|---|---|
+| Face ID lock + app-switcher cover | `PrivacyLock.swift` (scene lifecycle, `LocalAuthentication`) | Profile › App (settings only) |
+| Page zoom (Safari's 85 % equivalent) | `BudgetBridgeViewController.applyPageZoom` (`WKWebView.pageZoom`) | Profile › App |
+| Settings storage | `AppSettings.swift` (UserDefaults; read before the site loads) | `getAppSettings` / `setAppSettings` |
+| Local notifications | `@capacitor/local-notifications` | `lib/native/notifications.ts`, synced by `components/native/NativeNotificationSync.tsx` |
+| Status bar style | `setStatusBarStyle` | `components/native/NativeStatusBar.tsx` |
+
+Notifications are rescheduled from scratch on login, on returning to the foreground and on a
+settings change: a 20:00 daily reminder and a 07:00 "due today" for each active recurring
+payment's next date (the Pi auto-posts at 05:00). Preferences live in `localStorage`.
+
 ### Sign-in with GitHub/Google in the app
 
 Google blocks OAuth inside embedded web views, so the app runs OAuth in the iOS sign-in sheet
@@ -76,6 +88,12 @@ Steps, in this order (each depends on the previous one):
 
 Version: `1.0.<run number>`, build number `<run number>`. SideStore compares versions as strict
 `X.Y.Z`, so the patch number must keep increasing.
+
+8. **Builds from `main` only:** a GitHub Release `ios-v1.0.<run>` with the `.ipa`, and
+   `scripts/make-source.py` rewrites the SideStore source, uploaded to the `ios-source`
+   release at a fixed URL:
+   `https://github.com/OndrejKutil/budgeting_dashboard/releases/download/ios-source/source.json`.
+   SideStore shows the new version as an update.
 
 ## Adding a Capacitor plugin
 
