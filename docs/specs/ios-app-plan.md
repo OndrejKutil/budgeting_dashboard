@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **round A in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **round A built and merged (PR #105, build 1.0.4); waiting for Gate A (phone test)** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
