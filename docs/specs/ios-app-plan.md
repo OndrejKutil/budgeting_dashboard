@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **Gate B passed (23 Nov 2026, 1.0.6 via the SideStore source); round C in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **Gate C passed (23 Nov 2026, 1.0.12); waiting for the widget choice for round D** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -193,6 +193,13 @@ Gate C (Claude waits): Ondřej installs the build, **keeps** the extension when 
 asks, adds the widget, then runs a manual SideStore refresh and reports:
 - [ ] Widget shows the diagnostic values after install
 - [ ] …and still shows them after a SideStore refresh
+
+**Gate C results (23 Nov 2026, 1.0.12 from the SideStore source):** widget shows "Group OK",
+`group.com.ondrejkutil.budget.<TEAMID>` found via `ALTAppGroups`, same group as the app, and
+the app's value, both after install and after a SideStore refresh. Zoom fix and expiry banner
+(debug switch) confirmed. Note for round D: the home screen uses the clear/tinted icon style,
+where emoji render as blank shapes, so the real widgets use SF Symbols and support the
+accented rendering mode.
 
 ### Round D: real widget, expiry banner, final guide (≈4–6 h / 5–7 h)
 
