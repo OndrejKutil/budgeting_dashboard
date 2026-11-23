@@ -1,15 +1,13 @@
 import Foundation
 import WidgetKit
 
-/// What the app shares with the home-screen widgets through the App Group.
+/// Hands the web app's widget snapshot to the home-screen and lock-screen widgets.
 enum WidgetData {
-    /// Round C diagnostic: record that the app reached the shared container, then ask iOS to
-    /// redraw the widgets. Called on launch and each time the app comes to the foreground.
-    static func writeDiagnostic() {
-        guard let shared = AppGroup.defaults else { return }
-        shared.set(Date(), forKey: SharedKeys.diagnosticWrittenAt)
-        shared.set(AppGroup.current.identifier, forKey: SharedKeys.diagnosticAppGroup)
-        shared.set(AppGroup.current.source, forKey: SharedKeys.diagnosticAppGroupSource)
-        WidgetCenter.shared.reloadAllTimelines()
+    /// Stores the snapshot JSON (nil clears it) and asks iOS to redraw the widgets.
+    @discardableResult
+    static func save(json: String?) -> Bool {
+        let saved = WidgetStore.save(json: json)
+        if saved { WidgetCenter.shared.reloadAllTimelines() }
+        return saved
     }
 }

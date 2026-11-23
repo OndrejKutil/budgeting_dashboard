@@ -62,7 +62,7 @@ def main() -> None:
                         "downloadURL": args.download_url,
                         "size": os.path.getsize(args.ipa),
                         "sha256": sha256,
-                        "minOSVersion": "15.0",
+                        "minOSVersion": "17.0",
                     }
                 ],
                 "appPermissions": {

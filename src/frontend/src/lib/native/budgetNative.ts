@@ -5,7 +5,7 @@
  * `BudgetNative` is the app's own Capacitor plugin, implemented in
  * src/mobile/ios/App/App/BudgetNativePlugin.swift. Keep the two in sync.
  */
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 
 /** URL scheme the native app catches at the end of the OAuth sign-in sheet. Matches the backend. */
 export const NATIVE_OAUTH_CALLBACK_SCHEME = 'com.ondrejkutil.budget';
@@ -40,6 +40,13 @@ export interface BudgetNativePlugin {
   getProvisioningInfo(): Promise<NativeProvisioningInfo>;
   /** Debug: fake an expiry `days` from now; omit `days` to clear. */
   setDebugExpiryOverride(options: { days?: number }): Promise<NativeProvisioningInfo>;
+  /** Hands the widgets their data (JSON of `WidgetSnapshot`); omit `snapshot` to clear it. */
+  setWidgetData(options: { snapshot?: string }): Promise<void>;
+  /**
+   * Widget taps and controls. `target` is `add` (open Add transaction) or a path under
+   * /dashboard. Events are kept until a listener is added, so a cold start doesn't lose them.
+   */
+  addListener(eventName: 'deepLink', listener: (event: { target: string }) => void): Promise<PluginListenerHandle>;
 }
 
 export interface NativeProvisioningInfo {

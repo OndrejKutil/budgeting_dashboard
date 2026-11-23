@@ -14,7 +14,8 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
         CAPPluginMethod(name: "getAppSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAppSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getProvisioningInfo", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setDebugExpiryOverride", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setDebugExpiryOverride", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setWidgetData", returnType: CAPPluginReturnPromise)
     ]
 
     /// The only URL scheme the sign-in sheet may return to. Must match the backend's
@@ -177,5 +178,21 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
     @objc func setDebugExpiryOverride(_ call: CAPPluginCall) {
         ProvisioningInfo.debugOverrideDays = call.getDouble("days")
         call.resolve(provisioningPayload())
+    }
+
+    // MARK: - Widgets and deep links
+
+    /// `{ snapshot: string }` (JSON, see WidgetSnapshot.swift) or `{}` to clear on logout.
+    @objc func setWidgetData(_ call: CAPPluginCall) {
+        if WidgetData.save(json: call.getString("snapshot")) {
+            call.resolve()
+        } else {
+            call.reject("The widget data didn't match the expected format.", "INVALID_SNAPSHOT")
+        }
+    }
+
+    /// Fires the `deepLink` event; kept until the web app adds its listener (cold start).
+    func emitDeepLink(_ target: String) {
+        notifyListeners("deepLink", data: ["target": target], retainUntilConsumed: true)
     }
 }

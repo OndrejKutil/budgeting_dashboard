@@ -1,17 +1,19 @@
 /**
  * Local notifications for the native iOS app (no server push on a free Apple account).
  *
- * Everything is rescheduled from scratch on each sync: when the app opens or returns to the
- * foreground, when the user logs in, and when a setting changes. Only used inside the native app.
+ * Everything is rescheduled from scratch on each sync (see NativeSync): when the app opens or
+ * returns to the foreground, on login, after transactions change and when a setting changes.
+ * Only used inside the native app.
  *
- * - Daily reminder at 20:00 to log the day's spending.
+ * - Daily reminder at 20:00 to log the day's spending, for the next 7 days. Today's is skipped
+ *   once a transaction dated today exists ("smart" reminder), so it only nags when needed.
  * - "Due today" at 07:00 on the next due date of each active recurring payment. The Raspberry Pi
  *   auto-posts at 05:00, so the text says "auto-post" rather than "posted" in case it didn't run.
  */
 import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/local-notifications';
-import { accountsApi, categoriesApi, recurringApi } from '@/lib/api/endpoints';
 import { formatMoney } from '@/lib/currency';
 import type { DashboardTranslationKey } from '@/lib/i18n';
+import type { NativeData } from '@/lib/native/data';
 
 type Translate = (key: DashboardTranslationKey, params?: Record<string, string | number>) => string;
 
@@ -26,13 +28,14 @@ const PREF_KEYS: Record<NotificationKind, string> = {
 /** Dispatched on window when a preference changes, so the scheduler re-syncs. */
 export const NOTIFICATION_PREFS_EVENT = 'budget:notification-prefs-changed';
 
-const DAILY_ID = 1;
+const DAILY_ID_BASE = 1;
+const DAILY_DAYS = 7;
+const DAILY_REMINDER_HOUR = 20;
 const DUE_ID_BASE = 100;
 const TEST_ID = 9999;
-const DAILY_REMINDER = { hour: 20, minute: 0 };
 const DUE_REMINDER_HOUR = 7;
-/** iOS keeps at most 64 pending notifications per app. */
-const MAX_DUE = 50;
+/** iOS keeps at most 64 pending notifications per app (7 daily + these + the test one). */
+const MAX_DUE = 45;
 
 export function getNotificationPrefs(): NotificationPrefs {
   // On unless switched off.
@@ -63,53 +66,46 @@ export async function cancelScheduledNotifications(): Promise<void> {
   }
 }
 
-export async function syncNotifications(t: Translate, privacyMode: boolean): Promise<void> {
+export async function syncNotifications(t: Translate, privacyMode: boolean, data: NativeData): Promise<void> {
   const prefs = getNotificationPrefs();
   await cancelScheduledNotifications();
   if (!prefs.daily && !prefs.recurring) return;
   if (!(await ensureNotificationPermission())) return;
 
+  const now = new Date();
   const notifications: LocalNotificationSchema[] = [];
   if (prefs.daily) {
-    notifications.push({
-      id: DAILY_ID,
-      title: t('profile.notifyDailyTitle'),
-      body: t('profile.notifyDailyBody'),
-      schedule: { on: DAILY_REMINDER, allowWhileIdle: true },
-    });
+    for (let day = 0; day < DAILY_DAYS; day += 1) {
+      if (day === 0 && data.loggedToday) continue;
+      const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + day, DAILY_REMINDER_HOUR, 0, 0);
+      if (at <= now) continue;
+      notifications.push({
+        id: DAILY_ID_BASE + day,
+        title: t('profile.notifyDailyTitle'),
+        body: t('profile.notifyDailyBody'),
+        schedule: { at, allowWhileIdle: true },
+      });
+    }
   }
   if (prefs.recurring) {
-    notifications.push(...(await dueTodayNotifications(t, privacyMode)));
+    notifications.push(...dueTodayNotifications(t, privacyMode, data, now));
   }
   if (notifications.length > 0) {
     await LocalNotifications.schedule({ notifications });
   }
 }
 
-async function dueTodayNotifications(t: Translate, privacyMode: boolean): Promise<LocalNotificationSchema[]> {
-  const [recurring, accounts, categories] = await Promise.all([
-    recurringApi.getAll(),
-    accountsApi.getAll(),
-    categoriesApi.getAll(),
-  ]);
-  const currencyByAccount = new Map(accounts.data.map((a) => [a.accounts_id_pk, a.currency]));
-  const categoryName = new Map(categories.data.map((c) => [c.categories_id_pk, c.category_name]));
-  const now = new Date();
-
-  return recurring.data
-    .filter((r) => r.is_active !== false)
-    .map((r) => ({ r, at: dueReminderTime(r.next_date) }))
-    .filter((item): item is { r: (typeof recurring.data)[number]; at: Date } => item.at !== null && item.at > now)
-    .sort((a, b) => a.at.getTime() - b.at.getTime())
+function dueTodayNotifications(t: Translate, privacyMode: boolean, data: NativeData, now: Date): LocalNotificationSchema[] {
+  return data.upcoming
+    .map((payment) => ({ payment, at: dueReminderTime(payment.date) }))
+    .filter((item): item is { payment: (typeof data.upcoming)[number]; at: Date } => item.at !== null && item.at > now)
     .slice(0, MAX_DUE)
-    .map(({ r, at }, index) => {
-      const name = r.notes || categoryName.get(r.category_id_fk) || t('profile.notifyDueFallbackName');
-      const action = r.auto_post ? t('profile.notifyDueAuto') : t('profile.notifyDueManual');
-      const currency = currencyByAccount.get(r.account_id_fk);
-      const body = privacyMode || !currency ? action : `${formatMoney(r.amount, currency)} · ${action}`;
+    .map(({ payment, at }, index) => {
+      const action = payment.autoPost ? t('profile.notifyDueAuto') : t('profile.notifyDueManual');
+      const body = privacyMode ? action : `${formatMoney(payment.amount, payment.currency)} · ${action}`;
       return {
         id: DUE_ID_BASE + index,
-        title: t('profile.notifyDueTitle', { name }),
+        title: t('profile.notifyDueTitle', { name: payment.name }),
         body,
         schedule: { at, allowWhileIdle: true },
       };
