@@ -90,9 +90,15 @@ export function MobileDock() {
       <nav
         aria-label={t('nav.mobileNavigation')}
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 lg:hidden"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+        // Sits just above the home indicator (partly inside the safe area, like native tab bars).
+        style={{ paddingBottom: 'max(0.5rem, calc(env(safe-area-inset-bottom, 0px) - 0.5rem))' }}
       >
-        <div className="glass pointer-events-auto mx-auto grid max-w-sm grid-cols-5 items-center rounded-[1.625rem] p-2">
+        {/* Fades and blurs whatever scrolls underneath, so content doesn't show through around the dock. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 -top-8 bottom-0 bg-gradient-to-t from-background via-background/85 to-transparent backdrop-blur-md [mask-image:linear-gradient(to_top,black_55%,transparent)]"
+        />
+        <div className="glass pointer-events-auto relative mx-auto grid max-w-sm grid-cols-5 items-center rounded-[1.625rem] p-2">
           <DockLink item={overviewItem} active={isPathActive(pathname, overviewItem.href)} />
           <DockLink item={transactionsItem} active={isPathActive(pathname, transactionsItem.href)} />
           <button

@@ -29,6 +29,8 @@ import { getProfileAvatarUrl } from '@/lib/user-avatar';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { isNativeApp } from '@/lib/native/budgetNative';
+import { Switch } from '@/components/ui/switch';
+import { LOCK_TIMEOUT_OPTIONS, PAGE_ZOOM_OPTIONS, useNativeAppSettings } from '@/components/native/useNativeAppSettings';
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -214,6 +216,7 @@ export default function ProfilePage() {
   };
 
   const nativeApp = isNativeApp();
+  const appSettings = useNativeAppSettings();
   const hasProvider = (provider: string) => profile?.identities?.some((identity) => identity.provider === provider) ?? false;
   const avatarUrl = getProfileAvatarUrl(profile);
   const fullName: string = profile?.user_metadata?.full_name || '';
@@ -376,6 +379,82 @@ export default function ProfilePage() {
           </div>
         </Row>
       </Section>
+
+      {appSettings.available && (
+        <Section title={t('profile.appSettings')} description={t('profile.appSettingsDescription')}>
+          {appSettings.settings && appSettings.settings.biometry !== 'none' && (
+            <>
+              <Row label={t('profile.faceIdLock')} hint={t('profile.faceIdLockHint')}>
+                <Switch
+                  checked={appSettings.settings.lockEnabled}
+                  disabled={appSettings.busy}
+                  onCheckedChange={(checked) => void appSettings.update({ lockEnabled: checked })}
+                  aria-label={t('profile.faceIdLock')}
+                />
+              </Row>
+              {appSettings.settings.lockEnabled && (
+                <Row label={t('profile.lockAfter')} hint={t('profile.lockAfterHint')}>
+                  <Select
+                    value={String(appSettings.settings.lockTimeoutSeconds)}
+                    onValueChange={(value) => void appSettings.update({ lockTimeoutSeconds: Number(value) })}
+                    disabled={appSettings.busy}
+                  >
+                    <SelectTrigger aria-label={t('profile.lockAfter')} className="w-full sm:w-[10rem]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOCK_TIMEOUT_OPTIONS.map((seconds) => (
+                        <SelectItem key={seconds} value={String(seconds)}>
+                          {seconds === 0 ? t('profile.lockImmediately') : t('profile.lockMinutes', { count: seconds / 60 })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Row>
+              )}
+            </>
+          )}
+          {appSettings.settings && (
+            <Row label={t('profile.pageZoom')} hint={t('profile.pageZoomHint')}>
+              <Select
+                value={String(appSettings.settings.pageZoom)}
+                onValueChange={(value) => void appSettings.update({ pageZoom: Number(value) })}
+                disabled={appSettings.busy}
+              >
+                <SelectTrigger aria-label={t('profile.pageZoom')} className="w-full sm:w-[10rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_ZOOM_OPTIONS.map((zoom) => (
+                    <SelectItem key={zoom} value={String(zoom)}>
+                      {Math.round(zoom * 100)} %
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+          )}
+          <Row label={t('profile.dailyReminder')} hint={t('profile.dailyReminderHint')}>
+            <Switch
+              checked={appSettings.prefs.daily}
+              onCheckedChange={(checked) => void appSettings.setNotification('daily', checked)}
+              aria-label={t('profile.dailyReminder')}
+            />
+          </Row>
+          <Row label={t('profile.recurringReminder')} hint={t('profile.recurringReminderHint')}>
+            <Switch
+              checked={appSettings.prefs.recurring}
+              onCheckedChange={(checked) => void appSettings.setNotification('recurring', checked)}
+              aria-label={t('profile.recurringReminder')}
+            />
+          </Row>
+          <Row label={t('profile.sendTestNotification')}>
+            <Button variant="outline" onClick={() => void appSettings.sendTest()} className="h-9 px-4">
+              {t('profile.sendTestNotification')}
+            </Button>
+          </Row>
+        </Section>
+      )}
 
       <Section title={t('profile.connectedAccounts')} description={t('profile.connectedAccountsDescription')}>
         <Row
