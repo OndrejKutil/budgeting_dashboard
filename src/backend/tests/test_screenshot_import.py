@@ -157,6 +157,78 @@ def test_history_rule_is_skipped_when_user_gave_instructions():
     assert hits == 0
 
 
+def _ctx_with_raiffeisen():
+    return _ctx(accounts=[
+        {"id": "acc-moneta", "name": "Moneta", "type": "checking", "currency": "CZK"},
+        {"id": "acc-rb", "name": "Raiffeisen", "type": "checking", "currency": "CZK"},
+        {"id": "acc-air", "name": "Air Bank", "type": "savings", "currency": "CZK"},
+        {"id": "acc-rev-czk", "name": "Revolut CZK", "type": "checking", "currency": "CZK"},
+        {"id": "acc-rev-eur", "name": "Revolut EUR", "type": "checking", "currency": "EUR"},
+    ])
+
+
+def _albert_history_on_moneta():
+    history = MerchantHistory([
+        {"notes": "Albert", "category_id_fk": GROCERIES, "account_id_fk": "acc-moneta"},
+        {"notes": "Albert", "category_id_fk": GROCERIES, "account_id_fk": "acc-moneta"},
+        {"notes": "Albert", "category_id_fk": GROCERIES, "account_id_fk": "acc-moneta"},
+    ])
+    return history.match("Albert")
+
+
+def test_visible_bank_beats_history_account_the_model_copied():
+    # Groceries usually go on Moneta, but this notification came from Raiffeisen.
+    draft, _ = _build_draft(
+        _item(merchant="Albert", notes="Albert", account_id_fk="acc-moneta", bank_name="Raiffeisenbank a.s."),
+        _ctx_with_raiffeisen(),
+        _albert_history_on_moneta(),
+    )
+    assert draft.account_id_fk == "acc-rb"
+    assert draft.field_sources["account_id_fk"] == FieldSource.MODEL
+    assert draft.category_id_fk == GROCERIES
+
+
+def test_history_account_still_used_when_no_bank_visible():
+    draft, _ = _build_draft(
+        _item(merchant="Albert", notes="Albert", account_id_fk=None, bank_name=None),
+        _ctx_with_raiffeisen(),
+        _albert_history_on_moneta(),
+    )
+    assert draft.account_id_fk == "acc-moneta"
+    assert draft.field_sources["account_id_fk"] == FieldSource.RULE
+
+
+def test_generic_bank_word_does_not_match_another_bank():
+    draft, _ = _build_draft(
+        _item(account_id_fk="acc-moneta", bank_name="MONETA Money Bank"), _ctx_with_raiffeisen()
+    )
+    assert draft.account_id_fk == "acc-moneta"
+
+
+def test_several_accounts_at_one_bank_are_narrowed_by_currency():
+    draft, _ = _build_draft(
+        _item(currency="EUR", account_id_fk="acc-moneta", bank_name="Revolut"), _ctx_with_raiffeisen()
+    )
+    assert draft.account_id_fk == "acc-rev-eur"
+
+
+def test_unknown_bank_leaves_model_choice():
+    draft, _ = _build_draft(
+        _item(account_id_fk="acc-moneta", bank_name="Fio banka"), _ctx_with_raiffeisen()
+    )
+    assert draft.account_id_fk == "acc-moneta"
+    assert draft.field_sources["account_id_fk"] == FieldSource.MODEL
+
+
+def test_instructions_keep_model_account_over_visible_bank():
+    draft, _ = _build_draft(
+        _item(account_id_fk="acc-moneta", bank_name="Raiffeisenbank a.s."),
+        _ctx_with_raiffeisen(),
+        instructions_given=True,
+    )
+    assert draft.account_id_fk == "acc-moneta"
+
+
 def test_single_account_is_default_filled():
     ctx = _ctx(accounts=[{"id": "acc-only", "name": "Main", "type": "checking", "currency": "CZK"}])
     draft, _ = _build_draft(_item(account_id_fk=None), ctx)
