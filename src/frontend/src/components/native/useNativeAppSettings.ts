@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user-context';
-import { BudgetNative, isNativeApp, isNativeCancel, type NativeAppSettings } from '@/lib/native/budgetNative';
+import {
+  BudgetNative,
+  PROVISIONING_CHANGED_EVENT,
+  isNativeApp,
+  isNativeCancel,
+  type NativeAppSettings,
+} from '@/lib/native/budgetNative';
 import {
   ensureNotificationPermission,
   getNotificationPrefs,
@@ -24,13 +30,24 @@ export function useNativeAppSettings() {
   const [settings, setSettings] = useState<NativeAppSettings | null>(null);
   const [prefs, setPrefs] = useState<NotificationPrefs>(() => getNotificationPrefs());
   const [busy, setBusy] = useState(false);
+  const [expiryTest, setExpiryTest] = useState(false);
 
   useEffect(() => {
     if (!available) return;
     BudgetNative.getAppSettings()
       .then(setSettings)
       .catch((error) => console.warn('Native settings unavailable', error));
+    BudgetNative.getProvisioningInfo()
+      .then((info) => setExpiryTest(info.isOverride))
+      .catch(() => undefined);
   }, [available]);
+
+  /** Debug: pretend the signing profile expires in 2 days so the banner can be checked. */
+  const setExpiryTestEnabled = useCallback(async (enabled: boolean) => {
+    const info = await BudgetNative.setDebugExpiryOverride(enabled ? { days: 2 } : {});
+    setExpiryTest(info.isOverride);
+    window.dispatchEvent(new Event(PROVISIONING_CHANGED_EVENT));
+  }, []);
 
   const update = useCallback(
     async (change: Parameters<typeof BudgetNative.setAppSettings>[0]) => {
@@ -68,5 +85,5 @@ export function useNativeAppSettings() {
     });
   }, [t]);
 
-  return { available, settings, prefs, busy, update, setNotification, sendTest };
+  return { available, settings, prefs, busy, update, setNotification, sendTest, expiryTest, setExpiryTestEnabled };
 }

@@ -448,6 +448,13 @@ export default function ProfilePage() {
               aria-label={t('profile.recurringReminder')}
             />
           </Row>
+          <Row label={t('profile.expiryDebug')} hint={t('profile.expiryDebugHint')}>
+            <Switch
+              checked={appSettings.expiryTest}
+              onCheckedChange={(checked) => void appSettings.setExpiryTestEnabled(checked)}
+              aria-label={t('profile.expiryDebug')}
+            />
+          </Row>
           <Row label={t('profile.sendTestNotification')}>
             <Button variant="outline" onClick={() => void appSettings.sendTest()} className="h-9 px-4">
               {t('profile.sendTestNotification')}

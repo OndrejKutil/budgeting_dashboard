@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Topbar } from './Topbar';
 import { MobileDock } from './MobileDock';
 import { PullToRefresh } from './PullToRefresh';
+import { NativeExpiryBanner } from '@/components/native/NativeExpiryBanner';
 import { useAddTransactionShortcut } from '@/hooks/use-add-transaction';
 
 export function DashboardLayout() {
@@ -16,6 +17,7 @@ export function DashboardLayout() {
           id="main-content"
           className="mx-auto w-full max-w-[82rem] px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 sm:px-5 lg:px-14 lg:pb-16 lg:pt-8"
         >
+          <NativeExpiryBanner />
           <PullToRefresh>
             <Outlet />
           </PullToRefresh>
