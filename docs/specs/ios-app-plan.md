@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **plan drafted, waiting for kickoff inputs (K1–K5)** · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **plan drafted, waiting for K1 (bundle ID)** · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -43,6 +43,8 @@ and doesn't ask Ondřej to test anything that depends on it, until he confirms i
 ## 4. Inputs from Ondřej
 
 ### Kickoff (blocking: nothing starts without K1–K3)
+
+Answers so far (23 Nov 2026): K2 = Claude may merge to `main` when confident nothing breaks; otherwise it asks Ondřej to check first. K3 = (a), hide linking in the app. K4 = placeholder made from the current icon for now. K5 = iOS 26.6.2 (the spec said iOS 27; this plan targets 26.6.2, with no upgrade required). **K1 still open.**
 
 | # | Input | Why | Proposal (not assumed) |
 |---|---|---|---|
