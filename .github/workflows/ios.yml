@@ -38,6 +38,18 @@ jobs:
           cache: npm
           cache-dependency-path: src/mobile/package-lock.json
 
+      # The simulator's first boot spends ~5 min on setup; start it now so it overlaps the build.
+      - name: Start booting a simulator
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devs = [d for rt, ds in json.load(sys.stdin)["devices"].items() if "iOS" in rt for d in ds]
+          pick = next((d for d in devs if d["name"] == "iPhone 17 Pro"), None) or next(d for d in devs if d["name"].startswith("iPhone"))
+          print(pick["udid"])')
+          echo "SIM_DEVICE=$DEVICE" >> "$GITHUB_ENV"
+          echo "Simulator: $DEVICE"
+          xcrun simctl boot "$DEVICE"
+
       - name: Install dependencies
         run: npm ci
 
@@ -125,14 +137,8 @@ jobs:
       - name: Simulator smoke test
         run: |
           APP="$RUNNER_TEMP/sim/Build/Products/Debug-iphonesimulator/App.app"
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          devs = [d for rt, ds in json.load(sys.stdin)["devices"].items() if "iOS" in rt for d in ds]
-          pick = next((d for d in devs if d["name"] == "iPhone 17 Pro"), None) or next(d for d in devs if d["name"].startswith("iPhone"))
-          print(pick["udid"])')
-          echo "Simulator: $DEVICE"
-          xcrun simctl boot "$DEVICE"
-          xcrun simctl bootstatus "$DEVICE" -b
+          DEVICE="$SIM_DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b > /dev/null
           xcrun simctl install "$DEVICE" "$APP"
           xcrun simctl launch "$DEVICE" com.ondrejkutil.budget
           sleep 30
@@ -141,16 +147,21 @@ jobs:
           xcrun simctl spawn "$DEVICE" log show --last 2m --style compact \
             --predicate 'process == "App"' > "$RUNNER_TEMP/smoke/app.log" || true
           echo "--- App log (Capacitor lines) ---"
-          grep -E "⚡️|Capacitor|WebView|Error" "$RUNNER_TEMP/smoke/app.log" | tail -40 || true
+          grep -E "⚡️|Capacitor|WebView|Error|Fatal" "$RUNNER_TEMP/smoke/app.log" | tail -40 || true
 
-          if ! xcrun simctl spawn "$DEVICE" launchctl list | grep -q "com.ondrejkutil.budget"; then
-            echo "::error::The app is not running 30 s after launch (crashed?)."
-            exit 1
-          fi
           # A small JPEG of the screen in the log, so it can be checked without downloading artifacts.
           sips -s format jpeg -s formatOptions 40 -Z 640 "$RUNNER_TEMP/smoke/screenshot.png" \
             --out "$RUNNER_TEMP/smoke/screenshot-small.jpg" >/dev/null
           echo "SCREENSHOT_BASE64_BEGIN"; base64 -i "$RUNNER_TEMP/smoke/screenshot-small.jpg" | fold -w 1000; echo "SCREENSHOT_BASE64_END"
+
+          if ! xcrun simctl spawn "$DEVICE" launchctl list | grep -q "com.ondrejkutil.budget"; then
+            echo "::error::The app is not running 30 s after launch (crashed?)."
+            for f in $(ls -t ~/Library/Logs/DiagnosticReports/App-*.ips 2>/dev/null | head -1); do
+              cp "$f" "$RUNNER_TEMP/smoke/"
+              echo "--- Crash report: $f ---"; head -c 6000 "$f"
+            done
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
