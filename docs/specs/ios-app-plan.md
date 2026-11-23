@@ -68,9 +68,15 @@ K4 and K5 aren't needed until round A's build and setup guide. Claude asks again
 
 ### Per-round decisions (asked at the start of that round)
 
-- **Round B:** Face ID re-lock timeout (proposal: 5 min, adjustable in the app). Which
-  notifications and when (daily logging reminder time; how many days before a recurring
-  payment).
+- **Round B (answered 23 Nov 2026):**
+  - Face ID re-lock after **5 min** in the background, adjustable in the app.
+  - Notifications, each with its own on/off switch in the app's profile page:
+    1. Daily logging reminder at **20:00**.
+    2. Recurring payment **due today at 07:00** on its due date. The Pi auto-posts at 05:00,
+       so by 07:00 it has normally happened; the text says "due today (auto-post)" rather
+       than "posted" in case the Pi was off. Rescheduled from the templates' next dates
+       every time the app opens. A real "posted just now" push needs server push, which a
+       free Apple account can't do (out of scope).
 - **Round D:** widget content and layout. Claude describes the layout for approval before
   building it. Also how the expiry banner looks and where it sits.
 
