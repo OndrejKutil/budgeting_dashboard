@@ -143,7 +143,7 @@ jobs:
           DEVICE="$SIM_DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b > /dev/null
           xcrun simctl install "$DEVICE" "$APP"
-          xcrun simctl launch "$DEVICE" com.ondrejkutil.budget
+          xcrun simctl launch "$DEVICE" com.ondrejkutil.budget -budget.lock.enabled NO
           sleep 30
           mkdir -p "$RUNNER_TEMP/smoke"
           xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/smoke/screenshot.png"
