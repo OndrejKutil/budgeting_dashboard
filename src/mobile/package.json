@@ -1,0 +1,17 @@
+{
+  "name": "budget-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Native iOS shell (Capacitor) around budget.ondrejkutil.com. See docs/mobile/README.md.",
+  "scripts": {
+    "sync": "cap sync ios",
+    "check-versions": "node scripts/check-versions.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}

@@ -28,6 +28,7 @@ import { LOCALE_LABELS, LOCALES, type AppLocale } from '@/lib/i18n';
 import { getProfileAvatarUrl } from '@/lib/user-avatar';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { isNativeApp } from '@/lib/native/budgetNative';
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -212,6 +213,7 @@ export default function ProfilePage() {
     }
   };
 
+  const nativeApp = isNativeApp();
   const hasProvider = (provider: string) => profile?.identities?.some((identity) => identity.provider === provider) ?? false;
   const avatarUrl = getProfileAvatarUrl(profile);
   const fullName: string = profile?.user_metadata?.full_name || '';
@@ -383,6 +385,8 @@ export default function ProfilePage() {
         >
           {hasProvider('github') ? (
             connected
+          ) : nativeApp ? (
+            <span className="max-w-[12rem] text-right text-xs text-muted-foreground">{t('profile.linkOnWebsite')}</span>
           ) : (
             <Button variant="outline" onClick={() => void startLink('github')} disabled={isGitHubLinking} className="h-9 px-4">
               {isGitHubLinking && <Loader2 className="animate-spin" aria-hidden="true" />}
@@ -397,6 +401,8 @@ export default function ProfilePage() {
         >
           {hasProvider('google') ? (
             connected
+          ) : nativeApp ? (
+            <span className="max-w-[12rem] text-right text-xs text-muted-foreground">{t('profile.linkOnWebsite')}</span>
           ) : (
             <Button variant="outline" onClick={() => void startLink('google')} disabled={isGoogleLinking} className="h-9 px-4">
               {isGoogleLinking && <Loader2 className="animate-spin" aria-hidden="true" />}

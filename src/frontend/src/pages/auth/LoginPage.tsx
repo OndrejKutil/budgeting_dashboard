@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
-import { authApi } from '@/lib/api/endpoints';
+import { startOAuthSignIn } from '@/lib/oauth';
+import { isNativeCancel } from '@/lib/native/budgetNative';
 import { getErrorMessage } from '@/lib/api/client';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,8 +26,6 @@ const GoogleIcon = ({ className }: { className?: string }) => (
     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9c.87-2.6 3.3-4.52 6.16-4.52z" />
   </svg>
 );
-
-const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -89,12 +88,11 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const response = await authApi.getGitHubOAuthUrl();
-      // Redirect to GitHub OAuth
-      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
-      window.location.href = response.url;
+      await startOAuthSignIn('github');
     } catch (error) {
-      setErrors({ general: getErrorMessage(error, 'Failed to connect to GitHub. Please try again.') });
+      if (!isNativeCancel(error)) {
+        setErrors({ general: getErrorMessage(error, 'Failed to connect to GitHub. Please try again.') });
+      }
       setIsGitHubLoading(false);
     }
   };
@@ -104,11 +102,11 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const response = await authApi.getGoogleOAuthUrl();
-      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
-      window.location.href = response.url;
+      await startOAuthSignIn('google');
     } catch (error) {
-      setErrors({ general: getErrorMessage(error, 'Failed to connect to Google. Please try again.') });
+      if (!isNativeCancel(error)) {
+        setErrors({ general: getErrorMessage(error, 'Failed to connect to Google. Please try again.') });
+      }
       setIsGoogleLoading(false);
     }
   };

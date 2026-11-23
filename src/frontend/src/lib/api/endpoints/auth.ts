@@ -111,8 +111,10 @@ export const authApi = {
         return await response.json();
     },
 
-    getGitHubOAuthUrl: async () => {
-        const response = await fetch(`${API_BASE_URL}/auth/oauth/github`, {
+    /** `client: 'ios'` makes Supabase return to the native app instead of the website. */
+    getGitHubOAuthUrl: async (client?: 'ios') => {
+        const query = client ? `?client=${client}` : '';
+        const response = await fetch(`${API_BASE_URL}/auth/oauth/github${query}`, {
             method: 'GET',
             headers: {
                 'X-API-KEY': API_KEY,
@@ -126,8 +128,10 @@ export const authApi = {
         return await response.json();
     },
 
-    getGoogleOAuthUrl: async () => {
-        const response = await fetch(`${API_BASE_URL}/auth/oauth/google`, {
+    /** `client: 'ios'` makes Supabase return to the native app instead of the website. */
+    getGoogleOAuthUrl: async (client?: 'ios') => {
+        const query = client ? `?client=${client}` : '';
+        const response = await fetch(`${API_BASE_URL}/auth/oauth/google${query}`, {
             method: 'GET',
             headers: {
                 'X-API-KEY': API_KEY,
