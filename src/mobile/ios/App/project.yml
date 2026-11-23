@@ -1,0 +1,54 @@
+# XcodeGen spec for the Budget iOS app. CI generates App.xcodeproj from this file; the project is
+# never committed. See docs/mobile/README.md for the build order (cap copy -> xcodegen -> cap update).
+name: App
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+packages:
+  CapApp-SPM:
+    path: CapApp-SPM
+targets:
+  App:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: App
+        excludes:
+          - public
+          - "public/**"
+          - Info.plist
+          - App.entitlements
+      # Web assets copied by `cap copy`; must stay a folder reference inside the App group.
+      - path: App/public
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: CapApp-SPM
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ondrejkutil.budget
+        PRODUCT_NAME: App
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+        # Signing happens after the build (ad-hoc, with App.entitlements); SideStore re-signs on the phone.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+      configs:
+        Debug:
+          CAPACITOR_DEBUG: "true"
+        Release:
+          CAPACITOR_DEBUG: "false"
+    scheme: {}

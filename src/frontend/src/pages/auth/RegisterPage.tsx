@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
-import { authApi } from '@/lib/api/endpoints';
+import { startOAuthSignIn } from '@/lib/oauth';
+import { isNativeCancel } from '@/lib/native/budgetNative';
 import { getErrorMessage } from '@/lib/api/client';
 import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,8 +32,6 @@ const passwordRequirements = [
   { label: 'Contains a number', test: (p: string) => /\d/.test(p) },
   { label: 'Contains uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
 ];
-
-const OAUTH_REDIRECT_TARGET_KEY = 'oauth_redirect_target';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -95,11 +94,11 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const response = await authApi.getGitHubOAuthUrl();
-      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
-      window.location.href = response.url;
+      await startOAuthSignIn('github');
     } catch (error) {
-      setErrors({ general: getErrorMessage(error, 'Failed to connect to GitHub. Please try again.') });
+      if (!isNativeCancel(error)) {
+        setErrors({ general: getErrorMessage(error, 'Failed to connect to GitHub. Please try again.') });
+      }
       setIsGitHubLoading(false);
     }
   };
@@ -109,11 +108,11 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const response = await authApi.getGoogleOAuthUrl();
-      sessionStorage.setItem(OAUTH_REDIRECT_TARGET_KEY, '/dashboard');
-      window.location.href = response.url;
+      await startOAuthSignIn('google');
     } catch (error) {
-      setErrors({ general: getErrorMessage(error, 'Failed to connect to Google. Please try again.') });
+      if (!isNativeCancel(error)) {
+        setErrors({ general: getErrorMessage(error, 'Failed to connect to Google. Please try again.') });
+      }
       setIsGoogleLoading(false);
     }
   };

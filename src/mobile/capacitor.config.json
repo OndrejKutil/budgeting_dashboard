@@ -1,0 +1,15 @@
+{
+  "appId": "com.ondrejkutil.budget",
+  "appName": "Budget",
+  "webDir": "www",
+  "server": {
+    "url": "https://budget.ondrejkutil.com",
+    "appStartPath": "dashboard",
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#060d10",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

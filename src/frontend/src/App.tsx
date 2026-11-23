@@ -13,6 +13,7 @@ import { AnalyticsSkeleton, BudgetMakerSkeleton, DashboardSkeleton, MonthlyAnaly
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NativeStatusBar } from "@/components/native/NativeStatusBar";
 
 // Pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -153,6 +154,7 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+      <NativeStatusBar />
       <MotionConfig reducedMotion="user">
         <TooltipProvider>
           <Toaster />

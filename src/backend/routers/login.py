@@ -1,6 +1,7 @@
 # fastapi
 # logging
 import logging
+from typing import Literal
 
 import fastapi
 import httpx
@@ -301,7 +302,18 @@ def _get_frontend_url() -> str:
     return urls[0] if urls else "http://localhost:8080"
 
 
-def _get_oauth_callback_url() -> str:
+# Return address for the native iOS app (src/mobile). It is a fixed constant, never taken from the
+# request, so the endpoints can't be used to send tokens to an arbitrary URL. The iOS sign-in sheet
+# (ASWebAuthenticationSession) catches this scheme and hands the URL back to the app. It must also be
+# listed under Supabase -> Authentication -> URL Configuration -> Redirect URLs.
+NATIVE_IOS_OAUTH_CALLBACK_URL = "com.ondrejkutil.budget://auth/callback"
+
+OAuthClient = Literal["web", "ios"]
+
+
+def _get_oauth_callback_url(client: OAuthClient = "web") -> str:
+    if client == "ios":
+        return NATIVE_IOS_OAUTH_CALLBACK_URL
     return f"{_get_frontend_url()}/auth/callback"
 
 
@@ -350,11 +362,13 @@ async def _get_link_identity_url(provider: str, access_token: str) -> str:
 @limiter.limit(RATE_LIMITS["auth"])
 async def get_github_oauth_url(
     request: Request,
+    client: OAuthClient = "web",
     api_key: str = Depends(api_key_auth)
 ) -> OAuthUrlResponse:
     """
     Get GitHub OAuth authorization URL.
     Frontend should redirect the user to this URL to initiate OAuth flow.
+    `client=ios` makes Supabase return to the native app instead of the website.
     """
     try:
         supabase_client: Client = get_db_client()
@@ -363,7 +377,7 @@ async def get_github_oauth_url(
         response = supabase_client.auth.sign_in_with_oauth({
             "provider": "github",
             "options": {
-                "redirect_to": _get_oauth_callback_url()
+                "redirect_to": _get_oauth_callback_url(client)
             }
         })
         
@@ -385,11 +399,13 @@ async def get_github_oauth_url(
 @limiter.limit(RATE_LIMITS["auth"])
 async def get_google_oauth_url(
     request: Request,
+    client: OAuthClient = "web",
     api_key: str = Depends(api_key_auth)
 ) -> OAuthUrlResponse:
     """
     Get Google OAuth authorization URL.
     Frontend should redirect the user to this URL to initiate OAuth flow.
+    `client=ios` makes Supabase return to the native app instead of the website.
     """
     try:
         supabase_client: Client = get_db_client()
@@ -397,7 +413,7 @@ async def get_google_oauth_url(
         response = supabase_client.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
-                "redirect_to": _get_oauth_callback_url()
+                "redirect_to": _get_oauth_callback_url(client)
             }
         })
 
