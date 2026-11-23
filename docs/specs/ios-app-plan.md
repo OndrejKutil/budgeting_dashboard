@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **Gate B passed (23 Nov 2026, 1.0.6 via the SideStore source); round C in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **Gate C passed (23 Nov 2026, 1.0.12); waiting for the widget choice for round D** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -85,7 +85,15 @@ K4 and K5 aren't needed until round A's build and setup guide. Claude asks again
   4. Quick add: opens Add transaction via a deep link (small, lock screen). Recommended.
   5. Top categories (medium). 6. Net worth / accounts (small). 7. Lock-screen % ring.
   Privacy mode hides amounts; lock-screen widgets never show amounts.
-  Awaiting Ondřej's choice. Claude describes the layout for approval before
+  **Chosen 23 Nov 2026:**
+  - Home screen: This month (small + medium), Upcoming payments (medium), Pace (medium).
+  - Lock screen: rectangular next payment; circular per-day allowance; circular ring of the
+    month's cash flow as % of income (as on the Overview), instead of a budget ring.
+  - Controls: Add transaction, Import screenshot (lock-screen corners, Control Center, Action
+    Button), via a deep link into the app.
+  - Lock-screen amounts are `privacySensitive` (blanked while locked, shown after Face ID);
+    percentages stay visible. Home-screen amounts follow the app's privacy mode.
+  - Designs must work in the clear/tinted home-screen style (SF Symbols, no emoji). Claude describes the layout for approval before
   building it. Also how the expiry banner looks and where it sits.
 
 ## 5. Rounds
@@ -193,6 +201,13 @@ Gate C (Claude waits): Ondřej installs the build, **keeps** the extension when 
 asks, adds the widget, then runs a manual SideStore refresh and reports:
 - [ ] Widget shows the diagnostic values after install
 - [ ] …and still shows them after a SideStore refresh
+
+**Gate C results (23 Nov 2026, 1.0.12 from the SideStore source):** widget shows "Group OK",
+`group.com.ondrejkutil.budget.<TEAMID>` found via `ALTAppGroups`, same group as the app, and
+the app's value, both after install and after a SideStore refresh. Zoom fix and expiry banner
+(debug switch) confirmed. Note for round D: the home screen uses the clear/tinted icon style,
+where emoji render as blank shapes, so the real widgets use SF Symbols and support the
+accented rendering mode.
 
 ### Round D: real widget, expiry banner, final guide (≈4–6 h / 5–7 h)
 

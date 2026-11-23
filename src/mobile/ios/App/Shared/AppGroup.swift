@@ -56,12 +56,3 @@ enum AppGroup {
         return entitlements["com.apple.security.application-groups"] as? [String] ?? []
     }
 }
-
-/// Keys of the values the app shares with the widget.
-enum SharedKeys {
-    /// Round C diagnostic: when the app last wrote to the shared container.
-    static let diagnosticWrittenAt = "diagnostic.writtenAt"
-    /// Round C diagnostic: the group name the app resolved (the widget compares it with its own).
-    static let diagnosticAppGroup = "diagnostic.appGroup"
-    static let diagnosticAppGroupSource = "diagnostic.appGroupSource"
-}

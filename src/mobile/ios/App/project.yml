@@ -3,7 +3,7 @@
 name: App
 options:
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "17.0"
   createIntermediateGroups: true
   developmentLanguage: en
 settings:
@@ -24,7 +24,7 @@ targets:
   App:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "17.0"
     sources:
       - path: App
         excludes:
@@ -57,12 +57,12 @@ targets:
           CAPACITOR_DEBUG: "false"
     scheme: {}
 
-  # Home-screen widgets. Keep the deployment target at 15.0 like the app: `cap update` reads the
+  # Home-screen widgets. Keep the deployment target the same as the app: `cap update` reads the
   # first IPHONEOS_DEPLOYMENT_TARGET in the project for Package.swift.
   BudgetWidget:
     type: app-extension
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "17.0"
     sources:
       - path: BudgetWidget
         excludes:

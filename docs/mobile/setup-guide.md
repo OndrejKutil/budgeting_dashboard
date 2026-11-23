@@ -118,7 +118,7 @@ _Added once SideStore can sign in again (needed to test it)._
   after the chosen time (default 5 min). Cancelling keeps it locked with an **Unlock** button.
   The app switcher always shows a blurred screen. Turning the lock off asks for Face ID first.
 - **Zoom** — size of the whole page, like Safari's page zoom. Default 85 % (matches the PWA).
-- **Daily reminder** — 20:00, to log the day's spending.
+- **Daily reminder** — 20:00, to log the day's spending; skipped on days you've already logged something.
 - **Recurring payments** — 07:00 on the day each recurring payment is due ("auto-post" for ones
   the Raspberry Pi posts automatically at 05:00).
 - **Send test notification** — arrives 5 s later; lock the phone or leave the app to see it.
@@ -145,7 +145,31 @@ shows a yellow banner: open SideStore with LocalDevVPN on and refresh. If it exp
 app just won't open until refreshed — **don't delete it**, or its data (login, settings) is lost.
 Profile › App › **Test the expiry warning** fakes 2 days left so you can see the banner.
 
-_Widget section: added in rounds C–D._
+**Widgets** — all come from the one Budget widget extension:
+
+| Where | Widget | Shows |
+|---|---|---|
+| Home screen | **This month** (small, medium) | Spent this month vs your usual month (6-month average), days left; medium adds cash flow, % of income and **per day** (cash flow left ÷ days left) |
+| Home screen | **Upcoming payments** (medium) | Next 3 recurring payments |
+| Home screen | **Pace** (medium) | This month's spending line vs the 6-month average |
+| Lock screen | **Next payment** (rectangular) | Name, day and amount |
+| Lock screen | **Per day** (circular) | What you can spend per day |
+| Lock screen | **Cash flow** (circular) | Cash flow as % of income |
+| Lock screen / Control Center / Action Button | **Add transaction**, **Import screenshot** | Open the app straight there |
+
+- Add home-screen widgets: long-press the home screen › **Edit** › **Add Widget** › Budget.
+- Lock screen: long-press the lock screen › **Customize** › Lock Screen › tap the widget area
+  (below the clock) or a bottom corner button › Budget.
+- Control Center: open it › **+** (top left) › Add a Control › Budget. Action Button:
+  Settings › Action Button › Controls › Budget.
+- Tapping a widget opens the matching page in the app.
+- **Freshness:** widgets show the data from the last time the app was open (or a transaction was
+  saved); "days left" and "per day" are recalculated every day on their own. After a month
+  change they ask you to open Budget.
+- **Privacy:** with privacy mode on, home-screen widgets show "•••" instead of amounts.
+  Lock-screen amounts are hidden by iOS while the phone is locked and appear once Face ID
+  recognises you; percentages are always visible.
+- The daily 20:00 reminder skips today if you've already logged something today.
 
 ---
 

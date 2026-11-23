@@ -15,11 +15,6 @@ class BudgetBridgeViewController: CAPBridgeViewController {
         super.viewDidLoad()
         applyPageZoom()
         privacyLock = PrivacyLock(host: self)
-        WidgetData.writeDiagnostic()
-        NotificationCenter.default.addObserver(forName: UIScene.willEnterForegroundNotification,
-                                               object: nil, queue: .main) { _ in
-            WidgetData.writeDiagnostic()
-        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -28,6 +23,14 @@ class BudgetBridgeViewController: CAPBridgeViewController {
             hasAppeared = true
             privacyLock?.viewDidAppear()
         }
+    }
+
+    /// Passes a deep link (widget tap, control) to the web app. Buffered by Capacitor until the
+    /// page has registered its listener, so it also works on a cold start.
+    func handleDeepLink(_ url: URL) {
+        guard let target = DeepLink.target(of: url),
+              let plugin = bridge?.plugin(withName: "BudgetNative") as? BudgetNativePlugin else { return }
+        plugin.emitDeepLink(target)
     }
 
     /// Same effect as Safari's page zoom (aA menu), which the PWA follows but a web view doesn't.

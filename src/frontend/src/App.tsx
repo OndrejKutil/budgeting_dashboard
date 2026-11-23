@@ -14,7 +14,8 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NativeStatusBar } from "@/components/native/NativeStatusBar";
-import { NativeNotificationSync } from "@/components/native/NativeNotificationSync";
+import { NativeSync } from "@/components/native/NativeSync";
+import { NativeDeepLinks } from "@/components/native/NativeDeepLinks";
 
 // Pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -99,7 +100,8 @@ const AppContent = () => {
         <UserProvider> {/* UserProvider is used to provide user context to the app (user data, profile initials, currency...) */}
           <PrivacyModeProvider>
             <OAuthHashRedirect />
-            <NativeNotificationSync />
+            <NativeSync />
+            <NativeDeepLinks />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={withSuspense(<LandingPage />)} />
