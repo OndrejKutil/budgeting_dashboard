@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **plan drafted, waiting for K1 (bundle ID)** · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **round A in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -44,7 +44,7 @@ and doesn't ask Ondřej to test anything that depends on it, until he confirms i
 
 ### Kickoff (blocking: nothing starts without K1–K3)
 
-Answers so far (23 Nov 2026): K2 = Claude may merge to `main` when confident nothing breaks; otherwise it asks Ondřej to check first. K3 = (a), hide linking in the app. K4 = placeholder made from the current icon for now. K5 = iOS 26.6.2 (the spec said iOS 27; this plan targets 26.6.2, with no upgrade required). **K1 still open.**
+Answers (23 Nov 2026): K1 = `com.ondrejkutil.budget`. K2 = Claude may merge to `main` when confident nothing breaks; otherwise it asks Ondřej to check first. K3 = (a), hide linking in the app. K4 = placeholder made from the current icon for now. K5 = iOS 26.6.2 (the spec said iOS 27; this plan targets 26.6.2, with no upgrade required).
 
 | # | Input | Why | Proposal (not assumed) |
 |---|---|---|---|
@@ -197,7 +197,19 @@ No parallel implementation agents and no worktrees.
 
 ## 7. Version check results
 
-_Filled in during round 0._
+Checked 23 Nov 2026.
+
+| Item | Result |
+|---|---|
+| Repository | Public, so macOS runner minutes are free |
+| Capacitor | 8.6.2 (`@capacitor/core`, `ios`, `cli`), SPM by default, iOS 15.0 minimum, needs Xcode 26+. `cap add`/`cap copy` work on Linux; `cap sync`/`cap update` need an existing `project.pbxproj` (it exits 0 with a stale `Package.swift` otherwise). |
+| `@capacitor/local-notifications` | 8.3.1 (round B) |
+| Runners | `macos-26` (= `macos-latest`), Xcode 26.6 default, iOS 26.2–26.5 simulators (iPhone 17 family). `macos-15` defaults to Xcode 16.4, too old. XcodeGen not preinstalled: `brew install xcodegen` (2.48.0). Don't use XcodeGen's new `xcproj` format. |
+| App-local plugin | `CAPPlugin, CAPBridgedPlugin` + `bridge?.registerPluginInstance` in a `CAPBridgeViewController` subclass. The 8.5+ template builds the root view controller in `SceneDelegate`, so the subclass is set there. |
+| SideStore | Latest release 0.7.0-alpha (15 Sep 2026); nightly 27 Oct 2026. App Groups are read from the **entitlements embedded in each binary** (app and each `.appex`); without them no group is registered and the group entitlement is stripped. Group rename: `group.X` → `group.X.<TEAMID>`. 0.7.0-alpha writes `ALTAppGroups` into Info.plist; nightly no longer does (reads the signature instead), so the app must fall back to its own entitlements / `embedded.mobileprovision`. |
+| SideStore updates | Source JSON per AltStore format (`version`, `buildVersion`, `date`, `downloadURL`, `size` required per version). SideStore compares `version` as strict `X.Y.Z` semver; a change in `buildVersion` alone is ignored. Hence `1.0.<run number>`. The IPA's `CFBundleShortVersionString`/`CFBundleVersion` must equal `version`/`buildVersion`. |
+| SideStore on iOS 26.6.x | Sign-in failures (HTTP 503) were fixed in Sep but reappeared 20–22 Nov 2026 (issue #1744, discussion #1741), no maintainer-confirmed fix yet; workarounds involve the anisette server settings. |
+| OAuth sheet | Google's iOS SDK itself uses `ASWebAuthenticationSession`; no reports of Google blocking it. Supabase allows custom-scheme redirect URLs; implicit flow returns tokens in the fragment of the 302; an unlisted `redirect_to` silently falls back to the Site URL. `init(url:callback:.customScheme)` on iOS 17.4+, the older initializer below. No Info.plist URL type or entitlement needed. |
 
 ## 8. Risks
 
