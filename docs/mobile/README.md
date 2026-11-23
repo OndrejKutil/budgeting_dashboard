@@ -29,10 +29,23 @@ before.
 | Settings storage | `AppSettings.swift` (UserDefaults; read before the site loads) | `getAppSettings` / `setAppSettings` |
 | Local notifications | `@capacitor/local-notifications` | `lib/native/notifications.ts`, synced by `components/native/NativeNotificationSync.tsx` |
 | Status bar style | `setStatusBarStyle` | `components/native/NativeStatusBar.tsx` |
+| Expiry banner | `ProvisioningInfo.swift` (`embedded.mobileprovision`) | `components/native/NativeExpiryBanner.tsx` |
+| Widgets + controls | `BudgetWidget/BudgetWidget.swift` (extension), `Shared/WidgetSnapshot.swift` | `lib/native/widgets.ts`, `lib/native/data.ts` |
+| Deep links (`com.ondrejkutil.budget://add`, `import-screenshot`, `open?path=`) | `SceneDelegate` → `BudgetNative` `deepLink` event | `components/native/NativeDeepLinks.tsx` |
+| App Group lookup | `Shared/AppGroup.swift` (`ALTAppGroups` → profile → declared) | — |
 
-Notifications are rescheduled from scratch on login, on returning to the foreground and on a
-settings change: a 20:00 daily reminder and a 07:00 "due today" for each active recurring
-payment's next date (the Pi auto-posts at 05:00). Preferences live in `localStorage`.
+`components/native/NativeSync.tsx` loads the data once (`lib/native/data.ts`) and refreshes both
+the notifications and the widget snapshot on login, on returning to the foreground, after any
+successful save (react-query mutation) and on a settings change; it clears both on logout.
+
+- Notifications: 20:00 daily reminder for the next 7 days (today's skipped once a transaction is
+  dated today) and 07:00 "due today" for each active recurring payment's next date (the Pi
+  auto-posts at 05:00). Preferences live in `localStorage`.
+- Widgets: a JSON `WidgetSnapshot` (this month's summary, upcoming payments, localized labels)
+  stored in the App Group; the widget timelines add an entry at each midnight so days-left and
+  per-day stay current without the app. No budgets are used.
+- The App Group's real name is `group.com.ondrejkutil.budget.<TEAMID>` after SideStore signs it;
+  both targets resolve it at runtime.
 
 ### Sign-in with GitHub/Google in the app
 
@@ -107,5 +120,6 @@ Version: `1.0.<run number>`, build number `<run number>`. SideStore compares ver
 
 - No `WKAppBoundDomains`: it breaks Capacitor's bridge.
 - Don't change the bundle ID (`com.ondrejkutil.budget`) — it would burn App IDs and lose app data.
-- At most one app extension (the widget); each extension uses one of the 10 weekly App IDs.
+- At most one app extension (`BudgetWidget`, which holds every widget and control); each
+  extension uses one of the 10 weekly App IDs.
 - Never hardcode the final App Group name: SideStore appends `.<TEAMID>` at signing.
