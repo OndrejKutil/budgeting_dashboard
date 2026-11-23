@@ -140,10 +140,55 @@ show amounts.
 
 ---
 
-## Later sections
+**Expiry banner** — free signing lasts 7 days. When the app has under 3 days left, the dashboard
+shows a yellow banner: open SideStore with LocalDevVPN on and refresh. If it expires anyway, the
+app just won't open until refreshed — **don't delete it**, or its data (login, settings) is lost.
+Profile › App › **Test the expiry warning** fakes 2 days left so you can see the banner.
 
-- Widget and expiry banner (section 4) — rounds C–D
-6. Troubleshooting — round D (reboot + LocalDevVPN; re-place the pairing file with iloader:
-   **Manage Pairing File › Place**; switch anisette server; wait 24–72 h after re-registering a
-   device; App ID limit; never delete an expired app — refresh it, or its data is lost)
-7. Before an iOS update — check https://github.com/SideStore/SideStore/issues for the new version
+_Widget section: added in rounds C–D._
+
+---
+
+## 6. Troubleshooting
+
+Try these in order — it's the order other SideStore users found effective.
+
+1. **"Not connected to Wi-Fi and/or VPN"** (the most common error): **reboot the phone**, then
+   open LocalDevVPN and connect again, then retry in SideStore.
+2. **Still failing / "Could not determine UDID" / pairing errors:** re-create the pairing file.
+   On the PC: iloader › Settings › **Delete Stored Pairing**, connect the iPhone by USB, then
+   **Manage Pairing File** › **Place** next to SideStore.
+3. **Sign-in errors** (503, "ADI native error -45063", freezing):
+   SideStore › Settings › **Anisette Servers** — pick a Mac-based one (SideStore (New) or
+   jkcoxson) and turn off Auto Rotation; User Customizations › **On-Device Anisette** off;
+   **Reset adi.pb**. During the Nov 2026 outage, also the Client Info fix in section 1.
+4. **Error 1006 after a reset or a new pairing:** a newly registered device can take
+   **24–72 hours** on Apple's side. Wait, then retry.
+5. **"Maximum number of App IDs"**: a free Apple ID gets 10 per 7 days (SideStore, Budget and its
+   widget each use one). IDs free up 7 days after they were created — wait it out; don't rename
+   or reinstall apps under new IDs in the meantime.
+6. **App expired / won't open:** refresh it in SideStore (VPN on). Never delete it to "fix" it —
+   deleting loses its data. If SideStore itself expired, reinstall SideStore with iloader
+   (Budget keeps its data), then refresh.
+7. **Stopgap when nothing else works:** install the latest `.ipa` from
+   https://github.com/OndrejKutil/budgeting_dashboard/releases with iloader › **Import IPA** —
+   another 7 days while SideStore gets fixed.
+
+When asking for help, include the exact error text and SideStore's log
+(Settings › Developer › logs, or a screenshot of the error).
+
+---
+
+## 7. Before an iOS update
+
+Apple has broken SideStore with iOS updates several times (e.g. iOS 26.4 refresh, the autumn 2026
+sign-in changes). Before installing an update:
+
+1. Refresh all apps in SideStore first, so you have a full 7 days either way.
+2. Check https://github.com/SideStore/SideStore/issues for the new iOS version number — if
+   people report broken refresh or sign-in, wait for a fix.
+3. Turn off automatic iOS updates (Settings › General › Software Update › Automatic Updates) so
+   this check happens before, not after.
+
+The PWA (budget.ondrejkutil.com added to the home screen) keeps working whatever happens to
+SideStore.
