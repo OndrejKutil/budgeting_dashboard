@@ -19,10 +19,12 @@ Official SideStore docs: https://docs.sidestore.io (install guide, troubleshooti
   Don't install iOS updates until you've checked SideStore's GitHub issues for the new version
   (section 7).
 - Use **Wi-Fi** (SideStore's docs say mobile data isn't suitable for installing).
-- Apple ID: SideStore's docs suggest a **secondary Apple ID** rather than your main one (older
-  setups occasionally got accounts locked). It needs two-factor authentication with a trusted
-  device; security keys aren't supported by iloader. It doesn't have to be the Apple ID signed in
-  on the phone.
+- Apple ID: your **main Apple ID works**. SideStore's docs suggest a separate one as a precaution:
+  your password goes into iloader/SideStore, and older setups occasionally got accounts
+  temporarily locked (fixable with a password reset; nothing on the phone is affected). A second
+  Apple ID takes ~10 min at https://account.apple.com, can use your own phone number for 2FA, and
+  is never signed in on the iPhone itself — only in iloader and SideStore. Pick one before setup:
+  switching later means reinstalling the apps. Security-key 2FA isn't supported by iloader.
 
 ### 1a. On the PC
 
