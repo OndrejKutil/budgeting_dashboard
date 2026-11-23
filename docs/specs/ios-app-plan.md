@@ -77,7 +77,15 @@ K4 and K5 aren't needed until round A's build and setup guide. Claude asks again
        than "posted" in case the Pi was off. Rescheduled from the templates' next dates
        every time the app opens. A real "posted just now" push needs server push, which a
        free Apple account can't do (out of scope).
-- **Round D:** widget content and layout. Claude describes the layout for approval before
+- **Round D:** widget content and layout. Options proposed 23 Nov 2026 (one extension holds all
+  widgets, so one App ID; data updates only when the app is opened):
+  1. This month: spent vs budget, days left, safe-to-spend per day (small, medium). Recommended.
+  2. Pace: cumulative spend vs 6-month average (medium).
+  3. Upcoming recurring payments (medium). Recommended.
+  4. Quick add: opens Add transaction via a deep link (small, lock screen). Recommended.
+  5. Top categories (medium). 6. Net worth / accounts (small). 7. Lock-screen % ring.
+  Privacy mode hides amounts; lock-screen widgets never show amounts.
+  Awaiting Ondřej's choice. Claude describes the layout for approval before
   building it. Also how the expiry banner looks and where it sits.
 
 ## 5. Rounds
