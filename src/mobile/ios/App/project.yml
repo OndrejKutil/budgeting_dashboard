@@ -11,6 +11,12 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
+    # Signing happens after the build (ad-hoc, with the .entitlements files); SideStore re-signs
+    # everything on the phone.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
 packages:
   CapApp-SPM:
     path: CapApp-SPM
@@ -30,8 +36,11 @@ targets:
       - path: App/public
         type: folder
         buildPhase: resources
+      - path: Shared
     dependencies:
       - package: CapApp-SPM
+      # The only app extension (each one uses one of a free Apple ID's 10 weekly App IDs).
+      - target: BudgetWidget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ondrejkutil.budget
@@ -41,14 +50,31 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
-        # Signing happens after the build (ad-hoc, with App.entitlements); SideStore re-signs on the phone.
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGNING_ALLOWED: "NO"
-        CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGN_IDENTITY: ""
       configs:
         Debug:
           CAPACITOR_DEBUG: "true"
         Release:
           CAPACITOR_DEBUG: "false"
     scheme: {}
+
+  # Home-screen widgets. Keep the deployment target at 15.0 like the app: `cap update` reads the
+  # first IPHONEOS_DEPLOYMENT_TARGET in the project for Package.swift.
+  BudgetWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: BudgetWidget
+        excludes:
+          - Info.plist
+          - BudgetWidget.entitlements
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ondrejkutil.budget.widget
+        PRODUCT_NAME: BudgetWidget
+        INFOPLIST_FILE: BudgetWidget/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"

@@ -66,7 +66,7 @@ def main() -> None:
                     }
                 ],
                 "appPermissions": {
-                    "entitlements": [],
+                    "entitlements": ["com.apple.security.application-groups"],
                     "privacy": {
                         "NSFaceIDUsageDescription": "Budget uses Face ID to keep your finances private."
                     },

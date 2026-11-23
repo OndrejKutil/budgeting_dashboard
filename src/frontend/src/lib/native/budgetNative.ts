@@ -36,7 +36,19 @@ export interface BudgetNativePlugin {
   setAppSettings(
     options: Partial<Pick<NativeAppSettings, 'lockEnabled' | 'lockTimeoutSeconds' | 'pageZoom'>>,
   ): Promise<NativeAppSettings>;
+  /** When the signing profile expires; `expiresAt` is missing on builds without one. */
+  getProvisioningInfo(): Promise<NativeProvisioningInfo>;
+  /** Debug: fake an expiry `days` from now; omit `days` to clear. */
+  setDebugExpiryOverride(options: { days?: number }): Promise<NativeProvisioningInfo>;
 }
+
+export interface NativeProvisioningInfo {
+  expiresAt?: string;
+  isOverride: boolean;
+}
+
+/** Dispatched on window when the debug expiry override changes. */
+export const PROVISIONING_CHANGED_EVENT = 'budget:provisioning-changed';
 
 export const BudgetNative = registerPlugin<BudgetNativePlugin>('BudgetNative');
 

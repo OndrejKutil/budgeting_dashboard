@@ -18,8 +18,10 @@ final class AppSettings {
 
     private let defaults = UserDefaults.standard
 
+    /// Also settable with a launch argument (`-budget.lock.enabled NO`), which the CI simulator
+    /// test uses so the screenshot shows the page instead of the lock cover.
     var lockEnabled: Bool {
-        get { defaults.object(forKey: Key.lockEnabled) as? Bool ?? true }
+        get { defaults.object(forKey: Key.lockEnabled) == nil ? true : defaults.bool(forKey: Key.lockEnabled) }
         set { defaults.set(newValue, forKey: Key.lockEnabled) }
     }
 

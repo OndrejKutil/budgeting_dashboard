@@ -108,6 +108,10 @@ jobs:
                 --entitlements "ios/App/$NAME/$NAME.entitlements" "$EXT"
             done
           fi
+          if [ ! -d "$APP/PlugIns/BudgetWidget.appex" ]; then
+            echo "::error::The widget extension is missing from the app bundle."; exit 1
+          fi
+          echo "Widget entitlements:"; codesign -d --entitlements - "$APP/PlugIns/BudgetWidget.appex" || true
           codesign --force --sign - --timestamp=none --entitlements ios/App/App/App.entitlements "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
           echo "Embedded entitlements:"; codesign -d --entitlements - "$APP" || true
@@ -143,7 +147,7 @@ jobs:
           DEVICE="$SIM_DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b > /dev/null
           xcrun simctl install "$DEVICE" "$APP"
-          xcrun simctl launch "$DEVICE" com.ondrejkutil.budget
+          xcrun simctl launch "$DEVICE" com.ondrejkutil.budget -budget.lock.enabled NO
           sleep 30
           mkdir -p "$RUNNER_TEMP/smoke"
           xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/smoke/screenshot.png"

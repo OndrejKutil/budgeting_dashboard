@@ -12,7 +12,9 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
         CAPPluginMethod(name: "startAuthSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setStatusBarStyle", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getAppSettings", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setAppSettings", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setAppSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getProvisioningInfo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setDebugExpiryOverride", returnType: CAPPluginReturnPromise)
     ]
 
     /// The only URL scheme the sign-in sheet may return to. Must match the backend's
@@ -154,5 +156,26 @@ public class BudgetNativePlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticatio
                 }
             }
         }
+    }
+
+    // MARK: - Signing profile expiry
+
+    private func provisioningPayload() -> [String: Any] {
+        var payload: [String: Any] = ["isOverride": ProvisioningInfo.debugOverrideDays != nil]
+        if let date = ProvisioningInfo.expirationDate {
+            payload["expiresAt"] = ISO8601DateFormatter().string(from: date)
+        }
+        return payload
+    }
+
+    /// `expiresAt` (ISO 8601) is missing when the build has no profile (simulator).
+    @objc func getProvisioningInfo(_ call: CAPPluginCall) {
+        call.resolve(provisioningPayload())
+    }
+
+    /// `{ days: number }` fakes an expiry that many days from now; `{}` clears it.
+    @objc func setDebugExpiryOverride(_ call: CAPPluginCall) {
+        ProvisioningInfo.debugOverrideDays = call.getDouble("days")
+        call.resolve(provisioningPayload())
     }
 }

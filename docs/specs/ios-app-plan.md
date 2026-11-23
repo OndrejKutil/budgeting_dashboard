@@ -1,6 +1,6 @@
 # Plan: Budget iOS app (sideloaded Capacitor shell)
 
-Status: **Gate A passed (same-day items, 23 Nov 2026); next-day login check pending; round B next** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
+Status: **Gate B passed (23 Nov 2026, 1.0.6 via the SideStore source); round C in progress** · Bundle ID `com.ondrejkutil.budget` (K1 confirmed 23 Nov 2026) · Branch: `claude/admiring-ptolemy-spsx3a`
 Source spec: "Budget iOS app – sideloaded Capacitor shell (spec)", 23 Nov 2026.
 
 This plan implements that spec. Where it deviates, section 2 says so and why.
@@ -77,7 +77,15 @@ K4 and K5 aren't needed until round A's build and setup guide. Claude asks again
        than "posted" in case the Pi was off. Rescheduled from the templates' next dates
        every time the app opens. A real "posted just now" push needs server push, which a
        free Apple account can't do (out of scope).
-- **Round D:** widget content and layout. Claude describes the layout for approval before
+- **Round D:** widget content and layout. Options proposed 23 Nov 2026 (one extension holds all
+  widgets, so one App ID; data updates only when the app is opened):
+  1. This month: spent vs budget, days left, safe-to-spend per day (small, medium). Recommended.
+  2. Pace: cumulative spend vs 6-month average (medium).
+  3. Upcoming recurring payments (medium). Recommended.
+  4. Quick add: opens Add transaction via a deep link (small, lock screen). Recommended.
+  5. Top categories (medium). 6. Net worth / accounts (small). 7. Lock-screen % ring.
+  Privacy mode hides amounts; lock-screen widgets never show amounts.
+  Awaiting Ondřej's choice. Claude describes the layout for approval before
   building it. Also how the expiry banner looks and where it sits.
 
 ## 5. Rounds
@@ -164,6 +172,12 @@ Gate B (Claude waits): PR merged; M4 done; checklist:
 - [ ] Claude pushes a trivial native change → the update appears in SideStore → installing it keeps the login
 
 M5 (automations) can be set up now; the 3-night check runs alongside C and D.
+
+**Gate B results (23 Nov 2026):** SideStore signs in again (after the anisette workaround); the
+source was added and 1.0.6 installed from it. Face ID lock, app-switcher cover, re-lock, zoom
+setting, notifications, dock and tag picker as expected. Bug found: `WKWebView.pageZoom` left an
+empty strip on the right; fixed by zooming through the viewport meta (next release). Still to
+observe: 20:00 reminder, a 07:00 due-today reminder, next-day login, 3 nightly refreshes.
 
 ### Round C: diagnostic widget (≈1.5–2 h / 2–3 h)
 

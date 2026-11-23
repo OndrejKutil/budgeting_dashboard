@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 import Capacitor
 
 /// Capacitor's web view controller, plus the app's own plugin, the Face ID lock and page zoom.
@@ -14,6 +15,11 @@ class BudgetBridgeViewController: CAPBridgeViewController {
         super.viewDidLoad()
         applyPageZoom()
         privacyLock = PrivacyLock(host: self)
+        WidgetData.writeDiagnostic()
+        NotificationCenter.default.addObserver(forName: UIScene.willEnterForegroundNotification,
+                                               object: nil, queue: .main) { _ in
+            WidgetData.writeDiagnostic()
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -25,7 +31,37 @@ class BudgetBridgeViewController: CAPBridgeViewController {
     }
 
     /// Same effect as Safari's page zoom (aA menu), which the PWA follows but a web view doesn't.
+    ///
+    /// `WKWebView.pageZoom` only shrinks the page and leaves an empty strip on the right, because the
+    /// layout width stays at the device width. Instead the viewport meta tag is rewritten so the
+    /// page lays out at `screen width / zoom` and is scaled to fit, like Safari does. A user script
+    /// applies it to every page load; one is added per change (the latest wins), and the current
+    /// page is updated right away.
     func applyPageZoom() {
-        webView?.pageZoom = CGFloat(AppSettings.shared.pageZoom)
+        guard let webView = webView else { return }
+        let script = Self.viewportScript(zoom: AppSettings.shared.pageZoom)
+        webView.pageZoom = 1
+        webView.configuration.userContentController.addUserScript(
+            WKUserScript(source: script, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
+        webView.evaluateJavaScript(script, completionHandler: nil)
+    }
+
+    private static func viewportScript(zoom: Double) -> String {
+        let value = String(format: "%.3f", zoom)
+        return """
+        (function () {
+          var zoom = \(value);
+          var meta = document.querySelector('meta[name="viewport"]');
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'viewport';
+            (document.head || document.documentElement).appendChild(meta);
+          }
+          var width = Math.round(screen.width / zoom);
+          meta.setAttribute('content', 'width=' + width + ', initial-scale=' + zoom +
+            ', minimum-scale=' + zoom + ', maximum-scale=' + zoom + ', user-scalable=no, viewport-fit=cover');
+        })();
+        """
     }
 }
