@@ -85,7 +85,15 @@ K4 and K5 aren't needed until round A's build and setup guide. Claude asks again
   4. Quick add: opens Add transaction via a deep link (small, lock screen). Recommended.
   5. Top categories (medium). 6. Net worth / accounts (small). 7. Lock-screen % ring.
   Privacy mode hides amounts; lock-screen widgets never show amounts.
-  Awaiting Ondřej's choice. Claude describes the layout for approval before
+  **Chosen 23 Nov 2026:**
+  - Home screen: This month (small + medium), Upcoming payments (medium), Pace (medium).
+  - Lock screen: rectangular next payment; circular per-day allowance; circular ring of the
+    month's cash flow as % of income (as on the Overview), instead of a budget ring.
+  - Controls: Add transaction, Import screenshot (lock-screen corners, Control Center, Action
+    Button), via a deep link into the app.
+  - Lock-screen amounts are `privacySensitive` (blanked while locked, shown after Face ID);
+    percentages stay visible. Home-screen amounts follow the app's privacy mode.
+  - Designs must work in the clear/tinted home-screen style (SF Symbols, no emoji). Claude describes the layout for approval before
   building it. Also how the expiry banner looks and where it sits.
 
 ## 5. Rounds
