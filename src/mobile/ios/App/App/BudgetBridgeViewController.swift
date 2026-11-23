@@ -15,6 +15,11 @@ class BudgetBridgeViewController: CAPBridgeViewController {
         super.viewDidLoad()
         applyPageZoom()
         privacyLock = PrivacyLock(host: self)
+        WidgetData.writeDiagnostic()
+        NotificationCenter.default.addObserver(forName: UIScene.willEnterForegroundNotification,
+                                               object: nil, queue: .main) { _ in
+            WidgetData.writeDiagnostic()
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
