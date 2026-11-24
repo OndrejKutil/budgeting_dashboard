@@ -77,12 +77,14 @@ struct MonthModel {
 
     /// Spending vs the six-month average month, as on the Overview (+0.08 = 8 % more).
     var vsUsual: Double? { usual.map { (spent - $0) / $0 } }
-    /// Bar: spending as a share of a usual month.
-    var barFraction: Double? { usual.map { min(spent / $0, 1) } }
-    /// Marker: where a usual month would be by the day the data was written.
+    /// The bar spans the larger of this month's spending and a usual month, so it only fills up
+    /// completely once spending passes a usual month.
+    private var barScale: Double? { usual.map { max(spent, $0) } }
+    var barFraction: Double? { barScale.map { min(spent / $0, 1) } }
+    /// Marker: where a usual month is by the day the data was written.
     var usualMarker: Double? {
-        guard let usual = usual, let byNow = usualByDataDay else { return nil }
-        return min(byNow / usual, 1)
+        guard let scale = barScale, let byNow = usualByDataDay else { return nil }
+        return min(byNow / scale, 1)
     }
 
     /// The six-month average cumulative spending on the day the data was written.
@@ -118,12 +120,24 @@ struct WidgetFormat {
         return value
     }
 
+    /// Same as CURRENCY_LOCALE in src/frontend/src/lib/currency.ts: amounts look the way the app
+    /// shows them ("18 852 Kč"), whatever the app language.
+    static let currencyLocales = [
+        "AUD": "en_AU", "CAD": "en_CA", "CZK": "cs_CZ", "EUR": "de_DE",
+        "GBP": "en_GB", "PLN": "pl_PL", "USD": "en_US",
+    ]
+
+    private func currencyLocale(_ code: String) -> Locale {
+        Locale(identifier: Self.currencyLocales[code] ?? "en_US")
+    }
+
     func money(_ value: Double, currency: String? = nil, hideable: Bool = true) -> String {
         if hideable && snapshot.privacyMode { return "•••" }
+        let code = currency ?? snapshot.currency
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = locale
-        formatter.currencyCode = currency ?? snapshot.currency
+        formatter.locale = currencyLocale(code)
+        formatter.currencyCode = code
         formatter.maximumFractionDigits = 0
         formatter.minimumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
@@ -132,7 +146,7 @@ struct WidgetFormat {
     func number(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.locale = locale
+        formatter.locale = currencyLocale(snapshot.currency)
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
     }
@@ -221,21 +235,35 @@ struct BigAmount: View {
 
 struct ProgressBar: View {
     let fraction: Double
+    /// "Usual by now", drawn as a small caret under the bar so it shows on any fill and in the
+    /// clear/tinted home-screen style.
     let marker: Double?
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.12))
-                Capsule().fill(accent).frame(width: geometry.size.width * fraction).widgetAccentable()
+            ZStack(alignment: .topLeading) {
+                Capsule().fill(Color.primary.opacity(0.18)).frame(height: 7)
+                Capsule().fill(accent).frame(width: max(geometry.size.width * fraction, 7), height: 7).widgetAccentable()
                 if let marker = marker {
-                    Rectangle().fill(Color.white.opacity(0.85))
-                        .frame(width: 2, height: 11)
-                        .offset(x: geometry.size.width * marker - 1)
+                    Caret()
+                        .fill(Color.primary.opacity(0.9))
+                        .frame(width: 8, height: 5)
+                        .offset(x: geometry.size.width * marker - 4, y: 9)
                 }
             }
         }
-        .frame(height: 7)
+        .frame(height: 14)
+    }
+}
+
+struct Caret: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+        }
     }
 }
 
@@ -299,7 +327,7 @@ struct ThisMonthView: View {
             Caption(text: "\(format.monthName(model)) · \(format.text("spent", "SPENT").uppercased(with: format.locale))")
             BigAmount(text: format.money(model.spent))
             if let fraction = model.barFraction {
-                ProgressBar(fraction: fraction, marker: model.usualMarker).padding(.vertical, 3)
+                ProgressBar(fraction: fraction, marker: model.usualMarker).padding(.top, 3)
             }
             if let vsUsual = model.vsUsual {
                 (Text(format.percent(vsUsual, signed: true)).foregroundColor(vsUsual > 0 ? overColor : underColor)

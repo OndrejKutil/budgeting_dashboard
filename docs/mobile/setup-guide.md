@@ -106,7 +106,32 @@ Installing a newer build over an existing one keeps the app's data (login, setti
 
 ## 3. Nightly refresh automation
 
-_Added once SideStore can sign in again (needed to test it)._
+Free signing lasts 7 days, so SideStore should refresh every night while the phone is at home on
+Wi-Fi. In **Shortcuts** › **Automation** › **+** › **Time of Day**, create three automations, each
+**Repeat: Daily**, **Run Immediately**, **Notify When Run** off:
+
+| Time | Actions |
+|---|---|
+| 03:00 | **Set VPN** › LocalDevVPN › **Connect** |
+| 03:05 | **Open URLs** `sidestore://` › **Wait** 5 s › SideStore's **Refresh All Apps** |
+| 03:30 | **Set VPN** › Tailscale › **Connect** (without Tailscale: LocalDevVPN › Disconnect) |
+
+- Separate automations because SideStore restarts itself during a refresh, which would cut a single
+  shortcut short. Opening `sidestore://` first avoids "You are not signed in".
+- **Tailscale:** iOS runs one VPN at a time; connecting LocalDevVPN drops Tailscale. Turn off
+  Tailscale's **Connect On Demand** (Settings › VPN › Tailscale › ⓘ) or it can take the VPN back
+  mid-refresh. The 03:30 step reconnects it.
+- Test once with times a few minutes ahead and the phone locked; SideStore › My Apps should then
+  show 7 days again. Keep the phone on Wi-Fi overnight, ideally charging.
+
+**Refreshing or updating on mobile data** (backup for trips): SideStore 0.7.0-alpha has an
+experimental **Cellular Refresh** that briefly turns mobile data off while it installs on the phone.
+
+1. In Shortcuts, create a shortcut named exactly `TurnOffData` with **Set Mobile Data** › Off, and
+   one named exactly `TurnOnData` with **Set Mobile Data** › On.
+2. SideStore › Settings › **Experimental Features** › **Cellular Refresh** on.
+3. With LocalDevVPN connected and no Wi-Fi, refresh or update as usual; it jumps to Shortcuts
+   briefly. Tested and working on 24 Nov 2026.
 
 ---
 
