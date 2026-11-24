@@ -33,7 +33,11 @@ export function NativeSync() {
         await clearWidgets();
         return;
       }
-      const data = await loadNativeData(currency, t('profile.notifyDueFallbackName'));
+      const data = await loadNativeData(currency, {
+        fallbackName: t('profile.notifyDueFallbackName'),
+        accounts: (count) => t('profile.widgetAccountCount', { count }),
+        noGroup: (code) => t('profile.widgetNoGroup', { currency: code }),
+      });
       await syncNotifications(t, isPrivacyMode, data);
       await syncWidgets(data, { t, locale, privacyMode: isPrivacyMode });
     };

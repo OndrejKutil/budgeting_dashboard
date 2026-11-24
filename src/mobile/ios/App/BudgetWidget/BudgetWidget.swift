@@ -13,6 +13,10 @@ struct BudgetWidgets: WidgetBundle {
         NextPaymentWidget()
         PerDayWidget()
         CashFlowWidget()
+        SplitWidget()
+        ForecastWidget()
+        BalancesWidget()
+        SavingsRateWidget()
         if #available(iOS 18.0, *) {
             AddTransactionControl()
             ImportScreenshotControl()
@@ -77,12 +81,14 @@ struct MonthModel {
 
     /// Spending vs the six-month average month, as on the Overview (+0.08 = 8 % more).
     var vsUsual: Double? { usual.map { (spent - $0) / $0 } }
-    /// Bar: spending as a share of a usual month.
-    var barFraction: Double? { usual.map { min(spent / $0, 1) } }
-    /// Marker: where a usual month would be by the day the data was written.
+    /// The bar spans the larger of this month's spending and a usual month, so it only fills up
+    /// completely once spending passes a usual month.
+    private var barScale: Double? { usual.map { max(spent, $0) } }
+    var barFraction: Double? { barScale.map { min(spent / $0, 1) } }
+    /// Marker: where a usual month is by the day the data was written.
     var usualMarker: Double? {
-        guard let usual = usual, let byNow = usualByDataDay else { return nil }
-        return min(byNow / usual, 1)
+        guard let scale = barScale, let byNow = usualByDataDay else { return nil }
+        return min(byNow / scale, 1)
     }
 
     /// The six-month average cumulative spending on the day the data was written.
@@ -103,6 +109,22 @@ struct MonthModel {
     var cashFlowShare: Double? { snapshot.month.income > 0 ? cashFlow / snapshot.month.income : nil }
     /// What can still be spent per day without the month's cash flow going below zero.
     var perDay: Double { max(0, cashFlow) / Double(daysLeft) }
+
+    var income: Double { snapshot.month.income }
+    var saved: Double { snapshot.month.saved ?? 0 }
+    var invested: Double { snapshot.month.invested ?? 0 }
+
+    /// Saved + invested as a share of income.
+    var savingsRate: Double? { income > 0 ? (saved + invested) / income : nil }
+
+    /// Expected cash flow at month end: cash flow so far, plus recurring income still due, minus
+    /// the spending still expected at this month's daily pace so far.
+    var forecast: Double {
+        let dataDays = max(snapshot.month.cumulative.count, 1)
+        let pace = spent / Double(dataDays)
+        let remainingDays = max(0, daysInMonth - dataDays)
+        return cashFlow + (snapshot.month.expectedIncome ?? 0) - pace * Double(remainingDays)
+    }
 }
 
 // MARK: - Formatting
@@ -118,12 +140,24 @@ struct WidgetFormat {
         return value
     }
 
+    /// Same as CURRENCY_LOCALE in src/frontend/src/lib/currency.ts: amounts look the way the app
+    /// shows them ("18 852 Kč"), whatever the app language.
+    static let currencyLocales = [
+        "AUD": "en_AU", "CAD": "en_CA", "CZK": "cs_CZ", "EUR": "de_DE",
+        "GBP": "en_GB", "PLN": "pl_PL", "USD": "en_US",
+    ]
+
+    private func currencyLocale(_ code: String) -> Locale {
+        Locale(identifier: Self.currencyLocales[code] ?? "en_US")
+    }
+
     func money(_ value: Double, currency: String? = nil, hideable: Bool = true) -> String {
         if hideable && snapshot.privacyMode { return "•••" }
+        let code = currency ?? snapshot.currency
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = locale
-        formatter.currencyCode = currency ?? snapshot.currency
+        formatter.locale = currencyLocale(code)
+        formatter.currencyCode = code
         formatter.maximumFractionDigits = 0
         formatter.minimumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
@@ -132,7 +166,7 @@ struct WidgetFormat {
     func number(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.locale = locale
+        formatter.locale = currencyLocale(snapshot.currency)
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
     }
@@ -221,21 +255,35 @@ struct BigAmount: View {
 
 struct ProgressBar: View {
     let fraction: Double
+    /// "Usual by now", drawn as a small caret under the bar so it shows on any fill and in the
+    /// clear/tinted home-screen style.
     let marker: Double?
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.12))
-                Capsule().fill(accent).frame(width: geometry.size.width * fraction).widgetAccentable()
+            ZStack(alignment: .topLeading) {
+                Capsule().fill(Color.primary.opacity(0.18)).frame(height: 7)
+                Capsule().fill(accent).frame(width: max(geometry.size.width * fraction, 7), height: 7).widgetAccentable()
                 if let marker = marker {
-                    Rectangle().fill(Color.white.opacity(0.85))
-                        .frame(width: 2, height: 11)
-                        .offset(x: geometry.size.width * marker - 1)
+                    Caret()
+                        .fill(Color.primary.opacity(0.9))
+                        .frame(width: 8, height: 5)
+                        .offset(x: geometry.size.width * marker - 4, y: 9)
                 }
             }
         }
-        .frame(height: 7)
+        .frame(height: 14)
+    }
+}
+
+struct Caret: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+        }
     }
 }
 
@@ -299,7 +347,7 @@ struct ThisMonthView: View {
             Caption(text: "\(format.monthName(model)) · \(format.text("spent", "SPENT").uppercased(with: format.locale))")
             BigAmount(text: format.money(model.spent))
             if let fraction = model.barFraction {
-                ProgressBar(fraction: fraction, marker: model.usualMarker).padding(.vertical, 3)
+                ProgressBar(fraction: fraction, marker: model.usualMarker).padding(.top, 3)
             }
             if let vsUsual = model.vsUsual {
                 (Text(format.percent(vsUsual, signed: true)).foregroundColor(vsUsual > 0 ? overColor : underColor)
@@ -641,12 +689,292 @@ extension WidgetSnapshot {
             version: 1, generatedAt: now, locale: Locale.current.identifier, currency: "CZK", privacyMode: false,
             month: .init(year: parts.year ?? 2026, month: parts.month ?? 1, spent: cumulative.last ?? 0,
                          income: 38_000, cashFlow: 5_400, usualSpent: usualCumulative.last,
-                         cumulative: cumulative, usualCumulative: usualCumulative),
+                         cumulative: cumulative, usualCumulative: usualCumulative,
+                         saved: 9_000, invested: 5_000, expectedIncome: 0),
             upcoming: [
                 .init(name: "Rent", amount: -7_200, currency: "CZK", date: tomorrow, autoPost: true),
                 .init(name: "Spotify", amount: -199, currency: "CZK", date: later, autoPost: false),
             ],
+            balances: [
+                .init(name: "Everyday", detail: "3 accounts", amount: 48_210, currency: "CZK", change30d: -6_900,
+                      history: (0..<30).map { 55_000 - Double($0) * 230 }),
+                .init(name: "Savings", detail: "2 accounts", amount: 356_000, currency: "CZK", change30d: 9_000,
+                      history: (0..<30).map { 347_000 + Double($0) * 300 }),
+            ],
             labels: [:]
         )
+    }
+}
+
+// MARK: - Where the money went (home screen)
+
+struct SplitWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "BudgetSplit", provider: SnapshotProvider()) { entry in
+            SplitView(entry: entry)
+                .homeWidgetBackground()
+                .widgetURL(DeepLink.open(path: "/dashboard"))
+        }
+        .configurationDisplayName("Where the money went")
+        .description("This month's income split into spent, saved, invested and cash flow.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+struct SplitSegment {
+    let label: String
+    let amount: Double
+    let share: Double
+    let color: Color
+    let tintOpacity: Double
+}
+
+struct SplitView: View {
+    let entry: SnapshotEntry
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
+    var body: some View {
+        if let snapshot = entry.snapshot, MonthModel(snapshot: snapshot, date: entry.date).isCurrent {
+            let model = MonthModel(snapshot: snapshot, date: entry.date)
+            let format = WidgetFormat(snapshot: snapshot)
+            VStack(alignment: .leading, spacing: 8) {
+                Caption(text: family == .systemMedium
+                    ? "\(format.monthName(model)) · \(format.text("incomeTotal", "income {amount}", ["amount": format.money(model.income)]).uppercased(with: format.locale))"
+                    : "\(format.monthName(model)) · \(format.text("ofIncomeTitle", "of income").uppercased(with: format.locale))")
+                if model.income > 0 {
+                    let parts = segments(model, format)
+                    SplitBar(segments: parts, fullColor: renderingMode == .fullColor)
+                        .frame(height: family == .systemMedium ? 12 : 10)
+                    VStack(spacing: 4) {
+                        ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                            HStack(spacing: 6) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(renderingMode == .fullColor ? part.color : Color.primary.opacity(part.tintOpacity))
+                                    .frame(width: 8, height: 8)
+                                Text(part.label).lineLimit(1)
+                                Spacer(minLength: 4)
+                                if family == .systemMedium {
+                                    Text(format.money(part.amount)).foregroundColor(mutedText)
+                                }
+                                Text(format.percent(part.share)).fontWeight(.semibold).frame(minWidth: 36, alignment: .trailing)
+                            }
+                            .font(.caption)
+                        }
+                    }
+                } else {
+                    Text(format.text("noIncome", "No income yet this month")).font(.footnote).foregroundColor(mutedText)
+                }
+                Spacer(minLength: 0)
+            }
+        } else {
+            OpenAppPrompt(text: openAppText(entry.snapshot))
+        }
+    }
+
+    private func segments(_ model: MonthModel, _ format: WidgetFormat) -> [SplitSegment] {
+        let income = model.income
+        return [
+            SplitSegment(label: format.text("spent", "Spent"), amount: model.spent, share: model.spent / income,
+                         color: Color(red: 0.42, green: 0.48, blue: 0.52), tintOpacity: 0.35),
+            SplitSegment(label: format.text("saved", "Saved"), amount: model.saved, share: model.saved / income,
+                         color: Color(red: 0.25, green: 0.56, blue: 0.85), tintOpacity: 0.55),
+            SplitSegment(label: format.text("invested", "Invested"), amount: model.invested, share: model.invested / income,
+                         color: Color(red: 0.61, green: 0.48, blue: 0.88), tintOpacity: 0.75),
+            SplitSegment(label: format.text("cashFlow", "Cash flow"), amount: model.cashFlow, share: model.cashFlow / income,
+                         color: accent, tintOpacity: 1),
+        ]
+    }
+}
+
+/// Segments in proportion to their (non-negative) shares; tinted styles use opacity steps.
+struct SplitBar: View {
+    let segments: [SplitSegment]
+    let fullColor: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            let positive = segments.map { max($0.share, 0) }
+            let total = max(positive.reduce(0, +), 0.0001)
+            let gaps = CGFloat(segments.count - 1) * 2
+            HStack(spacing: 2) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
+                    Rectangle()
+                        .fill(fullColor ? segment.color : Color.primary.opacity(segment.tintOpacity))
+                        .frame(width: max(0, (geometry.size.width - gaps) * CGFloat(positive[index] / total)))
+                }
+            }
+            .clipShape(Capsule())
+        }
+    }
+}
+
+// MARK: - Month-end forecast (home screen)
+
+struct ForecastWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "BudgetForecast", provider: SnapshotProvider()) { entry in
+            ForecastView(entry: entry)
+                .homeWidgetBackground()
+                .widgetURL(DeepLink.open(path: "/dashboard"))
+        }
+        .configurationDisplayName("Month-end forecast")
+        .description("Expected cash flow at the end of the month at your current pace.")
+        .supportedFamilies([.systemSmall])
+    }
+}
+
+struct ForecastView: View {
+    let entry: SnapshotEntry
+
+    var body: some View {
+        if let snapshot = entry.snapshot, MonthModel(snapshot: snapshot, date: entry.date).isCurrent {
+            let model = MonthModel(snapshot: snapshot, date: entry.date)
+            let format = WidgetFormat(snapshot: snapshot)
+            let forecast = model.forecast
+            VStack(alignment: .leading, spacing: 2) {
+                Caption(text: format.text("endOfMonth", "End of {month}", ["month": format.monthName(model)]).uppercased(with: format.locale))
+                Spacer(minLength: 0)
+                Text((forecast > 0 ? "+" : "") + format.money(forecast))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.5).lineLimit(1)
+                    .foregroundColor(forecast >= 0 ? underColor : overColor)
+                    .widgetAccentable()
+                Text(format.text("expectedCashFlow", "expected cash flow")).font(.caption2).foregroundColor(mutedText)
+                if (snapshot.month.expectedIncome ?? 0) > 0 {
+                    Text(format.text("inclIncome", "incl. expected income"))
+                        .font(.system(size: 10)).foregroundColor(mutedText.opacity(0.75)).padding(.top, 6)
+                }
+                Spacer(minLength: 0)
+                Text(format.text("asOf", "as of {time}", ["time": format.time(snapshot.generatedAt)]))
+                    .font(.system(size: 9.5)).foregroundColor(mutedText.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            OpenAppPrompt(text: openAppText(entry.snapshot))
+        }
+    }
+}
+
+// MARK: - Balances (home screen)
+
+struct BalancesWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "BudgetBalances", provider: SnapshotProvider()) { entry in
+            BalancesView(entry: entry)
+                .homeWidgetBackground()
+                .widgetURL(DeepLink.open(path: "/dashboard/accounts"))
+        }
+        .configurationDisplayName("Balances")
+        .description("Your account groups and ungrouped accounts. No totals.")
+        .supportedFamilies([.systemMedium, .systemLarge])
+    }
+}
+
+struct BalancesView: View {
+    let entry: SnapshotEntry
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        if let snapshot = entry.snapshot, let rows = snapshot.balances, !rows.isEmpty {
+            let format = WidgetFormat(snapshot: snapshot)
+            let large = family == .systemLarge
+            VStack(alignment: .leading, spacing: 0) {
+                Caption(text: format.text("balances", "Balances").uppercased(with: format.locale)).padding(.bottom, 4)
+                ForEach(Array(rows.prefix(large ? 6 : 3).enumerated()), id: \.offset) { index, row in
+                    if index > 0 { Divider().overlay(Color.white.opacity(0.08)) }
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(row.name).font(.footnote.weight(.semibold)).lineLimit(1)
+                            Text(row.detail).font(.caption2).foregroundColor(mutedText).lineLimit(1)
+                        }
+                        Spacer(minLength: 4)
+                        if large && row.history.count > 1 {
+                            Sparkline(values: row.history).frame(width: 60, height: 22)
+                        }
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(format.money(row.amount, currency: row.currency))
+                                .font(.footnote.weight(.semibold)).lineLimit(1).widgetAccentable()
+                            if let change = row.change30d, !snapshot.privacyMode {
+                                Text(changeText(change, format: format, currency: row.currency, withPeriod: !large))
+                                    .font(.caption2)
+                                    .foregroundColor(change > 0.5 ? underColor : change < -0.5 ? overColor : mutedText)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .padding(.vertical, large ? 7 : 5)
+                }
+                Spacer(minLength: 0)
+            }
+        } else {
+            OpenAppPrompt(text: openAppText(entry.snapshot))
+        }
+    }
+
+    private func changeText(_ change: Double, format: WidgetFormat, currency: String, withPeriod: Bool) -> String {
+        let arrow = change > 0.5 ? "▲ " : change < -0.5 ? "▼ " : "± "
+        let amount = format.money(abs(change), currency: currency)
+        return arrow + amount + (withPeriod ? " " + format.text("in30Days", "in 30 d") : "")
+    }
+}
+
+struct Sparkline: View {
+    let values: [Double]
+
+    var body: some View {
+        GeometryReader { geometry in
+            let minimum = values.min() ?? 0
+            let maximum = values.max() ?? 1
+            let range = max(maximum - minimum, 1)
+            Path { path in
+                let step = geometry.size.width / CGFloat(max(values.count - 1, 1))
+                for (index, value) in values.enumerated() {
+                    let point = CGPoint(x: CGFloat(index) * step,
+                                        y: geometry.size.height - CGFloat((value - minimum) / range) * (geometry.size.height - 2) - 1)
+                    if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+                }
+            }
+            .stroke(accent, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+            .widgetAccentable()
+        }
+    }
+}
+
+// MARK: - Savings rate (lock screen)
+
+struct SavingsRateWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "BudgetSavingsRate", provider: SnapshotProvider()) { entry in
+            SavingsRateView(entry: entry)
+                .containerBackground(for: .widget) { Color.clear }
+                .widgetURL(DeepLink.open(path: "/dashboard"))
+        }
+        .configurationDisplayName("Savings rate")
+        .description("Saved + invested this month as a share of income.")
+        .supportedFamilies([.accessoryCircular])
+    }
+}
+
+struct SavingsRateView: View {
+    let entry: SnapshotEntry
+
+    var body: some View {
+        if let snapshot = entry.snapshot, MonthModel(snapshot: snapshot, date: entry.date).isCurrent,
+           let rate = MonthModel(snapshot: snapshot, date: entry.date).savingsRate {
+            let format = WidgetFormat(snapshot: snapshot)
+            Gauge(value: min(max(rate, 0), 1)) {
+                Text(format.text("savedShort", "saved"))
+            } currentValueLabel: {
+                Text(format.percent(rate)).minimumScaleFactor(0.5)
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .widgetAccentable()
+        } else {
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: "arrow.clockwise")
+            }
+        }
     }
 }

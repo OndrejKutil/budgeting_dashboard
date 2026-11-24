@@ -17,6 +17,22 @@ struct WidgetSnapshot: Codable {
         let cumulative: [Double]
         /// The six-month average of the same, one value per day of the month.
         let usualCumulative: [Double]
+        // Added with the second widget set; optional so older snapshots still decode.
+        let saved: Double?
+        let invested: Double?
+        /// Recurring income still due this month.
+        let expectedIncome: Double?
+    }
+
+    /// A Balances row: an account group (in the base currency) or an ungrouped account.
+    struct Balance: Codable {
+        let name: String
+        let detail: String
+        let amount: Double
+        let currency: String
+        let change30d: Double?
+        /// Daily balances over the last 30 days, oldest first.
+        let history: [Double]
     }
 
     struct Payment: Codable {
@@ -39,6 +55,8 @@ struct WidgetSnapshot: Codable {
     let month: Month
     /// Upcoming recurring payments, soonest first.
     let upcoming: [Payment]
+    /// Largest first; nil in snapshots from before the Balances widget.
+    let balances: [Balance]?
     /// Localized UI strings (from the web app's translations), keyed by name.
     let labels: [String: String]
 }
