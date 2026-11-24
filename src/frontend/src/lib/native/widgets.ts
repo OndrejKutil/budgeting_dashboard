@@ -4,7 +4,7 @@
  */
 import type { DashboardTranslationKey } from '@/lib/i18n';
 import { BudgetNative } from '@/lib/native/budgetNative';
-import type { NativeData, UpcomingPayment } from '@/lib/native/data';
+import type { BalanceRow, NativeData, UpcomingPayment } from '@/lib/native/data';
 
 type Translate = (key: DashboardTranslationKey, params?: Record<string, string | number>) => string;
 
@@ -23,8 +23,13 @@ export interface WidgetSnapshot {
     usualSpent: number | null;
     cumulative: number[];
     usualCumulative: number[];
+    saved: number;
+    invested: number;
+    /** Recurring income still due this month. */
+    expectedIncome: number;
   };
   upcoming: UpcomingPayment[];
+  balances: BalanceRow[];
   labels: Record<string, string>;
 }
 
@@ -51,10 +56,21 @@ const LABEL_KEYS: Record<string, DashboardTranslationKey> = {
   sixMonthAverage: 'profile.widgetSixMonthAverage',
   openApp: 'profile.widgetOpenApp',
   asOf: 'profile.widgetAsOf',
+  ofIncomeTitle: 'profile.widgetOfIncomeTitle',
+  incomeTotal: 'profile.widgetIncomeTotal',
+  saved: 'profile.widgetSaved',
+  invested: 'profile.widgetInvested',
+  noIncome: 'profile.widgetNoIncome',
+  endOfMonth: 'profile.widgetEndOfMonth',
+  expectedCashFlow: 'profile.widgetExpectedCashFlow',
+  inclIncome: 'profile.widgetInclIncome',
+  balances: 'profile.widgetBalances',
+  in30Days: 'profile.widgetIn30Days',
+  savedShort: 'profile.widgetSavedShort',
 };
 
 /** Placeholders the native side fills in; passed through `t` unchanged. */
-const PLACEHOLDERS = { count: '{count}', rate: '{rate}', amount: '{amount}', time: '{time}' };
+const PLACEHOLDERS = { count: '{count}', rate: '{rate}', amount: '{amount}', time: '{time}', month: '{month}' };
 
 export async function syncWidgets(
   data: NativeData,
@@ -78,8 +94,12 @@ export async function syncWidgets(
       usualSpent: summary.six_month_average?.expense ?? null,
       cumulative: summary.daily_cumulative_expense,
       usualCumulative: summary.average_daily_cumulative_expense,
+      saved: summary.total_saving,
+      invested: summary.total_investment,
+      expectedIncome: data.expectedIncome,
     },
     upcoming: data.upcoming.slice(0, 5),
+    balances: data.balances,
     labels: Object.fromEntries(
       Object.entries(LABEL_KEYS).map(([name, key]) => [name, options.t(key, PLACEHOLDERS)]),
     ),
